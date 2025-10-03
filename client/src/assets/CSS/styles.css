@@ -1,0 +1,180 @@
+:root{
+  /* tuned palette to match your design */
+  --orange:#ff5b1f;--green:#84bd00;--cyan:#1ec6ff;--yellow:#ffbf00;--gray:#8a8a8a;
+  --navy-900:#091a2c;--navy-800:#0f2a45;--navy-700:#133b5a;--navy-600:#19496f;
+  --blue-700:#0b5ea8;--blue-600:#0e6fc2;--blue-500:#0d7bd8;--blue-400:#4aa6ff;--blue-300:#bfe0ff;
+  --field:#0c1e34;--field-2:#0b1a2b;--card:#0e2744;
+}
+*{box-sizing:border-box}
+*{box-sizing:border-box}
+/* prevent iOS/Android from resizing text unexpectedly */
+html,body{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;color:#eaf2ff;background:
+  radial-gradient(50% 40% at 0% 0%, rgba(74,166,255,.14) 0%, transparent 60%),
+  radial-gradient(60% 50% at 100% 100%, rgba(30,198,255,.12) 0%, transparent 60%),
+  linear-gradient(180deg,var(--navy-900),var(--navy-700));
+  background-attachment: fixed;
+}
+.page{min-height:100vh}
+.bar{display:none}
+.logo{height:36px}
+.title{display:none}
+/* make container fluid but cap width for large screens */
+.container{max-width:920px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+/* allow the welcome container to span full width so its content can be perfectly centered */
+.container.welcome{max-width:none;width:100%;padding:0}
+/* ensure container centers its content with a subtle max-width on mobile */
+.container > .neo-card{max-width:760px;width:100%}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center;width:100%;padding:28px 16px}
+.welcome-logo{width:160px;height:160px;object-fit:contain;background:transparent;border-radius:20px;padding:6px;margin:2px 0;mix-blend-mode:normal;filter:drop-shadow(0 6px 18px rgba(0,0,0,.45));}
+.welcome-title{margin:0 0 4px 0;font-size:28px}
+.welcome-sub{margin:4px 0 10px 0;color:#bcd6fb}
+.welcome-btn{margin-top:4px}
+.stepper{display:flex;align-items:center;justify-content:space-between;margin:8px auto 24px auto;width:100%;max-width:640px;position:relative}
+.stepper-wrap{padding:6px 0}
+.stepper-track{position:absolute;left:0;right:0;top:50%;height:6px;background:rgba(255,255,255,.15);border-radius:999px;transform:translateY(-50%)}
+.stepper-fill{position:absolute;left:0;top:50%;height:6px;background:linear-gradient(90deg,var(--cyan),var(--blue-400));border-radius:999px;transform:translateY(-50%);transition:width .45s cubic-bezier(.22,.61,.36,1);overflow:hidden}
+.stepper-fill::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.14) 60%, rgba(255,255,255,0.02) 100%);opacity:0.6;mix-blend-mode:screen;animation:shimmer 2s linear infinite;transform:translateX(-40%)}
+.stepper-item{position:relative;flex:1;display:flex;align-items:center}
+.stepper-item .bar-link{flex:1;height:6px;background:rgba(255,255,255,.18);border-radius:999px;margin:0 8px}
+.stepper-item .bubble{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);color:#eaf2ff;border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(8px);position:relative;z-index:1;transition:transform .25s ease, box-shadow .25s ease}
+.stepper-item.active .bubble{box-shadow:0 0 22px rgba(74,166,255,.9),0 0 0 6px rgba(74,166,255,.18) inset;border-color:rgba(74,166,255,.95);animation:bubble-pulse 1.6s infinite}
+.stepper-item.done .bubble{transform:scale(.98);box-shadow:0 10px 30px rgba(10,80,140,.25)}
+.stepper-item.done .bar-link{background:linear-gradient(90deg,var(--cyan),var(--blue-400))}
+
+/* Completed step: replace number with a checkmark and add a small pop */
+.stepper-item.done .bubble{color:transparent;position:relative;background:linear-gradient(180deg, rgba(74,166,255,.95), rgba(13,123,204,.95));border-color:rgba(255,255,255,.18)}
+.stepper-item.done .bubble::after{content:"\2713";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.95);color:#eaf2ff;font-weight:800;font-size:16px}
+.stepper-item.done .bubble::after{animation:check-pop .28s cubic-bezier(.2,.9,.3,1)}
+
+/* stagger check animations so completed steps pop in sequence */
+.stepper-item.done:nth-child(1) .bubble::after{animation-delay:0s}
+.stepper-item.done:nth-child(2) .bubble::after{animation-delay:0.06s}
+.stepper-item.done:nth-child(3) .bubble::after{animation-delay:0.12s}
+.stepper-item.done:nth-child(4) .bubble::after{animation-delay:0.18s}
+.stepper-item.done:nth-child(5) .bubble::after{animation-delay:0.24s}
+
+@keyframes check-pop{
+  0%{transform:translate(-50%,-50%) scale(.3) rotate(-20deg);opacity:0}
+  60%{transform:translate(-50%,-50%) scale(1.08) rotate(6deg);opacity:1}
+  100%{transform:translate(-50%,-50%) scale(1) rotate(0);opacity:1}
+}
+
+@keyframes shimmer{from{transform:translateX(-40%)}to{transform:translateX(100%)}}
+
+@keyframes bubble-pulse{0%{transform:scale(1)}40%{transform:scale(1.06)}70%{transform:scale(1)}100%{transform:scale(1)}}
+
+.neo-card{position:relative;background:linear-gradient(180deg, rgba(9,26,44,.55), rgba(9,26,44,.45));backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
+  border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:26px;box-shadow:0 30px 70px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);width:100%;max-width:760px;margin:0 auto}
+
+/* subtle gradient border ring like Microsoft glass cards */
+.neo-card:before{content:"";position:absolute;inset:0;border-radius:24px;padding:1px;background:linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.04));-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.card-logos{position:absolute;top:8px;left:12px;right:12px;display:flex;justify-content:space-between}
+.card-logos img{width:64px;height:64px;object-fit:contain;background:#ffffff;border-radius:50%;padding:8px;border:1px solid rgba(0,0,0,0.06);box-shadow:0 6px 18px rgba(0,0,0,.18);mix-blend-mode:normal;filter:drop-shadow(0 6px 12px rgba(0,0,0,.18));}
+.card-title{margin:2px 0 6px 0;text-align:center;font-size:30px;font-weight:800;letter-spacing:.3px}
+.card-sub{margin:0 0 16px 0;text-align:center;color:#9cbce8}
+.step h2{margin:0 0 12px 0;color:#fff}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid .col-span-2{grid-column:span 2}
+label{display:flex;flex-direction:column;gap:8px;color:#cde3ff}
+/* increase form control font-size to >=18px to avoid iOS input auto-zoom on focus */
+.grid input,.grid select,.grid textarea{font-size:18px}
+input,select,textarea{color:#eaf2ff;caret-color:#eaf2ff}
+.pill{padding:16px 16px;min-height:48px;font-size:18px}
+.grid input,.grid select,.grid textarea{width:100%}
+
+/* phone prefix styling */
+.prefix-wrap{position:relative;display:flex;align-items:center}
+.prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;color:#cfe4ff;padding:6px 8px;border-radius:8px;pointer-events:none}
+.phone-input{padding-left:56px}
+.pill{background:rgba(9,20,36,.9);border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.35)}
+.pill:focus{box-shadow:0 0 0 4px rgba(10,120,200,0.18), 0 0 0 1px rgba(0,168,255,.8) inset;border-color:rgba(0,168,255,.8)}
+.btn:focus{outline:none;box-shadow:0 0 0 4px rgba(10,120,200,0.18)}
+::placeholder{color:#8aa3c6}
+input:hover,select:hover,textarea:hover{border-color:var(--blue-400)}
+input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(3,169,244,.25)}
+textarea{resize:vertical}
+
+/* Custom dropdown arrow for select.pill — hides native arrow and shows SVG for consistent look */
+select.pill{
+  -webkit-appearance: none; /* iOS/Safari */
+  -moz-appearance: none; /* Firefox */
+  appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px 18px;
+  padding-right: 48px; /* room for the custom arrow */
+}
+
+/* inline SVG arrow (white/soft) encoded for background-image */
+select.pill{background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23cfe4ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");}
+
+/* On small screens reduce the arrow size/spacing */
+@media (max-width:520px){
+  select.pill{background-position:right 12px center;background-size:14px;padding-right:42px}
+}
+.file-name{color:#9fc5ff}
+.error{color:#ffb4b4}
+.actions{display:flex;gap:12px;justify-content:flex-end;margin-top:18px}
+.btn{padding:14px 24px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:linear-gradient(180deg,var(--blue-600),var(--blue-500));color:white;font-weight:800;cursor:pointer;transition:transform .08s ease,filter .2s;font-size:16px}
+.btn:hover{filter:brightness(1.05)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;border-color:rgba(138,180,248,.35);color:#d7e7ff}
+.btn.primary{background:linear-gradient(180deg,var(--blue-600),var(--blue-500))}
+.animate-in{animation:slide .28s ease}
+.neo-card{animation:cardFade .35s ease}
+@keyframes cardFade{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+.pill{transition:box-shadow .2s, border-color .2s, transform .08s}
+.pill:active{transform:scale(.995)}
+@keyframes slide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.summary{list-style:none;padding:0;margin:8px 0 0 0;color:#cfe4ff}
+.summary li{margin:6px 0}
+.review-card {
+  background: rgba(13, 123, 204, 0.08);
+  border-radius: 16px;
+  padding: 18px 18px 8px 18px;
+  margin: 12px 0 0 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.summary li span {
+  color: #eaf2ff;
+  font-weight: 500;
+  margin-left: 6px;
+}
+/* TECH background layers: subtle grid + glow nodes + diagonal lines */
+.page:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:
+  repeating-linear-gradient(0deg, rgba(180,220,255,.05) 0 1px, transparent 1px 48px),
+  repeating-linear-gradient(90deg, rgba(180,220,255,.05) 0 1px, transparent 1px 48px);
+}
+.page:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:
+  radial-gradient(300px 240px at 15% 25%, rgba(26,198,255,.18) 0%, transparent 70%),
+  radial-gradient(260px 220px at 80% 10%, rgba(0,169,244,.16) 0%, transparent 70%),
+  radial-gradient(180px 180px at 85% 80%, rgba(255,190,0,.10) 0%, transparent 70%),
+  repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 2px, transparent 2px 18px);
+}
+
+/* make 1-column layout earlier for tablets/large phones */
+@media (max-width:1024px){.grid{grid-template-columns:1fr}.stepper{max-width:640px}}
+@media (max-width:900px){.stepper{max-width:640px}}
+@media (max-width:520px){
+  .container{padding:20px 12px}
+  .neo-card{padding:22px;max-width:96vw}
+  .card-title{font-size:24px}
+  .stepper{margin-bottom:14px}
+  .stepper-item .bubble{width:32px;height:32px}
+  .stepper-item .bar-link{height:4px;margin:0 6px}
+  .actions{justify-content:stretch}
+  .actions .btn{width:100%}
+}
+
+@media (max-width:380px){
+  .welcome-title{font-size:20px}
+  .welcome-logo{width:100px;height:100px;padding:10px}
+  .welcome-sub{font-size:13px}
+  .welcome-btn{padding:10px 18px}
+}
+
+@media (max-width:720px){
+  .card-logos img{width:48px;height:48px;padding:6px}
+}
+
