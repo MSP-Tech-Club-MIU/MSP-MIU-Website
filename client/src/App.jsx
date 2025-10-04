@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
-import miuLogo from './assets/miu-logo.png'
-import mspLogo from './assets/msp-logo.png'
+import miuLogo from './assets/Images/miu-logo.png'
+import mspLogo from './assets/Images/msp-logo.png'
 
 const palette = {
   orange: '#F4581F',
@@ -37,7 +37,6 @@ const departments = [
   'Software Development',
   'Technical Training Department',
   'Event Planning',
-  'Ushering',
 ]
 
 function Stepper({ step }) {
