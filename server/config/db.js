@@ -19,4 +19,14 @@ const sequelize = new Sequelize(
   }
 );
 
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("Database connection has been established successfully.");
+  } catch (error) {
+    console.warn("Database connection failed:", error.message);
+    console.log("Server will continue running without database. Create a .env file with DB credentials to enable database features.");
+  }
+})();
+
 module.exports = sequelize;

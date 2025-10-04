@@ -9,7 +9,8 @@ const router = express.Router();
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    const filename = `StudentSchedule_${req.body.university_id}${path.extname(file.originalname)}`;
+    // Always rename to StudentSchedule_${studentId}.pdf regardless of original file type
+    const filename = `StudentSchedule_${req.body.university_id}.pdf`;
     cb(null, filename);
   }
 });

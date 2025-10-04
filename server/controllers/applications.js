@@ -1,4 +1,4 @@
-const sequelize = require('../config/db');
+const { Application } = require('../models');
 
 // Submit new application
 const createApplication = async (req, res) => {
@@ -27,35 +27,39 @@ const createApplication = async (req, res) => {
         }
 
         // Check if university_id already exists
-        const [existing] = await sequelize.query(
-            'SELECT application_id FROM applications WHERE university_id = ?',
-            [university_id]
-        );
+        const existing = await Application.findOne({
+            where: { university_id }
+        });
 
-        if (existing.length > 0) {
+        if (existing) {
             return res.status(409).json({
                 success: false,
                 error: 'Application with this university ID already exists'
             });
         }
 
-        // Insert new application
-        const [result] = await sequelize.query(
-            `INSERT INTO applications 
-            (university_id, full_name, email, faculty, year, phone_number, 
-             first_choice, second_choice, skills, motivation, schedule) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [university_id, full_name, email, faculty, year, phone_number, 
-             first_choice, second_choice, skills, motivation, schedule || '']
-        );
+        // Create new application
+        const application = await Application.create({
+            university_id,
+            full_name,
+            email,
+            faculty,
+            year,
+            phone_number,
+            first_choice,
+            second_choice,
+            skills,
+            motivation,
+            schedule: schedule || ''
+        });
 
         res.status(201).json({
             success: true,
             message: 'Application submitted successfully',
             data: {
-                application_id: result.insertId,
-                university_id,
-                status: 'pending'
+                application_id: application.application_id,
+                university_id: application.university_id,
+                status: application.status
             }
         });
 
@@ -71,9 +75,9 @@ const createApplication = async (req, res) => {
 
 const getAllApplications = async (req, res) => {
     try {
-        const [applications] = await sequelize.query(`
-            SELECT * from applications
-        `);
+        const applications = await Application.findAll({
+            order: [['created_at', 'DESC']]
+        });
 
         res.json({
             success: true,
@@ -98,20 +102,17 @@ const updateApplicationStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
+        const application = await Application.findByPk(id);
 
-        const [result] = await sequelize.query(
-            'UPDATE applications SET status = ? WHERE application_id = ?',
-            [status, id]
-        );
-
-        if (result.affectedRows === 0) {
+        if (!application) {
             return res.status(404).json({
                 success: false,
                 error: 'Application not found'
             });
         }
 
-   
+        await application.update({ status });
+
         res.json({
             success: true,
             message: `Application ${status} successfully`,
@@ -132,17 +133,16 @@ const deleteApplication = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const [result] = await sequelize.query(
-            'DELETE FROM applications WHERE application_id = ?',
-            [id]
-        );
+        const application = await Application.findByPk(id);
 
-        if (result.affectedRows === 0) {
+        if (!application) {
             return res.status(404).json({
                 success: false,
                 error: 'Application not found'
             });
         }
+
+        await application.destroy();
 
         res.json({
             success: true,
