@@ -13,8 +13,7 @@ const createApplication = async (req, res) => {
             first_choice,
             second_choice,
             skills,
-            motivation,
-            schedule
+            motivation
         } = req.body;
 
         // Validation
@@ -49,8 +48,7 @@ const createApplication = async (req, res) => {
             first_choice,
             second_choice,
             skills,
-            motivation,
-            schedule: schedule || ''
+            motivation
         });
 
         res.status(201).json({
