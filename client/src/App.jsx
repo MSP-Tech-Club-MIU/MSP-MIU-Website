@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react'
 import miuLogo from './assets/Images/miu-logo.png'
 import mspLogo from './assets/Images/msp-logo.png'
+import ApiService from './services/api'
+import { departments, getDepartmentIdByName } from './data/departments'
 
 const palette = {
   orange: '#F4581F',
@@ -28,16 +30,16 @@ const faculties = [
   'Alsun',
 ]
 
-const years = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Senior 2']
-
-const departments = [
-  'Media & Content Creation',
-  'Public Relations (PR)',
-  'Human Resources (HR)',
-  'Software Development',
-  'Technical Training Department',
-  'Event Planning',
+// Year mapping to integers (matches database schema)
+const years = [
+  { value: 1, label: 'Freshman' },
+  { value: 2, label: 'Sophomore' },
+  { value: 3, label: 'Junior' },
+  { value: 4, label: 'Senior' },
+  { value: 5, label: 'Senior 2' }
 ]
+
+// Departments are now imported from data/departments.js
 
 function Stepper({ step }) {
   const items = [0,1,2,3,4]
@@ -127,9 +129,35 @@ function App() {
     e.preventDefault()
     if (!validateCurrentStep()) return
     setSubmitting(true)
-    await new Promise(r => setTimeout(r, 1000))
-    setSubmitting(false)
-    setScreen('success')
+    
+    try {
+      // Prepare form data for API - just send the filename
+      const formData = {
+        university_id: form.studentId,
+        full_name: form.name,
+        email: form.email,
+        faculty: form.faculty,
+        year: parseInt(form.year),
+        phone_number: form.phone,
+        first_choice: getDepartmentIdByName(form.dept1),
+        second_choice: getDepartmentIdByName(form.dept2),
+        skills: form.skills,
+        motivation: form.motivation,
+        schedule: form.schedule ? form.schedule.name : 'no-schedule.pdf'
+      };
+
+      // Submit application to backend
+      const result = await ApiService.submitApplication(formData);
+      
+      console.log('Application submitted successfully:', result);
+      setScreen('success')
+    } catch (error) {
+      console.error('Failed to submit application:', error);
+      // You can add error handling UI here
+      alert('Failed to submit application. Please try again.');
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const scheduleName = useMemo(() => (form.schedule ? form.schedule.name : 'No file chosen'), [form.schedule])
@@ -194,7 +222,7 @@ function App() {
                   <select className="pill" value={form.year} onChange={e => updateField('year', e.target.value)}>
                     <option value="">Select year</option>
                     {years.map(y => (
-                      <option key={y} value={y}>{y}</option>
+                      <option key={y.value} value={y.value}>{y.label}</option>
                     ))}
                   </select>
                   {errors.year && <small className="error">{errors.year}</small>}
@@ -251,7 +279,7 @@ function App() {
                   <select className="pill" value={form.dept1} onChange={e => updateField('dept1', e.target.value)}>
                     <option value="">Select department</option>
                     {departments.map(d => (
-                      <option key={d} value={d}>{d}</option>
+                      <option key={d.id} value={d.name}>{d.name}</option>
                     ))}
                   </select>
                   {errors.dept1 && <small className="error">{errors.dept1}</small>}
@@ -261,7 +289,7 @@ function App() {
                   <select className="pill" value={form.dept2} onChange={e => updateField('dept2', e.target.value)}>
                     <option value="">Select department</option>
                     {departments.map(d => (
-                      <option key={d} value={d}>{d}</option>
+                      <option key={d.id} value={d.name}>{d.name}</option>
                     ))}
                   </select>
                   {errors.dept2 && <small className="error">{errors.dept2}</small>}
@@ -298,7 +326,7 @@ function App() {
                   <li><b>Name:</b> <span>{form.name}</span></li>
                   <li><b>Email:</b> <span>{form.email}</span></li>
                   <li><b>ID:</b> <span>{form.studentId}</span></li>
-                  <li><b>Faculty/Year:</b> <span>{form.faculty} — {form.year}</span></li>
+                  <li><b>Faculty/Year:</b> <span>{form.faculty} — {years.find(y => y.value == form.year)?.label || form.year}</span></li>
                   <li><b>Phone:</b> <span>{form.phone}</span></li>
                   <li><b>Schedule:</b> <span>{scheduleName}</span></li>
                   <li><b>Departments:</b> <span>{form.dept1} , {form.dept2}</span></li>
