@@ -1,17 +1,22 @@
-require("dotenv").config();
 const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
 const { QueryTypes } = require("sequelize");
-const PORT = process.env.PORT || 3000;
-
-const app = express();
-app.use(cors());
-app.use(bodyParser.json());
-
 const sequelize = require("./config/db");
 
-app.get("/api/board", async (req, res) => {
+const router = express.Router();
+
+// Initialize database connection
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("✅ Database connection has been established successfully.");
+  } catch (error) {
+    console.warn("⚠️  Database connection failed:", error.message);
+    console.log("📝 Server will continue running without database. Create a .env file with DB credentials to enable database features.");
+  }
+})();
+
+// API Routes
+router.get("/board", async (req, res) => {
   try {
     const rows = await sequelize.query("SELECT * FROM board", {
       type: QueryTypes.SELECT
@@ -23,20 +28,4 @@ app.get("/api/board", async (req, res) => {
   }
 });
 
-
-async function startServer() {
-  try {
-    await sequelize.authenticate();
-    console.log("Database connection has been established successfully.");
-  } catch (error) {
-    console.error("Unable to connect to the database:", error);
-  }
-
-  app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-  });
-}
-
-startServer();
-
-module.exports = app;
+module.exports = router;
