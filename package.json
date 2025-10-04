@@ -12,7 +12,7 @@
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "build": "npm run build:client",
-    "build:client": "cd client && npm install && npm run build",
+    "build:client": "cd client && npm install --include=dev && npm run build",
     "start": "npm run start:server",
     "start:server": "cd server && npm start",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
