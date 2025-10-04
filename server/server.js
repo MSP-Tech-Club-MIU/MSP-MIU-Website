@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const { QueryTypes } = require("sequelize");
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 const app = express();
 app.use(cors());
