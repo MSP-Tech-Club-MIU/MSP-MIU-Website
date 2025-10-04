@@ -15,7 +15,8 @@ Application.belongsTo(Department, {
 });
 Application.belongsTo(Department, { 
   foreignKey: 'second_choice', 
-  as: 'secondChoiceDepartment' 
+  as: 'secondChoiceDepartment',
+  allowNull: true
 });
 Department.hasMany(Application, { 
   foreignKey: 'first_choice', 

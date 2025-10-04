@@ -63,10 +63,7 @@ const Application = sequelize.define('Application', {
   },
   second_choice: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    validate: {
-      notEmpty: true
-    }
+    allowNull: true
   },
   skills: {
     type: DataTypes.TEXT,

@@ -13,15 +13,16 @@ const createApplication = async (req, res) => {
             first_choice,
             second_choice,
             skills,
-            motivation
+            motivation,
+            schedule
         } = req.body;
 
         // Validation
         if (!university_id || !full_name || !email || !faculty || !year || !phone_number || 
-            !first_choice || !second_choice || !skills || !motivation) {
+            !first_choice || !skills || !motivation) {
             return res.status(400).json({ 
                 success: false,
-                error: 'All fields are required' 
+                error: 'All required fields must be provided' 
             });
         }
 
@@ -46,7 +47,7 @@ const createApplication = async (req, res) => {
             year,
             phone_number,
             first_choice,
-            second_choice,
+            second_choice: second_choice || null,
             skills,
             motivation
         });
@@ -63,9 +64,15 @@ const createApplication = async (req, res) => {
 
     } catch (error) {
         console.error('Error submitting application:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
         res.status(500).json({
             success: false,
-            error: 'Internal server error'
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };

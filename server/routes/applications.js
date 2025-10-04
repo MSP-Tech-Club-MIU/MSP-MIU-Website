@@ -17,7 +17,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Routes
-router.post("/", upload.single("schedule"), createApplication);
+router.post("/", createApplication);
 router.get("/", getAllApplications);
 router.put("/:id/status", updateApplicationStatus);
 router.delete("/:id", deleteApplication);
