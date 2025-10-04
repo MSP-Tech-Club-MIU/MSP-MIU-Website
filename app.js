@@ -7,14 +7,6 @@ const PORT = process.env.PORT;
 
 const app = express();
 
-// HTTPS redirect middleware
-app.use((req, res, next) => {
-  if (req.headers['x-forwarded-proto'] !== 'https') {
-    return res.redirect('https://' + req.headers.host + req.url);
-  }
-  next();
-});
-
 app.use(cors());
 app.use(bodyParser.json());
 
