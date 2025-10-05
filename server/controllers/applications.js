@@ -85,7 +85,7 @@ const createApplication = async (req, res) => {
 const getAllApplications = async (req, res) => {
     try {
         const applications = await Application.findAll({
-            order: [['created_at', 'DESC']]
+            order: [['application_id', 'DESC']]
         });
 
         res.json({
