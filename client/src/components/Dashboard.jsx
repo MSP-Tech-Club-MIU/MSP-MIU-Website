@@ -1,20 +1,23 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import ApiService from "../services/api";
 
 const Dashboard = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:3000/api/applications") // adjust backend port if needed
-      .then(res => {
-        setApplications(res.data.data);
+    const fetchApplications = async () => {
+      try {
+        const result = await ApiService.getAllApplications();
+        setApplications(result.data);
         setLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error("Error fetching applications:", err);
         setLoading(false);
-      });
+      }
+    };
+
+    fetchApplications();
   }, []);
 
   if (loading) return <p>Loading applications...</p>;
