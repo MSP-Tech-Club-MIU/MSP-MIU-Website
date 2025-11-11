@@ -699,6 +699,17 @@ const activateAccount = async (req, res) => {
             } else if (decoded.email) {
                 // Legacy token format - just has email
                 activationEmail = decoded.email;
+                
+                // Look up member or board member by email
+                member = await Member.findOne({ where: { email: activationEmail } });
+                
+                if (!member) {
+                    // If not a member, check if it's a board member
+                    boardMember = await Board.findOne({ where: { email: activationEmail } });
+                    if (boardMember) {
+                        isBoardMember = true;
+                    }
+                }
             } else {
                 logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
                     reason: 'Invalid token payload',
@@ -788,7 +799,7 @@ const activateAccount = async (req, res) => {
                 logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
                     reason: 'Password already set',
                     user_id: user.user_id,
-                    email
+                    email: activationEmail
                 }, req);
                 
                 return res.status(400).json({
@@ -848,15 +859,25 @@ const activateAccount = async (req, res) => {
             // User doesn't exist - create new user
             if (isBoardMember && boardMember) {
                 // Create user for board member with role 'board'
-                // Get university_id from Application if available, otherwise leave null
-                let universityId = null;
-                const { Application } = require('../models');
-                const application = await Application.findOne({ 
-                    where: { email },
-                    order: [['created_at', 'DESC']]
-                });
-                if (application && application.university_id) {
-                    universityId = application.university_id;
+                // Get university_id directly from board table (now stored in board table)
+                // Fallback to Application table if not in board table (for backwards compatibility)
+                let universityId = boardMember.university_id || null;
+                
+                // If university_id not in board table, try to get it from Application table
+                if (!universityId) {
+                    try {
+                        const { Application } = require('../models');
+                        const application = await Application.findOne({ 
+                            where: { email: activationEmail },
+                            order: [['created_at', 'DESC']]
+                        });
+                        if (application && application.university_id) {
+                            universityId = application.university_id;
+                        }
+                    } catch (appError) {
+                        // If Application model doesn't exist or query fails, just continue with null university_id
+                        console.warn('Could not fetch university_id from Application:', appError.message);
+                    }
                 }
                 
                 user = await User.create({
@@ -928,16 +949,26 @@ const activateAccount = async (req, res) => {
         } else if (error.name === 'SequelizeValidationError') {
             errorMessage = 'Invalid input data';
             statusCode = 400;
+        } else if (error.message) {
+            // Include the actual error message for debugging
+            errorMessage = error.message;
         }
 
+        // Log detailed error information
         logError('auth.activateAccount', error, {
-            email: req.body?.email || req.body?.token ? 'token_provided' : 'unknown',
-            error_name: error.name
+            email: req.body?.email || (req.body?.token ? 'token_provided' : 'unknown'),
+            error_name: error.name,
+            error_message: error.message,
+            stack: error.stack
         }, req);
+        
+        // In development, include more details
+        const isDevelopment = process.env.NODE_ENV !== 'production';
         
         res.status(statusCode).json({
             success: false,
-            error: errorMessage
+            error: errorMessage,
+            ...(isDevelopment && { details: error.message, stack: error.stack })
         });
     }
 };

@@ -43,6 +43,11 @@ const Board = sequelize.define('Board', {
       isEmail: true
     }
   },
+  university_id: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    field: 'ID' // Map to the actual database column name 'ID'
+  },
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
