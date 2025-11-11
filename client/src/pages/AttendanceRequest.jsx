@@ -19,7 +19,12 @@ const AttendanceRequest = () => {
     courseCode: '',
     lectureLabTime: '',
     room: '',
-    instructor: ''
+    instructor: '',
+    needsSecondAttendance: false,
+    secondCourseCode: '',
+    secondLectureLabTime: '',
+    secondRoom: '',
+    secondInstructor: ''
   });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -51,6 +56,13 @@ const AttendanceRequest = () => {
       if (!form.lectureLabTime.trim()) newErrors.lectureLabTime = 'Time required';
       if (!form.room.trim()) newErrors.room = 'Room required';
       if (!form.instructor.trim()) newErrors.instructor = 'Instructor name required';
+    }
+    
+    if (form.needsSecondAttendance) {
+      if (!form.secondCourseCode.trim()) newErrors.secondCourseCode = 'Course code required';
+      if (!form.secondLectureLabTime.trim()) newErrors.secondLectureLabTime = 'Time required';
+      if (!form.secondRoom.trim()) newErrors.secondRoom = 'Room required';
+      if (!form.secondInstructor.trim()) newErrors.secondInstructor = 'Instructor name required';
     }
     return newErrors;
   }, [form]);
@@ -219,6 +231,96 @@ const AttendanceRequest = () => {
                       disabled={submitting}
                     />
                     {errors.instructor && <span className="error">{errors.instructor}</span>}
+                  </label>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Second Attendance Checkbox - Only show if first attendance is needed */}
+            {form.needsAttendance && (
+              <div className="attendance-toggle">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="needsSecondAttendance"
+                    checked={form.needsSecondAttendance}
+                    onChange={onChange}
+                    disabled={submitting}
+                    className="attendance-checkbox"
+                  />
+                  <span>I need attendance proof for a second missed lecture/lab</span>
+                </label>
+              </div>
+            )}
+
+            {/* Second Conditional Attendance Fields */}
+            <AnimatePresence>
+              {form.needsSecondAttendance && (
+                <motion.div
+                  className="grid attendance-fields"
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  transition={{ 
+                    duration: 0.4,
+                    ease: [0.4, 0, 0.2, 1],
+                    height: { duration: 0.35 }
+                  }}
+                >
+                  <label className="floating-input">
+                    Second Course Code
+                    <input
+                      type="text"
+                      name="secondCourseCode"
+                      value={form.secondCourseCode}
+                      onChange={onChange}
+                      placeholder="e.g., CS102"
+                      className={`pill ${errors.secondCourseCode ? 'error-border' : ''}`}
+                      disabled={submitting}
+                    />
+                    {errors.secondCourseCode && <span className="error">{errors.secondCourseCode}</span>}
+                  </label>
+
+                  <label className="floating-input">
+                    Second Lecture/Lab Time
+                    <input
+                      type="text"
+                      name="secondLectureLabTime"
+                      value={form.secondLectureLabTime}
+                      onChange={onChange}
+                      placeholder="e.g., 2:00 PM - 4:00 PM"
+                      className={`pill ${errors.secondLectureLabTime ? 'error-border' : ''}`}
+                      disabled={submitting}
+                    />
+                    {errors.secondLectureLabTime && <span className="error">{errors.secondLectureLabTime}</span>}
+                  </label>
+
+                  <label className="floating-input">
+                    Second Room
+                    <input
+                      type="text"
+                      name="secondRoom"
+                      value={form.secondRoom}
+                      onChange={onChange}
+                      placeholder="e.g., 322"
+                      className={`pill ${errors.secondRoom ? 'error-border' : ''}`}
+                      disabled={submitting}
+                    />
+                    {errors.secondRoom && <span className="error">{errors.secondRoom}</span>}
+                  </label>
+
+                  <label className="floating-input">
+                    Second Doctor's or TA's Name
+                    <input
+                      type="text"
+                      name="secondInstructor"
+                      value={form.secondInstructor}
+                      onChange={onChange}
+                      placeholder="Instructor name"
+                      className={`pill ${errors.secondInstructor ? 'error-border' : ''}`}
+                      disabled={submitting}
+                    />
+                    {errors.secondInstructor && <span className="error">{errors.secondInstructor}</span>}
                   </label>
                 </motion.div>
               )}
