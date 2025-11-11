@@ -135,13 +135,24 @@ class ApiService {
     return !!this.getAuthToken();
   }
 
-  // Activate account - set password for user by email
-  static async activateAccount(email, password) {
+  // Activate account - set password for user by token or email
+  static async activateAccount(token, password, email = null) {
     try {
+      const body = { password };
+      
+      // Prefer token over email for security
+      if (token) {
+        body.token = token;
+      } else if (email) {
+        body.email = email;
+      } else {
+        throw new Error('Token or email is required');
+      }
+      
       const response = await fetch(`${API_BASE_URL}/auth/activate`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -153,6 +164,28 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error during account activation:', error);
+      throw error;
+    }
+  }
+
+  // Verify activation token and get email
+  static async verifyActivationToken(token) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-activation-token`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ token }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Token verification failed');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error verifying activation token:', error);
       throw error;
     }
   }
