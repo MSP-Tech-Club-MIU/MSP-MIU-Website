@@ -135,6 +135,28 @@ class ApiService {
     return !!this.getAuthToken();
   }
 
+  // Activate account - set password for user by email
+  static async activateAccount(email, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/activate`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Account activation failed');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error during account activation:', error);
+      throw error;
+    }
+  }
+
   static async submitApplication(formData) {
     try {
       console.log('API Service - Sending data:', formData);

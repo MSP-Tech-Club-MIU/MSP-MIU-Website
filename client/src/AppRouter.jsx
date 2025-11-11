@@ -15,6 +15,7 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Sponsors = lazy(() => import('./pages/Sponsors'));
 const FormAdmin = lazy(() => import('./pages/FormAdmin'));
 const Profile = lazy(() => import('./pages/Profile'));
+const AccountActivation = lazy(() => import('./pages/account-activation'));
 
 // Enhanced loading component with better UX
 const PageLoader = () => (
@@ -61,6 +62,7 @@ const AppRouter = () => (
         <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
         <Route path="/registration-admin" element={<SiteLayout><FormAdmin /></SiteLayout>} />
         <Route path="/profile" element={<SiteLayout><Profile /></SiteLayout>} />
+        <Route path="/account-activation" element={<AccountActivation />} />
       </Routes>
     </Suspense>
   </Router>

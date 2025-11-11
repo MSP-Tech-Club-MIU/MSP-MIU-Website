@@ -36,6 +36,13 @@ const Board = sequelize.define('Board', {
       notEmpty: true
     }
   },
+  email: {
+    type: DataTypes.STRING(150),
+    allowNull: true,
+    validate: {
+      isEmail: true
+    }
+  },
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,

@@ -1,5 +1,5 @@
 const bcrypt = require('bcrypt');
-const { User } = require('../models');
+const { User, Member, Board } = require('../models');
 const { generateToken: generateJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
 
@@ -471,12 +471,269 @@ const verifyToken = async (req, res) => {
     }
 };
 
+/**
+ * Activate account - Set password for member/user by email
+ * POST /api/auth/activate
+ * This endpoint is used when a member receives an activation email
+ * and needs to set their password to activate their account
+ */
+const activateAccount = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Validation
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Email and password are required'
+            });
+        }
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid email format'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Find member or board member by email
+        // First check if it's a member
+        let member = await Member.findOne({ where: { email } });
+        let boardMember = null;
+        let isBoardMember = false;
+
+        // If not a member, check if it's a board member
+        // Board members now have email field directly in the board table
+        if (!member) {
+            // Find board member by email directly from board table
+            boardMember = await Board.findOne({ where: { email } });
+            if (boardMember) {
+                isBoardMember = true;
+            }
+        }
+
+        if (!member && !boardMember) {
+            logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                reason: 'Member or board member not found',
+                email
+            }, req);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'No account found with this email. Please contact the administrator.'
+            });
+        }
+
+        // Check if user already exists
+        let user = null;
+        let role = 'member';
+        let recordId = null;
+        let recordType = 'member';
+        
+        if (isBoardMember && boardMember) {
+            role = 'board';
+            recordId = boardMember.board_id;
+            recordType = 'board';
+            
+            if (boardMember.user_id) {
+                user = await User.findByPk(boardMember.user_id);
+            } else {
+                user = await User.findOne({ where: { email } });
+            }
+        } else if (member) {
+            role = 'member';
+            recordId = member.member_id;
+            recordType = 'member';
+            
+            if (member.user_id) {
+                user = await User.findByPk(member.user_id);
+            } else {
+                user = await User.findOne({ where: { email } });
+            }
+        }
+
+        // Hash password
+        const saltRounds = 10;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+
+        if (user) {
+            // User exists - update password and activate
+            if (user.password_hash) {
+                // User already has a password set
+                logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                    reason: 'Password already set',
+                    user_id: user.user_id,
+                    email
+                }, req);
+                
+                return res.status(400).json({
+                    success: false,
+                    error: 'Account already activated. Please use the login page.'
+                });
+            }
+
+            // Update user: set password, role, and activate
+            // If it's a board member, ensure role is set to 'board'
+            const updateData = {
+                password_hash,
+                is_active: true
+            };
+            
+            // Always set role to 'board' if it's a board member
+            if (isBoardMember) {
+                updateData.role = 'board';
+            } else {
+                updateData.role = role;
+            }
+            
+            await user.update(updateData);
+
+            // Link record to user if not already linked
+            if (isBoardMember && boardMember && !boardMember.user_id) {
+                await boardMember.update({ user_id: user.user_id });
+            } else if (member && !member.user_id) {
+                await member.update({ user_id: user.user_id });
+            }
+
+            // Refresh user to get updated role
+            await user.reload();
+
+            // Log activation
+            logAuditEvent('ACCOUNT_ACTIVATED', {
+                user_id: user.user_id,
+                email,
+                role: user.role,
+                record_id: recordId,
+                record_type: recordType
+            }, req);
+
+            res.json({
+                success: true,
+                message: 'Account activated successfully',
+                user: {
+                    user_id: user.user_id,
+                    email: user.email,
+                    university_id: user.university_id,
+                    role: user.role,
+                    is_active: true
+                }
+            });
+
+        } else {
+            // User doesn't exist - create new user
+            if (isBoardMember && boardMember) {
+                // Create user for board member with role 'board'
+                // Get university_id from Application if available, otherwise leave null
+                let universityId = null;
+                const { Application } = require('../models');
+                const application = await Application.findOne({ 
+                    where: { email },
+                    order: [['created_at', 'DESC']]
+                });
+                if (application && application.university_id) {
+                    universityId = application.university_id;
+                }
+                
+                user = await User.create({
+                    email: boardMember.email,
+                    university_id: universityId,
+                    full_name: boardMember.full_name,
+                    password_hash,
+                    department_id: boardMember.department_id,
+                    role: 'board', // Ensure role is set to 'board'
+                    is_active: true
+                });
+
+                // Link board member to user
+                await boardMember.update({ user_id: user.user_id });
+
+                // Log activation
+                logAuditEvent('ACCOUNT_ACTIVATED', {
+                    user_id: user.user_id,
+                    email,
+                    role: 'board',
+                    board_id: boardMember.board_id
+                }, req);
+
+            } else if (member) {
+                // Create user for member
+                user = await User.create({
+                    email: member.email,
+                    university_id: member.university_id,
+                    full_name: member.full_name,
+                    password_hash,
+                    department_id: member.department_id,
+                    role: 'member',
+                    is_active: true
+                });
+
+                // Link member to user
+                await member.update({ user_id: user.user_id });
+
+                // Log activation
+                logAuditEvent('ACCOUNT_ACTIVATED', {
+                    user_id: user.user_id,
+                    email,
+                    role: 'member',
+                    member_id: member.member_id
+                }, req);
+            }
+
+            res.status(201).json({
+                success: true,
+                message: 'Account activated successfully',
+                user: {
+                    user_id: user.user_id,
+                    email: user.email,
+                    university_id: user.university_id,
+                    role: user.role,
+                    is_active: true
+                }
+            });
+        }
+
+    } catch (error) {
+        // Determine error type for better error messages
+        let errorMessage = 'Account activation failed';
+        let statusCode = 500;
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            errorMessage = 'Account with this email already exists';
+            statusCode = 409;
+        } else if (error.name === 'SequelizeValidationError') {
+            errorMessage = 'Invalid input data';
+            statusCode = 400;
+        }
+
+        logError('auth.activateAccount', error, {
+            email: req.body?.email || 'unknown',
+            error_name: error.name
+        }, req);
+        
+        res.status(statusCode).json({
+            success: false,
+            error: errorMessage
+        });
+    }
+};
+
 module.exports = {
     login,
     register,
     logout,
     getMe,
     changePassword,
-    verifyToken
+    verifyToken,
+    activateAccount
 };
 
