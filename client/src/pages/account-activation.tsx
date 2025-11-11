@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ApiService from '../services/api';
@@ -8,22 +8,50 @@ import './account-activation.css';
 const AccountActivation: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const email = searchParams.get('email') || '';
+  const token = searchParams.get('token') || '';
+  const emailParam = searchParams.get('email') || ''; // Legacy support
   
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verifyingToken, setVerifyingToken] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isActivated, setIsActivated] = useState(false);
 
-  useEffect(() => {
-    // Redirect if no email provided
-    if (!email) {
-      navigate('/');
+  const verifyToken = useCallback(async () => {
+    try {
+      setVerifyingToken(true);
+      const result = await ApiService.verifyActivationToken(token);
+      if (result.email) {
+        setEmail(result.email);
+      } else {
+        setErrors({ submit: 'Invalid activation token. Please use the link from your email.' });
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Invalid or expired activation token.';
+      setErrors({ submit: errorMessage });
+    } finally {
+      setVerifyingToken(false);
     }
-  }, [email, navigate]);
+  }, [token]);
+
+  useEffect(() => {
+    // If token is provided, verify it and get email
+    if (token) {
+      verifyToken();
+    } else if (emailParam) {
+      // Legacy support: use email directly
+      setEmail(emailParam);
+      setVerifyingToken(false);
+    } else {
+      // No token or email provided
+      setErrors({ submit: 'Invalid activation link. Please use the link from your email.' });
+      setVerifyingToken(false);
+    }
+  }, [token, emailParam, verifyToken]);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -75,7 +103,8 @@ const AccountActivation: React.FC = () => {
     setErrors({});
 
     try {
-      await ApiService.activateAccount(email, password);
+      // Use token if available, otherwise use email (legacy support)
+      await ApiService.activateAccount(token || null, password, token ? null : email);
       setIsActivated(true);
     } catch (error: any) {
       const errorMessage = error.message || 'Activation failed. Please try again.';
@@ -84,6 +113,49 @@ const AccountActivation: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Show loading state while verifying token
+  if (verifyingToken) {
+    return (
+      <div className="account-activation-container">
+        <div className="activation-card">
+          <div className="activation-header">
+            <img src={mspLogo} alt="MSP Logo" className="activation-logo" />
+            <h1 className="activation-title">Verifying Activation Link</h1>
+            <p className="activation-subtitle">Please wait while we verify your activation link...</p>
+          </div>
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div className="loading-spinner">
+              <div className="spinner"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no valid email after verification
+  if (!email && !verifyingToken) {
+    return (
+      <div className="account-activation-container">
+        <div className="activation-card">
+          <div className="activation-header">
+            <img src={mspLogo} alt="MSP Logo" className="activation-logo" />
+            <h1 className="activation-title">Invalid Activation Link</h1>
+            <p className="activation-subtitle">The activation link is invalid or has expired.</p>
+          </div>
+          {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
+          <button 
+            className="success-button"
+            onClick={() => navigate('/')}
+            style={{ marginTop: '20px' }}
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isActivated) {
     return (

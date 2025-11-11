@@ -9,11 +9,12 @@ require('../models/index');
 const Board = require('../models/Board');
 const User = require('../models/User');
 const Department = require('../models/Department');
+const { generateToken } = require('../utils/jwt');
 
 dotenv.config();
 
-// Get website URL from environment variable, default to localhost for development
-const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+// Get website URL from environment variable
+const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL;
 
 /**
  * Generate plain text email content for board member account activation
@@ -228,8 +229,27 @@ async function sendBoardActivationEmails() {
           continue;
         }
         
-        // Generate activation link
-        const activationLink = `${WEBSITE_URL}/account-activation?email=${encodeURIComponent(email)}`;
+        // Generate activation token
+        const tokenResult = generateToken({
+            email: email,
+            type: 'board_activation',
+            board_id: boardMember.board_id
+        });
+        
+        if (!tokenResult.success) {
+          console.error(`   ❌ Failed to generate token for ${boardMemberName}: ${tokenResult.error}`);
+          errorCount++;
+          errors.push({
+            name: boardMemberName,
+            position,
+            email,
+            error: `Token generation failed: ${tokenResult.error}`
+          });
+          continue;
+        }
+        
+        // Generate activation link with token
+        const activationLink = `${WEBSITE_URL}/account-activation?token=${encodeURIComponent(tokenResult.token)}`;
         
         // Generate email content
         const plainText = generatePlainTextEmail(boardMemberName, position, activationLink);
