@@ -16,9 +16,44 @@ const Navbar = memo(() => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
 
-  // Check authentication status
+  // Check authentication status and handle token expiration
   useEffect(() => {
-    setIsAuthenticated(ApiService.isAuthenticated());
+    const checkAuth = () => {
+      // Check if token exists and is valid (not expired)
+      const isAuth = ApiService.isAuthenticated();
+      setIsAuthenticated(isAuth);
+      
+      // If token was expired, it's already removed by isAuthenticated()
+      // The Navbar will automatically show login button
+    };
+    
+    checkAuth();
+    
+    // Check on focus (when user returns to tab)
+    const handleFocus = () => {
+      checkAuth();
+    };
+    
+    // Check on storage change (token removed in another tab)
+    const handleStorageChange = (e) => {
+      if (e.key === 'authToken') {
+        checkAuth();
+      }
+    };
+    
+    // Periodic check for token expiration (every 30 seconds)
+    const intervalId = setInterval(() => {
+      checkAuth();
+    }, 30000);
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(intervalId);
+    };
   }, [location.pathname]);
 
   useEffect(() => { 
