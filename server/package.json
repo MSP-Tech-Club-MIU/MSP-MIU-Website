@@ -10,7 +10,9 @@
     "send-demo-email": "node scripts/sendDemoEmail.mjs",
     "check-email-config": "node scripts/checkEmailConfig.mjs",
     "send-acceptance-emails": "node scripts/sendAcceptanceEmails.mjs",
-    "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs"
+    "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs",
+    "send-activation-emails": "node scripts/sendActivationEmails.mjs",
+    "send-board-activation-emails": "node scripts/sendBoardActivationEmails.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
