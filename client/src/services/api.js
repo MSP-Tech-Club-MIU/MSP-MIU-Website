@@ -113,26 +113,102 @@ class ApiService {
     }
   }
 
+  // Quick logout - removes token and redirects (no API call)
+  static logoutAndRedirect(redirectPath = '/') {
+    this.removeAuthToken();
+    window.location.href = redirectPath;
+  }
+
+  // Logout with callback (useful for React Router navigation)
+  static async logoutWithCallback(callback) {
+    try {
+      await this.logout();
+      if (callback && typeof callback === 'function') {
+        callback();
+      } else {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Still execute callback even if logout fails
+      if (callback && typeof callback === 'function') {
+        callback();
+      } else {
+        window.location.href = '/';
+      }
+    }
+  }
+
+  // Check if token is expired
+  static isTokenExpired() {
+    const token = this.getAuthToken();
+    if (!token) return true;
+    
+    try {
+      // Decode JWT token (without verification, just to check expiration)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const exp = payload.exp * 1000; // Convert to milliseconds
+      return Date.now() >= exp;
+    } catch (error) {
+      // If token is malformed, consider it expired
+      console.error('Error checking token expiration:', error);
+      return true;
+    }
+  }
+
+  // Check if user is authenticated (token exists and is not expired)
+  static isAuthenticated() {
+    const token = this.getAuthToken();
+    if (!token) return false;
+    
+    // Check if token is expired
+    if (this.isTokenExpired()) {
+      // Token expired, remove it
+      this.removeAuthToken();
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Check authentication and handle token expiration
+  static checkAuthAndHandleExpiration() {
+    if (this.isTokenExpired()) {
+      this.removeAuthToken();
+      return false;
+    }
+    return true;
+  }
 
   static async getProfile() {
     try {
+      // Check if token is expired before making request
+      if (this.isTokenExpired()) {
+        this.removeAuthToken();
+        throw new Error('Token expired. Please login again.');
+      }
+
       const response = await fetch(`${API_BASE_URL}/users/profile`, {
         headers: this.getHeaders(true),
       });
+      
+      // Handle 401 Unauthorized (token expired or invalid)
+      if (response.status === 401) {
+        this.removeAuthToken();
+        throw new Error('Token expired. Please login again.');
+      }
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
-        }
-        const result = await response.json();
-        return result.user;
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || 'Failed to fetch profile');
+      }
+      
+      const result = await response.json();
+      return result.user;
     } catch (error) {
       console.error('Error fetching profile:', error);
       throw error;
     }
-  }
-
-  // Check if user is authenticated
-  static isAuthenticated() {
-    return !!this.getAuthToken();
   }
 
   // Activate account - set password for user by token or email

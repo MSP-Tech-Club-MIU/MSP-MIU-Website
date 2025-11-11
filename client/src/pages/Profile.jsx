@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaGraduationCap, FaCalendar, FaFileUpload, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
 import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
-import ProfileCard from '../components/ProfileCard';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -22,6 +21,12 @@ const Profile = () => {
   const scheduleInputRef = useRef(null);
 
   useEffect(() => {
+    // Check if user is authenticated before fetching profile
+    if (!ApiService.isAuthenticated()) {
+      // Token expired or doesn't exist, redirect to home
+      window.location.href = '/';
+      return;
+    }
     fetchProfile();
   }, []);
 
@@ -39,7 +44,17 @@ const Profile = () => {
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setError('Failed to load profile. Please try again.');
+      
+      // Check if error is due to token expiration
+      if (error.message && error.message.includes('Token expired')) {
+        setError('Your session has expired. Please login again.');
+        // Redirect to home page after a short delay
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else {
+        setError('Failed to load profile. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -181,28 +196,6 @@ const Profile = () => {
     return `${year}`;
   };
 
-  const getFacultyFromId = (universityId) => {
-    if (!universityId) return 'N/A';
-    // Extract the last 5 digits and determine faculty based on pattern
-    const idNumber = universityId.split('/')[1];
-    if (!idNumber) return 'N/A';
-    
-    // This is a placeholder logic - adjust based on your university's ID system
-    const firstDigit = idNumber[0];
-    const facultyMap = {
-      '0': 'Engineering',
-      '1': 'Computer Science',
-      '2': 'Business Administration',
-      '3': 'Arts & Humanities',
-      '4': 'Science',
-      '5': 'Medicine',
-      '6': 'Law',
-      '7': 'Education',
-      '8': 'Architecture',
-      '9': 'Pharmacy',
-    };
-    return facultyMap[firstDigit] || 'General Studies';
-  };
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
@@ -309,43 +302,50 @@ const Profile = () => {
         </div>
 
         <div className="profile-content-layout">
-          {/* Left Section - Profile Card */}
+          {/* Left Section - Profile Picture Circle */}
           <div className="profile-card-section">
-            <div className="profile-card-wrapper-custom">
-              <ProfileCard
-                avatarUrl={profileImageUrl}
-                name={displayedData.full_name || 'No Name'}
-                title={user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member'}
-                showUserInfo={true}
-                miniAvatarUrl={profileImageUrl}
-              />
-              
-              {isEditing && (
-                <motion.div 
-                  className="upload-overlay"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                  />
-                  <button
-                    className="upload-btn"
-                    onClick={() => fileInputRef.current?.click()}
+            <div className="profile-picture-wrapper">
+              <div 
+                className={`profile-picture-circle ${isEditing ? 'editable' : ''}`}
+                onClick={isEditing ? () => fileInputRef.current?.click() : undefined}
+                style={{ cursor: isEditing ? 'pointer' : 'default' }}
+              >
+                <img
+                  src={profileImageUrl}
+                  alt={displayedData.full_name || 'Profile'}
+                  className="profile-picture-image"
+                />
+                {isEditing && (
+                  <motion.div 
+                    className="profile-picture-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                   >
-                    <FaUpload /> Upload New Photo
-                  </button>
-                  {profileImageFile && (
-                    <div className="file-selected-indicator">
-                      <FaCheckCircle /> Selected: {profileImageFile.name}
-                    </div>
-                  )}
+                    <FaUpload className="upload-icon" />
+                    <span className="upload-text">Change Photo</span>
+                  </motion.div>
+                )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
+              </div>
+              {profileImageFile && isEditing && (
+                <motion.div 
+                  className="file-selected-indicator-profile"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <FaCheckCircle /> {profileImageFile.name}
                 </motion.div>
               )}
+              <h2 className="profile-name">{displayedData.full_name || 'No Name'}</h2>
+              <p className="profile-role-text">
+                {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member'}
+              </p>
             </div>
 
             <div className="role-badge-container">
@@ -354,9 +354,6 @@ const Profile = () => {
                 style={{ backgroundColor: getRoleBadgeColor(user.role) }}
               >
                 {user.role?.toUpperCase() || 'MEMBER'}
-              </span>
-              <span className={`status-badge-large ${user.is_active ? 'active' : 'inactive'}`}>
-                {user.is_active ? '✓ Active Account' : '✗ Inactive Account'}
               </span>
             </div>
           </div>
@@ -443,17 +440,6 @@ const Profile = () => {
                   <div className="detail-content">
                     <label className="detail-label">Year</label>
                     <p className="detail-value">{extractYearFromId(displayedData.university_id)}</p>
-                  </div>
-                </div>
-
-                {/* Faculty */}
-                <div className="detail-card">
-                  <div className="detail-icon">
-                    <FaGraduationCap />
-                  </div>
-                  <div className="detail-content">
-                    <label className="detail-label">Faculty</label>
-                    <p className="detail-value">{getFacultyFromId(displayedData.university_id)}</p>
                   </div>
                 </div>
 
