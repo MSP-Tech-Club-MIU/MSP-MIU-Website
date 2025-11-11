@@ -1,0 +1,571 @@
+.EventDetailsPage {
+    min-height: 80vh;
+    padding: 120px 0 80px;
+    position: relative;
+    background: transparent;
+}
+
+.EventDetailsPage__container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 54px;
+}
+
+.EventDetailsPage__backBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    margin-bottom: 30px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    color: #C5DAE9;
+    font-size: .9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.EventDetailsPage__backBtn:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .25);
+    transform: translateX(-4px);
+}
+
+.EventDetailsPage__backBtn svg {
+    font-size: 1.1rem;
+}
+
+.EventDetailsPage__loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 20px;
+    color: #C5DAE9;
+}
+
+.EventDetailsPage__spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, .1);
+    border-top: 4px solid #03A9F4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.EventDetailsPage__error {
+    text-align: center;
+    padding: 60px 20px;
+    color: #ffb4b4;
+}
+
+.EventDetailsPage__error svg {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    opacity: .5;
+}
+
+.EventDetailsPage__error p {
+    margin: 0 0 30px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #C5DAE9;
+}
+
+.EventDetails {
+    background: linear-gradient(145deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 24px;
+    overflow: hidden;
+    backdrop-filter: blur(14px) saturate(160%);
+}
+
+.EventDetails__hero {
+    position: relative;
+    height: 400px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0D3159, #031C35);
+}
+
+.EventDetails__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.EventDetails__imagePlaceholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0D3159, #031C35);
+    color: rgba(255, 255, 255, .3);
+    font-size: 5rem;
+}
+
+.EventDetails__badge {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    padding: 8px 16px;
+    background: rgba(3, 169, 244, .95);
+    color: #fff;
+    border-radius: 20px;
+    font-size: .85rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: capitalize;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, .4);
+    z-index: 2;
+}
+
+.EventDetails__content {
+    padding: 40px;
+}
+
+.EventDetails__header {
+    margin-bottom: 32px;
+}
+
+.EventDetails__title {
+    margin: 0;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 650;
+    letter-spacing: .5px;
+    color: #E5F0F9;
+    line-height: 1.2;
+}
+
+.EventDetails__info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 40px;
+    padding: 24px;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 16px;
+}
+
+.EventDetails__infoItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.EventDetails__infoItem svg {
+    font-size: 1.5rem;
+    color: #5AA0E6;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.EventDetails__infoItem > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.EventDetails__infoLabel {
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: #8AA3C6;
+}
+
+.EventDetails__infoValue {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #C5DAE9;
+    line-height: 1.5;
+}
+
+.EventDetails__description {
+    margin-top: 32px;
+}
+
+.EventDetails__description h2 {
+    margin: 0 0 20px;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #8EC2F0;
+    letter-spacing: .4px;
+}
+
+.EventDetails__description p {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.8;
+    color: #C7D6E2;
+    white-space: pre-wrap;
+}
+
+/* Event Files Section */
+.EventDetails__files {
+    margin-top: 40px;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.EventDetails__filesHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.EventDetails__filesHeader h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #8EC2F0;
+    letter-spacing: .4px;
+}
+
+.EventDetails__uploadBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.EventDetails__uploadBtn:hover {
+    background: linear-gradient(135deg, #03A9F4, #0077CC);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px -4px rgba(3, 169, 244, .6);
+}
+
+.EventDetails__uploadSection {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 12px;
+}
+
+.EventDetails__uploadControls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.EventDetails__fileInputLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    color: #C5DAE9;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: all .3s ease;
+    flex: 1;
+    min-width: 200px;
+}
+
+.EventDetails__fileInputLabel:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .25);
+}
+
+.EventDetails__fileTypeSelect {
+    padding: 10px 16px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    color: #C5DAE9;
+    font-size: .9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.EventDetails__fileTypeSelect:focus {
+    border-color: #03A9F4;
+    box-shadow: 0 0 0 3px rgba(3, 169, 244, .2);
+}
+
+.EventDetails__uploadSubmitBtn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.EventDetails__uploadSubmitBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #03A9F4, #0077CC);
+    transform: translateY(-2px);
+}
+
+.EventDetails__uploadSubmitBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.EventDetails__filesEmpty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #8AA3C6;
+}
+
+.EventDetails__filesEmpty svg {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: .5;
+}
+
+.EventDetails__filesEmpty p {
+    margin: 0;
+    font-size: 1rem;
+    color: #C5DAE9;
+}
+
+.EventDetails__filesList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.EventDetails__fileItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 12px;
+    transition: all .3s ease;
+}
+
+.EventDetails__fileItem:hover {
+    background: rgba(255, 255, 255, .05);
+    border-color: rgba(255, 255, 255, .12);
+}
+
+.EventDetails__fileInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.EventDetails__fileIcon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.EventDetails__fileDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.EventDetails__fileName {
+    font-size: .95rem;
+    font-weight: 500;
+    color: #E5F0F9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.EventDetails__fileMeta {
+    font-size: .8rem;
+    color: #8AA3C6;
+    text-transform: capitalize;
+}
+
+.EventDetails__fileActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.EventDetails__fileDownloadBtn,
+.EventDetails__fileDeleteBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 8px;
+    color: #C5DAE9;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.EventDetails__fileDownloadBtn:hover {
+    background: rgba(3, 169, 244, .2);
+    border-color: rgba(3, 169, 244, .4);
+    color: #03A9F4;
+}
+
+.EventDetails__fileDeleteBtn:hover {
+    background: rgba(255, 87, 87, .2);
+    border-color: rgba(255, 87, 87, .4);
+    color: #ff5757;
+}
+
+/* Responsive Design */
+@media (max-width: 1080px) {
+    .EventDetailsPage__container {
+        padding: 0 38px;
+    }
+
+    .EventDetails__hero {
+        height: 350px;
+    }
+
+    .EventDetails__content {
+        padding: 32px;
+    }
+}
+
+@media (max-width: 780px) {
+    .EventDetailsPage {
+        padding: 100px 0 60px;
+    }
+
+    .EventDetailsPage__container {
+        padding: 0 24px;
+    }
+
+    .EventDetails__hero {
+        height: 280px;
+    }
+
+    .EventDetails__content {
+        padding: 24px;
+    }
+
+    .EventDetails__info {
+        padding: 20px;
+        gap: 16px;
+    }
+
+    .EventDetails__infoItem svg {
+        font-size: 1.3rem;
+    }
+
+    .EventDetails__description h2 {
+        font-size: 1.3rem;
+    }
+
+    .EventDetails__description p {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .EventDetailsPage__backBtn {
+        padding: 8px 16px;
+        font-size: .85rem;
+    }
+
+    .EventDetails__hero {
+        height: 220px;
+    }
+
+    .EventDetails__badge {
+        top: 16px;
+        right: 16px;
+        padding: 6px 12px;
+        font-size: .75rem;
+    }
+
+    .EventDetails__content {
+        padding: 20px;
+    }
+
+    .EventDetails__title {
+        font-size: 1.6rem;
+    }
+
+    .EventDetails__info {
+        padding: 16px;
+    }
+
+    .EventDetails__infoItem {
+        gap: 12px;
+    }
+
+    .EventDetails__infoItem svg {
+        font-size: 1.2rem;
+    }
+
+    .EventDetails__infoValue {
+        font-size: .95rem;
+    }
+
+    .EventDetails__description h2 {
+        font-size: 1.2rem;
+        margin-bottom: 16px;
+    }
+
+    .EventDetails__description p {
+        font-size: .95rem;
+    }
+
+    .EventDetails__files {
+        margin-top: 32px;
+        padding-top: 24px;
+    }
+
+    .EventDetails__filesHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .EventDetails__uploadControls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .EventDetails__fileInputLabel {
+        min-width: auto;
+    }
+
+    .EventDetails__fileItem {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .EventDetails__fileActions {
+        align-self: flex-end;
+    }
+}
+
