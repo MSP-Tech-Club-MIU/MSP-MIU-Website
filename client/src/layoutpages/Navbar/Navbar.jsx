@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser } from 'react-icons/fa';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
@@ -33,9 +33,6 @@ const Navbar = memo(() => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
 
   const closeMobile = useCallback(() => {
     setMobileOpen(false);
@@ -94,7 +91,7 @@ const Navbar = memo(() => {
   return (
     <header className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}>      
       <div className="Navbar__inner">
-        <NavLink to="/" className="Navbar__brand" onClick={closeMobile} aria-label="MSP Home">
+        <NavLink to="/" className="Navbar__brand" aria-label="MSP Home">
           <img
             src={mspLogo}
             alt="MSP Logo"
@@ -118,7 +115,6 @@ const Navbar = memo(() => {
               ) : (
                 <NavLink
                   to={l.to}
-                  onClick={closeMobile}
                   className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''}`}
                 >
                   <span className="NavItem__icon">{l.icon}</span>
@@ -164,6 +160,16 @@ const Navbar = memo(() => {
                   e.stopPropagation();
                 }}
               >
+                <button
+                  className="NavDrawer__close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeMobile();
+                  }}
+                  aria-label="Close menu"
+                >
+                  <FaTimes />
+                </button>
                 <ul className="NavDrawer__list">
                   {getLinks().map(l => (
                     <li key={l.to}>
@@ -183,9 +189,7 @@ const Navbar = memo(() => {
                         <NavLink
                           to={l.to}
                           onClick={(e) => {
-                            // Always close drawer immediately when clicking a link
                             e.stopPropagation();
-                            closeMobile();
                           }}
                           className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
                           end
