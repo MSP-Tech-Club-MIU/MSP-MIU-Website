@@ -165,9 +165,46 @@
     isolation: isolate;
 }
 
+.NavDrawer__close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: #8EC2F0;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.2s;
+    z-index: 10;
+    padding: 0;
+    margin: 0;
+}
+
+.NavDrawer__close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    transform: scale(1.1);
+}
+
+.NavDrawer__close:active {
+    transform: scale(0.95);
+}
+
+.NavDrawer__close:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.45);
+}
+
 .NavDrawer__list {
     list-style: none;
     margin: 0;
+    margin-top: 2.5rem;
     padding: 0;
     display: flex;
     flex-direction: column;
