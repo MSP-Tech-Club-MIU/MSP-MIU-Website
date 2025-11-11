@@ -14,7 +14,7 @@ const { generateToken } = require('../utils/jwt');
 dotenv.config();
 
 // Get website URL from environment variable
-const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL;
+const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://msp-miu.tech';
 
 /**
  * Generate plain text email content for board member account activation
@@ -178,7 +178,7 @@ async function sendBoardActivationEmails() {
         attributes: ['name'],
         required: false
       }],
-      attributes: ['board_id', 'full_name', 'position', 'department_id', 'year', 'email', 'user_id']
+      attributes: ['board_id', 'full_name', 'position', 'department_id', 'year', 'email', 'university_id', 'user_id']
     });
     
     console.log(`✅ Found ${boardMembers.length} board member(s) in the database.\n`);
