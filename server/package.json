@@ -8,7 +8,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "send-demo-email": "node scripts/sendDemoEmail.mjs",
-    "check-email-config": "node scripts/checkEmailConfig.mjs"
+    "check-email-config": "node scripts/checkEmailConfig.mjs",
+    "send-acceptance-emails": "node scripts/sendAcceptanceEmails.mjs",
+    "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
