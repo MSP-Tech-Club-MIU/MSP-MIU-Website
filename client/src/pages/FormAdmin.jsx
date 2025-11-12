@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+import { useNavigate } from "react-router-dom";
 import ApiService from "../services/api";
 import { getDepartmentNameById } from "../data/departments";
 
@@ -11,6 +12,7 @@ import FiltersSection from "../components/FiltersSection";
 import ApplicationsTable from "../components/ApplicationsTable";
 
 const FormAdmin = memo(() => {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -22,6 +24,11 @@ const FormAdmin = memo(() => {
   const [passwordModal, setPasswordModal] = useState({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
   const textareaRef = useRef(null);
   const passwordRef = useRef(null);
+  
+  // Authentication states
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -255,10 +262,54 @@ const FormAdmin = memo(() => {
     }
   }, []);
 
-  // Initial load
+  // Check authentication and role on mount
   useEffect(() => {
-    fetchApplications();
-  }, [fetchApplications]);
+    const checkAuthAndRole = async () => {
+      setIsCheckingAuth(true);
+      
+      // Check if user is authenticated
+      if (!ApiService.isAuthenticated()) {
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        // Redirect to login page
+        navigate('/login', { replace: true });
+        return;
+      }
+      
+      // Fetch user profile to check role
+      try {
+        const user = await ApiService.getProfile();
+        setIsAuthenticated(true);
+        setUserRole(user.role);
+        
+        // Check if user has board role
+        if (user.role !== 'board') {
+          setIsCheckingAuth(false);
+          // Don't redirect, show unauthorized message
+          return;
+        }
+        
+        // User is authenticated and has board role, proceed to load applications
+        setIsCheckingAuth(false);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        // Redirect to login if token is invalid
+        ApiService.removeAuthToken();
+        navigate('/login', { replace: true });
+      }
+    };
+    
+    checkAuthAndRole();
+  }, [navigate]);
+
+  // Initial load - only fetch applications if authenticated and has board role
+  useEffect(() => {
+    if (!isCheckingAuth && isAuthenticated && userRole === 'board') {
+      fetchApplications();
+    }
+  }, [isCheckingAuth, isAuthenticated, userRole, fetchApplications]);
 
   // Handle filter changes (no immediate API call)
   const handleFilterChange = useCallback((filterKey, value) => {
@@ -316,6 +367,83 @@ const FormAdmin = memo(() => {
     openPasswordModal(application, newStatus);
   };
 
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div style={{ 
+        textAlign: "center", 
+        padding: "50px",
+        backgroundColor: "#f8f9fa",
+        borderRadius: "8px",
+        margin: "20px"
+      }}>
+        <div style={{ 
+          display: "inline-block",
+          width: "40px",
+          height: "40px",
+          border: "4px solid #f3f3f3",
+          borderTop: "4px solid #395a7f",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+          marginBottom: "16px"
+        }}></div>
+        <h3 style={{ color: "#495057", margin: "0 0 8px 0" }}>
+          Verifying Access...
+        </h3>
+        <p style={{ color: "#6c757d", margin: "0", fontSize: "14px" }}>
+          Please wait while we verify your permissions...
+        </p>
+        <style>
+          {`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}
+        </style>
+      </div>
+    );
+  }
+
+  // Show unauthorized message if user is authenticated but doesn't have board role
+  if (isAuthenticated && userRole !== 'board') {
+    return (
+      <div style={{ 
+        textAlign: "center", 
+        padding: "50px",
+        backgroundColor: "#fff3cd",
+        borderRadius: "8px",
+        margin: "20px",
+        border: "2px solid #ffc107"
+      }}>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>
+          ⚠️
+        </div>
+        <h2 style={{ color: "#856404", margin: "0 0 8px 0" }}>
+          Access Denied
+        </h2>
+        <p style={{ color: "#856404", margin: "0 0 24px 0", fontSize: "16px" }}>
+          You don't have permission to access this page. Only board members can view the applications dashboard.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#395a7f",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            fontSize: "14px",
+            cursor: "pointer"
+          }}
+        >
+          Go to Home
+        </button>
+      </div>
+    );
+  }
+
+  // Show loading while fetching applications
   if (loading) {
     return (
       <div style={{ 
