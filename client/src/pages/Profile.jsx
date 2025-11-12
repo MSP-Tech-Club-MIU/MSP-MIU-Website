@@ -259,14 +259,14 @@ const Profile = () => {
           <div className="profile-actions">
             {!isEditing ? (
               <>
-                <motion.button 
+                {/* <motion.button 
                   className="action-btn edit-btn"
                   onClick={handleEdit}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <FaEdit /> Edit Profile
-                </motion.button>
+                </motion.button> */}
                 <motion.button 
                   className="action-btn logout-btn"
                   onClick={handleLogout}

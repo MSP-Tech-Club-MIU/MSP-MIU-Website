@@ -27,7 +27,8 @@
     padding: 0 54px;
     display: grid;
     gap: 40px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 300px));
+    justify-content: center;
 }
 
 .EventCard {
@@ -38,20 +39,27 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 22px;
     overflow: hidden;
-    min-height: 260px;
+    max-width: 300px;
+    max-height: 300px;
+    width: 100%;
 }
 
 .EventCard__media {
-    height: 120px;
+    flex: 1;
+    min-height: 150px;
+    max-height: 200px;
     background: linear-gradient(135deg, #0D3159, #031C35);
     position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .EventCard__body {
-    padding: 22px 22px 26px;
+    padding: 16px 18px 18px;
     display: flex;
     flex-direction: column;
-    flex: 1;
+    flex-shrink: 0;
 }
 
 .EventCard__title {

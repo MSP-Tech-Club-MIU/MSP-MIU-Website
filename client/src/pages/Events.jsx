@@ -5,9 +5,7 @@ import './Events.css';
 import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 
 // Import images
-import eventImage1 from '../assets/Images/IMG_3985.jpg';
-import eventImage2 from '../assets/Images/2.jpg';
-import eventImage3 from '../assets/Images/3.jpg';
+import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
 
 // Mock data for events (since no database currently)
 const mockEvents = [
@@ -20,26 +18,6 @@ const mockEvents = [
     place: 'Main Building, Room OOA',
     event_type: 'event',
     image_url: eventImage1
-  },
-  {
-    event_id: 2,
-    name: 'Azure Cloud Workshop',
-    description: 'Learn the fundamentals of Microsoft Azure cloud computing. Hands-on session covering virtual machines, storage, and networking.',
-    event_date: '2025-02-20',
-    event_time: '4:00 PM',
-    place: 'Lab 302, Building B',
-    event_type: 'session',
-    image_url: eventImage2
-  },
-  {
-    event_id: 3,
-    name: 'Tech Games Night',
-    description: 'Fun-filled evening with tech-themed games, competitions, and prizes. Great opportunity to network and have fun with fellow members.',
-    event_date: '2025-02-25',
-    event_time: '6:00 PM',
-    place: 'Student Center',
-    event_type: 'entertainment',
-    image_url: eventImage3
   }
 ];
 
