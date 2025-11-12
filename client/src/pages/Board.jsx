@@ -8,72 +8,151 @@ import './Board/Board.css';
 import img5 from '../assets/Images/card.jpg';
 
 const boardMembers = [
+  // Leadership
   {
     id: 1,
+    name: 'Mahmoud Mamdouh',
+    role: 'Founder',
+    department: 9,
+  },
+  {
+    id: 2,
+    name: 'Mohamed Wael',
+    role: 'President',
+    department: 8,
+  },
+  {
+    id: 3,
+    name: 'Mohamed Hesham',
+    role: 'Vice President',
+    department: 7,
+  },
+  // Department 1: Software Development
+  {
+    id: 4,
     name: 'Ahmed Mostafa',
     role: 'Software Development Head',
     department: 1, 
     image: img5
   },
   {
-    id: 2,
+    id: 5,
     name: 'Michael Hisham',
     role: 'Software Development Co-Head',
     department: 1, 
   },
   {
-    id: 3,
+    id: 6,
     name: 'Habiba Ehab',
     role: 'Software Development Co-Head',
     department: 1, 
   },
-  {
-    id: 5,
-    name: 'Mohamed Wael',
-    role: 'President',
-    department: 8,
-  },
-  {
-    id: 4,
-    name: 'Mohamed Hesham',
-    role: 'Vice President',
-    department: 7,
-  },
-  {
-    id: 6,
-    name: 'Mahmoud Mamdouh',
-    role: 'Founder',
-    department: 9,
-  },
+  // Department 2: Technical Training
   {
     id: 7,
-    name: 'Mohamed Essam',
+    name: 'Mohammed Essam',
     role: 'Technical Training Head',
     department: 2,
   },
   {
     id: 8,
-    name: 'Shahd Waleed',
+    name: 'Abdelkader',
     role: 'Technical Training Co-Head',
     department: 2,
   },
   {
     id: 9,
-    name: 'Youssef Hussien',
+    name: 'Shahd Waleed',
     role: 'Technical Training Co-Head',
     department: 2,
   },
   {
     id: 10,
-    name: 'Abdelkader Adnan',
+    name: 'Youssef Hussien',
     role: 'Technical Training Co-Head',
     department: 2,
   },
+  // Department 3: Media & Content Creation
   {
     id: 11,
     name: 'Diaa',
     role: 'Media & Content Creation Head',
     department: 3,
+  },
+  {
+    id: 12,
+    name: 'Joseph George',
+    role: 'Media & Content Creation Co-Head',
+    department: 3,
+  },
+  {
+    id: 13,
+    name: 'Alaa Waleed',
+    role: 'Media & Content Creation Co-Head',
+    department: 3,
+  },
+  {
+    id: 14,
+    name: 'Yassin Emad',
+    role: 'Media & Content Creation Co-Head',
+    department: 3,
+  },
+  // Department 4: Public Relations
+  {
+    id: 15,
+    name: 'Malak Elghamrawy',
+    role: 'Public Relations Head',
+    department: 4,
+  },
+  {
+    id: 16,
+    name: 'Pola Raouf',
+    role: 'Public Relations Co-Head',
+    department: 4,
+  },
+  {
+    id: 17,
+    name: 'Youssef Abdelaal',
+    role: 'Public Relations Co-Head',
+    department: 4,
+  },
+  // Department 5: Human Resources
+  {
+    id: 18,
+    name: 'Salma Khalid',
+    role: 'Human Resources Head',
+    department: 5,
+  },
+  {
+    id: 19,
+    name: 'Rawaa Ashour',
+    role: 'Human Resources Co-Head',
+    department: 5,
+  },
+  {
+    id: 20,
+    name: 'Mohamed Sherif',
+    role: 'Human Resources Co-Head',
+    department: 5,
+  },
+  // Department 6: Event Planning
+  {
+    id: 21,
+    name: 'Selim Mamdouh',
+    role: 'Event Planning Head',
+    department: 6,
+  },
+  {
+    id: 22,
+    name: 'Fatma Maged',
+    role: 'Event Planning Co-Head',
+    department: 6,
+  },
+  {
+    id: 23,
+    name: 'Habiba Aglan',
+    role: 'Event Planning Co-Head',
+    department: 6,
   },
 ];
 

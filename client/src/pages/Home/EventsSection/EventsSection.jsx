@@ -1,13 +1,13 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import './EventsSection.css';
+import { useNavigate } from 'react-router-dom';
+
+import eventImage1 from '../../../assets/Images/MSP-MIU_Opening_Session.jpg';
 
 // Memoized events data to prevent recreation
 const mockEvents = [
-  { id: 'e1', title: 'Intro to Azure', date: 'Oct 15, 2025', time: '5:00 PM', img: '', action: 'Join' },
-  { id: 'e2', title: 'AI Study Jam', date: 'Oct 18, 2025', time: '4:00 PM', img: '', action: 'Join' },
-  { id: 'e3', title: 'Hackathon Kickoff', date: 'Oct 25, 2025', time: '10:00 AM', img: '', action: 'Details' },
-  { id: 'e4', title: 'UI/UX Sprint', date: 'Oct 28, 2025', time: '2:00 PM', img: '', action: 'Join' }
+  { id: '1', title: 'MSP MIU Opening Session', date: 'Nov 12, 2025', time: '12:00 PM', img: eventImage1, action: 'Details' },
 ];
 
 const EventsSection = memo(() => {
@@ -19,7 +19,7 @@ const EventsSection = memo(() => {
   
   const buttonHoverAnimation = useMemo(() => ({ scale: 1.07 }), []);
   const buttonTapAnimation = useMemo(() => ({ scale: .92 }), []);
-  
+  const navigate = useNavigate();
   return (
     <section className="Events" aria-labelledby="events-heading">
       <div className="Events__head">
@@ -35,7 +35,15 @@ const EventsSection = memo(() => {
             viewport={viewportProps}
             whileHover={hoverAnimation}
           >
-            <div className="EventCard__media" />
+            <div 
+              className="EventCard__media" 
+              style={{ 
+                backgroundImage: ev.img ? `url(${ev.img})` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              }} 
+            />
             <div className="EventCard__body">
               <h3 className="EventCard__title">{ev.title}</h3>
               <p className="EventCard__meta">{ev.date} • {ev.time}</p>
@@ -43,6 +51,7 @@ const EventsSection = memo(() => {
                 className="EventCard__btn" 
                 whileHover={buttonHoverAnimation} 
                 whileTap={buttonTapAnimation} 
+                onClick={() => navigate(`/events/${ev.id}`)}
               >
                 {ev.action}
               </motion.button>

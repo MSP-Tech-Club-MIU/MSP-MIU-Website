@@ -8,11 +8,12 @@ const sequelize = require('../config/db');
 require('../models/index');
 const Member = require('../models/Member');
 const User = require('../models/User');
+const { generateToken } = require('../utils/jwt');
 
 dotenv.config();
 
-// Get website URL from environment variable, default to localhost for development
-const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+// Get website URL from environment variable
+const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://msp-miu.tech';
 
 /**
  * Generate plain text email content for account activation
@@ -187,9 +188,14 @@ async function sendActivationEmails() {
         const studentName = member.full_name;
         const email = member.email;
         
+        // Check if member has an email
         if (!email) {
-          console.warn(`⚠️  Member ${studentName} (ID: ${member.member_id}) has no email. Skipping...`);
-          skipped.push({ name: studentName, email: email || 'N/A', reason: 'No email address' });
+          console.warn(`⚠️  Member ${studentName} (ID: ${member.member_id}) has no email in members table. Skipping...`);
+          skipped.push({ 
+            name: studentName, 
+            email: 'N/A', 
+            reason: 'No email in members table' 
+          });
           continue;
         }
         
@@ -197,12 +203,34 @@ async function sendActivationEmails() {
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser && existingUser.password_hash) {
           console.warn(`⚠️  Member ${studentName} (${email}) already has an activated account. Skipping...`);
-          skipped.push({ name: studentName, email, reason: 'Account already activated' });
+          skipped.push({ 
+            name: studentName, 
+            email, 
+            reason: 'Account already activated' 
+          });
           continue;
         }
         
-        // Generate activation link
-        const activationLink = `${WEBSITE_URL}/account-activation?email=${encodeURIComponent(email)}`;
+        // Generate activation token
+        const tokenResult = generateToken({
+            email: email,
+            type: 'activation',
+            member_id: member.member_id
+        });
+        
+        if (!tokenResult.success) {
+          console.error(`   ❌ Failed to generate token for ${studentName}: ${tokenResult.error}`);
+          errorCount++;
+          errors.push({
+            name: studentName,
+            email,
+            error: `Token generation failed: ${tokenResult.error}`
+          });
+          continue;
+        }
+        
+        // Generate activation link with token
+        const activationLink = `${WEBSITE_URL}/account-activation?token=${encodeURIComponent(tokenResult.token)}`;
         
         // Generate email content
         const plainText = generatePlainTextEmail(studentName, activationLink);
@@ -221,7 +249,7 @@ async function sendActivationEmails() {
         };
         
         // Send email
-        console.log(`📤 Sending activation email to ${studentName} (${email})...`);
+        console.log(`📤 Sending activation email to ${studentName} - ${email}...`);
         await sendEmail(mailOptions);
         successCount++;
         console.log(`   ✅ Email sent successfully to ${studentName}\n`);
@@ -231,11 +259,11 @@ async function sendActivationEmails() {
         
       } catch (error) {
         errorCount++;
-        const errorMsg = `Failed to send email to ${member.full_name} (${member.email}): ${error.message}`;
+        const errorMsg = `Failed to send email to ${member.full_name}: ${error.message}`;
         console.error(`   ❌ ${errorMsg}\n`);
         errors.push({
           name: member.full_name,
-          email: member.email,
+          email: 'N/A',
           error: error.message
         });
       }

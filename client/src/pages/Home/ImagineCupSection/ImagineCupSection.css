@@ -1,0 +1,353 @@
+.ImagineCup {
+    padding: 90px 0 70px;
+    position: relative;
+    background: transparent;
+}
+
+.ImagineCup__container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 54px;
+}
+
+.ImagineCup__header {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    margin-bottom: 60px;
+    flex-wrap: wrap;
+}
+
+.ImagineCup__logoWrapper {
+    flex-shrink: 0;
+    width: 220px;
+    height: 220px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(142, 194, 240, 0.15), rgba(3, 169, 244, 0.15));
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(3, 169, 244, 0.1);
+}
+
+.ImagineCup__logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.ImagineCup__headerContent {
+    flex: 1;
+    min-width: 300px;
+}
+
+.ImagineCup__title {
+    margin: 0 0 16px;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 700;
+    letter-spacing: .5px;
+    background: linear-gradient(135deg, #8EC2F0, #03A9F4, #FF6B9D);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    line-height: 1.2;
+}
+
+.ImagineCup__subtitle {
+    margin: 0;
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: #C5DAE9;
+    font-weight: 400;
+}
+
+.ImagineCup__content {
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+}
+
+.ImagineCup__sectionTitle {
+    margin: 0 0 30px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: .4px;
+    color: #8EC2F0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ImagineCup__sectionTitle svg {
+    font-size: 1.8rem;
+    color: #03A9F4;
+}
+
+.ImagineCup__benefitsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 28px;
+}
+
+.ImagineCup__benefitCard {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 28px;
+    backdrop-filter: blur(14px) saturate(170%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ImagineCup__benefitCard:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(3, 169, 244, 0.3);
+    box-shadow: 0 8px 32px -8px rgba(3, 169, 244, 0.3);
+}
+
+.ImagineCup__benefitIcon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(3, 169, 244, 0.2), rgba(142, 194, 240, 0.2));
+    border: 1px solid rgba(3, 169, 244, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    color: #03A9F4;
+}
+
+.ImagineCup__benefitTitle {
+    margin: 0 0 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: .3px;
+    color: #E5F0F9;
+}
+
+.ImagineCup__benefitDescription {
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1.6;
+    color: #C5DAE9;
+}
+
+.ImagineCup__requirements {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 36px;
+    backdrop-filter: blur(14px) saturate(170%);
+}
+
+.ImagineCup__requirementsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.ImagineCup__requirementItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 1.05rem;
+    color: #C5DAE9;
+    line-height: 1.6;
+}
+
+.ImagineCup__requirementItem svg {
+    font-size: 1.4rem;
+    color: #03A9F4;
+    flex-shrink: 0;
+}
+
+.ImagineCup__cta {
+    background: linear-gradient(135deg, rgba(0, 119, 204, 0.15), rgba(3, 169, 244, 0.1));
+    border: 1px solid rgba(3, 169, 244, 0.2);
+    border-radius: 24px;
+    padding: 48px;
+    text-align: center;
+    backdrop-filter: blur(14px) saturate(170%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.ImagineCup__ctaContent {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.ImagineCup__ctaTitle {
+    margin: 0 0 16px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: .4px;
+    color: #E5F0F9;
+}
+
+.ImagineCup__ctaDescription {
+    margin: 0 0 32px;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: #C5DAE9;
+}
+
+.ImagineCup__ctaButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 36px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    color: #fff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    letter-spacing: .5px;
+    text-decoration: none;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px -8px rgba(0, 0, 0, 0.65);
+    scale: 1.05;
+    border: none;
+    cursor: pointer;
+}
+
+.ImagineCup__ctaButton:hover {
+    background: linear-gradient(135deg, #03A9F4, #0077CC);
+    box-shadow: 0 8px 24px -8px rgba(3, 169, 244, 0.6);
+}
+
+/* Responsive Design */
+@media (max-width: 1080px) {
+    .ImagineCup__container {
+        padding: 0 38px;
+    }
+
+    .ImagineCup__header {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+
+    .ImagineCup__logoWrapper {
+        width: 180px;
+        height: 180px;
+    }
+
+    .ImagineCup__headerContent {
+        min-width: auto;
+    }
+
+    .ImagineCup__benefitsGrid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+    }
+
+    .ImagineCup__requirements {
+        padding: 28px;
+    }
+
+    .ImagineCup__cta {
+        padding: 36px 32px;
+    }
+}
+
+@media (max-width: 680px) {
+    .ImagineCup {
+        padding: 70px 0 50px;
+    }
+
+    .ImagineCup__container {
+        padding: 0 24px;
+    }
+
+    .ImagineCup__header {
+        margin-bottom: 40px;
+    }
+
+    .ImagineCup__logoWrapper {
+        width: 150px;
+        height: 150px;
+    }
+
+    .ImagineCup__title {
+        font-size: 1.6rem;
+    }
+
+    .ImagineCup__subtitle {
+        font-size: 1rem;
+    }
+
+    .ImagineCup__content {
+        gap: 36px;
+    }
+
+    .ImagineCup__sectionTitle {
+        font-size: 1.4rem;
+        margin-bottom: 24px;
+    }
+
+    .ImagineCup__benefitsGrid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .ImagineCup__benefitCard {
+        padding: 24px;
+    }
+
+    .ImagineCup__benefitIcon {
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+
+    .ImagineCup__benefitTitle {
+        font-size: 1.1rem;
+    }
+
+    .ImagineCup__benefitDescription {
+        font-size: .9rem;
+    }
+
+    .ImagineCup__requirements {
+        padding: 24px;
+    }
+
+    .ImagineCup__requirementItem {
+        font-size: .95rem;
+        gap: 12px;
+    }
+
+    .ImagineCup__requirementItem svg {
+        font-size: 1.2rem;
+    }
+
+    .ImagineCup__cta {
+        padding: 28px 24px;
+    }
+
+    .ImagineCup__ctaTitle {
+        font-size: 1.5rem;
+    }
+
+    .ImagineCup__ctaDescription {
+        font-size: .95rem;
+        margin-bottom: 24px;
+    }
+
+    .ImagineCup__ctaButton {
+        padding: 14px 28px;
+        font-size: 1rem;
+    }
+}
+

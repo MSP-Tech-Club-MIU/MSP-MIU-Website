@@ -27,7 +27,7 @@ export const HeroSection = memo(() => {
           </p>
           <div className="Hero__ctas">
             <a href="/meet-the-board" className="HeroCTA HeroCTA--primary">Meet the Board</a>
-            <a href="/sessions" className="HeroCTA HeroCTA--ghost">Explore Sessions</a>
+            <a href="/events" className="HeroCTA HeroCTA--ghost">Explore Events</a>
           </div>
         </div>
         <div className="Hero__col Hero__col--logo">
