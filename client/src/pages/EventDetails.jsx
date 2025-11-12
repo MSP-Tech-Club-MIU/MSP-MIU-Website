@@ -1,13 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic } from 'react-icons/fi';
+import ApiService from '../services/api';
 
 // Import images
-import eventImage1 from '../assets/Images/IMG_3985.jpg';
-import eventImage2 from '../assets/Images/2.jpg';
-import eventImage3 from '../assets/Images/3.jpg';
+import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
 
 // Mock data (same as Events page)
 const mockEvents = [
@@ -20,35 +19,60 @@ const mockEvents = [
     place: 'Main Building, Room OOA',
     event_type: 'event',
     image_url: eventImage1
+  }
+];
+
+// Mock files data
+const mockFiles = [
+  {
+    file_id: 1,
+    file_name: 'Event_Agenda.pdf',
+    file_type: 'document',
+    file_size: '2.4 MB',
+    uploaded_at: '2025-11-10',
+    uploaded_by: 'Admin'
   },
   {
-    event_id: 2,
-    name: 'Azure Cloud Workshop',
-    description: 'Learn the fundamentals of Microsoft Azure cloud computing. Hands-on session covering virtual machines, storage, and networking. Perfect for beginners and those looking to expand their cloud knowledge.',
-    event_date: '2025-02-20',
-    event_time: '4:00 PM',
-    place: 'Lab 302, Building B',
-    event_type: 'session',
-    image_url: eventImage2
-  },
-  {
-    event_id: 3,
-    name: 'Tech Games Night',
-    description: 'Fun-filled evening with tech-themed games, competitions, and prizes. Great opportunity to network and have fun with fellow members. Food and drinks will be provided.',
-    event_date: '2025-02-25',
-    event_time: '6:00 PM',
-    place: 'Student Center',
-    event_type: 'entertainment',
-    image_url: eventImage3
+    file_id: 2,
+    file_name: 'Presentation_Slides.pptx',
+    file_type: 'document',
+    file_size: '5.1 MB',
+    uploaded_at: '2025-11-11',
+    uploaded_by: 'Board Member'
   }
 ];
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState(null);
+  const [files, setFiles] = useState([]); // Start with empty files to show empty state
+  const [showUpload, setShowUpload] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileType, setFileType] = useState('document');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Find event from mock data
   const event = mockEvents.find(e => e.event_id === parseInt(id));
+
+  // Check user role
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (ApiService.isAuthenticated()) {
+        try {
+          const user = await ApiService.getProfile();
+          setUserRole(user.role);
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    };
+    checkUserRole();
+  }, []);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -76,6 +100,70 @@ const EventDetails = () => {
       default:
         return '#03A9F4';
     }
+  };
+
+  const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
+
+  const getFileIcon = (fileType) => {
+    switch (fileType) {
+      case 'document':
+        return <FiFileText />;
+      case 'image':
+        return <FiImage />;
+      case 'video':
+        return <FiVideo />;
+      case 'audio':
+        return <FiMusic />;
+      default:
+        return <FiFile />;
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    // Simulate upload delay
+    setTimeout(() => {
+      const newFile = {
+        file_id: files.length + 1,
+        file_name: selectedFile.name,
+        file_type: fileType,
+        file_size: (selectedFile.size / (1024 * 1024)).toFixed(2) + ' MB',
+        uploaded_at: new Date().toISOString().split('T')[0],
+        uploaded_by: userRole === 'admin' ? 'Admin' : 'Board Member'
+      };
+      setFiles([...files, newFile]);
+      setSelectedFile(null);
+      setFileType('document');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setShowUpload(false);
+      setIsUploading(false);
+    }, 1000);
+  };
+
+  const handleDeleteFile = (fileId) => {
+    setFiles(files.filter(f => f.file_id !== fileId));
+  };
+
+  const handleDownloadFile = (file) => {
+    // Mock download - in real app, this would download the file
+    console.log('Downloading file:', file.file_name);
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = '#';
+    link.download = file.file_name;
+    link.click();
   };
 
   if (!event) {
@@ -177,6 +265,105 @@ const EventDetails = () => {
                 <p>{event.description}</p>
               </div>
             )}
+
+            {/* Event Files Section */}
+            <div className="EventDetails__files">
+              <div className="EventDetails__filesHeader">
+                <h2>Event Files</h2>
+                {isBoardOrAdmin && (
+                  <button
+                    className="EventDetails__uploadBtn"
+                    onClick={() => setShowUpload(!showUpload)}
+                  >
+                    <FiUpload />
+                    {showUpload ? 'Cancel' : 'Upload File'}
+                  </button>
+                )}
+              </div>
+
+              {isBoardOrAdmin && showUpload && (
+                <div className="EventDetails__uploadSection">
+                  <form onSubmit={handleUpload} className="EventDetails__uploadForm">
+                    <div className="EventDetails__uploadControls">
+                      <label htmlFor="file-input" className="EventDetails__fileInputLabel">
+                        <FiUpload />
+                        {selectedFile ? selectedFile.name : 'Choose File'}
+                      </label>
+                      <input
+                        id="file-input"
+                        ref={fileInputRef}
+                        type="file"
+                        className="EventDetails__fileInput"
+                        onChange={handleFileSelect}
+                        style={{ display: 'none' }}
+                      />
+                      <select
+                        className="EventDetails__fileTypeSelect"
+                        value={fileType}
+                        onChange={(e) => setFileType(e.target.value)}
+                      >
+                        <option value="document">Document</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <button
+                        type="submit"
+                        className="EventDetails__uploadSubmitBtn"
+                        disabled={!selectedFile || isUploading}
+                      >
+                        {isUploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {files.length === 0 ? (
+                <div className="EventDetails__filesEmpty">
+                  <FiFile />
+                  <p>No files available yet</p>
+                  <span>Files will appear here once uploaded</span>
+                </div>
+              ) : (
+                <div className="EventDetails__filesList">
+                  {files.map((file) => (
+                    <div key={file.file_id} className="EventDetails__fileItem">
+                      <div className="EventDetails__fileInfo">
+                        <span className="EventDetails__fileIcon">
+                          {getFileIcon(file.file_type)}
+                        </span>
+                        <div className="EventDetails__fileDetails">
+                          <span className="EventDetails__fileName">{file.file_name}</span>
+                          <span className="EventDetails__fileMeta">
+                            {file.file_size} • {file.file_type} • Uploaded on {file.uploaded_at}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="EventDetails__fileActions">
+                        <button
+                          className="EventDetails__fileDownloadBtn"
+                          onClick={() => handleDownloadFile(file)}
+                          title="Download"
+                        >
+                          <FiDownload />
+                        </button>
+                        {isBoardOrAdmin && (
+                          <button
+                            className="EventDetails__fileDeleteBtn"
+                            onClick={() => handleDeleteFile(file.file_id)}
+                            title="Delete"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </motion.article>
       </div>

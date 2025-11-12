@@ -2,81 +2,49 @@ import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { useGesture } from 'react-use-gesture';
 import './Dome.css';
 
-import img1 from '../assets/Images/1.jpg';
-import img2 from '../assets/Images/2.jpg';
-import img3 from '../assets/Images/3.jpg';
-import img4 from '../assets/Images/4.jpg';
-import img5 from '../assets/Images/5.jpg';
-import img6 from '../assets/Images/6.jpg';
-import img8 from '../assets/Images/8.jpg';
-import img9 from '../assets/Images/9.jpg';
-import img10 from '../assets/Images/10.jpg';
-import img11 from '../assets/Images/11.jpg';
-import img14 from '../assets/Images/14.jpg';
-import img15 from '../assets/Images/15.jpg';
-import img16 from '../assets/Images/16.jpg';
-import img17 from '../assets/Images/17.jpg';
-import img18 from '../assets/Images/18.jpg';
-import img19 from '../assets/Images/19.jpg';
-import img20 from '../assets/Images/20.jpg';
-import img21 from '../assets/Images/21.jpg';
-import img22 from '../assets/Images/22.jpg';
-import img23 from '../assets/Images/23.jpg';
-import img24 from '../assets/Images/24.jpg';
-import img25 from '../assets/Images/25.jpg';
-import img26 from '../assets/Images/26.jpg';
 import img3800 from '../assets/Images/IMG_3800.jpg';
 import img3871 from '../assets/Images/IMG_3871.jpg';
+import img3912 from '../assets/Images/IMG_3912.jpg';
+import img3928 from '../assets/Images/IMG_3928.jpg';
 import img3943 from '../assets/Images/IMG_3943.jpg';
 import img3981 from '../assets/Images/IMG_3981.jpg';
 import img3985 from '../assets/Images/IMG_3985.jpg';
 import img3995 from '../assets/Images/IMG_3995.jpg';
+import img4009 from '../assets/Images/IMG_4009.jpg';
+import img4012 from '../assets/Images/IMG_4012.jpg';
 import img5680 from '../assets/Images/IMG_5680.jpg';
+import img20251006144515 from '../assets/Images/IMG20251006144515.jpg';
 import img20251006150524 from '../assets/Images/IMG20251006150524.jpg';
+import img20251006152210 from '../assets/Images/IMG20251006152210.jpg';
 import img20251006152901 from '../assets/Images/IMG20251006152901.jpg';
 import img8ff82846 from '../assets/Images/8ff82846-9209-49a9-a0a8-984ec3c1d827.jpg';
 
+
+
 const DEFAULT_IMAGES = [
-  img1,
-  img2,
-  img3,
-  img4,
   img3800,
   img3871,
-  img6,
-  img8,
-  img9,
-  img5,
-  img10,
-  img11,
-  img14,
-  img5680,
-  img20251006150524,
-  img3985,
-  img3995,
-  img15,
-  img16,
-  img17,
-  img18,
+  img3912,
+  img3928,
   img3943,
   img3981,
-  img19,
-  img20,
-  img21,
-  img22,
-  img23,
-  img24,
-  img25,
-  img26,
+  img3985,
+  img3995,
+  img4009,
+  img4012,
+  img5680,
+  img20251006144515,
+  img20251006150524,
+  img20251006152210,
   img20251006152901,
   img8ff82846
 ];
 
 const DEFAULTS = {
-  maxVerticalRotationDeg: 5,
+  maxVerticalRotationDeg: 90,
   dragSensitivity: 20,
   enlargeTransitionMs: 300,
-  segments: 30 
+  segments: 20 
 };
 
 // Optimized utility functions

@@ -6,9 +6,10 @@
 }
 
 .EventDetailsPage__container {
-    max-width: 1000px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 54px;
+    width: 100%;
 }
 
 .EventDetailsPage__backBtn {
@@ -84,14 +85,15 @@
 .EventDetails {
     background: linear-gradient(145deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
     border: 1px solid rgba(255, 255, 255, .12);
-    border-radius: 24px;
+    border-radius: 28px;
     overflow: hidden;
     backdrop-filter: blur(14px) saturate(160%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .2);
 }
 
 .EventDetails__hero {
     position: relative;
-    height: 400px;
+    height: 450px;
     overflow: hidden;
     background: linear-gradient(135deg, #0D3159, #031C35);
 }
@@ -131,7 +133,7 @@
 }
 
 .EventDetails__content {
-    padding: 40px;
+    padding: 48px 40px;
 }
 
 .EventDetails__header {
@@ -257,10 +259,14 @@
 
 .EventDetails__uploadSection {
     margin-bottom: 24px;
-    padding: 20px;
-    background: rgba(255, 255, 255, .03);
-    border: 1px solid rgba(255, 255, 255, .08);
-    border-radius: 12px;
+    padding: 24px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+}
+
+.EventDetails__uploadForm {
+    width: 100%;
 }
 
 .EventDetails__uploadControls {
@@ -270,41 +276,53 @@
     flex-wrap: wrap;
 }
 
+.EventDetails__fileInput {
+    display: none;
+}
+
 .EventDetails__fileInputLabel {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 12px 20px;
     background: rgba(255, 255, 255, .05);
     border: 1px solid rgba(255, 255, 255, .15);
-    border-radius: 10px;
+    border-radius: 12px;
     color: #C5DAE9;
     font-size: .9rem;
     cursor: pointer;
     transition: all .3s ease;
     flex: 1;
     min-width: 200px;
+    justify-content: center;
 }
 
 .EventDetails__fileInputLabel:hover {
     background: rgba(255, 255, 255, .08);
     border-color: rgba(255, 255, 255, .25);
+    transform: translateY(-1px);
 }
 
 .EventDetails__fileTypeSelect {
-    padding: 10px 16px;
+    padding: 12px 20px;
     background: rgba(255, 255, 255, .05);
     border: 1px solid rgba(255, 255, 255, .15);
-    border-radius: 10px;
+    border-radius: 12px;
     color: #C5DAE9;
     font-size: .9rem;
     cursor: pointer;
     outline: none;
+    transition: all .3s ease;
 }
 
 .EventDetails__fileTypeSelect:focus {
     border-color: #03A9F4;
     box-shadow: 0 0 0 3px rgba(3, 169, 244, .2);
+}
+
+.EventDetails__fileTypeSelect:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .25);
 }
 
 .EventDetails__uploadSubmitBtn {
@@ -331,20 +349,32 @@
 
 .EventDetails__filesEmpty {
     text-align: center;
-    padding: 40px 20px;
+    padding: 60px 20px;
     color: #8AA3C6;
+    background: rgba(255, 255, 255, .02);
+    border: 1px dashed rgba(255, 255, 255, .1);
+    border-radius: 16px;
 }
 
 .EventDetails__filesEmpty svg {
-    font-size: 3rem;
-    margin-bottom: 16px;
-    opacity: .5;
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+    opacity: .4;
+    color: #5AA0E6;
 }
 
 .EventDetails__filesEmpty p {
-    margin: 0;
-    font-size: 1rem;
-    color: #C5DAE9;
+    margin: 0 0 8px;
+    font-size: 1.05rem;
+    color: #8AA3C6;
+    font-weight: 500;
+}
+
+.EventDetails__filesEmpty span {
+    display: block;
+    font-size: .9rem;
+    color: #6B7F9A;
+    opacity: .8;
 }
 
 .EventDetails__filesList {
@@ -357,16 +387,17 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 18px 20px;
     background: rgba(255, 255, 255, .03);
     border: 1px solid rgba(255, 255, 255, .08);
-    border-radius: 12px;
+    border-radius: 14px;
     transition: all .3s ease;
 }
 
 .EventDetails__fileItem:hover {
     background: rgba(255, 255, 255, .05);
-    border-color: rgba(255, 255, 255, .12);
+    border-color: rgba(255, 255, 255, .15);
+    transform: translateX(4px);
 }
 
 .EventDetails__fileInfo {
@@ -379,6 +410,10 @@
 .EventDetails__fileIcon {
     font-size: 1.5rem;
     flex-shrink: 0;
+    color: #5AA0E6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .EventDetails__fileDetails {
@@ -396,6 +431,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .EventDetails__fileMeta {
@@ -438,6 +474,21 @@
     color: #ff5757;
 }
 
+/* Desktop improvements */
+@media (min-width: 1200px) {
+    .EventDetailsPage__container {
+        padding: 0 80px;
+    }
+
+    .EventDetails__content {
+        padding: 56px 48px;
+    }
+
+    .EventDetails__hero {
+        height: 500px;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 1080px) {
     .EventDetailsPage__container {
@@ -445,11 +496,11 @@
     }
 
     .EventDetails__hero {
-        height: 350px;
+        height: 380px;
     }
 
     .EventDetails__content {
-        padding: 32px;
+        padding: 40px 32px;
     }
 }
 
@@ -541,6 +592,14 @@
     .EventDetails__files {
         margin-top: 32px;
         padding-top: 24px;
+    }
+
+    .EventDetails__uploadSection {
+        padding: 20px;
+    }
+
+    .EventDetails__fileItem {
+        padding: 16px;
     }
 
     .EventDetails__filesHeader {
