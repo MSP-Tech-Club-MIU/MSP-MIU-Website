@@ -335,12 +335,12 @@ class ApiService {
     }
   }
 
-  static async updateApplicationStatus(id, status) {
+  static async updateApplicationStatus(id, status, password) {
     try {
       const response = await fetch(`${API_BASE_URL}/applications/${id}/status`, {
         method: 'PUT',
         headers: this.getHeaders(true), // Include auth token for admin access
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, password }),
       });
 
       const result = await response.json();
