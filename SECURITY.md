@@ -395,7 +395,7 @@ app.use(cors(corsOptions));
 If you discover a security vulnerability, please follow these steps:
 
 1. **Do NOT** create a public GitHub issue
-2. **Email** the security team at: [security@msp-miu.com] (update with actual email)
+2. **Email** the security team at: [MSP@msp-miu.tech]
 3. **Include** the following information:
    - Description of the vulnerability
    - Steps to reproduce
@@ -407,11 +407,6 @@ If you discover a security vulnerability, please follow these steps:
 - **Initial Response:** Within 48 hours
 - **Status Update:** Within 7 days
 - **Fix Timeline:** Depends on severity
-
-### Security Team
-
-- **Primary Contact:** [Add contact information]
-- **Backup Contact:** [Add contact information]
 
 ### Responsible Disclosure
 
@@ -463,7 +458,7 @@ We follow responsible disclosure practices:
 
 ---
 
-**Last Updated:** [Current Date]
+**Last Updated:** 11/16/2025
 
 **Maintained By:** MSP MIU Development Team
 
