@@ -23,7 +23,8 @@ const PasswordToken = sequelize.define('PasswordToken', {
     allowNull: false,
     validate: {
       notEmpty: true
-    }
+    },
+    comment: 'Hashed password reset token (bcrypt hash) - never store plain text tokens'
   },
   expires_at: {
     type: DataTypes.DATE,

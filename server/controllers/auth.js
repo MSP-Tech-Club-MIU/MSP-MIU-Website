@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
-const { User, Member, Board } = require('../models');
-const { generateToken: generateJWTToken } = require('../utils/jwt');
+const { User, Member, Board, PasswordToken } = require('../models');
+const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
 
 /**
@@ -488,9 +488,8 @@ const verifyActivationToken = async (req, res) => {
             });
         }
 
-        const { verifyToken } = require('../utils/jwt');
-        const tokenResult = verifyToken(token);
-        
+        const tokenResult = verifyJWTToken(token);
+
         if (!tokenResult.success) {
             logSecurityEvent('ACTIVATION_TOKEN_VERIFICATION_FAILED', {
                 reason: tokenResult.error,
@@ -973,6 +972,383 @@ const activateAccount = async (req, res) => {
     }
 };
 
+/**
+ * Request password reset
+ * POST /api/auth/forgot-password
+ * Accepts university_id or email, sends reset link via email
+ */
+const forgotPassword = async (req, res) => {
+    try {
+        const { university_id, email } = req.body;
+
+        // Validation - require either university_id or email
+        if (!university_id && !email) {
+            return res.status(400).json({
+                success: false,
+                error: 'University ID or email is required'
+            });
+        }
+
+        let user = null;
+
+        // Find user by university_id or email
+        if (university_id) {
+            // Validate university ID format (xxxx/xxxxx)
+            const universityIdRegex = /^\d{4}\/\d{5}$/;
+            if (!universityIdRegex.test(university_id)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid university ID format. Expected format: xxxx/xxxxx (e.g. 20xx/xxxxx)'
+                });
+            }
+            user = await User.findOne({ where: { university_id } });
+        } else {
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid email format'
+                });
+            }
+            user = await User.findOne({ where: { email } });
+        }
+
+        // Always return success message (security best practice - don't reveal if user exists)
+        // But only send email if user exists
+        if (user && user.email) {
+            // Generate JWT token for password reset (expires in 1 hour)
+            const resetTokenResult = generateJWTToken({
+                user_id: user.user_id,
+                email: user.email,
+                type: 'password_reset'
+            }, '1h'); // Override default expiration to 1 hour
+
+            if (!resetTokenResult.success) {
+                logError('auth.forgotPassword', new Error(resetTokenResult.error), {
+                    user_id: user.user_id,
+                    university_id: user.university_id || 'unknown',
+                    email: user.email
+                }, req);
+                
+                // Still return success to user (security best practice)
+                return res.json({
+                    success: true,
+                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
+                });
+            }
+
+            // Store token in database for tracking (optional but recommended)
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+
+            try {
+                // Invalidate any existing unused reset tokens for this user
+                await PasswordToken.update(
+                    { used: true },
+                    { where: { user_id: user.user_id, used: false } }
+                );
+
+                // Hash the token before storing (security best practice)
+                const saltRounds = 10;
+                const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
+
+                // Create new password reset token record with hashed token
+                await PasswordToken.create({
+                    user_id: user.user_id,
+                    token: tokenHash,
+                    expires_at: expiresAt,
+                    used: false
+                });
+            } catch (tokenError) {
+                // Log but don't fail - token generation succeeded
+                logError('auth.forgotPassword.tokenStorage', tokenError, {
+                    user_id: user.user_id
+                }, req);
+            }
+
+            // Generate reset link
+            const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetTokenResult.token}`;
+
+            // Send password reset email (using dynamic import for ES module)
+            try {
+                const { sendEmail } = await import('../utils/email.mjs');
+                await sendEmail({
+                    to: user.email,
+                    subject: 'Password Reset Request - MSP MIU',
+                    html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <style>
+                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                                .header { background-color: #4a90e2; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                                .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+                                .button { display: inline-block; padding: 12px 30px; background-color: #4a90e2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                                .button:hover { background-color: #357abd; }
+                                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 20px 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="header">
+                                    <h1>Password Reset Request</h1>
+                                </div>
+                                <div class="content">
+                                    <p>Hello ${user.full_name || 'User'},</p>
+                                    <p>We received a request to reset your password for your MSP MIU account.</p>
+                                    <p>Click the button below to reset your password:</p>
+                                    <p style="text-align: center;">
+                                        <a href="${resetLink}" class="button">Reset Password</a>
+                                    </p>
+                                    <p>Or copy and paste this link into your browser:</p>
+                                    <p style="word-break: break-all; color: #4a90e2;">${resetLink}</p>
+                                    <div class="warning">
+                                        <strong>⚠️ Security Notice:</strong>
+                                        <ul>
+                                            <li>This link will expire in 1 hour</li>
+                                            <li>If you didn't request this reset, please ignore this email</li>
+                                            <li>Never share this link with anyone</li>
+                                        </ul>
+                                    </div>
+                                    <p>If you didn't request a password reset, you can safely ignore this email.</p>
+                                </div>
+                                <div class="footer">
+                                    <p>MSP MIU Website</p>
+                                    <p>This is an automated email, please do not reply.</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `,
+                    text: `
+Password Reset Request - MSP MIU
+
+Hello ${user.full_name || 'User'},
+
+We received a request to reset your password for your MSP MIU account.
+
+Click the following link to reset your password:
+${resetLink}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email.
+
+Security Notice:
+- This link will expire in 1 hour
+- If you didn't request this reset, please ignore this email
+- Never share this link with anyone
+
+MSP MIU Website
+This is an automated email, please do not reply.
+                    `
+                });
+
+                logAuditEvent('PASSWORD_RESET_REQUESTED', {
+                    user_id: user.user_id,
+                    university_id: user.university_id || 'unknown',
+                    email: user.email
+                }, req);
+            } catch (emailError) {
+                logError('auth.forgotPassword.email', emailError, {
+                    user_id: user.user_id,
+                    email: user.email
+                }, req);
+                
+                // Still return success to user (security best practice)
+                return res.json({
+                    success: true,
+                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
+                });
+            }
+        }
+
+        // Always return success (security best practice - don't reveal if user exists)
+        res.json({
+            success: true,
+            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        });
+
+    } catch (error) {
+        logError('auth.forgotPassword', error, {
+            university_id: req.body?.university_id || 'unknown',
+            email: req.body?.email || 'unknown'
+        }, req);
+        
+        // Still return success to user (security best practice)
+        res.json({
+            success: true,
+            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        });
+    }
+};
+
+/**
+ * Reset password using token
+ * POST /api/auth/reset-password
+ * Accepts token and new password
+ */
+const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        // Validation
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error: 'Reset token is required'
+            });
+        }
+
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                error: 'New password is required'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Verify token
+        const tokenResult = verifyJWTToken(token);
+        
+        if (!tokenResult.success) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Invalid or expired token',
+                error: tokenResult.error
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: tokenResult.error === 'Token expired' 
+                    ? 'Password reset link has expired. Please request a new one.'
+                    : 'Invalid reset token. Please use the link from your email.'
+            });
+        }
+
+        const decoded = tokenResult.decoded;
+        
+        // Verify token type
+        if (decoded.type !== 'password_reset') {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Invalid token type',
+                token_type: decoded.type
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid reset token type'
+            });
+        }
+
+        // Find user
+        const user = await User.findByPk(decoded.user_id);
+        
+        if (!user) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'User not found',
+                user_id: decoded.user_id
+            }, req);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        // Verify token in database (check if it's been used or expired)
+        // Get all unused tokens for this user and compare hashes
+        const passwordTokens = await PasswordToken.findAll({
+            where: {
+                user_id: user.user_id,
+                used: false
+            },
+            order: [['created_at', 'DESC']],
+            limit: 5 // Mitigate potential DoS by limiting tokens to check
+        });
+
+        // Find the matching token by comparing hashes
+        let passwordToken = null;
+        for (const storedToken of passwordTokens) {
+            const isMatch = await bcrypt.compare(token, storedToken.token);
+            if (isMatch) {
+                passwordToken = storedToken;
+                break;
+            }
+        }
+
+        if (!passwordToken) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Token not found or already used',
+                user_id: user.user_id
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid or already used reset token. Please request a new one.'
+            });
+        }
+
+        // Check if token has expired (database check)
+        if (new Date() > new Date(passwordToken.expires_at)) {
+            // Mark as used
+            await passwordToken.update({ used: true });
+            
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Token expired (database check)',
+                user_id: user.user_id
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Password reset link has expired. Please request a new one.'
+            });
+        }
+
+        // Hash new password
+        const saltRounds = 10;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+
+        // Update user password
+        await user.update({ password_hash });
+
+        // Mark token as used
+        await passwordToken.update({ used: true });
+
+        // Log successful password reset
+        logAuditEvent('PASSWORD_RESET_SUCCESS', {
+            user_id: user.user_id,
+            university_id: user.university_id || 'unknown',
+            email: user.email
+        }, req);
+
+        res.json({
+            success: true,
+            message: 'Password has been reset successfully. You can now login with your new password.'
+        });
+
+    } catch (error) {
+        logError('auth.resetPassword', error, {
+            token_provided: !!req.body?.token
+        }, req);
+        
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+};
+
 module.exports = {
     login,
     register,
@@ -981,6 +1357,8 @@ module.exports = {
     changePassword,
     verifyToken,
     verifyActivationToken,
-    activateAccount
+    activateAccount,
+    forgotPassword,
+    resetPassword
 };
 

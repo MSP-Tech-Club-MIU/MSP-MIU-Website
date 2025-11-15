@@ -216,15 +216,16 @@ async function sendBoardActivationEmails() {
           continue;
         }
         
-        // Check if user already exists and has a password (already activated)
+        // Check if user already exists and is active or has a password (already activated)
         const existingUser = await User.findOne({ where: { email } });
-        if (existingUser && existingUser.password_hash) {
+        if (existingUser && (existingUser.is_active || existingUser.password_hash)) {
+          const reason = existingUser.is_active ? 'Account is already active (is_active: 1)' : 'Account already has a password';
           console.warn(`⚠️  Board member ${boardMemberName} (${email}) already has an activated account. Skipping...`);
           skipped.push({ 
             name: boardMemberName, 
             position,
             email, 
-            reason: 'Account already activated' 
+            reason 
           });
           continue;
         }
@@ -271,7 +272,20 @@ async function sendBoardActivationEmails() {
         console.log(`📤 Sending activation email to ${boardMemberName} (${position}) - ${email}...`);
         await sendEmail(mailOptions);
         successCount++;
-        console.log(`   ✅ Email sent successfully to ${boardMemberName}\n`);
+        console.log(`   ✅ Email sent successfully to ${boardMemberName}`);
+        
+        // Check if user exists and verify is_active status
+        const userAfterEmail = await User.findOne({ where: { email } });
+        if (userAfterEmail) {
+          if (userAfterEmail.is_active) {
+            console.log(`   ℹ️  User account is active (is_active: 1)`);
+          } else {
+            console.log(`   ⚠️  User account is not active (is_active: 0)`);
+          }
+        } else {
+          console.log(`   ℹ️  User account does not exist yet (will be created on activation)`);
+        }
+        console.log();
         
         // Add a small delay to avoid overwhelming the email server
         await new Promise(resolve => setTimeout(resolve, 1000));

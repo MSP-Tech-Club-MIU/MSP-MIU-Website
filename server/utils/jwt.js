@@ -95,9 +95,10 @@ const getJWTExpiration = () => {
 /**
  * Generate JWT token with validation
  * @param {Object} payload - Token payload
+ * @param {string} customExpiresIn - Optional custom expiration time (e.g., '1h', '30m', '7d')
  * @returns {Object} - { success: boolean, token?: string, error?: string }
  */
-const generateToken = (payload) => {
+const generateToken = (payload, customExpiresIn = null) => {
     try {
         // Get JWT secret from environment
         const secret = process.env.JWT_SECRET;
@@ -131,8 +132,19 @@ const generateToken = (payload) => {
             };
         }
 
-        // Get expiration time
-        const expiresIn = getJWTExpiration();
+        // Get expiration time - use custom if provided, otherwise use default
+        let expiresIn = customExpiresIn || getJWTExpiration();
+        
+        // Validate custom expiration format if provided
+        if (customExpiresIn) {
+            const expirationRegex = /^\d+[smhd]$/;
+            if (!expirationRegex.test(customExpiresIn)) {
+                return {
+                    success: false,
+                    error: `Invalid expiration format: ${customExpiresIn}. Expected format: number followed by s, m, h, or d (e.g., '1h', '30m')`
+                };
+            }
+        }
 
         // Generate token using the secret (either validated or from env)
         const token = jwt.sign(
