@@ -1272,7 +1272,9 @@ const resetPassword = async (req, res) => {
             where: {
                 user_id: user.user_id,
                 used: false
-            }
+            },
+            order: [['created_at', 'DESC']],
+            limit: 5 // Mitigate potential DoS by limiting tokens to check
         });
 
         // Find the matching token by comparing hashes
