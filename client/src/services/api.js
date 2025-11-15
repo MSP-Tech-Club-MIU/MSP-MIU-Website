@@ -266,6 +266,69 @@ class ApiService {
     }
   }
 
+  // Request password reset
+  static async forgotPassword(university_id = null, email = null) {
+    try {
+      if (!university_id && !email) {
+        throw new Error('University ID or email is required');
+      }
+
+      const body = {};
+      if (university_id) {
+        body.university_id = university_id;
+      }
+      if (email) {
+        body.email = email;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to request password reset');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      throw error;
+    }
+  }
+
+  // Reset password using token
+  static async resetPassword(token, password) {
+    try {
+      if (!token) {
+        throw new Error('Reset token is required');
+      }
+      if (!password) {
+        throw new Error('New password is required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ token, password }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reset password');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      throw error;
+    }
+  }
+
   static async submitApplication(formData) {
     try {
       console.log('API Service - Sending data:', formData);
