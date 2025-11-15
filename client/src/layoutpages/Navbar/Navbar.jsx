@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes } from 'react-icons/fa';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
@@ -14,36 +14,54 @@ const Navbar = memo(() => {
   const [scrolled, setScrolled] = useState(false);
   const [showLoginCard, setShowLoginCard] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(null);
   const location = useLocation();
 
   // Check authentication status and handle token expiration
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       // Check if token exists and is valid (not expired)
       const isAuth = ApiService.isAuthenticated();
       setIsAuthenticated(isAuth);
       
-      // If token was expired, it's already removed by isAuthenticated()
-      // The Navbar will automatically show login button
+      // If authenticated, fetch user profile to get role
+      if (isAuth) {
+        try {
+          const userData = await ApiService.getProfile();
+          setUser(userData);
+        } catch (error) {
+          // If profile fetch fails, user might not be authenticated
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
     };
     
     checkAuth();
     
     // Check on focus (when user returns to tab)
     const handleFocus = () => {
-      checkAuth();
+      checkAuth().catch(() => {
+        // Silently handle errors
+      });
     };
     
     // Check on storage change (token removed in another tab)
     const handleStorageChange = (e) => {
       if (e.key === 'authToken') {
-        checkAuth();
+        checkAuth().catch(() => {
+          // Silently handle errors
+        });
       }
     };
     
     // Periodic check for token expiration (every 30 seconds)
     const intervalId = setInterval(() => {
-      checkAuth();
+      checkAuth().catch(() => {
+        // Silently handle errors in interval
+      });
     }, 30000);
     
     window.addEventListener('focus', handleFocus);
@@ -79,11 +97,22 @@ const Navbar = memo(() => {
     closeMobile();
   }, [closeMobile]);
   
-  const closeLoginCard = useCallback(() => {
+  const closeLoginCard = useCallback(async () => {
     setShowLoginCard(false);
     // Check auth status after closing login card (user might have logged in)
-    setTimeout(() => {
-      setIsAuthenticated(ApiService.isAuthenticated());
+    setTimeout(async () => {
+      const isAuth = ApiService.isAuthenticated();
+      setIsAuthenticated(isAuth);
+      if (isAuth) {
+        try {
+          const userData = await ApiService.getProfile();
+          setUser(userData);
+        } catch (error) {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
     }, 100);
   }, []);
   
@@ -94,7 +123,7 @@ const Navbar = memo(() => {
       { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       // { to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> },
-      // // { to: '/exercises', label: 'Exercises', icon: <FaDumbbell /> },
+      // { to: '/exercises', label: 'Exercises', icon: <FaLaptop /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
       // { to: '/suggestions', label: 'Suggestions', icon: <FaLightbulb /> },
       // { to: '/leaderboard', label: 'Leaderboard', icon: <FaTrophy /> },
@@ -107,9 +136,13 @@ const Navbar = memo(() => {
     } else {
       baseLinks.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
     }
+
+    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board')) {
+      baseLinks.push({ to: '/registration-admin', label: 'Registration Admin', icon: <FaUserCog /> });
+    }
     
     return baseLinks;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -136,7 +169,7 @@ const Navbar = memo(() => {
           <div className="Navbar__logoMark">MSP</div>
           <div className="Navbar__logoText">Tech Club</div>
         </NavLink>
-        <ul className="Navbar__links">
+        <ul className={`Navbar__links ${user && (user.role === 'admin' || user.role === 'board') ? 'Navbar__links--admin' : ''}`}>
           {getLinks().map(l => (
             <li key={l.to}>
               {!isAuthenticated && l.to === '/login' ? (
