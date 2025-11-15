@@ -1216,7 +1216,7 @@ const resetPassword = async (req, res) => {
         }
 
         // Verify token
-        const tokenResult = verifyToken(token);
+        const tokenResult = verifyJWTToken(token);
         
         if (!tokenResult.success) {
             logSecurityEvent('PASSWORD_RESET_FAILED', {
