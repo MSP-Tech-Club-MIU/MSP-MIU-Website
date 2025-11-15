@@ -1049,10 +1049,14 @@ const forgotPassword = async (req, res) => {
                     { where: { user_id: user.user_id, used: false } }
                 );
 
-                // Create new password reset token record
+                // Hash the token before storing (security best practice)
+                const saltRounds = 10;
+                const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
+
+                // Create new password reset token record with hashed token
                 await PasswordToken.create({
                     user_id: user.user_id,
-                    token: resetTokenResult.token,
+                    token: tokenHash,
                     expires_at: expiresAt,
                     used: false
                 });
@@ -1263,13 +1267,23 @@ const resetPassword = async (req, res) => {
         }
 
         // Verify token in database (check if it's been used or expired)
-        const passwordToken = await PasswordToken.findOne({
+        // Get all unused tokens for this user and compare hashes
+        const passwordTokens = await PasswordToken.findAll({
             where: {
                 user_id: user.user_id,
-                token: token,
                 used: false
             }
         });
+
+        // Find the matching token by comparing hashes
+        let passwordToken = null;
+        for (const storedToken of passwordTokens) {
+            const isMatch = await bcrypt.compare(token, storedToken.token);
+            if (isMatch) {
+                passwordToken = storedToken;
+                break;
+            }
+        }
 
         if (!passwordToken) {
             logSecurityEvent('PASSWORD_RESET_FAILED', {
