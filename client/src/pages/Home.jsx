@@ -41,7 +41,7 @@ export const Home = memo(() => {
 	return (
 		<main className="HomePage" aria-label="MSP Home">
 			<SEO
-				title="Home"
+				title="MSP - MIU"
 				description="Welcome to MSP Tech Club at Misr International University. Join our student-led innovation community to explore cutting-edge technologies, attend workshops, participate in hackathons, and develop your technical and leadership skills."
 				url="https://msp-miu.tech/"
 				structuredData={structuredData}
