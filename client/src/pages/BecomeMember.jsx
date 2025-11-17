@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, memo, useCallback } from 'react'
+import SEO from '../components/SEO'
 import miuLogo from '../assets/Images/miu-logo.png'
 import mspLogo from '../assets/Images/msp-logo.png'
 import ApiService from '../services/api'
@@ -206,8 +207,23 @@ const BecomeMember = memo(() => {
   }
 
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Become a Member - MSP Tech Club",
+    "description": "Join MSP Tech Club at MIU! Fill out our membership application form to become part of our student-led innovation community. Choose your department and start your journey with Microsoft Student Partners.",
+    "url": "https://msp-miu.tech/become-member"
+  };
+
   return (
     <div className="page" style={{ background: `linear-gradient(135deg, ${palette.navy900}, ${palette.navy700})` }}>
+      <SEO
+        title="Become a Member"
+        description="Join MSP Tech Club at MIU! Fill out our membership application form to become part of our student-led innovation community. Choose your department and start your journey with Microsoft Student Partners."
+        keywords="join MSP, become MSP member, MIU tech club application, Microsoft Student Partners application, join tech club"
+        url="https://msp-miu.tech/become-member"
+        structuredData={structuredData}
+      />
       {screen === 'welcome' && (
         <main className="container welcome" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center' }}>

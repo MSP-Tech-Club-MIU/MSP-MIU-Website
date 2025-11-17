@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../components/SEO';
 import './Events.css';
 import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 
@@ -25,6 +26,18 @@ const Events = () => {
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
   const navigate = useNavigate();
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": "MSP Tech Club Events",
+    "description": "Join MSP Tech Club events, workshops, sessions, and hackathons. Explore cutting-edge technologies, network with peers, and develop your skills.",
+    "organizer": {
+      "@type": "Organization",
+      "name": "MSP Tech Club - MIU",
+      "url": "https://msp-miu.tech"
+    }
+  };
 
   // Use mock data directly
   const events = mockEvents;
@@ -70,6 +83,13 @@ const Events = () => {
 
   return (
     <section className="EventsPage">
+      <SEO
+        title="Events & Sessions"
+        description="Discover upcoming MSP Tech Club events, workshops, sessions, and hackathons at MIU. Join us for tech talks, hands-on workshops, networking events, and more."
+        keywords="MSP events, tech workshops, hackathons, MIU events, technology sessions, student tech events, Microsoft workshops"
+        url="https://msp-miu.tech/events"
+        structuredData={structuredData}
+      />
       <div className="EventsPage__container">
         <header className="EventsPage__header">
           <h1 className="EventsPage__title">Events & Sessions</h1>

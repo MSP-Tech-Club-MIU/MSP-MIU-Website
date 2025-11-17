@@ -4,6 +4,19 @@ const cors = require("cors");
 const path = require("path");
 const PORT = process.env.PORT;
 
+// Suppress util._extend deprecation warning from dependencies
+// This warning comes from transitive dependencies (likely from older versions of body-parser 
+// used by other packages) and doesn't affect functionality since we're using Express's built-in JSON parser
+const originalEmitWarning = process.emitWarning;
+process.emitWarning = function(warning, type, code, ctor) {
+  // Suppress only the util._extend deprecation warning
+  if (typeof warning === 'string' && warning.includes('util._extend')) {
+    return; // Suppress this specific warning
+  }
+  // Emit all other warnings normally
+  return originalEmitWarning.call(this, warning, type, code, ctor);
+};
+
 const app = express();
 
 app.use(cors());

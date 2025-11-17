@@ -1,4 +1,5 @@
 import React, { memo, useMemo, useState } from 'react';
+import SEO from '../components/SEO';
 import './PageBase.css';
 import BoardHeader from './Board/BoardHeader';
 import ProfileCard from '../components/ProfileCard';
@@ -205,8 +206,27 @@ const Board = memo(() => {
            (orderA !== 999) ? -1 : (orderB !== 999) ? 1 : parseInt(a) - parseInt(b);
   });
 
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "MSP Tech Club - MIU Board",
+    "description": "Meet the board members and leadership team of MSP Tech Club at MIU. Our dedicated team leads various departments including Software Development, Technical Training, Media & Content Creation, and more.",
+    "member": boardMembers.map(member => ({
+      "@type": "Person",
+      "name": member.name,
+      "jobTitle": member.role
+    }))
+  };
+
   return (
     <section className="PageBase">
+      <SEO
+        title="Meet the Board"
+        description="Meet the board members and leadership team of MSP Tech Club at MIU. Learn about our dedicated team leading various departments including Software Development, Technical Training, Media & Content Creation, and more."
+        keywords="MSP board members, MIU tech club leadership, student club board, MSP team, tech club leadership"
+        url="https://msp-miu.tech/Meet-the-board"
+        structuredData={structuredData}
+      />
       <BoardHeader />
       <DepartmentMenu 
         selectedDepartment={selectedDepartment}
