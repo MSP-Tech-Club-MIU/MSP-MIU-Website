@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SEO from '../components/SEO';
 import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
 import './PageBase.css';
 import './Profile.css';
@@ -252,6 +253,12 @@ const Profile = () => {
 
   return (
     <section className="PageBase">
+      <SEO
+        title="My Profile"
+        description="View and manage your MSP Tech Club profile at MIU. Update your information, department, and schedule."
+        url="https://msp-miu.tech/profile"
+        noindex={true}
+      />
       <div className="profile-page-container">
         {/* Header with actions */}
         <div className="profile-header">
