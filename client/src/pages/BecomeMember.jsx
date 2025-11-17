@@ -326,6 +326,10 @@ const BecomeMember = memo(() => {
                     <option value="">Select department</option>
                     {departments
                       .filter(d => {
+                        // exclude board positions
+                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                          return false
+                        }
                         // hide software & technical unless faculty is CS or ECE
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {
                           return form.faculty === 'Computer Science' || form.faculty === 'Engineering Sciences & Arts - ECE'
@@ -344,6 +348,10 @@ const BecomeMember = memo(() => {
                     <option value="">Select department (optional)</option>
                     {departments
                       .filter(d => {
+                        // exclude board positions
+                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                          return false
+                        }
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {
                           return form.faculty === 'Computer Science' || form.faculty === 'Engineering Sciences & Arts - ECE'
                         }
