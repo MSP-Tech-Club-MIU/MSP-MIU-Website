@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
  * SEO Component for managing page meta tags, Open Graph, Twitter Cards, and structured data
  * 
  * @param {Object} props
- * @param {string} props.title - Page title (default: "MSP Tech Club - MIU")
+ * @param {string} props.title - Page title (default: "MSP - MIU")
  * @param {string} props.description - Meta description
  * @param {string} props.keywords - Meta keywords (comma-separated)
  * @param {string} props.image - Open Graph image URL
@@ -47,8 +47,6 @@ const SEO = ({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="1200" />
       <meta property="og:image:type" content="image/png" />
       <meta property="og:image:alt" content="MSP - MIU Logo" />
       <meta property="og:site_name" content="MSP - MIU" />
