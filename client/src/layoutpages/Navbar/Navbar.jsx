@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog } from 'react-icons/fa';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
@@ -122,7 +122,6 @@ const Navbar = memo(() => {
       { to: '/', label: 'Home', icon: <FaHome /> },
       { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
-      // { to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> },
       // { to: '/exercises', label: 'Exercises', icon: <FaLaptop /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
       // { to: '/suggestions', label: 'Suggestions', icon: <FaLightbulb /> },
@@ -135,6 +134,11 @@ const Navbar = memo(() => {
       baseLinks.push({ to: '/profile', label: 'Profile', icon: <FaUser /> });
     } else {
       baseLinks.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
+    }
+
+    // Add "Become a Member" for non-authenticated users
+    if (!isAuthenticated) {
+      baseLinks.push({ to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> });
     }
 
     if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board')) {
@@ -169,7 +173,7 @@ const Navbar = memo(() => {
           <div className="Navbar__logoMark">MSP</div>
           <div className="Navbar__logoText">Tech Club</div>
         </NavLink>
-        <ul className={`Navbar__links ${user && (user.role === 'admin' || user.role === 'board') ? 'Navbar__links--admin' : ''}`}>
+        <ul className={`Navbar__links ${(user && (user.role === 'admin' || user.role === 'board')) || !isAuthenticated ? 'Navbar__links--admin' : ''}`}>
           {getLinks().map(l => (
             <li key={l.to}>
               {!isAuthenticated && l.to === '/login' ? (
