@@ -33,11 +33,19 @@ app.use("/api", apiRoutes);
 // Serve uploaded files (profile pictures, etc.)
 app.use("/uploads", express.static(path.join(__dirname, "server/uploads")));
 
-// Serve static files from the React app build directory
+// Serve static files from the React app build directory (assets, images, etc.)
 app.use(express.static(path.join(__dirname, "client/public")));
 
+// Serve assets with explicit path to ensure images are accessible
+app.use("/assets", express.static(path.join(__dirname, "client/public/assets")));
+
 // Catch-all handler: send back React's index.html file for any non-API routes
+// This must be last to not interfere with static file serving
 app.get("*", (req, res) => {
+  // Don't serve index.html for asset requests
+  if (req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
+    return res.status(404).send('Not found');
+  }
   res.sendFile(path.join(__dirname, "client/public/index.html"));
 });
 
