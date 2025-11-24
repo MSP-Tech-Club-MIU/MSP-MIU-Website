@@ -71,21 +71,13 @@ Department.hasMany(Member, {
 });
 
 // Attendance associations
-Attendance.belongsTo(Session, {
-  foreignKey: 'session_id',
-  as: 'session'
+Attendance.belongsTo(Event, {
+  foreignKey: 'event_id',
+  as: 'event'
 });
-Attendance.belongsTo(Member, {
-  foreignKey: 'member_id',
-  as: 'member'
-});
-Session.hasMany(Attendance, {
-  foreignKey: 'session_id',
-  as: 'attendances'
-});
-Member.hasMany(Attendance, {
-  foreignKey: 'member_id',
-  as: 'attendances'
+Event.hasMany(Attendance, {
+  foreignKey: 'event_id',
+  as: 'attendanceRequests'
 });
 
 // User associations

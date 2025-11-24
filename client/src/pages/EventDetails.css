@@ -194,6 +194,40 @@
     line-height: 1.5;
 }
 
+.EventDetails__register {
+    margin: 40px 0;
+    text-align: center;
+}
+
+.EventDetails__registerBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+    box-shadow: 0 4px 16px rgba(3, 169, 244, .3);
+}
+
+.EventDetails__registerBtn:hover {
+    box-shadow: 0 6px 24px rgba(3, 169, 244, .5);
+    transform: translateY(-2px);
+}
+
+.EventDetails__registerBtn:active {
+    transform: translateY(0);
+}
+
+.EventDetails__registerBtn svg {
+    font-size: 1.1rem;
+}
+
 .EventDetails__description {
     margin-top: 32px;
 }
