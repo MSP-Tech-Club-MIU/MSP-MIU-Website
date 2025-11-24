@@ -1,17 +1,14 @@
-import React, { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Frontend-only mock submission (replace with real API later)
-async function submitAttendanceRequest(data) {
-  await new Promise(r => setTimeout(r, 1200));
-  console.log('Attendance Request:', data);
-  return { success: true };
-}
+import ApiService from '../services/api';
+import './PageBase.css';
 
 const AttendanceRequest = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({
+    eventId: '',
     name: '',
     phone: '',
     universityId: '',
@@ -26,9 +23,46 @@ const AttendanceRequest = () => {
     secondRoom: '',
     secondInstructor: ''
   });
+  const [eventName, setEventName] = useState('');
+  const [loadingEvent, setLoadingEvent] = useState(true);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Load event_id from URL params on component mount
+  useEffect(() => {
+    const eventId = searchParams.get('event_id');
+    if (eventId) {
+      setForm(prev => ({ ...prev, eventId }));
+      // Optionally fetch event name to display
+      fetchEventName(eventId);
+    } else {
+      setLoadingEvent(false);
+      setErrors({ eventId: 'Event ID is required. Please register from an event page.' });
+    }
+  }, [searchParams]);
+
+  // Fetch event name from API
+  const fetchEventName = async (eventId) => {
+    try {
+      setLoadingEvent(true);
+      const result = await ApiService.getEvents();
+      const events = Array.isArray(result) ? result : (result.data || []);
+      const event = events.find(e => e.event_id === parseInt(eventId));
+      if (event) {
+        setEventName(event.name);
+      } else {
+        // If event not found in list, try to fetch single event by ID
+        // For now, we'll just show the ID as fallback
+        console.warn(`Event with ID ${eventId} not found in events list`);
+      }
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      // Keep eventName empty so it falls back to showing ID
+    } finally {
+      setLoadingEvent(false);
+    }
+  };
 
   const onChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
@@ -41,6 +75,7 @@ const AttendanceRequest = () => {
 
   const validate = useCallback(() => {
     const newErrors = {};
+    if (!form.eventId) newErrors.eventId = 'Event ID is required. Please register from an event page.';
     if (!form.name.trim()) newErrors.name = 'Name is required';
     if (!form.phone.trim()) newErrors.phone = 'Phone number is required';
     else if (!/^\d{10,11}$/.test(form.phone.replace(/\s/g, ''))) {
@@ -76,17 +111,33 @@ const AttendanceRequest = () => {
     }
     setSubmitting(true);
     try {
-      await submitAttendanceRequest(form);
+      // Transform form data to match database schema
+      const formData = {
+        event_id: parseInt(form.eventId),
+        full_name: form.name.trim(),
+        phone_number: `+20${form.phone.replace(/\s/g, '')}`,
+        university_id: form.universityId.trim(),
+        course_code: form.needsAttendance ? form.courseCode.trim() : null,
+        lecture_lab_time: form.needsAttendance ? form.lectureLabTime.trim() : null,
+        room: form.needsAttendance ? form.room.trim() : null,
+        instructor_name: form.needsAttendance ? form.instructor.trim() : null,
+        additional_course_code: form.needsSecondAttendance ? form.secondCourseCode.trim() : null,
+        additional_lecture_lab_time: form.needsSecondAttendance ? form.secondLectureLabTime.trim() : null,
+        additional_room: form.needsSecondAttendance ? form.secondRoom.trim() : null,
+        additional_instructor_name: form.needsSecondAttendance ? form.secondInstructor.trim() : null
+      };
+
+      await ApiService.submitAttendanceRequest(formData);
       setShowSuccess(true);
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
-      setErrors({ name: 'Submission failed, please try again' });
+      setErrors({ submit: err.message || 'Submission failed, please try again' });
       setSubmitting(false);
     }
   }, [form, navigate, validate]);
 
   return (
-    <div className="page">
+    <section className="PageBase">
       <div className="container">
         <motion.div
           className="neo-card"
@@ -100,6 +151,33 @@ const AttendanceRequest = () => {
           </p>
 
           <form className="attendance-form" onSubmit={onSubmit}>
+            {/* Event Info Display */}
+            {form.eventId && (
+              <div className="event-info-display" style={{ 
+                marginBottom: '1.5rem', 
+                padding: '1rem', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                {loadingEvent ? (
+                  <p style={{ margin: 0, color: '#8EC2F0', fontSize: '0.9rem' }}>
+                    <strong>Event:</strong> Loading...
+                  </p>
+                ) : (
+                  <p style={{ margin: 0, color: '#8EC2F0', fontSize: '0.9rem' }}>
+                    <strong>Event:</strong> {eventName || `Event ID: ${form.eventId}`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {errors.eventId && (
+              <div className="error-message" style={{ marginBottom: '1rem', color: 'var(--error-color, #e74c3c)' }}>
+                {errors.eventId}
+              </div>
+            )}
+
             {/* Required Fields */}
             <div className="grid">
               <label className="col-span-2 floating-input">
@@ -326,6 +404,12 @@ const AttendanceRequest = () => {
               )}
             </AnimatePresence>
 
+            {errors.submit && (
+              <div className="error-message" style={{ marginBottom: '1rem', color: 'var(--error-color, #e74c3c)' }}>
+                {errors.submit}
+              </div>
+            )}
+
             <div className="actions">
               <motion.button
                 type="submit"
@@ -377,7 +461,7 @@ const AttendanceRequest = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </section>
   );
 };
 

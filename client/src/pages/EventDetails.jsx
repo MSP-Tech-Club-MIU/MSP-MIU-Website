@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus } from 'react-icons/fi';
 import ApiService from '../services/api';
 
 // Import images
@@ -265,6 +265,19 @@ const EventDetails = () => {
                 <p>{event.description}</p>
               </div>
             )}
+
+            {/* Register Button */}
+            <div className="EventDetails__register">
+              <motion.button
+                className="EventDetails__registerBtn"
+                onClick={() => navigate(`/attendance-request?event_id=${event.event_id}`)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <FiUserPlus />
+                Register for Attendance Request
+              </motion.button>
+            </div>
 
             {/* Event Files Section */}
             <div className="EventDetails__files">

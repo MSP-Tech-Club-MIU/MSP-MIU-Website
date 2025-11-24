@@ -1,18 +1,5 @@
 import { Helmet } from 'react-helmet-async';
 
-/**
- * SEO Component for managing page meta tags, Open Graph, Twitter Cards, and structured data
- * 
- * @param {Object} props
- * @param {string} props.title - Page title (default: "MSP - MIU")
- * @param {string} props.description - Meta description
- * @param {string} props.keywords - Meta keywords (comma-separated)
- * @param {string} props.image - Open Graph image URL
- * @param {string} props.url - Canonical URL
- * @param {string} props.type - Open Graph type (default: "website")
- * @param {Object} props.structuredData - JSON-LD structured data object
- * @param {boolean} props.noindex - Whether to prevent indexing (default: false)
- */
 const SEO = ({
   title = 'MSP - MIU',
   description = 'MSP Tech Club at Misr International University (MIU). A student-led innovation community powered by Microsoft Learn Student Ambassadors. Join us to explore cutting-edge technologies, build real projects, and develop technical & leadership excellence.',
@@ -84,4 +71,3 @@ const SEO = ({
 };
 
 export default SEO;
-
