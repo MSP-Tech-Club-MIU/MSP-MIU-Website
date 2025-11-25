@@ -16,5 +16,6 @@ router.use("/users", require("./routes/user"));
 router.use("/applications", require("./routes/applications"));
 router.use("/board", require("./routes/board"));
 router.use("/members", require("./routes/members"));
+router.use("/attendance", require("./routes/attendance"));
 
 module.exports = router;

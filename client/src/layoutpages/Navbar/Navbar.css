@@ -65,6 +65,10 @@
     flex: 1;
 }
 
+.Navbar__links--admin {
+    gap: 7rem;
+}
+
 .NavItem {
     position: relative;
     display: flex;

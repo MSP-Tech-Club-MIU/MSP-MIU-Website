@@ -471,6 +471,70 @@ class ApiService {
       throw error;
     }
   }
+
+  // Get all events
+  static async getEvents() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch events');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      throw error;
+    }
+  }
+
+
+  static async getEventById(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch event');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      throw error;
+    }
+  }
+
+  // Submit attendance request
+  static async submitAttendanceRequest(formData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error submitting attendance request:', error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;

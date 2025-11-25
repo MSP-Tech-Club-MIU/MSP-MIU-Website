@@ -1,7 +1,7 @@
 {
   "name": "msp-miu-website",
   "version": "1.0.0",
-  "description": "MIU MSP Club Registration Website",
+  "description": "MSP - MIU Tech Club Website",
   "private": true,
   "workspaces": [
     "client",

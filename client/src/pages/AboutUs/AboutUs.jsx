@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import SEO from '../../components/SEO';
 import './AboutUs.css';
 import { FiTarget, FiEye, FiHeart, FiUsers, FiCpu, FiArrowRight } from 'react-icons/fi';
 import { FaMicrosoft, FaRocket, FaTrophy, FaCode, FaHandshake, FaUserPlus } from 'react-icons/fa';
@@ -37,8 +38,31 @@ const missionValues = [
 ];
 
 const AboutUs = memo(() => {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "About MSP Tech Club - MIU",
+    "description": "MSP Tech Club is a student-led innovation community powered by the Microsoft Learn Student Ambassadors program. We explore cutting-edge technologies, build real projects, and develop technical & leadership excellence together.",
+    "mainEntity": {
+      "@type": "Organization",
+      "name": "MSP Tech Club - MIU",
+      "mission": "To inspire and equip students with the knowledge, tools, and opportunities to innovate and make an impact through technology.",
+      "foundingLocation": {
+        "@type": "Place",
+        "name": "Misr International University"
+      }
+    }
+  };
+
   return (
     <main className="About">
+      <SEO
+        title="About Us"
+        description="Learn about MSP Tech Club at MIU - a student-led innovation community powered by Microsoft Learn Student Ambassadors. Discover our mission, vision, values, and how we help students grow through technology."
+        keywords="MSP, Microsoft Student Partners, about MSP, MIU tech club, student organization, Microsoft Learn Student Ambassadors, technology community"
+        url="https://msp-miu.tech/about"
+        structuredData={structuredData}
+      />
       <section className="AboutHero" aria-labelledby="about-hero-heading">
         <div className="AboutHero__bg" aria-hidden="true" />
         <motion.div className="AboutHero__inner">
