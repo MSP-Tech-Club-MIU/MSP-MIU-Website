@@ -8,43 +8,12 @@ import ApiService from '../services/api';
 // Import images
 import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
 
-// Mock data (same as Events page)
-const mockEvents = [
-  {
-    event_id: 1,
-    name: 'Opening Ceremony',
-    description: 'Join us for the grand opening ceremony of MSP Tech Club. We\'ll have guest speakers, networking opportunities, and exciting announcements about upcoming events and initiatives. This is a special event where we\'ll introduce our mission, vision, and the amazing opportunities that await our members.',
-    event_date: '2025-11-12',
-    event_time: '12:00 PM',
-    place: 'Main Building, Room OOA',
-    event_type: 'event',
-    image_url: eventImage1
-  }
-];
-
-// Mock files data
-const mockFiles = [
-  {
-    file_id: 1,
-    file_name: 'Event_Agenda.pdf',
-    file_type: 'document',
-    file_size: '2.4 MB',
-    uploaded_at: '2025-11-10',
-    uploaded_by: 'Admin'
-  },
-  {
-    file_id: 2,
-    file_name: 'Presentation_Slides.pptx',
-    file_type: 'document',
-    file_size: '5.1 MB',
-    uploaded_at: '2025-11-11',
-    uploaded_by: 'Board Member'
-  }
-];
-
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [files, setFiles] = useState([]); // Start with empty files to show empty state
   const [showUpload, setShowUpload] = useState(false);
@@ -53,8 +22,44 @@ const EventDetails = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Find event from mock data
-  const event = mockEvents.find(e => e.event_id === parseInt(id));
+  // Fetch event from API
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await ApiService.getEventById(parseInt(id));
+        
+        // Map database fields to component fields
+        const mappedEvent = {
+          event_id: data.event_id,
+          name: data.name,
+          description: data.description,
+          event_date: data.event_date,
+          place: data.location,
+          // Map category: Workshop -> event, Session -> session, Entertainment -> entertainment
+          event_type: data.category === 'Workshop' ? 'event' : 
+                     data.category === 'Session' ? 'session' : 
+                     data.category === 'Entertainment' ? 'entertainment' : 'event',
+          // Use main_image from database if available, otherwise fallback to imported image
+          image_url: (data.main_image && data.main_image.trim()) ? data.main_image : eventImage1,
+          category: data.category
+        };
+        
+        setEvent(mappedEvent);
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError(err.message || 'Failed to load event');
+        setEvent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchEvent();
+    }
+  }, [id]);
 
   // Check user role
   useEffect(() => {
@@ -166,16 +171,44 @@ const EventDetails = () => {
     link.click();
   };
 
-  if (!event) {
+  // Loading state
+  if (loading) {
     return (
       <section className="EventDetailsPage">
         <div className="EventDetailsPage__container">
+          <button 
+            onClick={() => navigate('/events')} 
+            className="EventDetailsPage__backBtn"
+          >
+            <FiArrowLeft />
+            Back to Events
+          </button>
           <div className="EventDetailsPage__error">
-            <p>Event not found</p>
-            <button onClick={() => navigate('/events')} className="EventDetailsPage__backBtn">
-              <FiArrowLeft />
-              Back to Events
-            </button>
+            <FiCalendar />
+            <p>Loading event...</p>
+            <span>Please wait while we fetch the event details</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state or event not found
+  if (error || !event) {
+    return (
+      <section className="EventDetailsPage">
+        <div className="EventDetailsPage__container">
+          <button 
+            onClick={() => navigate('/events')} 
+            className="EventDetailsPage__backBtn"
+          >
+            <FiArrowLeft />
+            Back to Events
+          </button>
+          <div className="EventDetailsPage__error">
+            <FiCalendar />
+            <p>{error || 'Event not found'}</p>
+            <span>The event you're looking for doesn't exist or has been removed</span>
           </div>
         </div>
       </section>
