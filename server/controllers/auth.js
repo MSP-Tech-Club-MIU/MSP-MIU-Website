@@ -1068,7 +1068,7 @@ const forgotPassword = async (req, res) => {
             }
 
             // Generate reset link
-            const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${resetTokenResult.token}`;
+            const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
 
             // Send password reset email (using dynamic import for ES module)
             try {
