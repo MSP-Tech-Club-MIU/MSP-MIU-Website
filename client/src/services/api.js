@@ -493,6 +493,27 @@ class ApiService {
     }
   }
 
+
+  static async getEventById(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch event');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      throw error;
+    }
+  }
+
   // Submit attendance request
   static async submitAttendanceRequest(formData) {
     try {

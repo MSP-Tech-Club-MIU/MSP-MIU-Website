@@ -46,16 +46,8 @@ const AttendanceRequest = () => {
   const fetchEventName = async (eventId) => {
     try {
       setLoadingEvent(true);
-      const result = await ApiService.getEvents();
-      const events = Array.isArray(result) ? result : (result.data || []);
-      const event = events.find(e => e.event_id === parseInt(eventId));
-      if (event) {
-        setEventName(event.name);
-      } else {
-        // If event not found in list, try to fetch single event by ID
-        // For now, we'll just show the ID as fallback
-        console.warn(`Event with ID ${eventId} not found in events list`);
-      }
+      const result = await ApiService.getEventById(parseInt(eventId));
+      setEventName(result.data.name);
     } catch (error) {
       console.error('Error fetching event:', error);
       // Keep eventName empty so it falls back to showing ID
@@ -66,10 +58,21 @@ const AttendanceRequest = () => {
 
   const onChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
-    setForm(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
-    }));
+    
+    // Prevent leading zero in phone field
+    if (name === 'phone' && type !== 'checkbox') {
+      // Remove leading zero if user tries to enter it
+      const phoneValue = value.startsWith('0') ? value.substring(1) : value;
+      setForm(prev => ({ 
+        ...prev, 
+        [name]: phoneValue
+      }));
+    } else {
+      setForm(prev => ({ 
+        ...prev, 
+        [name]: type === 'checkbox' ? checked : value 
+      }));
+    }
     setErrors(prev => ({ ...prev, [name]: '' }));
   }, []);
 
@@ -166,7 +169,7 @@ const AttendanceRequest = () => {
                   </p>
                 ) : (
                   <p style={{ margin: 0, color: '#8EC2F0', fontSize: '0.9rem' }}>
-                    <strong>Event:</strong> {eventName || `Event ID: ${form.eventId}`}
+                    <strong>Event:</strong> {eventName ? eventName : `Event ID: ${form.eventId}`}
                   </p>
                 )}
               </div>

@@ -19,6 +19,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const AccountActivation = lazy(() => import('./pages/account-activation'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Enhanced loading component with better UX
 const PageLoader = () => (
@@ -69,6 +70,7 @@ const AppRouter = () => (
         <Route path="/account-activation" element={<AccountActivation />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
+        <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
   </Router>

@@ -126,15 +126,34 @@ const getAllApplications = async (req, res) => {
         // Add text search if provided
         if (search) {
             const { Op } = require('sequelize');
+            
+            // Sanitize search input: trim, limit length, and escape special LIKE characters
+            let sanitizedSearch = String(search).trim();
+            
+            // Limit search length to prevent DoS attacks
+            if (sanitizedSearch.length > 100) {
+                sanitizedSearch = sanitizedSearch.substring(0, 100);
+            }
+            
+            // Escape special LIKE pattern characters (% and _) to prevent pattern injection
+            // Replace % with \% and _ with \_ to treat them as literal characters
+            // This prevents users from using SQL LIKE wildcards for injection attempts
+            sanitizedSearch = sanitizedSearch.replace(/[%_\\]/g, (match) => {
+                if (match === '\\') return '\\\\';
+                return `\\${match}`;
+            });
+            
+            // Sequelize automatically parameterizes queries, but we've sanitized the input
+            // to prevent pattern-based attacks and ensure safe LIKE pattern matching
             queryOptions.where = {
                 ...whereClause,
                 [Op.or]: [
-                    { university_id: { [Op.like]: `%${search}%` } },
-                    { full_name: { [Op.like]: `%${search}%` } },
-                    { email: { [Op.like]: `%${search}%` } },
-                    { phone_number: { [Op.like]: `%${search}%` } },
-                    { skills: { [Op.like]: `%${search}%` } },
-                    { motivation: { [Op.like]: `%${search}%` } }
+                    { university_id: { [Op.like]: `%${sanitizedSearch}%` } },
+                    { full_name: { [Op.like]: `%${sanitizedSearch}%` } },
+                    { email: { [Op.like]: `%${sanitizedSearch}%` } },
+                    { phone_number: { [Op.like]: `%${sanitizedSearch}%` } },
+                    { skills: { [Op.like]: `%${sanitizedSearch}%` } },
+                    { motivation: { [Op.like]: `%${sanitizedSearch}%` } }
                     // Note: Comment field excluded from search
                 ]
             };
