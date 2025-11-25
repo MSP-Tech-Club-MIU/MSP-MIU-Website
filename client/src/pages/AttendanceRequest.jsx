@@ -46,11 +46,13 @@ const AttendanceRequest = () => {
   const fetchEventName = async (eventId) => {
     try {
       setLoadingEvent(true);
-      const result = await ApiService.getEventById(parseInt(eventId));
-      setEventName(result.data.name);
+      const eventData = await ApiService.getEventById(parseInt(eventId));
+      // API service returns the event object directly (already extracted from result.data)
+      setEventName(eventData.name || '');
     } catch (error) {
       console.error('Error fetching event:', error);
       // Keep eventName empty so it falls back to showing ID
+      setEventName('');
     } finally {
       setLoadingEvent(false);
     }

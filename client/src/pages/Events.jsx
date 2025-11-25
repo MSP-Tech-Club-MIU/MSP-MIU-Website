@@ -1,28 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
+import ApiService from '../services/api';
 import './Events.css';
 import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 
 // Import images
 import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
 
-// Mock data for events (since no database currently)
-const mockEvents = [
-  {
-    event_id: 1,
-    name: 'Opening Ceremony',
-    description: 'Join us for the grand opening ceremony of MSP Tech Club. We\'ll have guest speakers, networking opportunities, and exciting announcements about upcoming events and initiatives.',
-    event_date: '2025-11-12',
-    event_time: '12:00 PM',
-    place: 'Main Building, Room OOA',
-    event_type: 'event',
-    image_url: eventImage1
-  }
-];
-
 const Events = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
   const navigate = useNavigate();
@@ -39,8 +29,40 @@ const Events = () => {
     }
   };
 
-  // Use mock data directly
-  const events = mockEvents;
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await ApiService.getEvents();
+        // Map database fields to component fields
+        const mappedEvents = Array.isArray(data) ? data.map(event => ({
+          event_id: event.event_id,
+          name: event.name,
+          description: event.description,
+          event_date: event.event_date,
+          place: event.location,
+          // Map category: Workshop -> event, Session -> session, Entertainment -> entertainment
+          event_type: event.category === 'Workshop' ? 'event' : 
+                     event.category === 'Session' ? 'session' : 
+                     event.category === 'Entertainment' ? 'entertainment' : 'event',
+          // Use main_image from database if available, otherwise fallback to imported image
+          image_url: (event.main_image && event.main_image.trim()) ? event.main_image : eventImage1,
+          category: event.category
+        })) : [];
+        setEvents(mappedEvents);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError(err.message || 'Failed to load events');
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -140,7 +162,23 @@ const Events = () => {
           </div>
         </div>
 
-        {filteredEvents.length === 0 && (
+        {loading && (
+          <div className="EventsPage__empty">
+            <FiCalendar />
+            <p>Loading events...</p>
+            <span>Please wait while we fetch the latest events</span>
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="EventsPage__empty">
+            <FiCalendar />
+            <p>Error loading events</p>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {!loading && !error && filteredEvents.length === 0 && (
           <div className="EventsPage__empty">
             <FiCalendar />
             <p>No events found</p>
@@ -148,9 +186,10 @@ const Events = () => {
           </div>
         )}
 
-        <div className="EventsPage__grid">
-          <AnimatePresence mode="popLayout">
-            {filteredEvents.map((event) => (
+        {!loading && !error && (
+          <div className="EventsPage__grid">
+            <AnimatePresence mode="popLayout">
+              {filteredEvents.map((event) => (
               <motion.article
                 key={event.event_id}
                 className="EventCard"
@@ -212,9 +251,10 @@ const Events = () => {
                   )}
                 </div>
               </motion.article>
-            ))}
-          </AnimatePresence>
-        </div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </section>
   );
