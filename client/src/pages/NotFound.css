@@ -1,0 +1,122 @@
+.NotFound {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0a1929 0%, #1a1a2e 100%);
+}
+
+.NotFound__container {
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+}
+
+.NotFound__logo {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  animation: fadeInDown 0.6s ease-out;
+}
+
+.NotFound__logoImg {
+  max-width: 200px;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(3, 169, 244, 0.3));
+}
+
+.NotFound__content {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.NotFound__title {
+  font-size: 8rem;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(90deg, #0077CC, #03A9F4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  line-height: 1;
+  margin-bottom: 1rem;
+}
+
+.NotFound__subtitle {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: #eaf2ff;
+  letter-spacing: 0.5px;
+}
+
+.NotFound__message {
+  font-size: 1.1rem;
+  color: #8EC2F0;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}
+
+.NotFound__button {
+  display: inline-block;
+  padding: 0.875rem 2rem;
+  background: linear-gradient(90deg, #0077CC, #03A9F4);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(3, 169, 244, 0.3);
+}
+
+.NotFound__button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(3, 169, 244, 0.4);
+  background: linear-gradient(90deg, #03A9F4, #0077CC);
+}
+
+.NotFound__button:active {
+  transform: translateY(0);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .NotFound__title {
+    font-size: 5rem;
+  }
+
+  .NotFound__subtitle {
+    font-size: 1.5rem;
+  }
+
+  .NotFound__logoImg {
+    max-width: 150px;
+  }
+
+  .NotFound__message {
+    font-size: 1rem;
+  }
+}
+
