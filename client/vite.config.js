@@ -43,6 +43,18 @@ export default defineConfig({
           if (id.includes('/components/TextType')) {
             return 'chunk-texttype';
           }
+        },
+        // Asset file naming
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+            return `assets/images/[name]-[hash][extname]`;
+          }
+          if (/woff|woff2|eot|ttf|otf/i.test(ext)) {
+            return `assets/fonts/[name]-[hash][extname]`;
+          }
+          return `assets/[name]-[hash][extname]`;
         }
       }
     },
@@ -60,7 +72,9 @@ export default defineConfig({
   // Enable gzip compression
   server: {
     compress: true
-  }
+  },
+  // Asset handling for static files
+  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.svg', '**/*.webp']
 })
 
 
