@@ -286,8 +286,17 @@ const FormAdmin = memo(() => {
         setUserDepartment(user.department_id);
         
         // Check if user has board role OR department 5
+        // Validate role exists and is in allowed list
         const hasBoardRole = user.role === 'board';
-        const hasDept5Access = user.department_id === 5;
+        
+        // Validate department_id - must be a number and equals 5
+        // Type check to prevent manipulation (coerce to number and validate)
+        const userDepartmentId = user.department_id;
+        const departmentId = typeof userDepartmentId === 'number' 
+            ? userDepartmentId 
+            : parseInt(userDepartmentId, 10);
+        const hasDept5Access = !isNaN(departmentId) && departmentId === 5;
+        
         const hasAccess = hasBoardRole || hasDept5Access;
         
         if (!hasAccess) {
@@ -414,7 +423,11 @@ const FormAdmin = memo(() => {
   }
 
   // Show unauthorized message if user is authenticated but doesn't have access
-  const hasAccess = (userRole === 'board') || (userDepartment === 5);
+  // Validate department_id - must be a number and equals 5
+  const departmentId = typeof userDepartment === 'number' 
+    ? userDepartment 
+    : parseInt(userDepartment, 10);
+  const hasAccess = (userRole === 'board') || (!isNaN(departmentId) && departmentId === 5);
   if (isAuthenticated && !hasAccess) {
     return (
       <div style={{ 

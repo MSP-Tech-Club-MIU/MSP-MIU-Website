@@ -89,8 +89,16 @@ const Events = () => {
   }, []);
 
   // Allow: board/admin roles OR department 6 (Event Planning)
+  // Validate role exists and is in allowed list
   const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
-  const isEventPlanningDept = userDepartment === 6;
+  
+  // Validate department_id - must be a number and equals 6
+  // Type check to prevent manipulation (coerce to number and validate)
+  const departmentId = typeof userDepartment === 'number' 
+    ? userDepartment 
+    : parseInt(userDepartment, 10);
+  const isEventPlanningDept = !isNaN(departmentId) && departmentId === 6;
+  
   const canAccessAdminFeatures = isBoardOrAdmin || isEventPlanningDept;
 
   const formatDate = (dateString) => {
