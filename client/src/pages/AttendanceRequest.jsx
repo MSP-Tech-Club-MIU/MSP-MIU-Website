@@ -212,7 +212,7 @@ const AttendanceRequest = () => {
                 {errors.name && <span className="error">{errors.name}</span>}
               </label>
 
-              <label className="floating-input">
+              <label className="floating-input phone-full-width">
                 Phone Number
                 <div className="prefix-wrap">
                   <span className="prefix">+20</span>
