@@ -448,15 +448,6 @@ const FormAdmin = memo(() => {
   if (loading) {
     return <PageLoader message="Loading applications..." />;
   }
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: "20px" }}>

@@ -1,5 +1,32 @@
 const { Attendance, Event, sequelize } = require('../models');
 
+/**
+ * Helper function to update the attendees count in the events table
+ * @param {number} eventId - The event ID to update
+ */
+const updateEventAttendeesCount = async (eventId) => {
+    try {
+        const event = await Event.findByPk(eventId);
+        if (!event) {
+            console.warn(`Event ${eventId} not found when updating attendees count`);
+            return;
+        }
+
+        // Count total attendance requests for this event
+        const attendanceCount = await Attendance.count({
+            where: { event_id: eventId }
+        });
+
+        // Update the event's attendees field with the count as a string
+        await event.update({
+            attendees: String(attendanceCount)
+        });
+    } catch (updateError) {
+        // Log error but don't fail the request if attendees update fails
+        console.error('Error updating attendees count:', updateError);
+    }
+};
+
 // Submit new attendance request
 const createAttendanceRequest = async (req, res) => {
     try {
@@ -312,23 +339,7 @@ const deleteAttendanceRequest = async (req, res) => {
         await attendanceRequest.destroy();
 
         // Update the attendees count in the events table
-        try {
-            const event = await Event.findByPk(eventId);
-            if (event) {
-                // Count remaining attendance requests for this event
-                const attendanceCount = await Attendance.count({
-                    where: { event_id: eventId }
-                });
-
-                // Update the event's attendees field with the count as a string
-                await event.update({
-                    attendees: String(attendanceCount)
-                });
-            }
-        } catch (updateError) {
-            // Log error but don't fail the request if attendees update fails
-            console.error('Error updating attendees count:', updateError);
-        }
+        await updateEventAttendeesCount(eventId);
 
         res.json({
             success: true,

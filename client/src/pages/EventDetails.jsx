@@ -22,9 +22,9 @@ const EventDetails = () => {
   const [fileType, setFileType] = useState('document');
   const [isUploading, setIsUploading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showDeleteSubmissionsConfirm, setShowDeleteSubmissionsConfirm] = useState(false);
+  const [showRegistrationToggleConfirm, setShowRegistrationToggleConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeletingSubmissions, setIsDeletingSubmissions] = useState(false);
+  const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
   const fileInputRef = useRef(null);
 
   // Fetch event from API
@@ -193,7 +193,7 @@ const EventDetails = () => {
 
   const handleToggleRegistration = async () => {
     try {
-      setIsDeletingSubmissions(true);
+      setIsTogglingRegistration(true);
       const newStatus = !event.registration_enabled;
       await ApiService.updateEvent(event.event_id, {
         registration_enabled: newStatus
@@ -205,14 +205,20 @@ const EventDetails = () => {
         registration_enabled: newStatus
       }));
       
-      alert(`Registration ${newStatus ? 'enabled' : 'disabled'} for this event`);
-      setIsDeletingSubmissions(false);
-      setShowDeleteSubmissionsConfirm(false);
+      // Show success message (using a simple approach for now, can be enhanced with toast notifications later)
+      const message = `Registration ${newStatus ? 'enabled' : 'disabled'} for this event`;
+      console.log(message);
+      // TODO: Replace with proper toast notification system
+      alert(message);
+      setIsTogglingRegistration(false);
+      setShowRegistrationToggleConfirm(false);
     } catch (error) {
       console.error('Error toggling registration:', error);
-      alert('Failed to toggle registration: ' + (error.message || 'Unknown error'));
-      setIsDeletingSubmissions(false);
-      setShowDeleteSubmissionsConfirm(false);
+      const errorMessage = 'Failed to toggle registration: ' + (error.message || 'Unknown error');
+      // TODO: Replace with proper error notification system
+      alert(errorMessage);
+      setIsTogglingRegistration(false);
+      setShowRegistrationToggleConfirm(false);
     }
   };
 
@@ -387,10 +393,10 @@ const EventDetails = () => {
                 </h3>
                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
                   <motion.button
-                    onClick={() => setShowDeleteSubmissionsConfirm(true)}
-                    disabled={isDeletingSubmissions}
-                    whileHover={{ scale: isDeletingSubmissions ? 1 : 1.02 }}
-                    whileTap={{ scale: isDeletingSubmissions ? 1 : 0.98 }}
+                    onClick={() => setShowRegistrationToggleConfirm(true)}
+                    disabled={isTogglingRegistration}
+                    whileHover={{ scale: isTogglingRegistration ? 1 : 1.02 }}
+                    whileTap={{ scale: isTogglingRegistration ? 1 : 0.98 }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -402,21 +408,21 @@ const EventDetails = () => {
                       color: event.registration_enabled ? '#ffc107' : '#4caf50',
                       border: `1px solid ${event.registration_enabled ? 'rgba(255, 193, 7, 0.3)' : 'rgba(76, 175, 80, 0.3)'}`,
                       borderRadius: '8px',
-                      cursor: isDeletingSubmissions ? 'not-allowed' : 'pointer',
+                      cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
                       fontSize: '0.9rem',
                       fontWeight: '500',
-                      opacity: isDeletingSubmissions ? 0.6 : 1
+                      opacity: isTogglingRegistration ? 0.6 : 1
                     }}
                   >
                     {event.registration_enabled ? (
                       <>
                         <FiAlertTriangle />
-                        {isDeletingSubmissions ? 'Updating...' : 'Close Registration'}
+                        {isTogglingRegistration ? 'Updating...' : 'Close Registration'}
                       </>
                     ) : (
                       <>
                         <FiUserPlus />
-                        {isDeletingSubmissions ? 'Updating...' : 'Open Registration'}
+                        {isTogglingRegistration ? 'Updating...' : 'Open Registration'}
                       </>
                     )}
                   </motion.button>
@@ -628,13 +634,13 @@ const EventDetails = () => {
 
       {/* Delete Submissions Confirmation Modal */}
       <AnimatePresence>
-        {showDeleteSubmissionsConfirm && (
+        {showRegistrationToggleConfirm && (
           <motion.div
             className="success-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => !isDeletingSubmissions && setShowDeleteSubmissionsConfirm(false)}
+            onClick={() => !isTogglingRegistration && setShowDeleteSubmissionsConfirm(false)}
             style={{ zIndex: 1000 }}
           >
             <motion.div
@@ -669,14 +675,14 @@ const EventDetails = () => {
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                 <button
                   onClick={() => setShowDeleteSubmissionsConfirm(false)}
-                  disabled={isDeletingSubmissions}
+                  disabled={isTogglingRegistration}
                   style={{
                     padding: '0.75rem 1.5rem',
                     background: 'rgba(255, 255, 255, 0.1)',
                     color: '#fff',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '8px',
-                    cursor: isDeletingSubmissions ? 'not-allowed' : 'pointer',
+                    cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
                     fontSize: '0.9rem',
                     fontWeight: '500'
                   }}
@@ -685,20 +691,20 @@ const EventDetails = () => {
                 </button>
                 <button
                   onClick={handleToggleRegistration}
-                  disabled={isDeletingSubmissions}
+                  disabled={isTogglingRegistration}
                   style={{
                     padding: '0.75rem 1.5rem',
                     background: event.registration_enabled ? '#ffc107' : '#4caf50',
                     color: event.registration_enabled ? '#000' : '#fff',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: isDeletingSubmissions ? 'not-allowed' : 'pointer',
+                    cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
                     fontSize: '0.9rem',
                     fontWeight: '500',
-                    opacity: isDeletingSubmissions ? 0.6 : 1
+                    opacity: isTogglingRegistration ? 0.6 : 1
                   }}
                 >
-                  {isDeletingSubmissions 
+                  {isTogglingRegistration 
                     ? 'Updating...' 
                     : event.registration_enabled 
                       ? 'Close Registration' 

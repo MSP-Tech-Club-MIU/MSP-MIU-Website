@@ -2,6 +2,20 @@ const { Event } = require('../models');
 const { Op } = require('sequelize');
 
 /**
+ * Helper function to convert registration_enabled to boolean
+ * Handles string "true"/"false" from forms and other types
+ */
+const convertToBoolean = (value, defaultValue = true) => {
+    if (value === undefined) {
+        return defaultValue;
+    }
+    if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+    }
+    return Boolean(value);
+};
+
+/**
  * Create a new event
  * POST /api/events
  */
@@ -36,14 +50,7 @@ const addEvent = async (req, res) => {
         }
 
         // Convert registration_enabled to boolean (handle string "true"/"false" from form)
-        let regEnabled = true; // default
-        if (registration_enabled !== undefined) {
-            if (typeof registration_enabled === 'string') {
-                regEnabled = registration_enabled.toLowerCase() === 'true';
-            } else {
-                regEnabled = Boolean(registration_enabled);
-            }
-        }
+        const regEnabled = convertToBoolean(registration_enabled, true);
 
         // Create new event
         const newEvent = await Event.create({
@@ -87,15 +94,6 @@ const addEvent = async (req, res) => {
             return res.status(500).json({
                 success: false,
                 error: 'Database error occurred',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            });
-        }
-
-        // Handle database column errors
-        if (error.message && (error.message.includes('registration_enabled') || error.message.includes('Unknown column'))) {
-            return res.status(500).json({
-                success: false,
-                error: 'Database configuration error. Please ensure the registration_enabled column exists in the events table.',
                 details: process.env.NODE_ENV === 'development' ? error.message : undefined
             });
         }
@@ -227,14 +225,9 @@ const updateEvent = async (req, res) => {
         }
 
         // Convert registration_enabled to boolean if provided
-        let regEnabled = undefined;
-        if (registration_enabled !== undefined) {
-            if (typeof registration_enabled === 'string') {
-                regEnabled = registration_enabled.toLowerCase() === 'true';
-            } else {
-                regEnabled = Boolean(registration_enabled);
-            }
-        }
+        const regEnabled = registration_enabled !== undefined 
+            ? convertToBoolean(registration_enabled, true)
+            : undefined;
 
         // Update event
         await event.update({

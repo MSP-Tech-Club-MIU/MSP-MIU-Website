@@ -117,14 +117,8 @@ const AttendanceRequest = () => {
     }
     setSubmitting(true);
     try {
-      // Check if event registration is enabled
-      const eventData = await ApiService.getEventById(parseInt(form.eventId));
-      if (eventData.registration_enabled === false) {
-        setErrors({ submit: 'Registration for this event is currently closed' });
-        setSubmitting(false);
-        return;
-      }
       // Transform form data to match database schema
+      // Note: Server-side validation will check if registration is enabled
       const formData = {
         event_id: parseInt(form.eventId),
         full_name: form.name.trim(),
