@@ -26,12 +26,20 @@ const createAttendanceRequest = async (req, res) => {
             });
         }
 
-        // Validate event exists
+        // Validate event exists and registration is enabled
         const event = await Event.findByPk(event_id);
         if (!event) {
             return res.status(404).json({
                 success: false,
                 error: 'Event not found'
+            });
+        }
+
+        // Check if registration is enabled for this event
+        if (event.registration_enabled === false) {
+            return res.status(403).json({
+                success: false,
+                error: 'Registration for this event is currently closed'
             });
         }
 
@@ -51,6 +59,22 @@ const createAttendanceRequest = async (req, res) => {
             additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null,
             attended: false // Default to false
         });
+
+        // Update the attendees count in the events table
+        try {
+            // Count total attendance requests for this event
+            const attendanceCount = await Attendance.count({
+                where: { event_id: parseInt(event_id) }
+            });
+
+            // Update the event's attendees field with the count as a string
+            await event.update({
+                attendees: String(attendanceCount)
+            });
+        } catch (updateError) {
+            // Log error but don't fail the request if attendees update fails
+            console.error('Error updating attendees count:', updateError);
+        }
 
         res.status(201).json({
             success: true,
@@ -263,7 +287,28 @@ const deleteAttendanceRequest = async (req, res) => {
             });
         }
 
+        const eventId = attendanceRequest.event_id;
+
         await attendanceRequest.destroy();
+
+        // Update the attendees count in the events table
+        try {
+            const event = await Event.findByPk(eventId);
+            if (event) {
+                // Count remaining attendance requests for this event
+                const attendanceCount = await Attendance.count({
+                    where: { event_id: eventId }
+                });
+
+                // Update the event's attendees field with the count as a string
+                await event.update({
+                    attendees: String(attendanceCount)
+                });
+            }
+        } catch (updateError) {
+            // Log error but don't fail the request if attendees update fails
+            console.error('Error updating attendees count:', updateError);
+        }
 
         res.json({
             success: true,

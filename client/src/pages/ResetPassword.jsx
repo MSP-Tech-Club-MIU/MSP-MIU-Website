@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 import mspLogo from '../assets/Images/msp-logo.png';
 import './account-activation.css';
 
@@ -115,11 +116,7 @@ const ResetPassword = () => {
             <h1 className="activation-title">Verifying Reset Link</h1>
             <p className="activation-subtitle">Please wait while we verify your reset link...</p>
           </div>
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <div className="loading-spinner">
-              <div className="spinner"></div>
-            </div>
-          </div>
+          <PageLoader message="Verifying reset link..." />
         </div>
       </div>
     );

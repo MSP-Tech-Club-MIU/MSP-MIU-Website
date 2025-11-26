@@ -7,7 +7,7 @@ const { Op } = require('sequelize');
  */
 const addEvent = async (req, res) => {
     try {
-        const { name, description, event_date, location, category, upload_file, main_image, attendees } = req.body;
+        const { name, description, event_date, location, category, upload_file, main_image, attendees, registration_enabled } = req.body;
 
         // Validation
         if (!name || !event_date || !location || !category) {
@@ -35,6 +35,16 @@ const addEvent = async (req, res) => {
             });
         }
 
+        // Convert registration_enabled to boolean (handle string "true"/"false" from form)
+        let regEnabled = true; // default
+        if (registration_enabled !== undefined) {
+            if (typeof registration_enabled === 'string') {
+                regEnabled = registration_enabled.toLowerCase() === 'true';
+            } else {
+                regEnabled = Boolean(registration_enabled);
+            }
+        }
+
         // Create new event
         const newEvent = await Event.create({
             name,
@@ -44,7 +54,8 @@ const addEvent = async (req, res) => {
             category,
             upload_file: upload_file || null,
             main_image: main_image || null,
-            attendees: attendees || null
+            attendees: attendees || null,
+            registration_enabled: regEnabled
         });
 
         res.status(201).json({
@@ -55,6 +66,11 @@ const addEvent = async (req, res) => {
 
     } catch (error) {
         console.error('Error creating event:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
         
         // Handle Sequelize validation errors
         if (error.name === 'SequelizeValidationError') {
@@ -65,9 +81,29 @@ const addEvent = async (req, res) => {
             });
         }
 
+        // Handle Sequelize database errors
+        if (error.name === 'SequelizeDatabaseError') {
+            console.error('Database error:', error.original);
+            return res.status(500).json({
+                success: false,
+                error: 'Database error occurred',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+
+        // Handle database column errors
+        if (error.message && (error.message.includes('registration_enabled') || error.message.includes('Unknown column'))) {
+            return res.status(500).json({
+                success: false,
+                error: 'Database configuration error. Please ensure the registration_enabled column exists in the events table.',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+
         res.status(500).json({
             success: false,
-            error: 'Failed to create event'
+            error: 'Failed to create event',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
@@ -157,7 +193,7 @@ const getEventById = async (req, res) => {
 const updateEvent = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, event_date, location, category, upload_file, main_image, attendees } = req.body;
+        const { name, description, event_date, location, category, upload_file, main_image, attendees, registration_enabled } = req.body;
 
         const event = await Event.findByPk(id);
 
@@ -190,6 +226,16 @@ const updateEvent = async (req, res) => {
             }
         }
 
+        // Convert registration_enabled to boolean if provided
+        let regEnabled = undefined;
+        if (registration_enabled !== undefined) {
+            if (typeof registration_enabled === 'string') {
+                regEnabled = registration_enabled.toLowerCase() === 'true';
+            } else {
+                regEnabled = Boolean(registration_enabled);
+            }
+        }
+
         // Update event
         await event.update({
             ...(name && { name }),
@@ -199,7 +245,8 @@ const updateEvent = async (req, res) => {
             ...(category && { category }),
             ...(upload_file !== undefined && { upload_file }),
             ...(main_image !== undefined && { main_image }),
-            ...(attendees !== undefined && { attendees })
+            ...(attendees !== undefined && { attendees }),
+            ...(regEnabled !== undefined && { registration_enabled: regEnabled })
         });
 
         res.status(200).json({

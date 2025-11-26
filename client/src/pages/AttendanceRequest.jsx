@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 import './PageBase.css';
 
 const AttendanceRequest = () => {
@@ -116,6 +117,13 @@ const AttendanceRequest = () => {
     }
     setSubmitting(true);
     try {
+      // Check if event registration is enabled
+      const eventData = await ApiService.getEventById(parseInt(form.eventId));
+      if (eventData.registration_enabled === false) {
+        setErrors({ submit: 'Registration for this event is currently closed' });
+        setSubmitting(false);
+        return;
+      }
       // Transform form data to match database schema
       const formData = {
         event_id: parseInt(form.eventId),
@@ -140,6 +148,17 @@ const AttendanceRequest = () => {
       setSubmitting(false);
     }
   }, [form, navigate, validate]);
+
+  // Show loading while fetching event
+  if (loadingEvent && !form.eventId) {
+    return (
+      <section className="PageBase">
+        <div className="container">
+          <PageLoader message="Loading event information..." />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="PageBase">
