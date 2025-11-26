@@ -721,6 +721,63 @@ class ApiService {
       throw error;
     }
   }
+
+  // Export attendance requests to CSV
+  static async exportAttendanceRequestsToCSV(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.event_id) queryParams.append('event_id', filters.event_id);
+      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.search) queryParams.append('search', filters.search);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/attendance/export/csv${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to export attendance requests');
+      }
+
+      // Get the CSV content as text
+      const csvContent = await response.text();
+      
+      // Get filename from Content-Disposition header or generate one
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `attendance_review_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create a blob and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const urlObj = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', urlObj);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL
+      setTimeout(() => URL.revokeObjectURL(urlObj), 100);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error exporting attendance requests to CSV:', error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;

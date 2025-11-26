@@ -43,9 +43,19 @@ const AttendanceReview = () => {
 
         const user = await ApiService.getProfile();
         setUserRole(user.role);
-        // Allow: board/admin roles OR department_id = 6 (Event Planning)
+        
+        // Validate access - Allow: board/admin roles OR department_id = 6 (Event Planning)
+        // Validate role exists and is in allowed list
         const isBoardOrAdmin = user.role === 'board' || user.role === 'admin';
-        const isEventPlanningDept = user.department_id === 6;
+        
+        // Validate department_id - must be a number and equals 6
+        // Type check to prevent manipulation (coerce to number and validate)
+        const userDepartmentId = user.department_id;
+        const departmentId = typeof userDepartmentId === 'number' 
+            ? userDepartmentId 
+            : parseInt(userDepartmentId, 10);
+        const isEventPlanningDept = !isNaN(departmentId) && departmentId === 6;
+        
         const hasAccess = isBoardOrAdmin || isEventPlanningDept;
         setIsAuthenticated(hasAccess);
 
@@ -169,101 +179,32 @@ const AttendanceReview = () => {
     }
   };
 
-  // Format date for CSV (full format)
-  const formatDateForCSV = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  // Export to CSV function
-  const exportToCSV = () => {
+  // Export to CSV function (calls backend API)
+  const [isExporting, setIsExporting] = useState(false);
+  
+  const exportToCSV = async () => {
     if (attendanceRequests.length === 0) {
       alert('No data to export');
       return;
     }
 
-    // CSV headers
-    const headers = [
-      'Number',
-      'Full Name',
-      'University ID',
-      'Phone Number',
-      'Event Name',
-      'Event ID',
-      'Course Code',
-      'Lecture/Lab Time',
-      'Room',
-      'Instructor Name',
-      'Additional Course Code',
-      'Additional Lecture/Lab Time',
-      'Additional Room',
-      'Additional Instructor Name',
-      'Registered Date',
-      'Attendance Status'
-    ];
+    try {
+      setIsExporting(true);
+      
+      // Build filters object (same as what's displayed)
+      const filtersToSend = {};
+      if (filters.event_id) filtersToSend.event_id = filters.event_id;
+      if (filters.attended !== '') filtersToSend.attended = filters.attended === 'true';
+      if (filters.search) filtersToSend.search = filters.search;
 
-    // Convert data to CSV rows
-    const csvRows = attendanceRequests.map((request, index) => {
-      const row = [
-        index + 1,
-        request.full_name || '',
-        request.university_id || '',
-        request.phone_number || '',
-        request.event ? (request.event.name || '') : '',
-        request.event_id || '',
-        request.course_code || '',
-        request.lecture_lab_time || '',
-        request.room || '',
-        request.instructor_name || '',
-        request.additional_course_code || '',
-        request.additional_lecture_lab_time || '',
-        request.additional_room || '',
-        request.additional_instructor_name || '',
-        formatDateForCSV(request.created_at),
-        request.attended ? 'Attended' : "Didn't Attend"
-      ];
-      return row.map(cell => {
-        // Escape cells that contain commas, quotes, or newlines
-        const cellString = String(cell || '');
-        if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
-          return `"${cellString.replace(/"/g, '""')}"`;
-        }
-        return cellString;
-      }).join(',');
-    });
-
-    // Combine headers and rows
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-
-    // Create a blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    // Generate filename with current date
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
-    const filename = `attendance_review_${dateStr}_${timeStr}.csv`;
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Call backend API to export CSV
+      await ApiService.exportAttendanceRequestsToCSV(filtersToSend);
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      alert(`Failed to export CSV: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Show loading while checking auth
@@ -344,27 +285,33 @@ const AttendanceReview = () => {
               <motion.button
                 onClick={exportToCSV}
                 className="btn primary"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                disabled={isExporting}
+                whileHover={{ scale: isExporting ? 1 : 1.05 }}
+                whileTap={{ scale: isExporting ? 1 : 0.95 }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem',
                   padding: '0.75rem 1.5rem',
-                  background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+                  background: isExporting 
+                    ? 'linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%)'
+                    : 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
-                  cursor: 'pointer',
+                  cursor: isExporting ? 'not-allowed' : 'pointer',
                   fontSize: '0.95rem',
                   fontWeight: '600',
-                  boxShadow: '0 4px 12px rgba(39, 174, 96, 0.3)',
+                  boxShadow: isExporting 
+                    ? '0 2px 8px rgba(127, 140, 141, 0.2)'
+                    : '0 4px 12px rgba(39, 174, 96, 0.3)',
                   transition: 'all 0.3s ease',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  opacity: isExporting ? 0.7 : 1
                 }}
               >
                 <FiDownload />
-                Export to CSV
+                {isExporting ? 'Exporting...' : 'Export to CSV'}
               </motion.button>
             )}
           </div>
@@ -392,7 +339,7 @@ const AttendanceReview = () => {
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4caf50', marginBottom: '0.25rem' }}>
                   {attendanceRequests.filter(r => r.attended).length}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Did Attend</div>
+                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Attended</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.25rem' }}>

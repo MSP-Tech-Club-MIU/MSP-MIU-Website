@@ -172,14 +172,35 @@ const verifyDepartment = (...departments) => {
                 error: 'Authentication required'
             });
         }
-        // Check department_id field (not department)
-        const userDepartment = req.user.department_id || req.user.department;
-        if (!departments.includes(userDepartment)) {
+        
+        // Get department_id - must be a valid number, no fallback
+        const userDepartment = req.user.department_id;
+        
+        // Validate department_id exists and is a valid number
+        if (userDepartment === null || userDepartment === undefined) {
             return res.status(403).json({
                 success: false,
                 error: 'Department not allowed'
             });
         }
+        
+        // Ensure department_id is a number (prevent type coercion attacks)
+        const departmentId = typeof userDepartment === 'number' ? userDepartment : parseInt(userDepartment, 10);
+        if (isNaN(departmentId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        
+        // Validate department is in allowed list
+        if (!departments.includes(departmentId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        
         next();
     };
 };
@@ -197,12 +218,28 @@ const verifyRoleOrDepartment = (roles, departments) => {
             });
         }
 
-        // Check if user has required role
-        const hasRole = roles && roles.includes(req.user.role);
-        
-        // Check if user has required department
-        const userDepartment = req.user.department_id || req.user.department;
-        const hasDepartment = departments && departments.includes(userDepartment);
+        // Check if user has required role (validate role exists and is in allowed list)
+        const userRole = req.user.role;
+        const hasRole = roles && userRole && roles.includes(userRole);
+
+        // Check if user has required department - validate properly
+        let hasDepartment = false;
+        if (departments && departments.length > 0) {
+            const userDepartment = req.user.department_id;
+            
+            // Validate department_id exists and is a valid number
+            if (userDepartment !== null && userDepartment !== undefined) {
+                // Ensure department_id is a number (prevent type coercion attacks)
+                const departmentId = typeof userDepartment === 'number' 
+                    ? userDepartment 
+                    : parseInt(userDepartment, 10);
+                
+                // Only check if it's a valid number
+                if (!isNaN(departmentId)) {
+                    hasDepartment = departments.includes(departmentId);
+                }
+            }
+        }
 
         // Allow if user has required role OR department
         if (hasRole || hasDepartment) {
