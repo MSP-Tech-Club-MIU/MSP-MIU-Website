@@ -60,21 +60,41 @@ const createAttendanceRequest = async (req, res) => {
             attended: false // Default to false
         });
 
-        // Update the attendees count in the events table
-        try {
-            // Count total attendance requests for this event
+        await sequelize.transaction(async (t) => {
+            // Create new attendance request within the transaction
+            const newAttendanceRequest = await Attendance.create({
+                event_id: parseInt(event_id),
+                full_name: full_name.trim(),
+                phone_number: phone_number.trim(),
+                university_id: university_id.trim(),
+                course_code: course_code ? course_code.trim() : null,
+                lecture_lab_time: lecture_lab_time ? lecture_lab_time.trim() : null,
+                room: room ? room.trim() : null,
+                instructor_name: instructor_name ? instructor_name.trim() : null,
+                additional_course_code: additional_course_code ? additional_course_code.trim() : null,
+                additional_lecture_lab_time: additional_lecture_lab_time ? additional_lecture_lab_time.trim() : null,
+                additional_room: additional_room ? additional_room.trim() : null,
+                additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null,
+                attended: false // Default to false
+            }, { transaction: t });
+
+            // Recalculate and update attendees count within the same transaction
             const attendanceCount = await Attendance.count({
-                where: { event_id: parseInt(event_id) }
+                where: { event_id: parseInt(event_id) },
+                transaction: t
             });
 
-            // Update the event's attendees field with the count as a string
             await event.update({
                 attendees: String(attendanceCount)
+            }, { transaction: t });
+
+            // The original response logic is now inside the transaction callback
+            res.status(201).json({
+                success: true,
+                message: 'Attendance request submitted successfully',
+                data: newAttendanceRequest
             });
-        } catch (updateError) {
-            // Log error but don't fail the request if attendees update fails
-            console.error('Error updating attendees count:', updateError);
-        }
+        });
 
         res.status(201).json({
             success: true,
