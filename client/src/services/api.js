@@ -679,6 +679,28 @@ class ApiService {
     }
   }
 
+  // Update attendance request (update attended status)
+  static async updateAttendanceRequest(requestId, attended) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance/${requestId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true), // Include auth token for admin access
+        body: JSON.stringify({ attended }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating attendance request:', error);
+      throw error;
+    }
+  }
+
   // Delete attendance request by ID
   static async deleteAttendanceRequest(requestId) {
     try {
