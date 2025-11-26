@@ -72,20 +72,60 @@ const createAttendanceRequest = async (req, res) => {
             });
         }
 
-        // Check if user has already registered for this event (by university_id)
-        const existingRegistration = await Attendance.findOne({
-            where: {
-                event_id: parseInt(event_id),
-                university_id: university_id.trim()
-            }
-        });
-
-        if (existingRegistration) {
-            return res.status(409).json({
-                success: false,
-                error: 'You have already registered for this event'
+        await sequelize.transaction(async (t) => {
+            // Check if user has already registered for this event (by university_id)
+            const existingRegistration = await Attendance.findOne({
+                where: {
+                    event_id: parseInt(event_id),
+                    university_id: university_id.trim()
+                },
+                transaction: t
             });
-        }
+
+            if (existingRegistration) {
+                throw new Error('You have already registered for this event');
+            }
+
+            // Create new attendance request within the transaction
+            const attendanceRequest = await Attendance.create({
+                event_id: parseInt(event_id),
+                full_name: full_name.trim(),
+                phone_number: phone_number.trim(),
+                university_id: university_id.trim(),
+                course_code: course_code ? course_code.trim() : null,
+                lecture_lab_time: lecture_lab_time ? lecture_lab_time.trim() : null,
+                room: room ? room.trim() : null,
+                instructor_name: instructor_name ? instructor_name.trim() : null,
+                additional_course_code: additional_course_code ? additional_course_code.trim() : null,
+                additional_lecture_lab_time: additional_lecture_lab_time ? additional_lecture_lab_time.trim() : null,
+                additional_room: additional_room ? additional_room.trim() : null,
+                additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null,
+                attended: false // Default to false
+            }, { transaction: t });
+
+            // Update the attendees count in the events table within the same transaction
+            await updateEventAttendeesCount(parseInt(event_id), t);
+
+            // Return response with attendance request data
+            res.status(201).json({
+                success: true,
+                message: 'Attendance request submitted successfully',
+                data: {
+                    request_id: attendanceRequest.request_id,
+                    event_id: attendanceRequest.event_id,
+                    full_name: attendanceRequest.full_name,
+                    university_id: attendanceRequest.university_id
+                }
+            });
+        }).catch(err => {
+            if (err.message === 'You have already registered for this event') {
+                return res.status(409).json({
+                    success: false,
+                    error: err.message
+                });
+            }
+            throw err;
+        });
 
         // Create attendance request and update count within a transaction
         await sequelize.transaction(async (t) => {
