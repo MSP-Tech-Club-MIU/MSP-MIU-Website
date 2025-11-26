@@ -2,12 +2,26 @@ const { Event } = require('../models');
 const { Op } = require('sequelize');
 
 /**
+ * Helper function to convert registration_enabled to boolean
+ * Handles string "true"/"false" from forms and other types
+ */
+const convertToBoolean = (value, defaultValue = true) => {
+    if (value === undefined) {
+        return defaultValue;
+    }
+    if (typeof value === 'string') {
+        return value.toLowerCase() === 'true';
+    }
+    return Boolean(value);
+};
+
+/**
  * Create a new event
  * POST /api/events
  */
 const addEvent = async (req, res) => {
     try {
-        const { name, description, event_date, location, category, upload_file, main_image, attendees } = req.body;
+        const { name, description, event_date, location, category, upload_file, main_image, attendees, registration_enabled } = req.body;
 
         // Validation
         if (!name || !event_date || !location || !category) {
@@ -35,6 +49,9 @@ const addEvent = async (req, res) => {
             });
         }
 
+        // Convert registration_enabled to boolean (handle string "true"/"false" from form)
+        const regEnabled = convertToBoolean(registration_enabled, true);
+
         // Create new event
         const newEvent = await Event.create({
             name,
@@ -44,7 +61,8 @@ const addEvent = async (req, res) => {
             category,
             upload_file: upload_file || null,
             main_image: main_image || null,
-            attendees: attendees || null
+            attendees: attendees || null,
+            registration_enabled: regEnabled
         });
 
         res.status(201).json({
@@ -55,6 +73,11 @@ const addEvent = async (req, res) => {
 
     } catch (error) {
         console.error('Error creating event:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
         
         // Handle Sequelize validation errors
         if (error.name === 'SequelizeValidationError') {
@@ -65,9 +88,20 @@ const addEvent = async (req, res) => {
             });
         }
 
+        // Handle Sequelize database errors
+        if (error.name === 'SequelizeDatabaseError') {
+            console.error('Database error:', error.original);
+            return res.status(500).json({
+                success: false,
+                error: 'Database error occurred',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+
         res.status(500).json({
             success: false,
-            error: 'Failed to create event'
+            error: 'Failed to create event',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
@@ -157,7 +191,7 @@ const getEventById = async (req, res) => {
 const updateEvent = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, event_date, location, category, upload_file, main_image, attendees } = req.body;
+        const { name, description, event_date, location, category, upload_file, main_image, attendees, registration_enabled } = req.body;
 
         const event = await Event.findByPk(id);
 
@@ -190,6 +224,11 @@ const updateEvent = async (req, res) => {
             }
         }
 
+        // Convert registration_enabled to boolean if provided
+        const regEnabled = registration_enabled !== undefined 
+            ? convertToBoolean(registration_enabled, true)
+            : undefined;
+
         // Update event
         await event.update({
             ...(name && { name }),
@@ -199,7 +238,8 @@ const updateEvent = async (req, res) => {
             ...(category && { category }),
             ...(upload_file !== undefined && { upload_file }),
             ...(main_image !== undefined && { main_image }),
-            ...(attendees !== undefined && { attendees })
+            ...(attendees !== undefined && { attendees }),
+            ...(regEnabled !== undefined && { registration_enabled: regEnabled })
         });
 
         res.status(200).json({
@@ -210,6 +250,11 @@ const updateEvent = async (req, res) => {
 
     } catch (error) {
         console.error('Error updating event:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
         
         // Handle Sequelize validation errors
         if (error.name === 'SequelizeValidationError') {
@@ -220,9 +265,20 @@ const updateEvent = async (req, res) => {
             });
         }
 
+        // Handle Sequelize database errors
+        if (error.name === 'SequelizeDatabaseError') {
+            console.error('Database error:', error.original);
+            return res.status(500).json({
+                success: false,
+                error: 'Database error occurred',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+
         res.status(500).json({
             success: false,
-            error: 'Failed to update event'
+            error: 'Failed to update event',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };

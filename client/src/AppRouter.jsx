@@ -11,6 +11,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Exercises = lazy(() => import('./pages/Exercises'));
 const Events = lazy(() => import('./pages/Events'));
 const EventDetails = lazy(() => import('./pages/EventDetails'));
+const CreateEvent = lazy(() => import('./pages/CreateEvent'));
 const Suggestions = lazy(() => import('./pages/Suggestions'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Sponsors = lazy(() => import('./pages/Sponsors'));
@@ -51,7 +52,7 @@ const PageLoader = () => (
 );
 
 const AppRouter = () => (
-  <Router>
+  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
@@ -61,6 +62,7 @@ const AppRouter = () => (
         <Route path="/login" element={<SiteLayout><Login /></SiteLayout>} />
         <Route path="/exercises" element={<SiteLayout><Exercises /></SiteLayout>} />
         <Route path="/events" element={<SiteLayout><Events /></SiteLayout>} />
+        <Route path="/events/create" element={<SiteLayout><CreateEvent /></SiteLayout>} />
         <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
         <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
         <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />

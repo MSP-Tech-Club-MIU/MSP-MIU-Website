@@ -649,6 +649,56 @@ class ApiService {
       throw error;
     }
   }
+
+  // Get all attendance requests (with optional filters)
+  static async getAttendanceRequests(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.event_id) queryParams.append('event_id', filters.event_id);
+      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.search) queryParams.append('search', filters.search);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/attendance${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch attendance requests');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching attendance requests:', error);
+      throw error;
+    }
+  }
+
+  // Delete attendance request by ID
+  static async deleteAttendanceRequest(requestId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance/${requestId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting attendance request:', error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;

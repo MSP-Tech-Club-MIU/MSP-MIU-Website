@@ -5,6 +5,7 @@ import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, Fa
 import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -215,10 +216,7 @@ const Profile = () => {
     return (
       <section className="PageBase">
         <div className="profile-page-container">
-          <div className="profile-loading">
-            <div className="loading-spinner"></div>
-            <p>Loading profile...</p>
-          </div>
+          <PageLoader message="Loading profile..." />
         </div>
       </section>
     );
