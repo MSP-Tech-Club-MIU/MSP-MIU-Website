@@ -380,7 +380,7 @@ class ApiService {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: this.getHeaders(false), // No auth token required for now
+        headers: this.getHeaders(true), // Include auth token for protected route
       });
       
       const result = await response.json();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { FiDownload } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import './PageBase.css';
@@ -168,6 +169,103 @@ const AttendanceReview = () => {
     }
   };
 
+  // Format date for CSV (full format)
+  const formatDateForCSV = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    if (attendanceRequests.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // CSV headers
+    const headers = [
+      'Number',
+      'Full Name',
+      'University ID',
+      'Phone Number',
+      'Event Name',
+      'Event ID',
+      'Course Code',
+      'Lecture/Lab Time',
+      'Room',
+      'Instructor Name',
+      'Additional Course Code',
+      'Additional Lecture/Lab Time',
+      'Additional Room',
+      'Additional Instructor Name',
+      'Registered Date',
+      'Attendance Status'
+    ];
+
+    // Convert data to CSV rows
+    const csvRows = attendanceRequests.map((request, index) => {
+      const row = [
+        index + 1,
+        request.full_name || '',
+        request.university_id || '',
+        request.phone_number || '',
+        request.event ? (request.event.name || '') : '',
+        request.event_id || '',
+        request.course_code || '',
+        request.lecture_lab_time || '',
+        request.room || '',
+        request.instructor_name || '',
+        request.additional_course_code || '',
+        request.additional_lecture_lab_time || '',
+        request.additional_room || '',
+        request.additional_instructor_name || '',
+        formatDateForCSV(request.created_at),
+        request.attended ? 'Attended' : "Didn't Attend"
+      ];
+      return row.map(cell => {
+        // Escape cells that contain commas, quotes, or newlines
+        const cellString = String(cell || '');
+        if (cellString.includes(',') || cellString.includes('"') || cellString.includes('\n')) {
+          return `"${cellString.replace(/"/g, '""')}"`;
+        }
+        return cellString;
+      }).join(',');
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+
+    // Create a blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with current date
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
+    const filename = `attendance_review_${dateStr}_${timeStr}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Show loading while checking auth
   if (isCheckingAuth) {
     return (
@@ -228,10 +326,48 @@ const AttendanceReview = () => {
           transition={{ duration: 0.35 }}
           style={{ maxWidth: '100%' }}
         >
-          <h1 className="card-title">Attendance Review</h1>
-          <p className="card-sub">
-            Review and manage attendance requests for events. Update the attendance status for registered users.
-          </p>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'flex-start',
+            marginBottom: '1rem',
+            flexWrap: 'wrap',
+            gap: '1rem'
+          }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <h1 className="card-title">Attendance Review</h1>
+              <p className="card-sub">
+                Review and manage attendance requests for events. Update the attendance status for registered users.
+              </p>
+            </div>
+            {!loading && attendanceRequests.length > 0 && (
+              <motion.button
+                onClick={exportToCSV}
+                className="btn primary"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  background: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '0.95rem',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(39, 174, 96, 0.3)',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <FiDownload />
+                Export to CSV
+              </motion.button>
+            )}
+          </div>
 
           {/* Summary Stats - Top */}
           {!loading && attendanceRequests.length > 0 && (
@@ -256,13 +392,13 @@ const AttendanceReview = () => {
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4caf50', marginBottom: '0.25rem' }}>
                   {attendanceRequests.filter(r => r.attended).length}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Attended</div>
+                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Did Attend</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.25rem' }}>
                   {attendanceRequests.filter(r => !r.attended).length}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Not Attended</div>
+                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Didn't Attend</div>
               </div>
             </div>
           )}
@@ -500,8 +636,8 @@ const AttendanceReview = () => {
                                   cursor: updatingIds.has(request.request_id) ? 'not-allowed' : 'pointer'
                                 }}
                               >
-                                <option value="false">No</option>
-                                <option value="true">Yes</option>
+                                <option value="false">Didn't Attend</option>
+                                <option value="true">Attended</option>
                               </select>
                               {updatingIds.has(request.request_id) && (
                                 <span className="dots-loader" aria-hidden="true" style={{ fontSize: '0.6rem' }}>
