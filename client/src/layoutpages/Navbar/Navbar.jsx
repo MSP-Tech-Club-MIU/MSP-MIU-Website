@@ -262,6 +262,7 @@ const Navbar = memo(() => {
                           to={l.to}
                           onClick={(e) => {
                             e.stopPropagation();
+                            closeMobile();
                           }}
                           className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
                           end

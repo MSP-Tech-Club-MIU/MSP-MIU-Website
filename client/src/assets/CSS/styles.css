@@ -157,6 +157,11 @@ select.pill{background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://ww
 
 /* make 1-column layout earlier for tablets/large phones */
 @media (max-width:1024px){.grid{grid-template-columns:1fr}.stepper{max-width:640px}}
+/* Phone number on separate row for mobile */
+@media (max-width:768px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid .phone-full-width{grid-column:1/-1}
+}
 @media (max-width:900px){.stepper{max-width:640px}}
 @media (max-width:520px){
   .container{padding:20px 12px}
