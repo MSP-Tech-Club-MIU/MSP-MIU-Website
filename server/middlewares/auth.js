@@ -164,6 +164,57 @@ const verifyRole = (...roles) => {
     };
 };
 
+const verifyDepartment = (...departments) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        // Check department_id field (not department)
+        const userDepartment = req.user.department_id || req.user.department;
+        if (!departments.includes(userDepartment)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        next();
+    };
+};
+
+/**
+ * Verify role OR department middleware
+ * Allows access if user has required role(s) OR department(s)
+ */
+const verifyRoleOrDepartment = (roles, departments) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+
+        // Check if user has required role
+        const hasRole = roles && roles.includes(req.user.role);
+        
+        // Check if user has required department
+        const userDepartment = req.user.department_id || req.user.department;
+        const hasDepartment = departments && departments.includes(userDepartment);
+
+        // Allow if user has required role OR department
+        if (hasRole || hasDepartment) {
+            return next();
+        }
+
+        return res.status(403).json({
+            success: false,
+            error: 'Access denied'
+        });
+    };
+};
 /**
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't require it
@@ -238,6 +289,8 @@ module.exports = {
     authenticateToken,
     authorize,
     verifyRole,
-    optionalAuth
+    optionalAuth,
+    verifyDepartment,
+    verifyRoleOrDepartment
 };
 

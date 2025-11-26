@@ -30,6 +30,7 @@ const FormAdmin = memo(() => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [userDepartment, setUserDepartment] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -277,20 +278,25 @@ const FormAdmin = memo(() => {
         return;
       }
       
-      // Fetch user profile to check role
+      // Fetch user profile to check role and department
       try {
         const user = await ApiService.getProfile();
         setIsAuthenticated(true);
         setUserRole(user.role);
+        setUserDepartment(user.department_id);
         
-        // Check if user has board role
-        if (user.role !== 'board') {
+        // Check if user has board role OR department 5
+        const hasBoardRole = user.role === 'board';
+        const hasDept5Access = user.department_id === 5;
+        const hasAccess = hasBoardRole || hasDept5Access;
+        
+        if (!hasAccess) {
           setIsCheckingAuth(false);
           // Don't redirect, show unauthorized message
           return;
         }
         
-        // User is authenticated and has board role, proceed to load applications
+        // User is authenticated and has access, proceed to load applications
         setIsCheckingAuth(false);
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -305,12 +311,13 @@ const FormAdmin = memo(() => {
     checkAuthAndRole();
   }, [navigate]);
 
-  // Initial load - only fetch applications if authenticated and has board role
+  // Initial load - only fetch applications if authenticated and has access
   useEffect(() => {
-    if (!isCheckingAuth && isAuthenticated && userRole === 'board') {
+    const hasAccess = (userRole === 'board') || (userDepartment === 5);
+    if (!isCheckingAuth && isAuthenticated && hasAccess) {
       fetchApplications();
     }
-  }, [isCheckingAuth, isAuthenticated, userRole, fetchApplications]);
+  }, [isCheckingAuth, isAuthenticated, userRole, userDepartment, fetchApplications]);
 
   // Handle filter changes (no immediate API call)
   const handleFilterChange = useCallback((filterKey, value) => {
@@ -406,8 +413,9 @@ const FormAdmin = memo(() => {
     );
   }
 
-  // Show unauthorized message if user is authenticated but doesn't have board role
-  if (isAuthenticated && userRole !== 'board') {
+  // Show unauthorized message if user is authenticated but doesn't have access
+  const hasAccess = (userRole === 'board') || (userDepartment === 5);
+  if (isAuthenticated && !hasAccess) {
     return (
       <div style={{ 
         textAlign: "center", 
@@ -424,7 +432,7 @@ const FormAdmin = memo(() => {
           Access Denied
         </h2>
         <p style={{ color: "#856404", margin: "0 0 24px 0", fontSize: "16px" }}>
-          You don't have permission to access this page. Only board members can view the applications dashboard.
+          You don't have permission to access this page. Only board members and authorized departments can view the applications dashboard.
         </p>
         <button
           onClick={() => navigate('/')}

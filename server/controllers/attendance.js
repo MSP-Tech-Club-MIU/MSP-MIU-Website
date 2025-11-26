@@ -87,6 +87,7 @@ const createAttendanceRequest = async (req, res) => {
             }
 
             // Create new attendance request within the transaction
+            // Note: 'attended' field will default to false from the database/model
             const attendanceRequest = await Attendance.create({
                 event_id: parseInt(event_id),
                 full_name: full_name.trim(),
@@ -99,8 +100,8 @@ const createAttendanceRequest = async (req, res) => {
                 additional_course_code: additional_course_code ? additional_course_code.trim() : null,
                 additional_lecture_lab_time: additional_lecture_lab_time ? additional_lecture_lab_time.trim() : null,
                 additional_room: additional_room ? additional_room.trim() : null,
-                additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null,
-                attended: false // Default to false
+                additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null
+                // attended defaults to false from database and model
             }, { transaction: t });
 
             // Update the attendees count in the events table within the same transaction
@@ -125,41 +126,6 @@ const createAttendanceRequest = async (req, res) => {
                 });
             }
             throw err;
-        });
-
-        // Create attendance request and update count within a transaction
-        await sequelize.transaction(async (t) => {
-            // Create new attendance request within the transaction
-            const attendanceRequest = await Attendance.create({
-                event_id: parseInt(event_id),
-                full_name: full_name.trim(),
-                phone_number: phone_number.trim(),
-                university_id: university_id.trim(),
-                course_code: course_code ? course_code.trim() : null,
-                lecture_lab_time: lecture_lab_time ? lecture_lab_time.trim() : null,
-                room: room ? room.trim() : null,
-                instructor_name: instructor_name ? instructor_name.trim() : null,
-                additional_course_code: additional_course_code ? additional_course_code.trim() : null,
-                additional_lecture_lab_time: additional_lecture_lab_time ? additional_lecture_lab_time.trim() : null,
-                additional_room: additional_room ? additional_room.trim() : null,
-                additional_instructor_name: additional_instructor_name ? additional_instructor_name.trim() : null,
-                attended: false // Default to false
-            }, { transaction: t });
-
-            // Update the attendees count in the events table within the same transaction
-            await updateEventAttendeesCount(parseInt(event_id), t);
-
-            // Return response with attendance request data
-            res.status(201).json({
-                success: true,
-                message: 'Attendance request submitted successfully',
-                data: {
-                    request_id: attendanceRequest.request_id,
-                    event_id: attendanceRequest.event_id,
-                    full_name: attendanceRequest.full_name,
-                    university_id: attendanceRequest.university_id
-                }
-            });
         });
 
     } catch (error) {
@@ -217,7 +183,7 @@ const getAllAttendanceRequests = async (req, res) => {
             include: [{
                 model: Event,
                 as: 'event',
-                attributes: ['event_id', 'name', 'date']
+                attributes: ['event_id', 'name', 'event_date']
             }],
             order: [['created_at', 'DESC']]
         };
@@ -285,7 +251,7 @@ const getAttendanceRequestById = async (req, res) => {
             include: [{
                 model: Event,
                 as: 'event',
-                attributes: ['event_id', 'name', 'date', 'description']
+                attributes: ['event_id', 'name', 'event_date', 'description']
             }]
         });
 

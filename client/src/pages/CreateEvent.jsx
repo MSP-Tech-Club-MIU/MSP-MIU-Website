@@ -30,25 +30,23 @@ const CreateEvent = () => {
   // Check user role and authentication
   useEffect(() => {
     const checkUserRole = async () => {
+      setLoading(true);
       if (ApiService.isAuthenticated()) {
         try {
           const user = await ApiService.getProfile();
           setUserRole(user.role);
-          // Redirect if not board or admin
-          if (user.role !== 'board' && user.role !== 'admin') {
-            navigate('/events');
-          }
+          // Don't redirect - let the component show access denied message
         } catch (error) {
           console.error('Error fetching user role:', error);
-          navigate('/events');
+          setUserRole(null);
         }
       } else {
-        navigate('/events');
+        setUserRole(null);
       }
       setLoading(false);
     };
     checkUserRole();
-  }, [navigate]);
+  }, []);
 
   const onChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
@@ -131,17 +129,54 @@ const CreateEvent = () => {
     );
   }
 
-  // Show unauthorized if not board/admin (shouldn't reach here due to redirect, but just in case)
-  if (userRole !== 'board' && userRole !== 'admin') {
+  // Show unauthorized if not authenticated or not board/admin
+  if (!loading && (userRole === null || (userRole !== 'board' && userRole !== 'admin'))) {
+    const isNotAuthenticated = userRole === null;
     return (
       <section className="PageBase">
         <div className="container">
-          <div style={{ textAlign: 'center', padding: '2rem' }}>
-            <p>You don't have permission to access this page.</p>
-            <button onClick={() => navigate('/events')} className="btn primary" style={{ marginTop: '1rem' }}>
-              Back to Events
-            </button>
-          </div>
+          <motion.div
+            className="neo-card"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <h1 className="card-title">Access Denied</h1>
+            <p style={{ color: '#e74c3c', marginBottom: '1rem', textAlign: 'center' }}>
+              {isNotAuthenticated 
+                ? 'You must be logged in and have board or administrator privileges to access this page.'
+                : 'This page is only available to board members and administrators.'}
+            </p>
+            <div className="actions" style={{ justifyContent: 'center' }}>
+              {isNotAuthenticated ? (
+                <motion.button
+                  className="btn primary"
+                  onClick={() => navigate('/login')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Go to Login
+                </motion.button>
+              ) : (
+                <motion.button
+                  className="btn primary"
+                  onClick={() => navigate('/events')}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Back to Events
+                </motion.button>
+              )}
+              <motion.button
+                className="btn secondary"
+                onClick={() => navigate('/')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Go Home
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
       </section>
     );

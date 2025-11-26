@@ -380,7 +380,7 @@ class ApiService {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: this.getHeaders(false), // No auth token required for now
+        headers: this.getHeaders(true), // Include auth token for protected route
       });
       
       const result = await response.json();
@@ -675,6 +675,28 @@ class ApiService {
       return result.data || result;
     } catch (error) {
       console.error('Error fetching attendance requests:', error);
+      throw error;
+    }
+  }
+
+  // Update attendance request (update attended status)
+  static async updateAttendanceRequest(requestId, attended) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance/${requestId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true), // Include auth token for admin access
+        body: JSON.stringify({ attended }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating attendance request:', error);
       throw error;
     }
   }

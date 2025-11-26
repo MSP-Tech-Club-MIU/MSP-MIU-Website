@@ -6,15 +6,19 @@ const {
     updateAttendanceRequest,
     deleteAttendanceRequest
 } = require("../controllers/attendance");
+const { authenticateToken, verifyRoleOrDepartment } = require("../middlewares/auth");
 
 const router = express.Router();
 
-// Routes
+// Public routes
 router.post("/", createAttendanceRequest);
-router.get("/", getAllAttendanceRequests);
-router.get("/:id", getAttendanceRequestById);
-router.put("/:id", updateAttendanceRequest);
-router.delete("/:id", deleteAttendanceRequest);
+
+// Protected routes (require authentication)
+// Allow: admin/board roles OR department 6 (Event Planning)
+router.get("/", authenticateToken, verifyRoleOrDepartment(['admin', 'board'], [6]), getAllAttendanceRequests);
+router.get("/:id", authenticateToken, verifyRoleOrDepartment(['admin', 'board'], [6]), getAttendanceRequestById);
+router.put("/:id", authenticateToken, verifyRoleOrDepartment(['admin', 'board'], [6]), updateAttendanceRequest);
+router.delete("/:id", authenticateToken, verifyRoleOrDepartment(['admin', 'board'], [6]), deleteAttendanceRequest);
 
 module.exports = router;
 

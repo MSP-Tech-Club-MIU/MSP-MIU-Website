@@ -5,7 +5,7 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import './Events.css';
-import { FiCalendar, FiClock, FiMapPin, FiPlus } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiPlus, FiCheckSquare } from 'react-icons/fi';
 
 // Import images
 import mspLogo from '../assets/Images/msp-logo.png';
@@ -17,6 +17,7 @@ const Events = () => {
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
   const [userRole, setUserRole] = useState(null);
+  const [userDepartment, setUserDepartment] = useState(null);
   const navigate = useNavigate();
 
   const structuredData = {
@@ -31,19 +32,22 @@ const Events = () => {
     }
   };
 
-  // Check user role
+  // Check user role and department
   useEffect(() => {
     const checkUserRole = async () => {
       if (ApiService.isAuthenticated()) {
         try {
           const user = await ApiService.getProfile();
           setUserRole(user.role);
+          setUserDepartment(user.department_id);
         } catch (error) {
           console.error('Error fetching user role:', error);
           setUserRole(null);
+          setUserDepartment(null);
         }
       } else {
         setUserRole(null);
+        setUserDepartment(null);
       }
     };
     checkUserRole();
@@ -84,7 +88,10 @@ const Events = () => {
     fetchEvents();
   }, []);
 
+  // Allow: board/admin roles OR department 6 (Event Planning)
   const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
+  const isEventPlanningDept = userDepartment === 6;
+  const canAccessAdminFeatures = isBoardOrAdmin || isEventPlanningDept;
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -136,37 +143,85 @@ const Events = () => {
       />
       <div className="EventsPage__container">
         <header className="EventsPage__header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <div>
-              <h1 className="EventsPage__title">Events & Sessions</h1>
-              <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '1.5rem',
+            width: '100%'
+          }}>
+            {/* Title Section */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+              flexWrap: 'wrap',
+              gap: '1rem'
+            }}>
+              <div style={{ flex: '1', minWidth: '200px' }}>
+                <h1 className="EventsPage__title">Events & Sessions</h1>
+                <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
+              </div>
+              {/* Action Buttons */}
+              {canAccessAdminFeatures && (
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '0.75rem', 
+                  alignItems: 'flex-start',
+                  flexWrap: 'wrap'
+                }}>
+                  <motion.button
+                    onClick={() => navigate('/attendance-review')}
+                    className="EventsPage__createBtn"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                      transition: 'all 0.3s ease',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <FiCheckSquare />
+                    Attendance Review
+                  </motion.button>
+                  <motion.button
+                    onClick={() => navigate('/events/create')}
+                    className="EventsPage__createBtn"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      background: 'linear-gradient(135deg, #03A9F4 0%, #0288D1 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontSize: '0.95rem',
+                      fontWeight: '600',
+                      boxShadow: '0 4px 12px rgba(3, 169, 244, 0.3)',
+                      transition: 'all 0.3s ease',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <FiPlus />
+                    Create Event
+                  </motion.button>
+                </div>
+              )}
             </div>
-            {isBoardOrAdmin && (
-              <motion.button
-                onClick={() => navigate('/events/create')}
-                className="EventsPage__createBtn"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  background: 'linear-gradient(135deg, #03A9F4 0%, #0288D1 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  boxShadow: '0 4px 12px rgba(3, 169, 244, 0.3)',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <FiPlus />
-                Create Event
-              </motion.button>
-            )}
           </div>
         </header>
 
