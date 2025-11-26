@@ -51,6 +51,9 @@ export default defineConfig({
           if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
             return `assets/images/[name]-[hash][extname]`;
           }
+          if (/pdf|pptx?|docx?|xlsx?/i.test(ext)) {
+            return `assets/documents/[name]-[hash][extname]`;
+          }
           if (/woff|woff2|eot|ttf|otf/i.test(ext)) {
             return `assets/fonts/[name]-[hash][extname]`;
           }
@@ -73,8 +76,8 @@ export default defineConfig({
   server: {
     compress: true
   },
-  // Asset handling for static files
-  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.svg', '**/*.webp']
+  // Asset handling for static files (images, documents, etc.)
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.webp', '**/*.pdf', '**/*.pptx', '**/*.ppt']
 })
 
 
