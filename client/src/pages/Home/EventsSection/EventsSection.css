@@ -35,22 +35,23 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(145deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .02));
+    border: 1px solid rgba(255, 255, 255, .12);
     border-radius: 22px;
     overflow: hidden;
     max-width: 100%;
     max-height: 100%;
     width: 100%;
+    backdrop-filter: blur(14px) saturate(160%);
+    transition: all .3s ease;
 }
 
 .EventCard__media {
-    flex: 1;
     min-height: 150px;
     max-height: 200px;
     background: linear-gradient(135deg, #0D3159, #031C35);
     position: relative;
-    background-size: cover;
+    background-size: contain;
     background-position: center;
     background-repeat: no-repeat;
 }
@@ -60,6 +61,7 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    border-top: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 .EventCard__title {

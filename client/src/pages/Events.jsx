@@ -1,30 +1,22 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
+import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 import './Events.css';
-import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiPlus } from 'react-icons/fi';
 
 // Import images
-import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
-
-// Mock data for events (since no database currently)
-const mockEvents = [
-  {
-    event_id: 1,
-    name: 'Opening Ceremony',
-    description: 'Join us for the grand opening ceremony of MSP Tech Club. We\'ll have guest speakers, networking opportunities, and exciting announcements about upcoming events and initiatives.',
-    event_date: '2025-11-12',
-    event_time: '12:00 PM',
-    place: 'Main Building, Room OOA',
-    event_type: 'event',
-    image_url: eventImage1
-  }
-];
+import mspLogo from '../assets/Images/msp-logo.png';
 
 const Events = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
+  const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
   const structuredData = {
@@ -39,8 +31,60 @@ const Events = () => {
     }
   };
 
-  // Use mock data directly
-  const events = mockEvents;
+  // Check user role
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (ApiService.isAuthenticated()) {
+        try {
+          const user = await ApiService.getProfile();
+          setUserRole(user.role);
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    };
+    checkUserRole();
+  }, []);
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await ApiService.getEvents();
+        // Map database fields to component fields
+        const mappedEvents = Array.isArray(data) ? data.map(event => ({
+          event_id: event.event_id,
+          name: event.name,
+          description: event.description,
+          event_date: event.event_date,
+          place: event.location,
+          // Map category: Workshop -> event, Session -> session, Entertainment -> entertainment
+          event_type: event.category === 'Workshop' ? 'event' : 
+                     event.category === 'Session' ? 'session' : 
+                     event.category === 'Entertainment' ? 'entertainment' : 'event',
+          // Use main_image from database if available, otherwise fallback to MSP logo
+          image_url: (event.main_image && event.main_image.trim()) ? event.main_image : mspLogo,
+          category: event.category
+        })) : [];
+        setEvents(mappedEvents);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError(err.message || 'Failed to load events');
+        setEvents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -92,8 +136,38 @@ const Events = () => {
       />
       <div className="EventsPage__container">
         <header className="EventsPage__header">
-          <h1 className="EventsPage__title">Events & Sessions</h1>
-          <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div>
+              <h1 className="EventsPage__title">Events & Sessions</h1>
+              <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
+            </div>
+            {isBoardOrAdmin && (
+              <motion.button
+                onClick={() => navigate('/events/create')}
+                className="EventsPage__createBtn"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1.5rem',
+                  background: 'linear-gradient(135deg, #03A9F4 0%, #0288D1 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  boxShadow: '0 4px 12px rgba(3, 169, 244, 0.3)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <FiPlus />
+                Create Event
+              </motion.button>
+            )}
+          </div>
         </header>
 
         <div className="EventsPage__controls">
@@ -140,7 +214,17 @@ const Events = () => {
           </div>
         </div>
 
-        {filteredEvents.length === 0 && (
+        {loading && <PageLoader message="Loading events..." />}
+
+        {error && !loading && (
+          <div className="EventsPage__empty">
+            <FiCalendar />
+            <p>Error loading events</p>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {!loading && !error && filteredEvents.length === 0 && (
           <div className="EventsPage__empty">
             <FiCalendar />
             <p>No events found</p>
@@ -148,9 +232,10 @@ const Events = () => {
           </div>
         )}
 
-        <div className="EventsPage__grid">
-          <AnimatePresence mode="popLayout">
-            {filteredEvents.map((event) => (
+        {!loading && !error && (
+          <div className="EventsPage__grid">
+            <AnimatePresence mode="popLayout">
+              {filteredEvents.map((event) => (
               <motion.article
                 key={event.event_id}
                 className="EventCard"
@@ -212,9 +297,10 @@ const Events = () => {
                   )}
                 </div>
               </motion.article>
-            ))}
-          </AnimatePresence>
-        </div>
+              ))}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </section>
   );

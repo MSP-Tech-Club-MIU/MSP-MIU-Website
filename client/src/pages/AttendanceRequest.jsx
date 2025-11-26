@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 import './PageBase.css';
 
 const AttendanceRequest = () => {
@@ -46,11 +47,13 @@ const AttendanceRequest = () => {
   const fetchEventName = async (eventId) => {
     try {
       setLoadingEvent(true);
-      const result = await ApiService.getEventById(parseInt(eventId));
-      setEventName(result.data.name);
+      const eventData = await ApiService.getEventById(parseInt(eventId));
+      // API service returns the event object directly (already extracted from result.data)
+      setEventName(eventData.name || '');
     } catch (error) {
       console.error('Error fetching event:', error);
       // Keep eventName empty so it falls back to showing ID
+      setEventName('');
     } finally {
       setLoadingEvent(false);
     }
@@ -115,6 +118,7 @@ const AttendanceRequest = () => {
     setSubmitting(true);
     try {
       // Transform form data to match database schema
+      // Note: Server-side validation will check if registration is enabled
       const formData = {
         event_id: parseInt(form.eventId),
         full_name: form.name.trim(),
@@ -138,6 +142,17 @@ const AttendanceRequest = () => {
       setSubmitting(false);
     }
   }, [form, navigate, validate]);
+
+  // Show loading while fetching event
+  if (loadingEvent && !form.eventId) {
+    return (
+      <section className="PageBase">
+        <div className="container">
+          <PageLoader message="Loading event information..." />
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="PageBase">
@@ -197,7 +212,7 @@ const AttendanceRequest = () => {
                 {errors.name && <span className="error">{errors.name}</span>}
               </label>
 
-              <label className="floating-input">
+              <label className="floating-input phone-full-width">
                 Phone Number
                 <div className="prefix-wrap">
                   <span className="prefix">+20</span>

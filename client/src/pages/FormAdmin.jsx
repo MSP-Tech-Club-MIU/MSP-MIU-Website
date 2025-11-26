@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import ApiService from "../services/api";
 import { getDepartmentNameById } from "../data/departments";
+import PageLoader from "../components/PageLoader";
 
 // Import components
 import CommentModal from "../components/CommentModal";
@@ -445,40 +446,7 @@ const FormAdmin = memo(() => {
 
   // Show loading while fetching applications
   if (loading) {
-    return (
-      <div style={{ 
-        textAlign: "center", 
-        padding: "50px",
-        backgroundColor: "#f8f9fa",
-        borderRadius: "8px",
-        margin: "20px"
-      }}>
-        <div style={{ 
-          display: "inline-block",
-          width: "40px",
-          height: "40px",
-          border: "4px solid #f3f3f3",
-          borderTop: "4px solid #395a7f",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
-          marginBottom: "16px"
-        }}></div>
-        <h3 style={{ color: "#495057", margin: "0 0 8px 0" }}>
-          Loading Applications
-        </h3>
-        <p style={{ color: "#6c757d", margin: "0", fontSize: "14px" }}>
-          Please wait while we fetch the latest data...
-        </p>
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
-      </div>
-    );
+    return <PageLoader message="Loading applications..." />;
   }
 
   return (

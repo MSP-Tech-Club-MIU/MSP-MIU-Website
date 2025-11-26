@@ -472,10 +472,27 @@ class ApiService {
     }
   }
 
-  // Get all events
-  static async getEvents() {
+  // Get all events with optional filters
+  static async getEvents(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/events`, {
+      // Build query string from filters
+      const queryParams = new URLSearchParams();
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
+      if (filters.past) queryParams.append('past', filters.past);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/events${queryString ? `?${queryString}` : ''}`;
+      
+      const cacheKey = getCacheKey(url, filters);
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('Returning cached events data');
+        return cachedData;
+      }
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -486,16 +503,28 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch events');
       }
 
-      return result.data || result;
+      const data = result.data || result;
+      
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
     } catch (error) {
       console.error('Error fetching events:', error);
       throw error;
     }
   }
 
-
+  // Get event by ID
   static async getEventById(id) {
     try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${id}`);
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('Returning cached event data');
+        return cachedData;
+      }
+
       const response = await fetch(`${API_BASE_URL}/events/${id}`, {
         method: 'GET',
         headers: this.getHeaders(),
@@ -507,9 +536,94 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch event');
       }
 
-      return result.data || result;
+      const data = result.data || result;
+      
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
     } catch (error) {
       console.error('Error fetching event:', error);
+      throw error;
+    }
+  }
+
+  // Create a new event (admin only)
+  static async createEvent(eventData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events`, {
+        method: 'POST',
+        headers: this.getHeaders(true), // Include auth token for admin access
+        body: JSON.stringify(eventData),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create event');
+      }
+
+      // Invalidate events cache when new event is created
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events`);
+      cache.delete(cacheKey);
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating event:', error);
+      throw error;
+    }
+  }
+
+  // Update an event (admin only)
+  static async updateEvent(id, eventData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true), // Include auth token for admin access
+        body: JSON.stringify(eventData),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update event');
+      }
+
+      // Invalidate events cache when event is updated
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events`);
+      cache.delete(cacheKey);
+      const eventCacheKey = getCacheKey(`${API_BASE_URL}/events/${id}`);
+      cache.delete(eventCacheKey);
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error updating event:', error);
+      throw error;
+    }
+  }
+
+  // Delete an event (admin only)
+  static async deleteEvent(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete event');
+      }
+
+      // Invalidate events cache when event is deleted
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events`);
+      cache.delete(cacheKey);
+      const eventCacheKey = getCacheKey(`${API_BASE_URL}/events/${id}`);
+      cache.delete(eventCacheKey);
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting event:', error);
       throw error;
     }
   }
@@ -532,6 +646,56 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error submitting attendance request:', error);
+      throw error;
+    }
+  }
+
+  // Get all attendance requests (with optional filters)
+  static async getAttendanceRequests(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.event_id) queryParams.append('event_id', filters.event_id);
+      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.search) queryParams.append('search', filters.search);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/attendance${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch attendance requests');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching attendance requests:', error);
+      throw error;
+    }
+  }
+
+  // Delete attendance request by ID
+  static async deleteAttendanceRequest(requestId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance/${requestId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting attendance request:', error);
       throw error;
     }
   }

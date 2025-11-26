@@ -1,60 +1,71 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle } from 'react-icons/fi';
 import ApiService from '../services/api';
+import PageLoader from '../components/PageLoader';
 
 // Import images
-import eventImage1 from '../assets/Images/MSP-MIU_Opening_Session.jpg';
-
-// Mock data (same as Events page)
-const mockEvents = [
-  {
-    event_id: 1,
-    name: 'Opening Ceremony',
-    description: 'Join us for the grand opening ceremony of MSP Tech Club. We\'ll have guest speakers, networking opportunities, and exciting announcements about upcoming events and initiatives. This is a special event where we\'ll introduce our mission, vision, and the amazing opportunities that await our members.',
-    event_date: '2025-11-12',
-    event_time: '12:00 PM',
-    place: 'Main Building, Room OOA',
-    event_type: 'event',
-    image_url: eventImage1
-  }
-];
-
-// Mock files data
-const mockFiles = [
-  {
-    file_id: 1,
-    file_name: 'Event_Agenda.pdf',
-    file_type: 'document',
-    file_size: '2.4 MB',
-    uploaded_at: '2025-11-10',
-    uploaded_by: 'Admin'
-  },
-  {
-    file_id: 2,
-    file_name: 'Presentation_Slides.pptx',
-    file_type: 'document',
-    file_size: '5.1 MB',
-    uploaded_at: '2025-11-11',
-    uploaded_by: 'Board Member'
-  }
-];
+import mspLogo from '../assets/Images/msp-logo.png';
 
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [event, setEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [files, setFiles] = useState([]); // Start with empty files to show empty state
   const [showUpload, setShowUpload] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileType, setFileType] = useState('document');
   const [isUploading, setIsUploading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showRegistrationToggleConfirm, setShowRegistrationToggleConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Find event from mock data
-  const event = mockEvents.find(e => e.event_id === parseInt(id));
+  // Fetch event from API
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await ApiService.getEventById(parseInt(id));
+        
+        // Map database fields to component fields
+        const mappedEvent = {
+          event_id: data.event_id,
+          name: data.name,
+          description: data.description,
+          event_date: data.event_date,
+          place: data.location,
+          // Map category: Workshop -> event, Session -> session, Entertainment -> entertainment
+          event_type: data.category === 'Workshop' ? 'event' : 
+                     data.category === 'Session' ? 'session' : 
+                     data.category === 'Entertainment' ? 'entertainment' : 'event',
+          // Use main_image from database if available, otherwise fallback to MSP logo
+          image_url: (data.main_image && data.main_image.trim()) ? data.main_image : mspLogo,
+          category: data.category,
+          registration_enabled: data.registration_enabled !== undefined ? data.registration_enabled : true
+        };
+        
+        setEvent(mappedEvent);
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError(err.message || 'Failed to load event');
+        setEvent(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchEvent();
+    }
+  }, [id]);
 
   // Check user role
   useEffect(() => {
@@ -84,8 +95,17 @@ const EventDetails = () => {
   const getImageSrc = (imageUrl) => {
     // Handle both imported images and URLs
     if (!imageUrl) return null;
-    if (typeof imageUrl === 'string' && imageUrl.startsWith('http')) return imageUrl;
-    // If it's already an imported module, return it directly
+    // If it's an HTTP/HTTPS URL, return as-is
+    if (typeof imageUrl === 'string' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      return imageUrl;
+    }
+    // If it's a string path (not an imported module), ensure it starts with / for public assets
+    if (typeof imageUrl === 'string') {
+      // Remove leading slash if present, then add it back to ensure consistent format
+      const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+      return `/${cleanPath}`;
+    }
+    // If it's already an imported module (object with default or string from import), return it directly
     return imageUrl;
   };
 
@@ -166,16 +186,85 @@ const EventDetails = () => {
     link.click();
   };
 
-  if (!event) {
+  const handleDeleteEvent = async () => {
+    try {
+      setIsDeleting(true);
+      await ApiService.deleteEvent(event.event_id);
+      // Redirect to events page after successful deletion
+      navigate('/events');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Failed to delete event: ' + (error.message || 'Unknown error'));
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleToggleRegistration = async () => {
+    try {
+      setIsTogglingRegistration(true);
+      const newStatus = !event.registration_enabled;
+      await ApiService.updateEvent(event.event_id, {
+        registration_enabled: newStatus
+      });
+      
+      // Update local event state
+      setEvent(prev => ({
+        ...prev,
+        registration_enabled: newStatus
+      }));
+      
+      // Show success message (using a simple approach for now, can be enhanced with toast notifications later)
+      const message = `Registration ${newStatus ? 'enabled' : 'disabled'} for this event`;
+      console.log(message);
+      // TODO: Replace with proper toast notification system
+      alert(message);
+      setIsTogglingRegistration(false);
+      setShowRegistrationToggleConfirm(false);
+    } catch (error) {
+      console.error('Error toggling registration:', error);
+      const errorMessage = 'Failed to toggle registration: ' + (error.message || 'Unknown error');
+      // TODO: Replace with proper error notification system
+      alert(errorMessage);
+      setIsTogglingRegistration(false);
+      setShowRegistrationToggleConfirm(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
     return (
       <section className="EventDetailsPage">
         <div className="EventDetailsPage__container">
+          <button 
+            onClick={() => navigate('/events')} 
+            className="EventDetailsPage__backBtn"
+          >
+            <FiArrowLeft />
+            Back to Events
+          </button>
+          <PageLoader message="Loading event details..." />
+        </div>
+      </section>
+    );
+  }
+
+  // Error state or event not found
+  if (error || !event) {
+    return (
+      <section className="EventDetailsPage">
+        <div className="EventDetailsPage__container">
+          <button 
+            onClick={() => navigate('/events')} 
+            className="EventDetailsPage__backBtn"
+          >
+            <FiArrowLeft />
+            Back to Events
+          </button>
           <div className="EventDetailsPage__error">
-            <p>Event not found</p>
-            <button onClick={() => navigate('/events')} className="EventDetailsPage__backBtn">
-              <FiArrowLeft />
-              Back to Events
-            </button>
+            <FiCalendar />
+            <p>{error || 'Event not found'}</p>
+            <span>The event you're looking for doesn't exist or has been removed</span>
           </div>
         </div>
       </section>
@@ -199,30 +288,34 @@ const EventDetails = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {event.image_url && (
-            <div className="EventDetails__hero">
-              <img 
-                src={getImageSrc(event.image_url)} 
-                alt={event.name}
-                className="EventDetails__image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-              <div 
-                className="EventDetails__imagePlaceholder"
-                style={{ display: event.image_url ? 'none' : 'flex' }}
-              >
-                <FiCalendar />
+          {event.image_url && (() => {
+            const imageSrc = getImageSrc(event.image_url);
+            return (
+              <div className="EventDetails__hero">
+                <div 
+                  className="EventDetails__image"
+                  style={{ 
+                    backgroundImage: imageSrc ? `url("${imageSrc}")` : 'none',
+                    backgroundSize: 'contain',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                  }} 
+                />
+                <div 
+                  className="EventDetails__imagePlaceholder"
+                  style={{ display: imageSrc ? 'none' : 'flex' }}
+                >
+                  <FiCalendar />
+                </div>
+                <div 
+                  className="EventDetails__badge"
+                  style={{ backgroundColor: getEventTypeColor(event.event_type) }}
+                >
+                  {event.event_type}
+                </div>
               </div>
-              <div 
-                className="EventDetails__badge"
-                style={{ backgroundColor: getEventTypeColor(event.event_type) }}
-              >
-                {event.event_type}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="EventDetails__content">
             <header className="EventDetails__header">
@@ -266,18 +359,113 @@ const EventDetails = () => {
               </div>
             )}
 
-            {/* Register Button */}
-            <div className="EventDetails__register">
-              <motion.button
-                className="EventDetails__registerBtn"
-                onClick={() => navigate(`/attendance-request?event_id=${event.event_id}`)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <FiUserPlus />
-                Register for Attendance Request
-              </motion.button>
-            </div>
+            {/* Register Button - Only show if registration is enabled */}
+            {event.registration_enabled !== false ? (
+              <div className="EventDetails__register">
+                <motion.button
+                  className="EventDetails__registerBtn"
+                  onClick={() => navigate(`/attendance-request?event_id=${event.event_id}`)}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <FiUserPlus />
+                  Register for Attendance Request
+                </motion.button>
+              </div>
+            ) : (
+              <div className="EventDetails__register" style={{ 
+                padding: '1rem', 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: 0, color: '#ffc107', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                  <FiAlertTriangle />
+                  Registration for this event is currently closed
+                </p>
+              </div>
+            )}
+
+            {/* Admin/Board Actions */}
+            {isBoardOrAdmin && (
+              <div className="EventDetails__adminActions" style={{ 
+                marginTop: '2rem', 
+                padding: '1.5rem', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 1rem 0', 
+                  fontSize: '1.1rem', 
+                  color: '#8EC2F0',
+                  fontWeight: '600'
+                }}>
+                  Admin Actions
+                </h3>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <motion.button
+                    onClick={() => setShowRegistrationToggleConfirm(true)}
+                    disabled={isTogglingRegistration}
+                    whileHover={{ scale: isTogglingRegistration ? 1 : 1.02 }}
+                    whileTap={{ scale: isTogglingRegistration ? 1 : 0.98 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      background: event.registration_enabled 
+                        ? 'rgba(255, 193, 7, 0.2)' 
+                        : 'rgba(76, 175, 80, 0.2)',
+                      color: event.registration_enabled ? '#ffc107' : '#4caf50',
+                      border: `1px solid ${event.registration_enabled ? 'rgba(255, 193, 7, 0.3)' : 'rgba(76, 175, 80, 0.3)'}`,
+                      borderRadius: '8px',
+                      cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      opacity: isTogglingRegistration ? 0.6 : 1
+                    }}
+                  >
+                    {event.registration_enabled ? (
+                      <>
+                        <FiAlertTriangle />
+                        {isTogglingRegistration ? 'Updating...' : 'Close Registration'}
+                      </>
+                    ) : (
+                      <>
+                        <FiUserPlus />
+                        {isTogglingRegistration ? 'Updating...' : 'Open Registration'}
+                      </>
+                    )}
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isDeleting}
+                    whileHover={{ scale: isDeleting ? 1 : 1.02 }}
+                    whileTap={{ scale: isDeleting ? 1 : 0.98 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      background: 'rgba(231, 76, 60, 0.2)',
+                      color: '#e74c3c',
+                      border: '1px solid rgba(231, 76, 60, 0.3)',
+                      borderRadius: '8px',
+                      cursor: isDeleting ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      opacity: isDeleting ? 0.6 : 1
+                    }}
+                  >
+                    <FiTrash2 />
+                    {isDeleting ? 'Deleting...' : 'Delete Event'}
+                  </motion.button>
+                </div>
+              </div>
+            )}
 
             {/* Event Files Section */}
             <div className="EventDetails__files">
@@ -380,6 +568,166 @@ const EventDetails = () => {
           </div>
         </motion.article>
       </div>
+
+      {/* Delete Event Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            className="success-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+            style={{ zIndex: 1000 }}
+          >
+            <motion.div
+              className="success-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ 
+                maxWidth: '500px',
+                background: 'rgba(20, 25, 40, 0.98)',
+                border: '1px solid rgba(231, 76, 60, 0.3)'
+              }}
+            >
+              <div style={{ 
+                fontSize: '3rem', 
+                color: '#e74c3c', 
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <FiAlertTriangle />
+              </div>
+              <h2 style={{ color: '#fff', marginBottom: '1rem' }}>Delete Event?</h2>
+              <p style={{ color: '#8EC2F0', marginBottom: '2rem', lineHeight: '1.6' }}>
+                Are you sure you want to delete "{event.name}"? This action cannot be undone and will also remove all associated attendance requests.
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteEvent}
+                  disabled={isDeleting}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#e74c3c',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: isDeleting ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    opacity: isDeleting ? 0.6 : 1
+                  }}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Event'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Submissions Confirmation Modal */}
+      <AnimatePresence>
+        {showRegistrationToggleConfirm && (
+          <motion.div
+            className="success-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !isTogglingRegistration && setShowRegistrationToggleConfirm(false)}
+            style={{ zIndex: 1000 }}
+          >
+            <motion.div
+              className="success-card"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ 
+                maxWidth: '500px',
+                background: 'rgba(20, 25, 40, 0.98)',
+                border: '1px solid rgba(255, 193, 7, 0.3)'
+              }}
+            >
+              <div style={{ 
+                fontSize: '3rem', 
+                color: '#ffc107', 
+                marginBottom: '1rem',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <FiAlertTriangle />
+              </div>
+              <h2 style={{ color: '#fff', marginBottom: '1rem' }}>
+                {event.registration_enabled ? 'Close Registration?' : 'Open Registration?'}
+              </h2>
+              <p style={{ color: '#8EC2F0', marginBottom: '2rem', lineHeight: '1.6' }}>
+                {event.registration_enabled 
+                  ? `Are you sure you want to close registration for "${event.name}"? Users will no longer be able to submit attendance requests for this event.`
+                  : `Are you sure you want to open registration for "${event.name}"? Users will be able to submit attendance requests for this event.`}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button
+                  onClick={() => setShowDeleteSubmissionsConfirm(false)}
+                  disabled={isTogglingRegistration}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleToggleRegistration}
+                  disabled={isTogglingRegistration}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: event.registration_enabled ? '#ffc107' : '#4caf50',
+                    color: event.registration_enabled ? '#000' : '#fff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: isTogglingRegistration ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500',
+                    opacity: isTogglingRegistration ? 0.6 : 1
+                  }}
+                >
+                  {isTogglingRegistration 
+                    ? 'Updating...' 
+                    : event.registration_enabled 
+                      ? 'Close Registration' 
+                      : 'Open Registration'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 };

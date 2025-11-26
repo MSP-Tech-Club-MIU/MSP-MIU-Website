@@ -48,13 +48,18 @@ const Event = sequelize.define('Event', {
     allowNull: true
   },
   attendees: {
-    type: DataTypes.JSON,
+    type: DataTypes.STRING(255),
     allowNull: true
   },
   main_image: {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  registration_enabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  }
   
 }, {
   tableName: 'events',
