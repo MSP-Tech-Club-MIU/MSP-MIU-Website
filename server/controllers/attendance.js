@@ -72,6 +72,21 @@ const createAttendanceRequest = async (req, res) => {
             });
         }
 
+        // Check if user has already registered for this event (by university_id)
+        const existingRegistration = await Attendance.findOne({
+            where: {
+                event_id: parseInt(event_id),
+                university_id: university_id.trim()
+            }
+        });
+
+        if (existingRegistration) {
+            return res.status(409).json({
+                success: false,
+                error: 'You have already registered for this event'
+            });
+        }
+
         // Create attendance request and update count within a transaction
         await sequelize.transaction(async (t) => {
             // Create new attendance request within the transaction
