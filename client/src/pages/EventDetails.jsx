@@ -49,14 +49,51 @@ const EventDetails = () => {
           // Use main_image from database if available, otherwise fallback to MSP logo
           image_url: (data.main_image && data.main_image.trim()) ? data.main_image : mspLogo,
           category: data.category,
-          registration_enabled: data.registration_enabled !== undefined ? data.registration_enabled : true
+          registration_enabled: data.registration_enabled !== undefined ? data.registration_enabled : true,
+          upload_file: data.upload_file || null
         };
         
         setEvent(mappedEvent);
+        
+        // If event has an upload_file, add it to files array
+        if (data.upload_file && data.upload_file.trim()) {
+          // Decode URL-encoded characters (e.g., %20 -> space)
+          const decodedPath = decodeURIComponent(data.upload_file);
+          const filePath = decodedPath;
+          const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
+          const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+          
+          // Determine file type based on extension
+          let fileType = 'document';
+          if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(fileExtension)) {
+            fileType = 'image';
+          } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+            fileType = 'video';
+          } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+            fileType = 'audio';
+          } else if (['pptx', 'ppt'].includes(fileExtension)) {
+            fileType = 'document';
+          } else if (['pdf'].includes(fileExtension)) {
+            fileType = 'document';
+          }
+          
+          setFiles([{
+            file_id: 1,
+            file_name: filePath, // Store full path so getFileSrc can resolve it correctly
+            file_display_name: fileName, // Display name (just filename, decoded)
+            file_type: fileType,
+            file_size: 'N/A', // Size not available from database
+            uploaded_at: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            uploaded_by: 'System'
+          }]);
+        } else {
+          setFiles([]);
+        }
       } catch (err) {
         console.error('Error fetching event:', err);
         setError(err.message || 'Failed to load event');
         setEvent(null);
+        setFiles([]);
       } finally {
         setLoading(false);
       }
@@ -122,7 +159,10 @@ const EventDetails = () => {
       const cleanPath = fileName.startsWith('/') ? fileName.slice(1) : fileName;
       // If path doesn't start with 'assets/', assume it's in assets folder
       const filePath = cleanPath.startsWith('assets/') ? cleanPath : `assets/${cleanPath}`;
-      return `/${filePath}`;
+      // Encode the path for URL (spaces become %20, etc.)
+      // Split by /, encode each segment, then join back
+      const encodedPath = filePath.split('/').map(segment => encodeURIComponent(segment)).join('/');
+      return `/${encodedPath}`;
     }
     return fileName;
   };
@@ -173,7 +213,8 @@ const EventDetails = () => {
     setTimeout(() => {
       const newFile = {
         file_id: files.length + 1,
-        file_name: selectedFile.name,
+        file_name: selectedFile.name, // For new uploads, file_name is just the name
+        file_display_name: selectedFile.name,
         file_type: fileType,
         file_size: (selectedFile.size / (1024 * 1024)).toFixed(2) + ' MB',
         uploaded_at: new Date().toISOString().split('T')[0],
@@ -562,7 +603,7 @@ const EventDetails = () => {
                           {getFileIcon(file.file_type)}
                         </span>
                         <div className="EventDetails__fileDetails">
-                          <span className="EventDetails__fileName">{file.file_name}</span>
+                          <span className="EventDetails__fileName">{file.file_display_name || file.file_name}</span>
                           <span className="EventDetails__fileMeta">
                             {file.file_size} • {file.file_type} • Uploaded on {file.uploaded_at}
                           </span>
