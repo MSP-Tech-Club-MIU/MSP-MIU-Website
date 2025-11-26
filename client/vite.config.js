@@ -73,8 +73,8 @@ export default defineConfig({
   server: {
     compress: true
   },
-  // Asset handling for static files
-  assetsInclude: ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.gif', '**/*.svg', '**/*.webp']
+  // Asset handling for static files (same handling for PNG and JPG)
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg', '**/*.webp']
 })
 
 
