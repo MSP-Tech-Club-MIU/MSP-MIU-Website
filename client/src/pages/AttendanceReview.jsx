@@ -42,11 +42,14 @@ const AttendanceReview = () => {
 
         const user = await ApiService.getProfile();
         setUserRole(user.role);
+        // Allow: board/admin roles OR department_id = 6 (Event Planning)
         const isBoardOrAdmin = user.role === 'board' || user.role === 'admin';
-        setIsAuthenticated(isBoardOrAdmin);
+        const isEventPlanningDept = user.department_id === 6;
+        const hasAccess = isBoardOrAdmin || isEventPlanningDept;
+        setIsAuthenticated(hasAccess);
 
-        if (!isBoardOrAdmin) {
-          setError('Access denied. This page is only available to board members and administrators.');
+        if (!hasAccess) {
+          setError('Access denied. This page is only available to board members, administrators, and Event Planning department members.');
         }
       } catch (error) {
         console.error('Error checking authentication:', error);
@@ -189,7 +192,7 @@ const AttendanceReview = () => {
           >
             <h1 className="card-title">Access Denied</h1>
             <p style={{ color: '#e74c3c', marginBottom: '1rem' }}>
-              {error || 'This page is only available to board members and administrators.'}
+              {error || 'This page is only available to board members, administrators, and Event Planning department members.'}
             </p>
             <div className="actions">
               <motion.button

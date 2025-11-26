@@ -17,6 +17,7 @@ const Events = () => {
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
   const [userRole, setUserRole] = useState(null);
+  const [userDepartment, setUserDepartment] = useState(null);
   const navigate = useNavigate();
 
   const structuredData = {
@@ -31,19 +32,22 @@ const Events = () => {
     }
   };
 
-  // Check user role
+  // Check user role and department
   useEffect(() => {
     const checkUserRole = async () => {
       if (ApiService.isAuthenticated()) {
         try {
           const user = await ApiService.getProfile();
           setUserRole(user.role);
+          setUserDepartment(user.department_id);
         } catch (error) {
           console.error('Error fetching user role:', error);
           setUserRole(null);
+          setUserDepartment(null);
         }
       } else {
         setUserRole(null);
+        setUserDepartment(null);
       }
     };
     checkUserRole();
@@ -84,7 +88,10 @@ const Events = () => {
     fetchEvents();
   }, []);
 
+  // Allow: board/admin roles OR department 6 (Event Planning)
   const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
+  const isEventPlanningDept = userDepartment === 6;
+  const canAccessAdminFeatures = isBoardOrAdmin || isEventPlanningDept;
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -155,7 +162,7 @@ const Events = () => {
                 <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
               </div>
               {/* Action Buttons */}
-              {isBoardOrAdmin && (
+              {canAccessAdminFeatures && (
                 <div style={{ 
                   display: 'flex', 
                   gap: '0.75rem', 
