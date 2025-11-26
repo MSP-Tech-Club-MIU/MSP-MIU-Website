@@ -109,7 +109,7 @@ const EventsSection = memo(() => {
                   className="EventCard__media" 
                   style={{ 
                     backgroundImage: imageSrc ? `url(${imageSrc})` : 'none',
-                    backgroundSize: 'cover',
+                    backgroundSize: 'contain',
                     backgroundPosition: 'center',
                     backgroundRepeat: 'no-repeat'
                   }} 
