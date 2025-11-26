@@ -380,7 +380,7 @@ class ApiService {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: this.getHeaders(false), // No auth token required for now
+        headers: this.getHeaders(true), // Include auth token for protected route
       });
       
       const result = await response.json();
@@ -398,12 +398,12 @@ class ApiService {
     }
   }
 
-  static async updateApplicationStatus(id, status, password) {
+  static async updateApplicationStatus(id, status) {
     try {
       const response = await fetch(`${API_BASE_URL}/applications/${id}/status`, {
         method: 'PUT',
         headers: this.getHeaders(true), // Include auth token for admin access
-        body: JSON.stringify({ status, password }),
+        body: JSON.stringify({ status }),
       });
 
       const result = await response.json();
@@ -413,8 +413,7 @@ class ApiService {
       }
 
       // Invalidate cache when data is updated
-      const cacheKey = getCacheKey(`${API_BASE_URL}/applications`);
-      cache.delete(cacheKey);
+      cache.clear();
 
       return result;
     } catch (error) {
@@ -679,6 +678,28 @@ class ApiService {
     }
   }
 
+  // Update attendance request (update attended status)
+  static async updateAttendanceRequest(requestId, attended) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/attendance/${requestId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true), // Include auth token for admin access
+        body: JSON.stringify({ attended }),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update attendance request');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error updating attendance request:', error);
+      throw error;
+    }
+  }
+
   // Delete attendance request by ID
   static async deleteAttendanceRequest(requestId) {
     try {
@@ -696,6 +717,63 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error deleting attendance request:', error);
+      throw error;
+    }
+  }
+
+  // Export attendance requests to CSV
+  static async exportAttendanceRequestsToCSV(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.event_id) queryParams.append('event_id', filters.event_id);
+      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.search) queryParams.append('search', filters.search);
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/attendance/export/csv${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true), // Include auth token for admin access
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to export attendance requests');
+      }
+
+      // Get the CSV content as text
+      const csvContent = await response.text();
+      
+      // Get filename from Content-Disposition header or generate one
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `attendance_review_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create a blob and trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const urlObj = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', urlObj);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the object URL
+      setTimeout(() => URL.revokeObjectURL(urlObj), 100);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error exporting attendance requests to CSV:', error);
       throw error;
     }
   }

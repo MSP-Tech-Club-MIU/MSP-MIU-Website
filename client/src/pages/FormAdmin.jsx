@@ -6,7 +6,6 @@ import PageLoader from "../components/PageLoader";
 
 // Import components
 import CommentModal from "../components/CommentModal";
-import PasswordModal from "../components/PasswordModal";
 import TextModal from "../components/TextModal";
 import ChartsSection from "../components/ChartsSection";
 import FiltersSection from "../components/FiltersSection";
@@ -22,14 +21,14 @@ const FormAdmin = memo(() => {
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedText, setExpandedText] = useState({ field: null, appId: null });
   const [commentModal, setCommentModal] = useState({ isOpen: false, application: null, comment: '' });
-  const [passwordModal, setPasswordModal] = useState({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
+  const [statusAlert, setStatusAlert] = useState(null);
   const textareaRef = useRef(null);
-  const passwordRef = useRef(null);
   
   // Authentication states
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
+  const [userDepartment, setUserDepartment] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -101,64 +100,6 @@ const FormAdmin = memo(() => {
     setCommentModal({ isOpen: false, application: null, comment: '' });
   };
 
-  // Function to open password modal
-  const openPasswordModal = (application, newStatus) => {
-    setPasswordModal({
-      isOpen: true,
-      application: application,
-      newStatus: newStatus,
-      password: '',
-      error: ''
-    });
-  };
-
-  // Function to close password modal
-  const closePasswordModal = () => {
-    setPasswordModal({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
-  };
-
-  // Function to confirm status change with password
-  const confirmStatusChange = async () => {
-    if (!passwordModal.password) {
-      setPasswordModal(prev => ({ ...prev, error: 'Please enter the password' }));
-      return;
-    }
-
-    try {
-      await ApiService.updateApplicationStatus(
-        passwordModal.application.application_id, 
-        passwordModal.newStatus, 
-        passwordModal.password
-      );
-      
-      // Update local state
-      setApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      // Also update filtered applications
-      setFilteredApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      closePasswordModal();
-    } catch (error) {
-      console.error('Error updating application status:', error);
-      setPasswordModal(prev => ({ 
-        ...prev, 
-        error: error.message || 'Failed to update application status. Please check the password and try again.' 
-      }));
-    }
-  };
-
   // Focus textarea when modal opens
   useEffect(() => {
     if (commentModal.isOpen && textareaRef.current) {
@@ -166,12 +107,11 @@ const FormAdmin = memo(() => {
     }
   }, [commentModal.isOpen]);
 
-  // Focus password input when modal opens
   useEffect(() => {
-    if (passwordModal.isOpen && passwordRef.current) {
-      passwordRef.current.focus();
-    }
-  }, [passwordModal.isOpen]);
+    if (!statusAlert) return;
+    const timeout = setTimeout(() => setStatusAlert(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [statusAlert]);
 
   // Function to get status color
   const getStatusColor = (status) => {
@@ -277,20 +217,34 @@ const FormAdmin = memo(() => {
         return;
       }
       
-      // Fetch user profile to check role
+      // Fetch user profile to check role and department
       try {
         const user = await ApiService.getProfile();
         setIsAuthenticated(true);
         setUserRole(user.role);
+        setUserDepartment(user.department_id);
         
-        // Check if user has board role
-        if (user.role !== 'board') {
+        // Check if user has board role OR department 5
+        // Validate role exists and is in allowed list
+        const hasBoardRole = user.role === 'board';
+        
+        // Validate department_id - must be a number and equals 5
+        // Type check to prevent manipulation (coerce to number and validate)
+        const userDepartmentId = user.department_id;
+        const departmentId = typeof userDepartmentId === 'number' 
+            ? userDepartmentId 
+            : parseInt(userDepartmentId, 10);
+        const hasDept5Access = !isNaN(departmentId) && departmentId === 5;
+        
+        const hasAccess = hasBoardRole || hasDept5Access;
+        
+        if (!hasAccess) {
           setIsCheckingAuth(false);
           // Don't redirect, show unauthorized message
           return;
         }
         
-        // User is authenticated and has board role, proceed to load applications
+        // User is authenticated and has access, proceed to load applications
         setIsCheckingAuth(false);
       } catch (error) {
         console.error('Error fetching user profile:', error);
@@ -305,12 +259,13 @@ const FormAdmin = memo(() => {
     checkAuthAndRole();
   }, [navigate]);
 
-  // Initial load - only fetch applications if authenticated and has board role
+  // Initial load - only fetch applications if authenticated and has access
   useEffect(() => {
-    if (!isCheckingAuth && isAuthenticated && userRole === 'board') {
+    const hasAccess = (userRole === 'board') || (userDepartment === 5);
+    if (!isCheckingAuth && isAuthenticated && hasAccess) {
       fetchApplications();
     }
-  }, [isCheckingAuth, isAuthenticated, userRole, fetchApplications]);
+  }, [isCheckingAuth, isAuthenticated, userRole, userDepartment, fetchApplications]);
 
   // Handle filter changes (no immediate API call)
   const handleFilterChange = useCallback((filterKey, value) => {
@@ -363,9 +318,32 @@ const FormAdmin = memo(() => {
   }, [debouncedSearchTerm, filters, fetchApplications]);
 
   const handleStatusChange = async (application_id, newStatus) => {
-    // For all status changes, show password modal
-    const application = applications.find(app => app.application_id === application_id);
-    openPasswordModal(application, newStatus);
+    try {
+      await ApiService.updateApplicationStatus(application_id, newStatus);
+
+      setApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setFilteredApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setStatusAlert({
+        type: 'success',
+        message: `Application status updated to "${newStatus}".`
+      });
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      setStatusAlert({
+        type: 'error',
+        message: error.message || 'Failed to update application status.'
+      });
+    }
   };
 
   // Show loading while checking authentication
@@ -406,8 +384,13 @@ const FormAdmin = memo(() => {
     );
   }
 
-  // Show unauthorized message if user is authenticated but doesn't have board role
-  if (isAuthenticated && userRole !== 'board') {
+  // Show unauthorized message if user is authenticated but doesn't have access
+  // Validate department_id - must be a number and equals 5
+  const departmentId = typeof userDepartment === 'number' 
+    ? userDepartment 
+    : parseInt(userDepartment, 10);
+  const hasAccess = (userRole === 'board') || (!isNaN(departmentId) && departmentId === 5);
+  if (isAuthenticated && !hasAccess) {
     return (
       <div style={{ 
         textAlign: "center", 
@@ -424,7 +407,7 @@ const FormAdmin = memo(() => {
           Access Denied
         </h2>
         <p style={{ color: "#856404", margin: "0 0 24px 0", fontSize: "16px" }}>
-          You don't have permission to access this page. Only board members can view the applications dashboard.
+          You don't have permission to access this page. Only board members and authorized departments can view the applications dashboard.
         </p>
         <button
           onClick={() => navigate('/')}
@@ -462,13 +445,20 @@ const FormAdmin = memo(() => {
         saveComment={saveComment}
         textareaRef={textareaRef}
       />
-      <PasswordModal 
-        passwordModal={passwordModal}
-        setPasswordModal={setPasswordModal}
-        closePasswordModal={closePasswordModal}
-        confirmApproval={confirmStatusChange}
-        passwordRef={passwordRef}
-      />
+      {statusAlert && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: `1px solid ${statusAlert.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+            backgroundColor: statusAlert.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: statusAlert.type === 'success' ? '#155724' : '#721c24'
+          }}
+        >
+          {statusAlert.message}
+        </div>
+      )}
       <h2>Applications Dashboard</h2>
       
       <ChartsSection 
