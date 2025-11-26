@@ -95,8 +95,17 @@ const EventDetails = () => {
   const getImageSrc = (imageUrl) => {
     // Handle both imported images and URLs
     if (!imageUrl) return null;
-    if (typeof imageUrl === 'string' && imageUrl.startsWith('http')) return imageUrl;
-    // If it's already an imported module, return it directly
+    // If it's an HTTP/HTTPS URL, return as-is
+    if (typeof imageUrl === 'string' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
+      return imageUrl;
+    }
+    // If it's a string path (not an imported module), ensure it starts with / for public assets
+    if (typeof imageUrl === 'string') {
+      // Remove leading slash if present, then add it back to ensure consistent format
+      const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
+      return `/${cleanPath}`;
+    }
+    // If it's already an imported module (object with default or string from import), return it directly
     return imageUrl;
   };
 
@@ -279,30 +288,34 @@ const EventDetails = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          {event.image_url && (
-            <div className="EventDetails__hero">
-              <img 
-                src={getImageSrc(event.image_url)} 
-                alt={event.name}
-                className="EventDetails__image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                }}
-              />
-              <div 
-                className="EventDetails__imagePlaceholder"
-                style={{ display: event.image_url ? 'none' : 'flex' }}
-              >
-                <FiCalendar />
+          {event.image_url && (() => {
+            const imageSrc = getImageSrc(event.image_url);
+            return (
+              <div className="EventDetails__hero">
+                <div 
+                  className="EventDetails__image"
+                  style={{ 
+                    backgroundImage: imageSrc ? `url("${imageSrc}")` : 'none',
+                    backgroundSize: 'contain',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                  }} 
+                />
+                <div 
+                  className="EventDetails__imagePlaceholder"
+                  style={{ display: imageSrc ? 'none' : 'flex' }}
+                >
+                  <FiCalendar />
+                </div>
+                <div 
+                  className="EventDetails__badge"
+                  style={{ backgroundColor: getEventTypeColor(event.event_type) }}
+                >
+                  {event.event_type}
+                </div>
               </div>
-              <div 
-                className="EventDetails__badge"
-                style={{ backgroundColor: getEventTypeColor(event.event_type) }}
-              >
-                {event.event_type}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           <div className="EventDetails__content">
             <header className="EventDetails__header">
