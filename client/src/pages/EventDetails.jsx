@@ -109,6 +109,24 @@ const EventDetails = () => {
     return imageUrl;
   };
 
+  const getFileSrc = (fileName) => {
+    // Handle file paths from static folder
+    if (!fileName) return null;
+    // If it's an HTTP/HTTPS URL, return as-is
+    if (typeof fileName === 'string' && (fileName.startsWith('http://') || fileName.startsWith('https://'))) {
+      return fileName;
+    }
+    // If it's a string path, ensure it starts with / for static assets
+    // Files in static/assets/ are served at /assets/ in the browser
+    if (typeof fileName === 'string') {
+      const cleanPath = fileName.startsWith('/') ? fileName.slice(1) : fileName;
+      // If path doesn't start with 'assets/', assume it's in assets folder
+      const filePath = cleanPath.startsWith('assets/') ? cleanPath : `assets/${cleanPath}`;
+      return `/${filePath}`;
+    }
+    return fileName;
+  };
+
   const getEventTypeColor = (type) => {
     switch (type) {
       case 'event':
@@ -177,13 +195,21 @@ const EventDetails = () => {
   };
 
   const handleDownloadFile = (file) => {
-    // Mock download - in real app, this would download the file
-    console.log('Downloading file:', file.file_name);
+    // Get the file path from static folder
+    const filePath = getFileSrc(file.file_name);
+    if (!filePath) {
+      console.error('File path not found:', file.file_name);
+      return;
+    }
+    
     // Create a temporary link and trigger download
     const link = document.createElement('a');
-    link.href = '#';
+    link.href = filePath;
     link.download = file.file_name;
+    link.target = '_blank'; // Open in new tab for PDF/PPTX files
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const handleDeleteEvent = async () => {

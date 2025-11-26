@@ -30,3 +30,33 @@ declare module '*.png?url' {
   export default content;
 }
 
+declare module '*.pdf' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.pptx' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.ppt' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.pdf?url' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.pptx?url' {
+  const content: string;
+  export default content;
+}
+
+declare module '*.ppt?url' {
+  const content: string;
+  export default content;
+}
+
