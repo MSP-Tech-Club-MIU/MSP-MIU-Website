@@ -250,6 +250,11 @@ const updateEvent = async (req, res) => {
 
     } catch (error) {
         console.error('Error updating event:', error);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
         
         // Handle Sequelize validation errors
         if (error.name === 'SequelizeValidationError') {
@@ -260,9 +265,20 @@ const updateEvent = async (req, res) => {
             });
         }
 
+        // Handle Sequelize database errors
+        if (error.name === 'SequelizeDatabaseError') {
+            console.error('Database error:', error.original);
+            return res.status(500).json({
+                success: false,
+                error: 'Database error occurred',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
+        }
+
         res.status(500).json({
             success: false,
-            error: 'Failed to update event'
+            error: 'Failed to update event',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
