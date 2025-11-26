@@ -640,7 +640,7 @@ const EventDetails = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => !isTogglingRegistration && setShowDeleteSubmissionsConfirm(false)}
+            onClick={() => !isTogglingRegistration && setShowRegistrationToggleConfirm(false)}
             style={{ zIndex: 1000 }}
           >
             <motion.div
