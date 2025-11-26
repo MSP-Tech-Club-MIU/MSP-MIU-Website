@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
+import ScrollToTop from './components/ScrollToTop';
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -53,6 +54,7 @@ const PageLoader = () => (
 
 const AppRouter = () => (
   <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <ScrollToTop />
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
