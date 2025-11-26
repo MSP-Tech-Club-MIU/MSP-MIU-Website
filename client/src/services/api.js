@@ -398,12 +398,12 @@ class ApiService {
     }
   }
 
-  static async updateApplicationStatus(id, status, password) {
+  static async updateApplicationStatus(id, status) {
     try {
       const response = await fetch(`${API_BASE_URL}/applications/${id}/status`, {
         method: 'PUT',
         headers: this.getHeaders(true), // Include auth token for admin access
-        body: JSON.stringify({ status, password }),
+        body: JSON.stringify({ status }),
       });
 
       const result = await response.json();
@@ -413,8 +413,7 @@ class ApiService {
       }
 
       // Invalidate cache when data is updated
-      const cacheKey = getCacheKey(`${API_BASE_URL}/applications`);
-      cache.delete(cacheKey);
+      cache.clear();
 
       return result;
     } catch (error) {

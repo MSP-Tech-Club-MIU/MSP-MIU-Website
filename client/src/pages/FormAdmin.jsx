@@ -6,7 +6,6 @@ import PageLoader from "../components/PageLoader";
 
 // Import components
 import CommentModal from "../components/CommentModal";
-import PasswordModal from "../components/PasswordModal";
 import TextModal from "../components/TextModal";
 import ChartsSection from "../components/ChartsSection";
 import FiltersSection from "../components/FiltersSection";
@@ -22,9 +21,8 @@ const FormAdmin = memo(() => {
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedText, setExpandedText] = useState({ field: null, appId: null });
   const [commentModal, setCommentModal] = useState({ isOpen: false, application: null, comment: '' });
-  const [passwordModal, setPasswordModal] = useState({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
+  const [statusAlert, setStatusAlert] = useState(null);
   const textareaRef = useRef(null);
-  const passwordRef = useRef(null);
   
   // Authentication states
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -102,64 +100,6 @@ const FormAdmin = memo(() => {
     setCommentModal({ isOpen: false, application: null, comment: '' });
   };
 
-  // Function to open password modal
-  const openPasswordModal = (application, newStatus) => {
-    setPasswordModal({
-      isOpen: true,
-      application: application,
-      newStatus: newStatus,
-      password: '',
-      error: ''
-    });
-  };
-
-  // Function to close password modal
-  const closePasswordModal = () => {
-    setPasswordModal({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
-  };
-
-  // Function to confirm status change with password
-  const confirmStatusChange = async () => {
-    if (!passwordModal.password) {
-      setPasswordModal(prev => ({ ...prev, error: 'Please enter the password' }));
-      return;
-    }
-
-    try {
-      await ApiService.updateApplicationStatus(
-        passwordModal.application.application_id, 
-        passwordModal.newStatus, 
-        passwordModal.password
-      );
-      
-      // Update local state
-      setApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      // Also update filtered applications
-      setFilteredApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      closePasswordModal();
-    } catch (error) {
-      console.error('Error updating application status:', error);
-      setPasswordModal(prev => ({ 
-        ...prev, 
-        error: error.message || 'Failed to update application status. Please check the password and try again.' 
-      }));
-    }
-  };
-
   // Focus textarea when modal opens
   useEffect(() => {
     if (commentModal.isOpen && textareaRef.current) {
@@ -167,12 +107,11 @@ const FormAdmin = memo(() => {
     }
   }, [commentModal.isOpen]);
 
-  // Focus password input when modal opens
   useEffect(() => {
-    if (passwordModal.isOpen && passwordRef.current) {
-      passwordRef.current.focus();
-    }
-  }, [passwordModal.isOpen]);
+    if (!statusAlert) return;
+    const timeout = setTimeout(() => setStatusAlert(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [statusAlert]);
 
   // Function to get status color
   const getStatusColor = (status) => {
@@ -379,9 +318,32 @@ const FormAdmin = memo(() => {
   }, [debouncedSearchTerm, filters, fetchApplications]);
 
   const handleStatusChange = async (application_id, newStatus) => {
-    // For all status changes, show password modal
-    const application = applications.find(app => app.application_id === application_id);
-    openPasswordModal(application, newStatus);
+    try {
+      await ApiService.updateApplicationStatus(application_id, newStatus);
+
+      setApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setFilteredApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setStatusAlert({
+        type: 'success',
+        message: `Application status updated to "${newStatus}".`
+      });
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      setStatusAlert({
+        type: 'error',
+        message: error.message || 'Failed to update application status.'
+      });
+    }
   };
 
   // Show loading while checking authentication
@@ -483,13 +445,20 @@ const FormAdmin = memo(() => {
         saveComment={saveComment}
         textareaRef={textareaRef}
       />
-      <PasswordModal 
-        passwordModal={passwordModal}
-        setPasswordModal={setPasswordModal}
-        closePasswordModal={closePasswordModal}
-        confirmApproval={confirmStatusChange}
-        passwordRef={passwordRef}
-      />
+      {statusAlert && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: `1px solid ${statusAlert.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+            backgroundColor: statusAlert.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: statusAlert.type === 'success' ? '#155724' : '#721c24'
+          }}
+        >
+          {statusAlert.message}
+        </div>
+      )}
       <h2>Applications Dashboard</h2>
       
       <ChartsSection 

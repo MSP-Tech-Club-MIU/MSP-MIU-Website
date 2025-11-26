@@ -190,7 +190,14 @@ const getAllApplications = async (req, res) => {
 const updateApplicationStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, password } = req.body;
+        const { status } = req.body;
+
+        if (!req.user || req.user.role !== 'board') {
+            return res.status(403).json({
+                success: false,
+                error: 'Only board members can update application status'
+            });
+        }
 
         const application = await Application.findByPk(id);
 
@@ -198,21 +205,6 @@ const updateApplicationStatus = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'Application not found'
-            });
-        }
-
-        // Check password for any status change
-        if (!password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Password required for status change'
-            });
-        }
-
-        if (password !== 'الرجل العناب' && password !== 'el_ragol_el_3enab') {
-            return res.status(401).json({
-                success: false,
-                error: 'Incorrect password'
             });
         }
 
