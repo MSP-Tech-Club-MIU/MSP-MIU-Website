@@ -799,94 +799,50 @@ class ApiService {
     }
   }
 
-  // Get all slides from cloud storage
+  /**
+   * Generic method to get assets by type from cloud storage
+   * @param {string} assetType - Type of asset: 'slides', 'videos', 'codes', 'assets', 'event-thumbnails', 'documents'
+   * @returns {Promise<Array>} Array of asset objects
+   */
+  static async getAssets(assetType = 'assets') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/assets/${assetType}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to fetch ${assetType}`);
+      }
+
+      return result[assetType] || [];
+    } catch (error) {
+      console.error(`Error fetching ${assetType}:`, error);
+      throw error;
+    }
+  }
+
+  // Legacy convenience methods for backward compatibility
   static async getSlides() {
-    try {
-    const response = await fetch(`${API_BASE_URL}/cloud/slides`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch slides');
-    }
-    return result.slides || [];
-    } catch (error) {
-      console.error('Error fetching slides:', error);
-      throw error;
-    }
+    return this.getAssets('slides');
   }
 
-  // Get all videos from cloud storage
   static async getVideos() {
-    try {
-    const response = await fetch(`${API_BASE_URL}/cloud/videos`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch videos');
-    }
-    return result.videos || [];
-    } catch (error) {
-      console.error('Error fetching videos:', error);
-      throw error;
-    }
+    return this.getAssets('videos');
   }
 
-  // Get all codes from cloud storage
   static async getCodes() {
-    try {
-    const response = await fetch(`${API_BASE_URL}/cloud/codes`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch codes');
-    }
-    return result.codes || [];
-    } catch (error) {
-      console.error('Error fetching codes:', error);
-      throw error;
-    }
+    return this.getAssets('codes');
   }
 
-  // Get all assets from cloud storage
-  static async getAssets() {
-    try {
-    const response = await fetch(`${API_BASE_URL}/cloud/assets`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch assets');
-    }
-    return result.assets || [];
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-      throw error;
-    }
-  }
-
-  // Get all documents from cloud storage
   static async getDocuments() {
-    try {
-    const response = await fetch(`${API_BASE_URL}/cloud/documents`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch documents');
-    }
-    return result.documents || [];
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-      throw error;
-    }
+    return this.getAssets('documents');
+  }
+
+  static async getEventThumbnails() {
+    return this.getAssets('event-thumbnails');
   }
 }
 

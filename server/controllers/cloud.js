@@ -126,188 +126,81 @@ const getImages = async (req, res) => {
   }
 };
 
-// Get all slides from cloud storage
-const getSlides = async (req, res) => {
+/**
+ * Generic function to get assets by type from cloud storage
+ * Handles: slides, videos, codes, assets, event-thumbnails, documents
+ */
+const getAssetsByType = async (req, res) => {
   try {
-    const bucket = process.env.R2_BUCKET;
-    const prefix = 'Slides/';
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
-    });
-    const response = await r2.send(command);
+    const { type } = req.params;
     
-    // Validate response.Contents exists before mapping
-    if (!response.Contents || !Array.isArray(response.Contents)) {
-      return res.json({
-        success: true,
-        slides: [],
-        count: 0
-      });
-    }
-    
-    // Filter out directories and get only slide files
-    const slides = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
-        const isDirectory = key.endsWith('/');
-        const isSlideFile = /\.(ppt|pptx|pdf)$/i.test(key);
-        return !isDirectory && isSlideFile;
-      })
-      .map(obj => {
-        const slideUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-        return {
-          key: obj.Key,
-          url: slideUrl || obj.Key,
-          name: obj.Key.split('/').pop(),
-          size: obj.Size,
-          lastModified: obj.LastModified
-        };
-      });
-    res.json({
-      success: true,
-      slides: slides,
-      count: slides.length
-    });
-  } catch (error) {
-    console.error('Error fetching slides from R2:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch slides',
-      message: error.message
-    });
-  }
-};
+    // Asset type configuration
+    const assetConfig = {
+      slides: {
+        prefix: 'Slides/',
+        fileFilter: (key) => /\.(ppt|pptx|pdf)$/i.test(key)
+      },
+      videos: {
+        prefix: 'Videos/',
+        fileFilter: (key) => /\.(mp4|webm|ogg|mov|avi|wmv|flv|mkv)$/i.test(key)
+      },
+      codes: {
+        prefix: 'Codes/',
+        fileFilter: null // No specific file type filter
+      },
+      assets: {
+        prefix: 'Assets/',
+        fileFilter: null // No specific file type filter
+      },
+      'event-thumbnails': {
+        prefix: 'Events_Thumbnails/',
+        fileFilter: (key) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(key)
+      },
+      documents: {
+        prefix: 'Documents/',
+        fileFilter: null // No specific file type filter
+      }
+    };
 
-// Get all videos from cloud storage
-const getVideos = async (req, res) => {
-  try {
-    const bucket = process.env.R2_BUCKET;
-    const prefix = 'Videos/';
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
-    });
-    const response = await r2.send(command);
-    
-    // Validate response.Contents exists before mapping
-    if (!response.Contents || !Array.isArray(response.Contents)) {
-      return res.json({
-        success: true,
-        videos: [],
-        count: 0
+    // Validate asset type
+    if (!assetConfig[type]) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid asset type: ${type}. Supported types: ${Object.keys(assetConfig).join(', ')}`
       });
     }
-    
-    // Filter out directories and get only video files
-    const videos = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
-        const isDirectory = key.endsWith('/');
-        const isVideoFile = /\.(mp4|webm|ogg|mov|avi|wmv|flv|mkv)$/i.test(key);
-        return !isDirectory && isVideoFile;
-      })
-      .map(obj => {
-        const videoUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-        return {
-          key: obj.Key,
-          url: videoUrl || obj.Key,
-          name: obj.Key.split('/').pop(),
-          size: obj.Size,
-          lastModified: obj.LastModified
-        };
-      });
-    res.json({
-      success: true,
-      videos: videos,
-      count: videos.length
-    });
-  } catch (error) {
-    console.error('Error fetching videos from R2:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch videos',
-      message: error.message
-    });
-  }
-};
 
-// Get all codes from cloud storage
-const getCodes = async (req, res) => {
-  try {
+    const config = assetConfig[type];
     const bucket = process.env.R2_BUCKET;
-    const prefix = 'Codes/';
+    
     const command = new ListObjectsV2Command({
       Bucket: bucket,
-      Prefix: prefix
+      Prefix: config.prefix
     });
-    const response = await r2.send(command);
-    
-    // Validate response.Contents exists before mapping
-    if (!response.Contents || !Array.isArray(response.Contents)) {
-      return res.json({
-        success: true,
-        codes: [],
-        count: 0
-      });
-    }
-    
-    // Filter out directories
-    const codes = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
-        return !key.endsWith('/');
-      })
-      .map(obj => {
-        const codeUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-        return {
-          key: obj.Key,
-          url: codeUrl || obj.Key,
-          name: obj.Key.split('/').pop(),
-          size: obj.Size,
-          lastModified: obj.LastModified
-        };
-      });
-    res.json({
-      success: true,
-      codes: codes,
-      count: codes.length
-    });
-  } catch (error) {
-    console.error('Error fetching codes from R2:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch codes',
-      message: error.message
-    });
-  }
-};
 
-// Get all assets from cloud storage
-const getAssets = async (req, res) => {
-  try {
-    const bucket = process.env.R2_BUCKET;
-    const prefix = 'Assets/';
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
-    });
     const response = await r2.send(command);
     
     // Validate response.Contents exists before mapping
     if (!response.Contents || !Array.isArray(response.Contents)) {
       return res.json({
         success: true,
-        assets: [],
+        [type]: [],
         count: 0
       });
     }
     
-    // Filter out directories
+    // Filter and map assets
     const assets = response.Contents
       .filter(obj => {
         const key = obj.Key;
-        return !key.endsWith('/');
+        const isDirectory = key.endsWith('/');
+        
+        // Apply file type filter if configured
+        if (config.fileFilter && !config.fileFilter(key)) {
+          return false;
+        }
+        
+        return !isDirectory;
       })
       .map(obj => {
         const assetUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
@@ -319,127 +212,57 @@ const getAssets = async (req, res) => {
           lastModified: obj.LastModified
         };
       });
+
     res.json({
       success: true,
-      assets: assets,
+      [type]: assets,
       count: assets.length
     });
   } catch (error) {
-    console.error('Error fetching assets from R2:', error);
+    console.error(`Error fetching ${req.params.type} from R2:`, error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch assets',
+      error: `Failed to fetch ${req.params.type}`,
       message: error.message
     });
   }
 };
 
-// Get all event thumbnails from cloud storage
+// Legacy individual functions for backward compatibility (delegate to generic function)
+const getSlides = async (req, res) => {
+  req.params.type = 'slides';
+  return getAssetsByType(req, res);
+};
+
+const getVideos = async (req, res) => {
+  req.params.type = 'videos';
+  return getAssetsByType(req, res);
+};
+
+const getCodes = async (req, res) => {
+  req.params.type = 'codes';
+  return getAssetsByType(req, res);
+};
+
+const getAssets = async (req, res) => {
+  req.params.type = 'assets';
+  return getAssetsByType(req, res);
+};
+
 const getEventThumbnails = async (req, res) => {
-  try {
-    const bucket = process.env.R2_BUCKET;
-    const prefix = 'Events_Thumbnails/';
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
-    });
-    const response = await r2.send(command);
-    
-    // Validate response.Contents exists before mapping
-    if (!response.Contents || !Array.isArray(response.Contents)) {
-      return res.json({
-        success: true,
-        eventThumbnails: [],
-        count: 0
-      });
-    }
-    
-    // Filter out directories and ensure it's an image file
-    const eventThumbnails = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
-        const isDirectory = key.endsWith('/');
-        const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(key);
-        return !isDirectory && isImage;
-      })
-      .map(obj => {
-        const thumbnailUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-        return {
-          key: obj.Key,
-          url: thumbnailUrl || obj.Key,
-          name: obj.Key.split('/').pop(),
-          size: obj.Size,
-          lastModified: obj.LastModified
-        };
-      });
-    res.json({
-      success: true,
-      eventThumbnails: eventThumbnails,
-      count: eventThumbnails.length
-    });
-  } catch (error) {
-    console.error('Error fetching event thumbnails from R2:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch event thumbnails',
-      message: error.message
-    });
-  }
+  req.params.type = 'event-thumbnails';
+  return getAssetsByType(req, res);
 };
 
-// Get all documents from cloud storage
 const getDocuments = async (req, res) => {
-  try {
-    const bucket = process.env.R2_BUCKET;
-    const prefix = 'Documents/';
-    const command = new ListObjectsV2Command({
-      Bucket: bucket,
-      Prefix: prefix
-    });
-    const response = await r2.send(command);
-    
-    // Validate response.Contents exists before mapping
-    if (!response.Contents || !Array.isArray(response.Contents)) {
-      return res.json({
-        success: true,
-        documents: [],
-        count: 0
-      });
-    }
-    
-    // Filter out directories
-    const documents = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
-        return !key.endsWith('/');
-      })
-      .map(obj => {
-        const documentUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-        return {
-          key: obj.Key,
-          url: documentUrl || obj.Key,
-          name: obj.Key.split('/').pop(),
-          size: obj.Size,
-          lastModified: obj.LastModified
-        };
-      });
-    res.json({
-      success: true,
-      documents: documents,
-      count: documents.length
-    });
-  } catch (error) {
-    console.error('Error fetching documents from R2:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch documents',
-      message: error.message
-    });
-  }
+  req.params.type = 'documents';
+  return getAssetsByType(req, res);
 };
 
 module.exports = {
   getImages,
+  getAssetsByType,
+  // Legacy functions for backward compatibility
   getSlides,
   getVideos,
   getCodes,
