@@ -777,6 +777,117 @@ class ApiService {
       throw error;
     }
   }
+
+  // Get all images from cloud storage
+  static async getImages() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/images`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch images');
+      }
+
+      return result.images || [];
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      throw error;
+    }
+  }
+
+  // Get all slides from cloud storage
+  static async getSlides() {
+    try {
+    const response = await fetch(`${API_BASE_URL}/cloud/slides`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch slides');
+    }
+    return result.slides || [];
+    } catch (error) {
+      console.error('Error fetching slides:', error);
+      throw error;
+    }
+  }
+
+  // Get all videos from cloud storage
+  static async getVideos() {
+    try {
+    const response = await fetch(`${API_BASE_URL}/cloud/videos`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch videos');
+    }
+    return result.videos || [];
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+      throw error;
+    }
+  }
+
+  // Get all codes from cloud storage
+  static async getCodes() {
+    try {
+    const response = await fetch(`${API_BASE_URL}/cloud/codes`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch codes');
+    }
+    return result.codes || [];
+    } catch (error) {
+      console.error('Error fetching codes:', error);
+      throw error;
+    }
+  }
+
+  // Get all assets from cloud storage
+  static async getAssets() {
+    try {
+    const response = await fetch(`${API_BASE_URL}/cloud/assets`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch assets');
+    }
+    return result.assets || [];
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+      throw error;
+    }
+  }
+
+  // Get all documents from cloud storage
+  static async getDocuments() {
+    try {
+    const response = await fetch(`${API_BASE_URL}/cloud/documents`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch documents');
+    }
+    return result.documents || [];
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;
