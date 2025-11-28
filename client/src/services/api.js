@@ -777,6 +777,73 @@ class ApiService {
       throw error;
     }
   }
+
+  // Get all images from cloud storage
+  static async getImages() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/images`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch images');
+      }
+
+      return result.images || [];
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generic method to get assets by type from cloud storage
+   * @param {string} assetType - Type of asset: 'slides', 'videos', 'codes', 'assets', 'event-thumbnails', 'documents'
+   * @returns {Promise<Array>} Array of asset objects
+   */
+  static async getAssets(assetType = 'assets') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/assets/${assetType}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to fetch ${assetType}`);
+      }
+
+      return result[assetType] || [];
+    } catch (error) {
+      console.error(`Error fetching ${assetType}:`, error);
+      throw error;
+    }
+  }
+
+  // Legacy convenience methods for backward compatibility
+  static async getSlides() {
+    return this.getAssets('slides');
+  }
+
+  static async getVideos() {
+    return this.getAssets('videos');
+  }
+
+  static async getCodes() {
+    return this.getAssets('codes');
+  }
+
+  static async getDocuments() {
+    return this.getAssets('documents');
+  }
+
+  static async getEventThumbnails() {
+    return this.getAssets('event-thumbnails');
+  }
 }
 
 export default ApiService;

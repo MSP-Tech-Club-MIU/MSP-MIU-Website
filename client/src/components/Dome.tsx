@@ -1,44 +1,7 @@
 import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { useGesture } from 'react-use-gesture';
 import './Dome.css';
-
-import img3800 from '../assets/Images/IMG_3800.jpg';
-import img3871 from '../assets/Images/IMG_3871.jpg';
-import img3912 from '../assets/Images/IMG_3912.jpg';
-import img3928 from '../assets/Images/IMG_3928.jpg';
-import img3943 from '../assets/Images/IMG_3943.jpg';
-import img3981 from '../assets/Images/IMG_3981.jpg';
-import img3985 from '../assets/Images/IMG_3985.jpg';
-import img3995 from '../assets/Images/IMG_3995.jpg';
-import img4009 from '../assets/Images/IMG_4009.jpg';
-import img4012 from '../assets/Images/IMG_4012.jpg';
-import img5680 from '../assets/Images/IMG_5680.jpg';
-import img20251006144515 from '../assets/Images/IMG20251006144515.jpg';
-import img20251006150524 from '../assets/Images/IMG20251006150524.jpg';
-import img20251006152210 from '../assets/Images/IMG20251006152210.jpg';
-import img20251006152901 from '../assets/Images/IMG20251006152901.jpg';
-import img8ff82846 from '../assets/Images/8ff82846-9209-49a9-a0a8-984ec3c1d827.jpg';
-
-
-
-const DEFAULT_IMAGES = [
-  img3800,
-  img3871,
-  img3912,
-  img3928,
-  img3943,
-  img3981,
-  img3985,
-  img3995,
-  img4009,
-  img4012,
-  img5680,
-  img20251006144515,
-  img20251006150524,
-  img20251006152210,
-  img20251006152901,
-  img8ff82846
-];
+import ApiService from '../services/api';
 
 const DEFAULTS = {
   maxVerticalRotationDeg: 90,
@@ -117,7 +80,7 @@ function computeItemBaseRotation(offsetX, offsetY, sizeX, sizeY, segments) {
 }
 
 export default function DomeGallery({
-  images = DEFAULT_IMAGES,
+  images,
   fit = 0.8,
   fitBasis = 'auto',
   minRadius = 600,
@@ -144,7 +107,37 @@ export default function DomeGallery({
   const inertiaRAF = useRef(null);
   const lastDragEndAt = useRef(0);
 
-  const items = useMemo(() => buildItems(images, segments), [images, segments]);
+  // State for images from cloud API
+  const [cloudImages, setCloudImages] = useState<string[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(true);
+  const [imagesError, setImagesError] = useState<string | null>(null);
+
+  // Fetch images from cloud API
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        setImagesLoading(true);
+        setImagesError(null);
+        const imageData = await ApiService.getImages();
+        // Extract URLs from image objects (API returns {url, key, name, ...})
+        const imageUrls = imageData.map((img: { url: string }) => img.url);
+        setCloudImages(imageUrls);
+      } catch (error) {
+        console.error('Failed to load images from cloud API:', error);
+        setImagesError(error instanceof Error ? error.message : 'Failed to load images');
+        setCloudImages([]); // Fallback to empty array
+      } finally {
+        setImagesLoading(false);
+      }
+    };
+
+    fetchImages();
+  }, []);
+
+  // Use provided images prop if available, otherwise use cloud images
+  const displayImages = images || cloudImages;
+
+  const items = useMemo(() => buildItems(displayImages, segments), [displayImages, segments]);
   
   // Lazy loading: Track which images should be loaded
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set());
