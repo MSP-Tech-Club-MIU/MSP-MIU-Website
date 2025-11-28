@@ -2,7 +2,13 @@ import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FiAward, FiCode, FiDollarSign, FiUsers, FiCheckCircle } from 'react-icons/fi';
 import './ImagineCupSection.css';
-const imagineCupLogo = `${import.meta.env.R2_PUBLIC_DOMAIN}/Assets/imagine_cup.jpg`;
+import apiService from '../../../services/api';
+const imagineCupLogo = await apiService.getAssets().then(assets => {
+  return assets.find(asset => asset.name === 'imagine_cup.jpg')?.url;
+}).catch(error => {
+  console.error('Error fetching imagine cup logo:', error);
+  return null;
+});
 
 const ImagineCupSection = memo(() => {
   const initialAnimation = useMemo(() => ({ opacity: 0, y: 30 }), []);
