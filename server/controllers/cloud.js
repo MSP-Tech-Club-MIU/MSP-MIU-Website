@@ -1,6 +1,80 @@
 const { r2 } = require('../config/cloud');
 const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
 
+/**
+ * Validates and sanitizes the base URL from environment variable
+ * @param {string} baseUrl - The base URL from environment variable
+ * @returns {string|null} - Validated base URL or null if invalid
+ */
+function validateBaseUrl(baseUrl) {
+  if (!baseUrl || typeof baseUrl !== 'string') {
+    return null;
+  }
+
+  // Remove trailing slashes
+  const cleaned = baseUrl.trim().replace(/\/+$/, '');
+  
+  // Validate URL format
+  try {
+    const url = new URL(cleaned);
+    // Only allow http and https protocols
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      console.error('Invalid protocol in R2_PUBLIC_DOMAIN:', url.protocol);
+      return null;
+    }
+    return cleaned;
+  } catch (error) {
+    console.error('Invalid URL format in R2_PUBLIC_DOMAIN:', error.message);
+    return null;
+  }
+}
+
+/**
+ * Sanitizes object key to prevent path traversal and ensure safe URL construction
+ * @param {string} key - The object key from R2
+ * @returns {string} - Sanitized key
+ */
+function sanitizeObjectKey(key) {
+  if (!key || typeof key !== 'string') {
+    return '';
+  }
+
+  // Remove path traversal sequences
+  let sanitized = key
+    .replace(/\.\./g, '') // Remove .. sequences
+    .replace(/^\/+/, '') // Remove leading slashes
+    .replace(/\/+/g, '/'); // Normalize multiple slashes
+
+  // Ensure key doesn't start with / to prevent issues
+  if (sanitized.startsWith('/')) {
+    sanitized = sanitized.substring(1);
+  }
+
+  return sanitized;
+}
+
+/**
+ * Safely constructs a public URL for an object
+ * @param {string} baseUrl - Validated base URL
+ * @param {string} objectKey - Object key from R2
+ * @returns {string} - Safe public URL
+ */
+function buildSafeUrl(baseUrl, objectKey) {
+  const validatedBase = validateBaseUrl(baseUrl);
+  if (!validatedBase) {
+    // If base URL is invalid, return empty string or just the sanitized key
+    return '';
+  }
+
+  const sanitizedKey = sanitizeObjectKey(objectKey);
+  if (!sanitizedKey) {
+    return '';
+  }
+
+  // Construct URL safely - ensure single slash between base and key
+  return `${validatedBase}/${sanitizedKey}`;
+}
+
 // Get all images from cloud storage
 const getImages = async (req, res) => {
   try {
@@ -24,21 +98,13 @@ const getImages = async (req, res) => {
         return !isDirectory && isImage;
       })
       .map(obj => {
-        // Return the full URL to the image
-        const cloudStorageUrl = process.env.R2_PUBLIC_DOMAIN;
+        // Return the full URL to the image using secure URL construction
         const imageKey = obj.Key;
-        // Construct URL: ensure no double slashes
-        let imageUrl;
-        if (cloudStorageUrl) {
-          const baseUrl = cloudStorageUrl.endsWith('/') ? cloudStorageUrl.slice(0, -1) : cloudStorageUrl;
-          const key = imageKey.startsWith('/') ? imageKey : `/${imageKey}`;
-          imageUrl = `${baseUrl}${key}`;
-        } else {
-          imageUrl = imageKey;
-        }
+        const imageUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, imageKey);
+        
         return {
           key: imageKey,
-          url: imageUrl,
+          url: imageUrl || imageKey, // Fallback to key if URL construction fails
           name: imageKey.replace(prefix, ''),
           size: obj.Size,
           lastModified: obj.LastModified
@@ -71,9 +137,10 @@ const getSlides = async (req, res) => {
     });
     const response = await r2.send(command);
     const slides = response.Contents.map(obj => {
+      const slideUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: slideUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
@@ -105,9 +172,10 @@ const getVideos = async (req, res) => {
     });
     const response = await r2.send(command);
     const videos = response.Contents.map(obj => {
+      const videoUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: videoUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
@@ -139,9 +207,10 @@ const getCodes = async (req, res) => {
     });
     const response = await r2.send(command);
     const codes = response.Contents.map(obj => {
+      const codeUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: codeUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
@@ -173,9 +242,10 @@ const getAssets = async (req, res) => {
     });
     const response = await r2.send(command);
     const assets = response.Contents.map(obj => {
+      const assetUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: assetUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
@@ -207,9 +277,10 @@ const getEventThumbnails = async (req, res) => {
     });
     const response = await r2.send(command);
     const eventThumbnails = response.Contents.map(obj => {
+      const thumbnailUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: thumbnailUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
@@ -241,9 +312,10 @@ const getDocuments = async (req, res) => {
     });
     const response = await r2.send(command);
     const documents = response.Contents.map(obj => {
+      const documentUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
       return {
         key: obj.Key,
-        url: `${process.env.R2_PUBLIC_DOMAIN}/${obj.Key}`,
+        url: documentUrl || obj.Key,
         name: obj.Key.split('/').pop(),
         size: obj.Size,
         lastModified: obj.LastModified
