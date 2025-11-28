@@ -2,7 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FiAward, FiCode, FiDollarSign, FiUsers, FiCheckCircle } from 'react-icons/fi';
 import './ImagineCupSection.css';
-const imagineCupLogo = `${import.meta.env.VITE_CLOUD_STORAGE_URL}/Assets/imagine_cup.jpg`;
+const imagineCupLogo = `${import.meta.env.R2_PUBLIC_DOMAIN}/Assets/imagine_cup.jpg`;
 
 const ImagineCupSection = memo(() => {
   const initialAnimation = useMemo(() => ({ opacity: 0, y: 30 }), []);
