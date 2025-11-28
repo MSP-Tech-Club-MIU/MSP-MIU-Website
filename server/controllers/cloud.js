@@ -136,16 +136,34 @@ const getSlides = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const slides = response.Contents.map(obj => {
-      const slideUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: slideUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        slides: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories and get only slide files
+    const slides = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        const isDirectory = key.endsWith('/');
+        const isSlideFile = /\.(ppt|pptx|pdf)$/i.test(key);
+        return !isDirectory && isSlideFile;
+      })
+      .map(obj => {
+        const slideUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: slideUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       slides: slides,
@@ -171,16 +189,34 @@ const getVideos = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const videos = response.Contents.map(obj => {
-      const videoUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: videoUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        videos: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories and get only video files
+    const videos = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        const isDirectory = key.endsWith('/');
+        const isVideoFile = /\.(mp4|webm|ogg|mov|avi|wmv|flv|mkv)$/i.test(key);
+        return !isDirectory && isVideoFile;
+      })
+      .map(obj => {
+        const videoUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: videoUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       videos: videos,
@@ -206,16 +242,32 @@ const getCodes = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const codes = response.Contents.map(obj => {
-      const codeUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: codeUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        codes: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories
+    const codes = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        return !key.endsWith('/');
+      })
+      .map(obj => {
+        const codeUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: codeUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       codes: codes,
@@ -241,16 +293,32 @@ const getAssets = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const assets = response.Contents.map(obj => {
-      const assetUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: assetUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        assets: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories
+    const assets = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        return !key.endsWith('/');
+      })
+      .map(obj => {
+        const assetUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: assetUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       assets: assets,
@@ -276,16 +344,34 @@ const getEventThumbnails = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const eventThumbnails = response.Contents.map(obj => {
-      const thumbnailUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: thumbnailUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        eventThumbnails: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories and ensure it's an image file
+    const eventThumbnails = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        const isDirectory = key.endsWith('/');
+        const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(key);
+        return !isDirectory && isImage;
+      })
+      .map(obj => {
+        const thumbnailUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: thumbnailUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       eventThumbnails: eventThumbnails,
@@ -311,16 +397,32 @@ const getDocuments = async (req, res) => {
       Prefix: prefix
     });
     const response = await r2.send(command);
-    const documents = response.Contents.map(obj => {
-      const documentUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
-      return {
-        key: obj.Key,
-        url: documentUrl || obj.Key,
-        name: obj.Key.split('/').pop(),
-        size: obj.Size,
-        lastModified: obj.LastModified
-      };
-    });
+    
+    // Validate response.Contents exists before mapping
+    if (!response.Contents || !Array.isArray(response.Contents)) {
+      return res.json({
+        success: true,
+        documents: [],
+        count: 0
+      });
+    }
+    
+    // Filter out directories
+    const documents = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        return !key.endsWith('/');
+      })
+      .map(obj => {
+        const documentUrl = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, obj.Key);
+        return {
+          key: obj.Key,
+          url: documentUrl || obj.Key,
+          name: obj.Key.split('/').pop(),
+          size: obj.Size,
+          lastModified: obj.LastModified
+        };
+      });
     res.json({
       success: true,
       documents: documents,

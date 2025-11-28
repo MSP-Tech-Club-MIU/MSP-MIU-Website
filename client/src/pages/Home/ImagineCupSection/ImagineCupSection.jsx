@@ -1,16 +1,32 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiAward, FiCode, FiDollarSign, FiUsers, FiCheckCircle } from 'react-icons/fi';
 import './ImagineCupSection.css';
-import apiService from '../../../services/api';
-const imagineCupLogo = await apiService.getAssets().then(assets => {
-  return assets.find(asset => asset.name === 'imagine_cup.jpg')?.url;
-}).catch(error => {
-  console.error('Error fetching imagine cup logo:', error);
-  return null;
-});
+import ApiService from '../../../services/api';
 
 const ImagineCupSection = memo(() => {
+  const [imagineCupLogo, setImagineCupLogo] = useState(null);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const assets = await ApiService.getAssets();
+        const logoAsset = assets.find(asset => 
+          asset.name === 'imagine_cup.jpg' || 
+          asset.key?.includes('imagine_cup.jpg') ||
+          asset.key?.includes('Assets/imagine_cup.jpg')
+        );
+        if (logoAsset?.url) {
+          setImagineCupLogo(logoAsset.url);
+        }
+      } catch (error) {
+        console.error('Error fetching Imagine Cup logo:', error);
+        // Component will render without logo if fetch fails
+      }
+    };
+
+    fetchLogo();
+  }, []);
   const initialAnimation = useMemo(() => ({ opacity: 0, y: 30 }), []);
   const whileInViewAnimation = useMemo(() => ({ opacity: 1, y: 0 }), []);
   const viewportProps = useMemo(() => ({ once: true, amount: 0.2 }), []);
@@ -48,13 +64,16 @@ const ImagineCupSection = memo(() => {
           whileInView={whileInViewAnimation}
           viewport={viewportProps}
         >
-          <div className="ImagineCup__logoWrapper">
-            <img 
-              src={imagineCupLogo} 
-              alt="Microsoft Imagine Cup 2026 Logo" 
-              className="ImagineCup__logo"
-            />
-          </div>
+          {imagineCupLogo && (
+            <div className="ImagineCup__logoWrapper">
+              <img 
+                src={imagineCupLogo} 
+                alt="Microsoft Imagine Cup 2026 Logo" 
+                className="ImagineCup__logo"
+                loading="lazy"
+              />
+            </div>
+          )}
           <div className="ImagineCup__headerContent">
             <h2 id="imagine-cup-heading" className="ImagineCup__title">
               Microsoft Imagine Cup 2026
