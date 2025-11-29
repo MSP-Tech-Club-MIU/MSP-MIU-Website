@@ -141,7 +141,7 @@ const Navbar = memo(() => {
       baseLinks.push({ to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> });
     }
 
-    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board')) {
+    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board' || user.department_id === 5)) {
       baseLinks.push({ to: '/registration-admin', label: 'Registration Admin', icon: <FaUserCog /> });
     }
     
