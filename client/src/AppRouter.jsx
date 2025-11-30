@@ -22,6 +22,7 @@ const AccountActivation = lazy(() => import('./pages/account-activation'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
+const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Enhanced loading component with better UX
@@ -76,6 +77,7 @@ const AppRouter = () => (
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
+        <Route path="/download-android" element={<SiteLayout><DownloadAndroidApp /></SiteLayout>} />
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
