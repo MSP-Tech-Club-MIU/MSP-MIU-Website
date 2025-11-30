@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+    <!-- Restrict to app-specific directories only for security -->
+    <!-- External storage: Only app's private files directory -->
+    <external-files-path name="external_files" path="." />
+    
+    <!-- Cache: Only app's cache directory (already scoped to app) -->
+    <cache-path name="cache_files" path="." />
+    
+    <!-- Internal files: Only app's private files directory (already scoped to app) -->
+    <files-path name="internal_files" path="." />
 </paths>
