@@ -6,21 +6,20 @@ function getApiBaseUrl() {
      /capacitor/i.test(navigator.userAgent) || 
      /ionic/i.test(navigator.userAgent));
   
+  // In Capacitor (mobile app), always use production deployment URL
+  // No localhost - mobile apps must connect to the deployed backend
   if (isCapacitor) {
-    // In Capacitor (mobile app), always use production deployment URL
-    // No localhost - mobile apps must connect to the deployed backend
-    return process.env.PRODUCTION_API_URL;
+    return import.meta.env.VITE_PRODUCTION_API_URL || 'https://msp-miu.tech/api';
   }
   
-  // Web app: use relative URL in production, localhost in development
+  // Web app: use production URL in production, development URL in development
   if (import.meta.env.PROD) {
-    return process.env.PRODUCTION_API_URL;
+    // Production web app - use production API URL from env or relative URL as fallback
+    return import.meta.env.VITE_PRODUCTION_API_URL || '/api';
   }
-
-  if (process.env.NODE_ENV === 'development') {
-    return process.env.DEVELOPMENT_API_URL;
-  }
-
+  
+  // Development web app - use development API URL from env or localhost as fallback
+  return import.meta.env.VITE_DEVELOPMENT_API_URL || 'http://localhost:3000/api';
 }
 
 const API_BASE_URL = getApiBaseUrl();
