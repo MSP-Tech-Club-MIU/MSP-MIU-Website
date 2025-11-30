@@ -9,15 +9,18 @@ function getApiBaseUrl() {
   if (isCapacitor) {
     // In Capacitor (mobile app), always use production deployment URL
     // No localhost - mobile apps must connect to the deployed backend
-    return 'https://msp-miu.tech/api';
+    return process.env.PRODUCTION_API_URL;
   }
   
   // Web app: use relative URL in production, localhost in development
   if (import.meta.env.PROD) {
-    return '/api';
+    return process.env.PRODUCTION_API_URL;
   }
-  
-  return 'http://localhost:3000/api';
+
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.DEVELOPMENT_API_URL;
+  }
+
 }
 
 const API_BASE_URL = getApiBaseUrl();
