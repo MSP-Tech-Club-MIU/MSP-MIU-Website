@@ -1,0 +1,19 @@
+{
+  "appId": "tech.mspmiu",
+  "appName": "MSP - MIU",
+  "webDir": "public",
+  "server": {
+    "url": "https://msp-miu.tech",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "allowsLinkPreview": false
+  }
+}
