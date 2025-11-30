@@ -38,8 +38,8 @@ const corsOptions = {
       'https://localhost', // Capacitor Android HTTPS
     ];
     
-    // Allow if origin is in allowed list or if it's a mobile app (no origin)
-    if (allowedOrigins.includes(origin) || !origin) {
+    // Allow if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
