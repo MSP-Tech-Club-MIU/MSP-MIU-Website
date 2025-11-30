@@ -1,6 +1,26 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '/api' 
-  : 'http://localhost:3000/api';
+// Determine API base URL based on environment
+function getApiBaseUrl() {
+  // Check if running in Capacitor (mobile app)
+  const isCapacitor = typeof window !== 'undefined' && 
+    (window.Capacitor || window.ionic || 
+     /capacitor/i.test(navigator.userAgent) || 
+     /ionic/i.test(navigator.userAgent));
+  
+  if (isCapacitor) {
+    // In Capacitor (mobile app), always use production deployment URL
+    // No localhost - mobile apps must connect to the deployed backend
+    return 'https://msp-miu.tech/api';
+  }
+  
+  // Web app: use relative URL in production, localhost in development
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  
+  return 'http://localhost:3000/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Simple cache implementation
 const cache = new Map();
