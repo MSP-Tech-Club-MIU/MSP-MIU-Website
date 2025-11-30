@@ -1,8 +1,73 @@
+# Environment variables
 /.env
-/node_modules
 /server/.env
 /client/.env
+/server/scripts/.env
+
+# Dependencies
+/node_modules
 /server/node_modules
 /client/node_modules
+
+# Build outputs
 /client/public
-/server/scripts/.env
+/client/dist
+/client/.vite
+
+# Mobile app build artifacts (Capacitor)
+/client/android/app/build
+/client/android/build
+/client/android/.gradle
+/client/android/local.properties
+/client/android/capacitor.settings.gradle
+/client/ios/App/Pods
+/client/ios/App/Podfile.lock
+/client/ios/App/build
+/client/ios/App/DerivedData
+/client/ios/App/App.xcworkspace/xcuserdata
+/client/ios/App/App.xcodeproj/xcuserdata
+/client/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
+
+# Upload directories (user-generated content)
+/uploads
+/server/uploads
+/client/uploads
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Cache directories
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+
+# Temporary files
+*.tmp
+*.temp
+.tmp
+.temp
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+
+# Nested duplicate directories (appears to be a mistake)
+/client/Back-End

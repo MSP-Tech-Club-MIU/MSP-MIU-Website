@@ -19,6 +19,8 @@ process.emitWarning = function(warning, type, code, ctor) {
 
 const app = express();
 
+// Simple CORS configuration - allow all origins for now
+// Note: If app is being decommissioned, this minimal setup is sufficient
 app.use(cors());
 // Use Express built-in JSON parser instead of body-parser (removes util._extend deprecation warning)
 app.use(express.json());
