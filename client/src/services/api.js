@@ -1,6 +1,28 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '/api' 
-  : 'http://localhost:3000/api';
+// Determine API base URL based on environment
+function getApiBaseUrl() {
+  // Check if running in Capacitor (mobile app)
+  const isCapacitor = typeof window !== 'undefined' && 
+    (window.Capacitor || window.ionic || 
+     /capacitor/i.test(navigator.userAgent) || 
+     /ionic/i.test(navigator.userAgent));
+  
+  // In Capacitor (mobile app), always use production deployment URL
+  // No localhost - mobile apps must connect to the deployed backend
+  if (isCapacitor) {
+    return import.meta.env.VITE_PRODUCTION_API_URL || 'https://msp-miu.tech/api';
+  }
+  
+  // Web app: use production URL in production, development URL in development
+  if (import.meta.env.PROD) {
+    // Production web app - use production API URL from env or relative URL as fallback
+    return import.meta.env.VITE_PRODUCTION_API_URL || '/api';
+  }
+  
+  // Development web app - use development API URL from env or localhost as fallback
+  return import.meta.env.VITE_DEVELOPMENT_API_URL || 'http://localhost:3000/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Simple cache implementation
 const cache = new Map();
@@ -776,6 +798,73 @@ class ApiService {
       console.error('Error exporting attendance requests to CSV:', error);
       throw error;
     }
+  }
+
+  // Get all images from cloud storage
+  static async getImages() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/images`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch images');
+      }
+
+      return result.images || [];
+    } catch (error) {
+      console.error('Error fetching images:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generic method to get assets by type from cloud storage
+   * @param {string} assetType - Type of asset: 'slides', 'videos', 'codes', 'assets', 'event-thumbnails', 'documents'
+   * @returns {Promise<Array>} Array of asset objects
+   */
+  static async getAssets(assetType = 'assets') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cloud/assets/${assetType}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to fetch ${assetType}`);
+      }
+
+      return result[assetType] || [];
+    } catch (error) {
+      console.error(`Error fetching ${assetType}:`, error);
+      throw error;
+    }
+  }
+
+  // Legacy convenience methods for backward compatibility
+  static async getSlides() {
+    return this.getAssets('slides');
+  }
+
+  static async getVideos() {
+    return this.getAssets('videos');
+  }
+
+  static async getCodes() {
+    return this.getAssets('codes');
+  }
+
+  static async getDocuments() {
+    return this.getAssets('documents');
+  }
+
+  static async getEventThumbnails() {
+    return this.getAssets('event-thumbnails');
   }
 }
 
