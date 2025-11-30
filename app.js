@@ -19,40 +19,9 @@ process.emitWarning = function(warning, type, code, ctor) {
 
 const app = express();
 
-// CORS configuration for web and mobile apps
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, etc.)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // List of allowed origins
-    const allowedOrigins = [
-      'http://localhost:5173', // Vite dev server
-      'http://localhost:3000', // Backend dev server
-      'https://msp-miu.tech', // Production website
-      'capacitor://localhost', // Capacitor iOS
-      'ionic://localhost', // Ionic iOS
-      'http://localhost', // Capacitor Android
-      'https://localhost', // Capacitor Android HTTPS
-    ];
-    
-    // Allow if origin is in allowed list or if it's a mobile app (no origin)
-    if (allowedOrigins.includes(origin) || !origin) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Authorization'],
-  maxAge: 86400 // 24 hours
-};
-
-app.use(cors(corsOptions));
+// Simple CORS configuration - allow all origins for now
+// Note: If app is being decommissioned, this minimal setup is sufficient
+app.use(cors());
 // Use Express built-in JSON parser instead of body-parser (removes util._extend deprecation warning)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
