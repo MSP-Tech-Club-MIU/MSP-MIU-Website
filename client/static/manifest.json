@@ -12,25 +12,25 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/assets/msp-logo-favicon.png",
+      "src": "/static/assets/msp-logo-favicon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/msp-logo-favicon.png",
+      "src": "/static/assets/msp-logo-favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/msp-logo.png",
+      "src": "/static/assets/msp-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/assets/msp-logo.png",
+      "src": "/static/assets/msp-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
