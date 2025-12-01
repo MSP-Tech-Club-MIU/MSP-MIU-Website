@@ -206,6 +206,57 @@ const EventDetails = () => {
     const file = e.target.files[0];
     if (file) {
       setSelectedFile(file);
+      // If in edit mode, upload the file immediately
+      if (isEditMode) {
+        handleEditModeFileUpload(file);
+      }
+    }
+  };
+
+  const handleEditModeFileUpload = async (file) => {
+    setIsUploading(true);
+    try {
+      // Determine upload type based on file extension
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      let uploadType = 'assets'; // default
+      
+      if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+        uploadType = 'images';
+      } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+        uploadType = 'assets';
+      } else if (['zip', 'rar', '7z'].includes(ext)) {
+        uploadType = 'codes';
+      }
+
+      // Upload file to R2
+      const uploadResult = await ApiService.uploadFile(file, uploadType);
+      
+      // Update edit form with the new URL
+      handleEditFormChange('upload_file', uploadResult.url);
+      
+      // Update files array for preview
+      const displayFileType = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext) ? 'image' :
+                             ['mp4', 'webm', 'ogg'].includes(ext) ? 'video' :
+                             ['mp3', 'wav', 'ogg'].includes(ext) ? 'audio' : 'document';
+      
+      setFiles([{
+        file_id: Date.now(),
+        file_name: uploadResult.url,
+        file_display_name: file.name,
+        file_type: displayFileType,
+        file_size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+        uploaded_at: new Date().toISOString().split('T')[0],
+        uploaded_by: userRole === 'admin' ? 'Admin' : 'Board Member'
+      }]);
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to upload file: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setSelectedFile(null);
     }
   };
 
@@ -407,39 +458,77 @@ const EventDetails = () => {
   const handleSaveEdit = async () => {
     setIsSaving(true);
     try {
-      const updateData = {
-        name: editForm.name.trim(),
-        description: editForm.description.trim() || null,
-        event_date: editForm.event_date,
-        location: editForm.location.trim(),
-        category: editForm.category,
-        main_image: editForm.main_image.trim() || null,
-        upload_file: editForm.upload_file.trim() || null,
-        registration_enabled: editForm.registration_enabled
+      // Helper function to normalize string values (trim and convert empty to null)
+      const normalizeString = (value) => {
+        if (value === null || value === undefined) return null;
+        const trimmed = String(value).trim();
+        return trimmed === '' ? null : trimmed;
       };
+
+      // Build update data object
+      const updateData = {};
+      
+      // Only include fields that have been modified or are being explicitly set
+      if (editForm.name !== undefined) {
+        updateData.name = normalizeString(editForm.name);
+      }
+      
+      if (editForm.description !== undefined) {
+        updateData.description = normalizeString(editForm.description);
+      }
+      
+      if (editForm.event_date !== undefined) {
+        updateData.event_date = editForm.event_date;
+      }
+      
+      if (editForm.location !== undefined) {
+        updateData.location = normalizeString(editForm.location);
+      }
+      
+      if (editForm.category !== undefined) {
+        updateData.category = editForm.category;
+      }
+      
+      if (editForm.main_image !== undefined) {
+        updateData.main_image = normalizeString(editForm.main_image);
+      }
+      
+      if (editForm.upload_file !== undefined) {
+        updateData.upload_file = normalizeString(editForm.upload_file);
+      }
+      
+      if (editForm.registration_enabled !== undefined) {
+        updateData.registration_enabled = editForm.registration_enabled;
+      }
 
       await ApiService.updateEvent(event.event_id, updateData);
       
-      // Update local event state
-      setEvent(prev => ({
-        ...prev,
-        name: updateData.name,
-        description: updateData.description,
-        event_date: updateData.event_date,
-        place: updateData.location,
-        category: updateData.category,
-        image_url: updateData.main_image || mspLogo,
-        upload_file: updateData.upload_file,
-        registration_enabled: updateData.registration_enabled,
-        event_type: updateData.category === 'Workshop' ? 'event' : 
-                   updateData.category === 'Session' ? 'session' : 
-                   updateData.category === 'Entertainment' ? 'entertainment' : 'event'
-      }));
+      // Fetch updated event from server to ensure we have the latest data
+      const updatedEventData = await ApiService.getEventById(parseInt(id));
+      
+      // Map database fields to component fields
+      const mappedEvent = {
+        event_id: updatedEventData.event_id,
+        name: updatedEventData.name,
+        description: updatedEventData.description,
+        event_date: updatedEventData.event_date,
+        place: updatedEventData.location,
+        event_type: updatedEventData.category === 'Workshop' ? 'event' : 
+                   updatedEventData.category === 'Session' ? 'session' : 
+                   updatedEventData.category === 'Entertainment' ? 'entertainment' : 'event',
+        image_url: (updatedEventData.main_image && updatedEventData.main_image.trim()) ? updatedEventData.main_image : mspLogo,
+        category: updatedEventData.category,
+        registration_enabled: updatedEventData.registration_enabled !== undefined ? updatedEventData.registration_enabled : true,
+        upload_file: updatedEventData.upload_file || null
+      };
+      
+      setEvent(mappedEvent);
 
-      // Update files array if upload_file changed
-      if (updateData.upload_file && updateData.upload_file.trim()) {
-        const decodedPath = decodeURIComponent(updateData.upload_file);
-        const fileName = decodedPath.split('/').pop() || decodedPath.split('\\').pop() || decodedPath;
+      // Update files array based on upload_file
+      if (updatedEventData.upload_file && updatedEventData.upload_file.trim()) {
+        const decodedPath = decodeURIComponent(updatedEventData.upload_file);
+        const filePath = decodedPath;
+        const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
         const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
         
         let fileType = 'document';
@@ -449,16 +538,20 @@ const EventDetails = () => {
           fileType = 'video';
         } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
           fileType = 'audio';
+        } else if (['pptx', 'ppt'].includes(fileExtension)) {
+          fileType = 'document';
+        } else if (['pdf'].includes(fileExtension)) {
+          fileType = 'document';
         }
         
         setFiles([{
           file_id: Date.now(),
-          file_name: updateData.upload_file,
+          file_name: filePath,
           file_display_name: fileName,
           file_type: fileType,
           file_size: 'N/A',
-          uploaded_at: new Date().toISOString().split('T')[0],
-          uploaded_by: userRole === 'admin' ? 'Admin' : 'Board Member'
+          uploaded_at: updatedEventData.created_at ? new Date(updatedEventData.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          uploaded_by: 'System'
         }]);
       } else {
         setFiles([]);

@@ -13,5 +13,6 @@ const r2 = new S3Client({
 });
 
 module.exports = {
-  r2
+  r2,
+  PutObjectCommand
 };
