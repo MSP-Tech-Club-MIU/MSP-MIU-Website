@@ -866,6 +866,44 @@ class ApiService {
   static async getEventThumbnails() {
     return this.getAssets('event-thumbnails');
   }
+
+  /**
+   * Upload a file to R2 storage
+   * @param {File} file - The file to upload
+   * @param {string} type - The upload type (assets, codes, events, images, mobile, slides)
+   * @returns {Promise<{success: boolean, url: string, key: string}>}
+   */
+  static async uploadFile(file, type) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required for file upload');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/upload/${type}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;
