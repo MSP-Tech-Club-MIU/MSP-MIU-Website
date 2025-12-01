@@ -1,7 +1,6 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const multer = require("multer");
 const path = require("path");
-
+const {r2, PutObjectCommand} = require("../config/cloud");
 
 // Only allow PDFs or images (pizza filtering)
 const fileFilter = (req, file, cb) => {
@@ -19,15 +18,63 @@ const upload = multer({ storage: multer.memoryStorage(),
  fileFilter
  });
 
-// R2 client
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY,
-    secretAccessKey: process.env.R2_SECRET_KEY,
-  },
-});
+// Map type → directory
+const directoryMap = {
+  assets: "Assets/",
+  codes: "Codes/",
+  events: "Events_Thumbnails/",
+  images: "Images/",
+  mobile: "Mobile Application/",
+  slides: "Slides/"
+};
 
-module.exports = upload;
-module.exports.fileFilter = fileFilter;
+// Upload handler
+const uploadFile = async (req, res) => {
+  try {
+    const { type } = req.params; // assets, codes, events, etc.
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const dir = directoryMap[type.toLowerCase()];
+    if (!dir) return res.status(400).json({ error: "Invalid directory type" });
+
+    // Generate unique filename
+    const ext = path.extname(file.originalname);
+    const unique = `${Date.now()}_${Math.random().toString(36).substring(2)}${ext}`;
+    const key = `${dir}${unique}`;
+
+    const command = new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+    });
+    const result = await r2.send(command);
+    console.log(result);
+
+    // Public URL
+    const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
+
+    return res.json({
+      success: true,
+      url: publicURL,
+      key
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed", details: err.message });
+  }
+};
+
+
+
+
+// Export multer middleware
+const multerUpload = upload.single("file");
+
+module.exports = {
+  uploadFile,
+  upload
+};
