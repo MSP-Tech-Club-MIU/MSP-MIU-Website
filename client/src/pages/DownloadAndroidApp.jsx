@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
 import SEO from '../components/SEO';
+import BackButton from '../components/BackButton';
 import { FiDownload, FiSmartphone, FiShield, FiZap, FiCheck } from 'react-icons/fi';
 import { FaAndroid } from 'react-icons/fa';
 import './DownloadAndroidApp.css';
@@ -69,6 +70,7 @@ const DownloadAndroidApp = memo(() => {
 
   return (
     <main className="DownloadAndroidApp">
+      <BackButton to="/" label="Back to Home" />
       <SEO
         title="Download Android App"
         description="Download the MSP - MIU Android app for the best mobile experience. Access events, latest activities, accounts, and more on your Android device."

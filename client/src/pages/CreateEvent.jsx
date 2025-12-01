@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import './PageBase.css';
-import { FiCalendar, FiMapPin, FiImage, FiFile, FiArrowLeft, FiUpload, FiX } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiImage, FiFile, FiUpload, FiX } from 'react-icons/fi';
 
 // Import default event image (same as Events.jsx)
 import mspLogo from '../assets/Images/msp-logo.png';
@@ -249,6 +250,7 @@ const CreateEvent = () => {
 
   return (
     <section className="PageBase">
+      <BackButton to="/events" label="Back to Events" />
       <div className="container">
         <motion.div
           className="neo-card"
@@ -256,21 +258,11 @@ const CreateEvent = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <button
-              onClick={() => navigate('/events')}
-              className="btn secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <FiArrowLeft />
-              Back
-            </button>
-            <div>
-              <h1 className="card-title">Create New Event</h1>
-              <p className="card-sub">
-                Add a new event to the MSP Tech Club calendar
-              </p>
-            </div>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <h1 className="card-title">Create New Event</h1>
+            <p className="card-sub">
+              Add a new event to the MSP Tech Club calendar
+            </p>
           </div>
 
           <form className="attendance-form" onSubmit={onSubmit}>

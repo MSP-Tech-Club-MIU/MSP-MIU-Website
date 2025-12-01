@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import SEO from '../../components/SEO';
+import BackButton from '../../components/BackButton';
 import './AboutUs.css';
 import { FiTarget, FiEye, FiHeart, FiUsers, FiCpu, FiArrowRight } from 'react-icons/fi';
 import { FaMicrosoft, FaRocket, FaTrophy, FaCode, FaHandshake, FaUserPlus } from 'react-icons/fa';
@@ -63,6 +64,7 @@ const AboutUs = memo(() => {
         url="https://msp-miu.tech/about"
         structuredData={structuredData}
       />
+      <BackButton to="/" label="Back to Home" />
       <section className="AboutHero" aria-labelledby="about-hero-heading">
         <div className="AboutHero__bg" aria-hidden="true" />
         <motion.div className="AboutHero__inner">

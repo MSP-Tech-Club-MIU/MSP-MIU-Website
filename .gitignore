@@ -13,13 +13,19 @@
 /client/public
 /client/dist
 /client/.vite
+/client/static
 
 # Mobile app build artifacts (Capacitor)
 /client/android/app/build
+/client/android/app/release
 /client/android/build
 /client/android/.gradle
+/client/android/gradle
 /client/android/local.properties
 /client/android/capacitor.settings.gradle
+/client/android/.idea
+/client/android/*.iml
+/client/android/app/src/main/assets/public
 /client/ios/App/Pods
 /client/ios/App/Podfile.lock
 /client/ios/App/build
@@ -27,6 +33,8 @@
 /client/ios/App/App.xcworkspace/xcuserdata
 /client/ios/App/App.xcodeproj/xcuserdata
 /client/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
+/client/ios/App/App.xcworkspace/xcshareddata
+/client/capacitor.config.json.bak
 
 # Upload directories (user-generated content)
 /uploads

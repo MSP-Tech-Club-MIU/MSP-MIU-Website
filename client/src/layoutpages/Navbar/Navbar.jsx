@@ -7,7 +7,11 @@ import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
+import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
 import mspLogo from '../../assets/Images/msp-logo.png';
+
+// Helper function to check if running in Capacitor (native app) environment
+const isCapacitor = () => typeof window !== 'undefined' && window.Capacitor;
 
 const Navbar = memo(() => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -124,7 +128,8 @@ const Navbar = memo(() => {
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       // { to: '/exercises', label: 'Exercises', icon: <FaLaptop /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
-      { to: '/download-android', label: 'Download App', icon: <FaAndroid /> },
+      // Only include download link if not in Capacitor environment (not in native app)
+      ...(!isCapacitor() ? [{ to: '/download-android', label: 'Download App', icon: <FaAndroid /> }] : []),
       // { to: '/suggestions', label: 'Suggestions', icon: <FaLightbulb /> },
       // { to: '/leaderboard', label: 'Leaderboard', icon: <FaTrophy /> },
       // { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> }
@@ -284,6 +289,14 @@ const Navbar = memo(() => {
       
       {/* Login Card Overlay */}
       <LoginCard isOpen={showLoginCard} onClose={closeLoginCard} />
+      
+      {/* Android Back Button Handler */}
+      <AndroidBackButtonHandler
+        onCloseModal={closeLoginCard}
+        onCloseDrawer={closeMobile}
+        isModalOpen={showLoginCard}
+        isDrawerOpen={mobileOpen}
+      />
     </header>
   );
 });

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import './PageBase.css';
 
 const AttendanceRequest = () => {
@@ -156,6 +157,7 @@ const AttendanceRequest = () => {
 
   return (
     <section className="PageBase">
+      <BackButton to="/events" label="Back to Events" />
       <div className="container">
         <motion.div
           className="neo-card"
