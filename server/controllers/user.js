@@ -294,6 +294,13 @@ const logoutUser = async (req, res) => {
 const getProfile = async (req, res) => {
     try {
         // User is attached by authenticateToken middleware
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
         const userId = req.user.user_id;
 
         const user = await User.findByPk(userId, {
