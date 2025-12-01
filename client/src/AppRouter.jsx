@@ -1,11 +1,8 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
 import ScrollToTop from './components/ScrollToTop';
 import AndroidBackButtonSetup from './components/AndroidBackButtonSetup';
-
-// Helper function to check if running in Capacitor (native app) environment
-const isCapacitor = () => typeof window !== 'undefined' && window.Capacitor;
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -26,9 +23,41 @@ const AccountActivation = lazy(() => import('./pages/account-activation'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
-// Only load DownloadAndroidApp if not in Capacitor environment (not in native app)
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Wrapper component to conditionally render DownloadAndroidApp only on web
+const DownloadAndroidAppWrapper = () => {
+  const [isWeb, setIsWeb] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if running in Capacitor (native app) environment
+    const checkCapacitor = () => {
+      const isCapacitor = typeof window !== 'undefined' && 
+        (window.Capacitor || 
+         window.ionic || 
+         /capacitor/i.test(navigator.userAgent) || 
+         /ionic/i.test(navigator.userAgent));
+      return isCapacitor;
+    };
+
+    const isCapacitorEnv = checkCapacitor();
+    setIsWeb(!isCapacitorEnv);
+
+    // If in Capacitor, redirect to home
+    if (isCapacitorEnv) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]);
+
+  // Show nothing while checking or if in Capacitor
+  if (!isWeb) {
+    return null;
+  }
+
+  return <DownloadAndroidApp />;
+};
 
 // Enhanced loading component with better UX
 const PageLoader = () => (
@@ -84,9 +113,7 @@ const AppRouter = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        {!isCapacitor() && (
-          <Route path="/download-android" element={<SiteLayout><DownloadAndroidApp /></SiteLayout>} />
-        )}
+        <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
