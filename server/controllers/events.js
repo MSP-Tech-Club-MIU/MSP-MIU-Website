@@ -59,7 +59,7 @@ const addEvent = async (req, res) => {
             event_date,
             location,
             category,
-            upload_file:  req.files.file ? req.files.file[0].path : null,
+            upload_file:  req.files.upload_file ? req.files.upload_file[0].path : null,
             main_image: req.files.main_image ? req.files.main_image[0].path : null,
             attendees: attendees || null,
             registration_enabled: regEnabled
@@ -257,47 +257,26 @@ const updateEvent = async (req, res) => {
         const regEnabled = registration_enabled !== undefined 
             ? convertToBoolean(registration_enabled, true)
             : undefined;
-
-        // Handle file uploads - priority: multer files > req.body URLs > existing files
-        // For upload_file: check multer first, then req.body, then keep existing
-        let newUploadFile = event.upload_file; // Default to existing
-        if (req.files?.file && req.files.file[0]) {
-            // File uploaded via multer
-            newUploadFile = req.files.file[0].path;
-        } else if (upload_file !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty
-            newUploadFile = (upload_file === null || upload_file === '') ? null : upload_file;
-        }
-
-        // For main_image: check multer first, then req.body, then keep existing
-        let newMainImage = event.main_image; // Default to existing
-        if (req.files?.main_image && req.files.main_image[0]) {
-            // File uploaded via multer
-            newMainImage = req.files.main_image[0].path;
-        } else if (main_image !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty
-            newMainImage = (main_image === null || main_image === '') ? null : main_image;
-        }
-
-        // Build update object - only include fields that are explicitly provided
-        const updateData = {};
-        
-        if (name !== undefined) updateData.name = name;
-        if (description !== undefined) updateData.description = description;
-        if (event_date !== undefined) updateData.event_date = event_date;
-        if (location !== undefined) updateData.location = location;
-        if (category !== undefined) updateData.category = category;
-        if (attendees !== undefined) updateData.attendees = attendees;
-        if (regEnabled !== undefined) updateData.registration_enabled = regEnabled;
-        
-        // Always update file fields if they've been determined
-        updateData.upload_file = newUploadFile;
-        updateData.main_image = newMainImage;
-
-        await event.update(updateData);
-
-        // Reload event to get updated data
-        await event.reload();
+        // Handle file uploads(from multer)
+               const newUploadFile = req.files?.upload_file ? req.files.upload_file[0].path : event.upload_file;
+        const newMainImage = req.files?.main_image ? req.files.main_image[0].path : event.main_image;
+           
+        /*
+         //Update event
+         if user does not provide a field, keep the existing value , 
+         if user provides any string even if empty string it gets updated.
+    */ 
+        await event.update({
+            name: name ?? event.name,
+            description: description ?? event.description,
+            event_date: event_date ?? event.event_date,
+            location: location ?? event.location,
+            category: category ?? event.category,
+            upload_file: newUploadFile,
+            main_image: newMainImage,
+            attendees: attendees ?? event.attendees,
+            registration_enabled: regEnabled
+        });
 
         res.status(200).json({
             success: true,
