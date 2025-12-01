@@ -60,7 +60,7 @@ const addEvent = async (req, res) => {
             location,
             category,
             upload_file:  req.files.file ? req.files.file[0].path : null,
-            main_image: req.files.photo ? req.files.photo[0].path : null,
+            main_image: req.files.main_image ? req.files.main_image[0].path : null,
             attendees: attendees || null,
             registration_enabled: regEnabled
         });
@@ -259,7 +259,7 @@ const updateEvent = async (req, res) => {
             : undefined;
         // Handle file uploads(from multer)
                const newUploadFile = req.files?.file ? req.files.file[0].path : event.upload_file;
-        const newMainImage = req.files?.photo ? req.files.photo[0].path : event.main_image;
+        const newMainImage = req.files?.main_image ? req.files.main_image[0].path : event.main_image;
            
         /*
          //Update event

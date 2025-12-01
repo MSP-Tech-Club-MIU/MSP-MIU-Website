@@ -12,14 +12,14 @@ router.get('/:id', getEventById);
 
 // Create event (admin and board only)
 router.post('/', authenticateToken, verifyRole('admin', 'board'), upload.fields([
-        { name: "photo"},
+        { name: "main_image"},
         { name: "file" }
     ]),  addEvent);
 
 // Update event (admin and board only)
 router.put('/:id', authenticateToken, verifyRole('admin', 'board'), upload.fields([
         { name: "file"},
-        { name: "photo" }
+        { name: "main_image" }
     ]), updateEvent);
 
 // Download content
