@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle, FiEdit2, FiSave, FiX, FiEdit3 } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 
@@ -25,7 +25,12 @@ const EventDetails = () => {
   const [showRegistrationToggleConfirm, setShowRegistrationToggleConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTogglingRegistration, setIsTogglingRegistration] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
 
   // Fetch event from API
   useEffect(() => {
@@ -209,30 +214,104 @@ const EventDetails = () => {
     if (!selectedFile) return;
 
     setIsUploading(true);
-    // Simulate upload delay
-    setTimeout(() => {
+    try {
+      // Determine upload type based on file extension
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase();
+      let uploadType = 'assets'; // default
+      
+      if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+        uploadType = 'images';
+      } else if (['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx'].includes(ext)) {
+        uploadType = 'assets';
+      } else if (['zip', 'rar', '7z'].includes(ext)) {
+        uploadType = 'codes';
+      }
+
+      // Upload file to R2
+      const uploadResult = await ApiService.uploadFile(selectedFile, uploadType);
+      
+      // If in edit mode, update edit form instead of directly updating event
+      if (isEditMode) {
+        handleEditFormChange('upload_file', uploadResult.url);
+      } else {
+        // Update event with new file URL
+        await ApiService.updateEvent(event.event_id, {
+          upload_file: uploadResult.url
+        });
+
+        // Also update event state
+        setEvent(prev => ({
+          ...prev,
+          upload_file: uploadResult.url
+        }));
+      }
+
+      // Determine file type based on extension for display
+      let displayFileType = 'document';
+      if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(ext)) {
+        displayFileType = 'image';
+      } else if (['mp4', 'webm', 'ogg'].includes(ext)) {
+        displayFileType = 'video';
+      } else if (['mp3', 'wav', 'ogg'].includes(ext)) {
+        displayFileType = 'audio';
+      }
+
+      // Update local state with new file
       const newFile = {
-        file_id: files.length + 1,
-        file_name: selectedFile.name, // For new uploads, file_name is just the name
+        file_id: Date.now(), // Use timestamp as ID
+        file_name: uploadResult.url, // Store full URL
         file_display_name: selectedFile.name,
-        file_type: fileType,
+        file_type: displayFileType,
         file_size: (selectedFile.size / (1024 * 1024)).toFixed(2) + ' MB',
         uploaded_at: new Date().toISOString().split('T')[0],
         uploaded_by: userRole === 'admin' ? 'Admin' : 'Board Member'
       };
-      setFiles([...files, newFile]);
+
+      // Replace existing file or add new one
+      if (files.length > 0) {
+        // Replace existing file
+        setFiles([newFile]);
+      } else {
+        // Add new file
+        setFiles([newFile]);
+      }
+
+      // Reset form
       setSelectedFile(null);
       setFileType('document');
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
       setShowUpload(false);
+    } catch (error) {
+      console.error('File upload error:', error);
+      alert('Failed to upload file: ' + (error.message || 'Unknown error'));
+    } finally {
       setIsUploading(false);
-    }, 1000);
+    }
   };
 
-  const handleDeleteFile = (fileId) => {
-    setFiles(files.filter(f => f.file_id !== fileId));
+  const handleDeleteFile = async (fileId) => {
+    if (!isBoardOrAdmin) return;
+    
+    try {
+      // Update event to remove upload_file
+      await ApiService.updateEvent(event.event_id, {
+        upload_file: null
+      });
+
+      // Update local state
+      setFiles(files.filter(f => f.file_id !== fileId));
+      
+      // Also update event state
+      setEvent(prev => ({
+        ...prev,
+        upload_file: null
+      }));
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      alert('Failed to delete file: ' + (error.message || 'Unknown error'));
+    }
   };
 
   const handleDownloadFile = (file) => {
@@ -298,6 +377,135 @@ const EventDetails = () => {
     }
   };
 
+  const handleEnterEditMode = () => {
+    // Initialize edit form with current event data
+    setEditForm({
+      name: event.name,
+      description: event.description || '',
+      event_date: event.event_date,
+      location: event.place || '',
+      category: event.category || 'Workshop',
+      main_image: event.image_url && event.image_url !== mspLogo ? event.image_url : '',
+      upload_file: event.upload_file || '',
+      registration_enabled: event.registration_enabled !== false
+    });
+    setIsEditMode(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditForm({});
+  };
+
+  const handleEditFormChange = (field, value) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveEdit = async () => {
+    setIsSaving(true);
+    try {
+      const updateData = {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || null,
+        event_date: editForm.event_date,
+        location: editForm.location.trim(),
+        category: editForm.category,
+        main_image: editForm.main_image.trim() || null,
+        upload_file: editForm.upload_file.trim() || null,
+        registration_enabled: editForm.registration_enabled
+      };
+
+      await ApiService.updateEvent(event.event_id, updateData);
+      
+      // Update local event state
+      setEvent(prev => ({
+        ...prev,
+        name: updateData.name,
+        description: updateData.description,
+        event_date: updateData.event_date,
+        place: updateData.location,
+        category: updateData.category,
+        image_url: updateData.main_image || mspLogo,
+        upload_file: updateData.upload_file,
+        registration_enabled: updateData.registration_enabled,
+        event_type: updateData.category === 'Workshop' ? 'event' : 
+                   updateData.category === 'Session' ? 'session' : 
+                   updateData.category === 'Entertainment' ? 'entertainment' : 'event'
+      }));
+
+      // Update files array if upload_file changed
+      if (updateData.upload_file && updateData.upload_file.trim()) {
+        const decodedPath = decodeURIComponent(updateData.upload_file);
+        const fileName = decodedPath.split('/').pop() || decodedPath.split('\\').pop() || decodedPath;
+        const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+        
+        let fileType = 'document';
+        if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(fileExtension)) {
+          fileType = 'image';
+        } else if (['mp4', 'webm', 'ogg'].includes(fileExtension)) {
+          fileType = 'video';
+        } else if (['mp3', 'wav', 'ogg'].includes(fileExtension)) {
+          fileType = 'audio';
+        }
+        
+        setFiles([{
+          file_id: Date.now(),
+          file_name: updateData.upload_file,
+          file_display_name: fileName,
+          file_type: fileType,
+          file_size: 'N/A',
+          uploaded_at: new Date().toISOString().split('T')[0],
+          uploaded_by: userRole === 'admin' ? 'Admin' : 'Board Member'
+        }]);
+      } else {
+        setFiles([]);
+      }
+
+      alert('Event updated successfully!');
+      setIsEditMode(false);
+      setEditForm({});
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert('Failed to update event: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image size must be less than 10MB');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const result = await ApiService.uploadFile(file, 'events');
+      handleEditFormChange('main_image', result.url);
+    } catch (error) {
+      console.error('Image upload error:', error);
+      alert('Failed to upload image: ' + (error.message || 'Unknown error'));
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -356,9 +564,11 @@ const EventDetails = () => {
           transition={{ duration: 0.4 }}
         >
           {event.image_url && (() => {
-            const imageSrc = getImageSrc(event.image_url);
+            const imageSrc = getImageSrc(isEditMode ? (editForm.main_image || mspLogo) : event.image_url);
+            const currentImageUrl = isEditMode ? editForm.main_image : event.image_url;
+            const showImage = currentImageUrl && currentImageUrl !== mspLogo && typeof currentImageUrl === 'string' && (currentImageUrl.startsWith('http://') || currentImageUrl.startsWith('https://'));
             return (
-              <div className="EventDetails__hero">
+              <div className="EventDetails__hero" style={{ position: 'relative' }}>
                 <div 
                   className="EventDetails__image"
                   style={{ 
@@ -380,25 +590,229 @@ const EventDetails = () => {
                 >
                   {event.event_type}
                 </div>
+                {isEditMode && isBoardOrAdmin && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '1rem',
+                    right: '1rem',
+                    display: 'flex',
+                    gap: '0.5rem',
+                    zIndex: 10
+                  }}>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      style={{ display: 'none' }}
+                    />
+                    <motion.button
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={uploadingImage}
+                      whileHover={{ scale: uploadingImage ? 1 : 1.05 }}
+                      whileTap={{ scale: uploadingImage ? 1 : 0.95 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        background: 'rgba(142, 194, 240, 0.9)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: uploadingImage ? 'not-allowed' : 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        opacity: uploadingImage ? 0.6 : 1
+                      }}
+                      title="Replace Image"
+                    >
+                      <FiEdit3 />
+                      {uploadingImage ? 'Uploading...' : 'Replace'}
+                    </motion.button>
+                    <motion.button
+                      onClick={() => handleEditFormChange('main_image', '')}
+                      disabled={uploadingImage || !showImage}
+                      whileHover={{ scale: (uploadingImage || !showImage) ? 1 : 1.05 }}
+                      whileTap={{ scale: (uploadingImage || !showImage) ? 1 : 0.95 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 0.75rem',
+                        background: 'rgba(231, 76, 60, 0.9)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: (uploadingImage || !showImage) ? 'not-allowed' : 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: '500',
+                        opacity: (uploadingImage || !showImage) ? 0.6 : 1
+                      }}
+                      title="Remove Image"
+                    >
+                      <FiX />
+                      Remove
+                    </motion.button>
+                  </div>
+                )}
+                {isEditMode && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '1rem',
+                    left: '1rem',
+                    right: '1rem',
+                    zIndex: 10
+                  }}>
+                    <input
+                      type="url"
+                      value={editForm.main_image || ''}
+                      onChange={(e) => handleEditFormChange('main_image', e.target.value)}
+                      placeholder="Or paste image URL here"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        background: 'rgba(20, 25, 40, 0.95)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.85rem'
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             );
           })()}
 
           <div className="EventDetails__content">
-            <header className="EventDetails__header">
-              <h1 className="EventDetails__title">{event.name}</h1>
+            <header className="EventDetails__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <h1 className="EventDetails__title" style={{ flex: 1 }}>
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={editForm.name || ''}
+                    onChange={(e) => handleEditFormChange('name', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.5rem',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(142, 194, 240, 0.3)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: 'inherit',
+                      fontFamily: 'inherit',
+                      fontWeight: 'inherit'
+                    }}
+                    placeholder="Event Name"
+                  />
+                ) : (
+                  event.name
+                )}
+              </h1>
+              {isBoardOrAdmin && !isEditMode && (
+                <motion.button
+                  onClick={handleEnterEditMode}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1rem',
+                    background: 'rgba(142, 194, 240, 0.2)',
+                    color: '#8EC2F0',
+                    border: '1px solid rgba(142, 194, 240, 0.3)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  <FiEdit2 />
+                  Edit
+                </motion.button>
+              )}
+              {isEditMode && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <motion.button
+                    onClick={handleSaveEdit}
+                    disabled={isSaving}
+                    whileHover={{ scale: isSaving ? 1 : 1.05 }}
+                    whileTap={{ scale: isSaving ? 1 : 0.95 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      background: 'rgba(76, 175, 80, 0.2)',
+                      color: '#4caf50',
+                      border: '1px solid rgba(76, 175, 80, 0.3)',
+                      borderRadius: '8px',
+                      cursor: isSaving ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      opacity: isSaving ? 0.6 : 1
+                    }}
+                  >
+                    <FiSave />
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </motion.button>
+                  <motion.button
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    whileHover={{ scale: isSaving ? 1 : 1.05 }}
+                    whileTap={{ scale: isSaving ? 1 : 0.95 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      cursor: isSaving ? 'not-allowed' : 'pointer',
+                      fontSize: '0.9rem',
+                      fontWeight: '500',
+                      opacity: isSaving ? 0.6 : 1
+                    }}
+                  >
+                    <FiX />
+                    Cancel
+                  </motion.button>
+                </div>
+              )}
             </header>
 
             <div className="EventDetails__info">
               <div className="EventDetails__infoItem">
                 <FiCalendar />
-                <div>
+                <div style={{ flex: 1 }}>
                   <span className="EventDetails__infoLabel">Date</span>
-                  <span className="EventDetails__infoValue">{formatDate(event.event_date)}</span>
+                  {isEditMode ? (
+                    <input
+                      type="date"
+                      value={editForm.event_date || ''}
+                      onChange={(e) => handleEditFormChange('event_date', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        marginTop: '0.25rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.95rem'
+                      }}
+                    />
+                  ) : (
+                    <span className="EventDetails__infoValue">{formatDate(event.event_date)}</span>
+                  )}
                 </div>
               </div>
 
-              {event.event_time && (
+              {event.event_time && !isEditMode && (
                 <div className="EventDetails__infoItem">
                   <FiClock />
                   <div>
@@ -408,26 +822,89 @@ const EventDetails = () => {
                 </div>
               )}
 
-              {event.place && (
+              <div className="EventDetails__infoItem">
+                <FiMapPin />
+                <div style={{ flex: 1 }}>
+                  <span className="EventDetails__infoLabel">Location</span>
+                  {isEditMode ? (
+                    <input
+                      type="text"
+                      value={editForm.location || ''}
+                      onChange={(e) => handleEditFormChange('location', e.target.value)}
+                      placeholder="e.g., Main Building, Room OOA"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        marginTop: '0.25rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.95rem'
+                      }}
+                    />
+                  ) : (
+                    <span className="EventDetails__infoValue">{event.place || 'Not specified'}</span>
+                  )}
+                </div>
+              </div>
+
+              {isEditMode && (
                 <div className="EventDetails__infoItem">
-                  <FiMapPin />
-                  <div>
-                    <span className="EventDetails__infoLabel">Location</span>
-                    <span className="EventDetails__infoValue">{event.place}</span>
+                  <FiCalendar />
+                  <div style={{ flex: 1 }}>
+                    <span className="EventDetails__infoLabel">Category</span>
+                    <select
+                      value={editForm.category || 'Workshop'}
+                      onChange={(e) => handleEditFormChange('category', e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        marginTop: '0.25rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.95rem'
+                      }}
+                    >
+                      <option value="Workshop">Workshop</option>
+                      <option value="Session">Session</option>
+                      <option value="Entertainment">Entertainment</option>
+                    </select>
                   </div>
                 </div>
               )}
             </div>
 
-            {event.description && (
-              <div className="EventDetails__description">
-                <h2>About This Event</h2>
-                <p>{event.description}</p>
-              </div>
-            )}
+            <div className="EventDetails__description">
+              <h2>About This Event</h2>
+              {isEditMode ? (
+                <textarea
+                  value={editForm.description || ''}
+                  onChange={(e) => handleEditFormChange('description', e.target.value)}
+                  placeholder="Describe the event, what attendees can expect, agenda, etc."
+                  rows="6"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(142, 194, 240, 0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '0.95rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    minHeight: '120px'
+                  }}
+                />
+              ) : (
+                <p>{event.description || 'No description provided.'}</p>
+              )}
+            </div>
 
             {/* Register Button - Only show if registration is enabled */}
-            {event.registration_enabled !== false ? (
+            {!isEditMode && (event.registration_enabled !== false ? (
               <div className="EventDetails__register">
                 <motion.button
                   className="EventDetails__registerBtn"
@@ -452,10 +929,35 @@ const EventDetails = () => {
                   Registration for this event is currently closed
                 </p>
               </div>
+            ))}
+
+            {/* Registration Toggle - Editable in edit mode */}
+            {isEditMode && (
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1rem', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '12px'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={editForm.registration_enabled !== false}
+                    onChange={(e) => handleEditFormChange('registration_enabled', e.target.checked)}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: '#8EC2F0', fontSize: '0.95rem' }}>
+                    Allow registration for this event
+                  </span>
+                </label>
+                <small style={{ color: '#8EC2F0', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block', marginLeft: '2rem' }}>
+                  If unchecked, users will not be able to submit attendance requests for this event
+                </small>
+              </div>
             )}
 
             {/* Admin/Board Actions */}
-            {isBoardOrAdmin && (
+            {isBoardOrAdmin && !isEditMode && (
               <div className="EventDetails__adminActions" style={{ 
                 marginTop: '2rem', 
                 padding: '1.5rem', 
@@ -538,7 +1040,7 @@ const EventDetails = () => {
             <div className="EventDetails__files">
               <div className="EventDetails__filesHeader">
                 <h2>Event Files</h2>
-                {isBoardOrAdmin && (
+                {isBoardOrAdmin && !isEditMode && (
                   <button
                     className="EventDetails__uploadBtn"
                     onClick={() => setShowUpload(!showUpload)}
@@ -548,6 +1050,101 @@ const EventDetails = () => {
                   </button>
                 )}
               </div>
+
+              {isEditMode && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '1rem', 
+                  background: 'rgba(255, 255, 255, 0.05)', 
+                  borderRadius: '12px',
+                  border: '1px solid rgba(142, 194, 240, 0.2)'
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    color: '#8EC2F0', 
+                    fontSize: '0.9rem', 
+                    fontWeight: '500',
+                    marginBottom: '0.5rem'
+                  }}>
+                    File URL
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input
+                      type="url"
+                      value={editForm.upload_file || ''}
+                      onChange={(e) => handleEditFormChange('upload_file', e.target.value)}
+                      placeholder="https://example.com/file.pdf or upload a file"
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.9rem'
+                      }}
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileSelect}
+                      style={{ display: 'none' }}
+                    />
+                    <motion.button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      whileHover={{ scale: isUploading ? 1 : 1.02 }}
+                      whileTap={{ scale: isUploading ? 1 : 0.98 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(142, 194, 240, 0.2)',
+                        color: '#8EC2F0',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <FiUpload />
+                      {isUploading ? 'Uploading...' : 'Upload'}
+                    </motion.button>
+                    {editForm.upload_file && (
+                      <motion.button
+                        type="button"
+                        onClick={() => handleEditFormChange('upload_file', '')}
+                        disabled={isUploading}
+                        whileHover={{ scale: isUploading ? 1 : 1.02 }}
+                        whileTap={{ scale: isUploading ? 1 : 0.98 }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          background: 'rgba(231, 76, 60, 0.2)',
+                          color: '#e74c3c',
+                          border: '1px solid rgba(231, 76, 60, 0.3)',
+                          borderRadius: '8px',
+                          cursor: isUploading ? 'not-allowed' : 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: '500'
+                        }}
+                      >
+                        <FiX />
+                        Remove
+                      </motion.button>
+                    )}
+                  </div>
+                  <small style={{ color: '#8EC2F0', fontSize: '0.85rem', marginTop: '0.5rem', display: 'block' }}>
+                    Paste a file URL or upload a file directly
+                  </small>
+                </div>
+              )}
 
               {isBoardOrAdmin && showUpload && (
                 <div className="EventDetails__uploadSection">
@@ -754,7 +1351,7 @@ const EventDetails = () => {
               </p>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                 <button
-                  onClick={() => setShowDeleteSubmissionsConfirm(false)}
+                  onClick={() => setShowRegistrationToggleConfirm(false)}
                   disabled={isTogglingRegistration}
                   style={{
                     padding: '0.75rem 1.5rem',
