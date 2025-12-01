@@ -59,8 +59,8 @@ const addEvent = async (req, res) => {
             event_date,
             location,
             category,
-            upload_file: upload_file || null,
-            main_image: main_image || null,
+            upload_file:  req.files.file ? req.files.file[0].path : null,
+            main_image: req.files.main_image ? req.files.main_image[0].path : null,
             attendees: attendees || null,
             registration_enabled: regEnabled
         });
@@ -185,6 +185,35 @@ const getEventById = async (req, res) => {
 };
 
 /**
+ * download content
+ * GET /api/events/:id/download
+ */
+
+const downloadContent = async (req, res) => {
+try {
+const event = await Event.findByPk(req.params.id);
+if (!event || !event.upload_file){
+    return res.status(404).json({
+        success: false,
+        error: 'File not found'
+    });
+}
+res.download(event.upload_file);
+} catch (error) {
+    res.status(500).json({
+        success: false,
+        error: 'Failed to download file'
+    });
+
+}
+}
+
+
+
+
+
+
+/**
  * Update an event
  * PUT /api/events/:id
  */
@@ -228,18 +257,25 @@ const updateEvent = async (req, res) => {
         const regEnabled = registration_enabled !== undefined 
             ? convertToBoolean(registration_enabled, true)
             : undefined;
-
-        // Update event
+        // Handle file uploads(from multer)
+               const newUploadFile = req.files?.file ? req.files.file[0].path : event.upload_file;
+        const newMainImage = req.files?.main_image ? req.files.main_image[0].path : event.main_image;
+           
+        /*
+         //Update event
+         if user does not provide a field, keep the existing value , 
+         if user provides any string even if empty string it gets updated.
+    */ 
         await event.update({
-            ...(name && { name }),
-            ...(description !== undefined && { description }),
-            ...(event_date && { event_date }),
-            ...(location && { location }),
-            ...(category && { category }),
-            ...(upload_file !== undefined && { upload_file }),
-            ...(main_image !== undefined && { main_image }),
-            ...(attendees !== undefined && { attendees }),
-            ...(regEnabled !== undefined && { registration_enabled: regEnabled })
+            name: name ?? event.name,
+            description: description ?? event.description,
+            event_date: event_date ?? event.event_date,
+            location: location ?? event.location,
+            category: category ?? event.category,
+            upload_file: newUploadFile,
+            main_image: newMainImage,
+            attendees: attendees ?? event.attendees,
+            registration_enabled: regEnabled
         });
 
         res.status(200).json({
@@ -321,5 +357,6 @@ module.exports = {
     getAllEvents,
     getEventById,
     updateEvent,
+    downloadContent,
     deleteEvent
 };
