@@ -470,7 +470,7 @@ const EventDetails = () => {
       
       // Only include fields that have been modified or are being explicitly set
       if (editForm.name !== undefined) {
-        updateData.name = normalizeString(editForm.name) || event.name;
+        updateData.name = normalizeString(editForm.name);
       }
       
       if (editForm.description !== undefined) {
@@ -478,15 +478,15 @@ const EventDetails = () => {
       }
       
       if (editForm.event_date !== undefined) {
-        updateData.event_date = editForm.event_date || event.event_date;
+        updateData.event_date = editForm.event_date;
       }
       
       if (editForm.location !== undefined) {
-        updateData.location = normalizeString(editForm.location) || event.place || '';
+        updateData.location = normalizeString(editForm.location);
       }
       
       if (editForm.category !== undefined) {
-        updateData.category = editForm.category || event.category;
+        updateData.category = editForm.category;
       }
       
       if (editForm.main_image !== undefined) {
