@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import './PageBase.css';
-import { FiCalendar, FiMapPin, FiImage, FiFile, FiArrowLeft } from 'react-icons/fi';
+import { FiCalendar, FiMapPin, FiImage, FiFile, FiArrowLeft, FiUpload, FiX } from 'react-icons/fi';
 
 // Import default event image (same as Events.jsx)
 import mspLogo from '../assets/Images/msp-logo.png';
@@ -26,6 +26,10 @@ const CreateEvent = () => {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const imageInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Check user role and authentication
   useEffect(() => {
@@ -117,6 +121,67 @@ const CreateEvent = () => {
       setSubmitting(false);
     }
   }, [form, navigate, validate]);
+
+  const handleImageUpload = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setErrors(prev => ({ ...prev, main_image: 'Please select an image file' }));
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, main_image: 'Image size must be less than 10MB' }));
+      return;
+    }
+
+    setUploadingImage(true);
+    setErrors(prev => ({ ...prev, main_image: '' }));
+
+    try {
+      const result = await ApiService.uploadFile(file, 'events');
+      setForm(prev => ({ ...prev, main_image: result.url }));
+    } catch (error) {
+      console.error('Image upload error:', error);
+      setErrors(prev => ({ ...prev, main_image: error.message || 'Failed to upload image' }));
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
+      }
+    }
+  }, []);
+
+  const handleFileUpload = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (50MB limit)
+    if (file.size > 50 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, upload_file: 'File size must be less than 50MB' }));
+      return;
+    }
+
+    setUploadingFile(true);
+    setErrors(prev => ({ ...prev, upload_file: '' }));
+
+    try {
+      // Upload to slides directory
+      const result = await ApiService.uploadFile(file, 'slides');
+      setForm(prev => ({ ...prev, upload_file: result.url }));
+    } catch (error) {
+      console.error('File upload error:', error);
+      setErrors(prev => ({ ...prev, upload_file: error.message || 'Failed to upload file' }));
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, []);
 
   // Show loading while checking authentication
   if (loading) {
@@ -314,22 +379,66 @@ const CreateEvent = () => {
             {/* Optional Fields */}
             <div className="grid" style={{ marginTop: '1rem' }}>
               <label className="floating-input">
-                Main Image URL
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FiImage style={{ color: '#8EC2F0' }} />
+                Main Image
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
+                    <FiImage style={{ color: '#8EC2F0' }} />
+                    <input
+                      type="url"
+                      name="main_image"
+                      value={form.main_image}
+                      onChange={onChange}
+                      placeholder="https://example.com/image.jpg or upload a file"
+                      className="pill"
+                      disabled={submitting || uploadingImage}
+                      style={{ flex: '1' }}
+                    />
+                  </div>
                   <input
-                    type="url"
-                    name="main_image"
-                    value={form.main_image}
-                    onChange={onChange}
-                    placeholder="https://example.com/image.jpg"
-                    className="pill"
-                    disabled={submitting}
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    style={{ display: 'none' }}
+                    disabled={submitting || uploadingImage}
                   />
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={submitting || uploadingImage}
+                    className="btn secondary"
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem',
+                      whiteSpace: 'nowrap',
+                      padding: '0.5rem 1rem'
+                    }}
+                  >
+                    <FiUpload />
+                    {uploadingImage ? 'Uploading...' : 'Upload'}
+                  </button>
+                  {form.main_image && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, main_image: '' }))}
+                      disabled={submitting || uploadingImage}
+                      className="btn secondary"
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem'
+                      }}
+                    >
+                      <FiX />
+                    </button>
+                  )}
                 </div>
                 <small style={{ color: '#8EC2F0', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
-                  Optional: URL to the event's main image. If not provided, the default logo will be used as a placeholder.
+                  Optional: URL to the event's main image or upload an image file. If not provided, the default logo will be used as a placeholder.
                 </small>
+                {errors.main_image && <span className="error" style={{ marginTop: '0.25rem', display: 'block' }}>{errors.main_image}</span>}
                 {!form.main_image && (
                   <div style={{ 
                     marginTop: '0.75rem', 
@@ -364,22 +473,65 @@ const CreateEvent = () => {
               </label>
 
               <label className="floating-input">
-                Upload File URL
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <FiFile style={{ color: '#8EC2F0' }} />
+                Upload File
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
+                    <FiFile style={{ color: '#8EC2F0' }} />
+                    <input
+                      type="url"
+                      name="upload_file"
+                      value={form.upload_file}
+                      onChange={onChange}
+                      placeholder="https://example.com/file.pdf or upload a file"
+                      className="pill"
+                      disabled={submitting || uploadingFile}
+                      style={{ flex: '1' }}
+                    />
+                  </div>
                   <input
-                    type="url"
-                    name="upload_file"
-                    value={form.upload_file}
-                    onChange={onChange}
-                    placeholder="https://example.com/file.pdf"
-                    className="pill"
-                    disabled={submitting}
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    disabled={submitting || uploadingFile}
                   />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={submitting || uploadingFile}
+                    className="btn secondary"
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem',
+                      whiteSpace: 'nowrap',
+                      padding: '0.5rem 1rem'
+                    }}
+                  >
+                    <FiUpload />
+                    {uploadingFile ? 'Uploading...' : 'Upload'}
+                  </button>
+                  {form.upload_file && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, upload_file: '' }))}
+                      disabled={submitting || uploadingFile}
+                      className="btn secondary"
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem'
+                      }}
+                    >
+                      <FiX />
+                    </button>
+                  )}
                 </div>
                 <small style={{ color: '#8EC2F0', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
-                  Optional: URL to event-related files (PDFs, documents, etc.)
+                  Optional: URL to event-related files (PDFs, documents, etc.) or upload a file directly.
                 </small>
+                {errors.upload_file && <span className="error" style={{ marginTop: '0.25rem', display: 'block' }}>{errors.upload_file}</span>}
               </label>
             </div>
 

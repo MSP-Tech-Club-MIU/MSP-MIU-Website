@@ -19,5 +19,6 @@ router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));
 router.use("/events", require("./routes/events"));
 router.use("/cloud", require("./routes/cloud"));
+router.use("/upload", require("./routes/upload"));
 
 module.exports = router;
