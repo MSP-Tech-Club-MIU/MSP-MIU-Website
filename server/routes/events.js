@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { addEvent, getAllEvents, getEventById, updateEvent, downloadContent, deleteEvent } = require('../controllers/events');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
-const upload = require('../middlewares/multer');
+const {upload} = require('../middlewares/multer');
 
 // Get all events (public or authenticated based on your requirements)
 router.get('/', getAllEvents);

@@ -1,11 +1,11 @@
-// this file is for setting up multer for file uploads
-const multer = require('multer');
-const path = require('path');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const multer = require("multer");
+const path = require("path");
 
 
 // Only allow PDFs or images (pizza filtering)
 const fileFilter = (req, file, cb) => {
-  const allowedExt = ['pdf','jpg','jpeg','png','gif','ppt','pptx'];
+  const allowedExt = ['pdf','jpg','jpeg','png','gif','ppt'];
   const ext = file.originalname.split('.').pop().toLowerCase();
 
   if (!allowedExt.includes(ext)) {
@@ -15,12 +15,78 @@ const fileFilter = (req, file, cb) => {
   cb(null, true);
 };
 
-const upload = multer({ 
-     fileFilter,
-    limits:{
- fileSize: 50 * 1024 * 1024 // limit file size to 50MB
-    } 
+const upload = multer({ storage: multer.memoryStorage(),
+ fileFilter
+ });
 
+// R2 client
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY,
+    secretAccessKey: process.env.R2_SECRET_KEY,
+  },
 });
 
-module.exports = upload;
+// Map type → directory
+const directoryMap = {
+  assets: "Assets/",
+  codes: "Codes/",
+  events: "Events_Thumbnails/",
+  images: "Images/",
+  mobile: "Mobile Application/",
+  slides: "Slides/"
+};
+
+// Upload handler
+const uploadFile = async (req, res) => {
+  try {
+    const { type } = req.params; // assets, codes, events, etc.
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const dir = directoryMap[type.toLowerCase()];
+    if (!dir) return res.status(400).json({ error: "Invalid directory type" });
+
+    // Generate unique filename
+    const ext = path.extname(file.originalname);
+    const unique = `${Date.now()}_${Math.random().toString(36).substring(2)}${ext}`;
+    const key = `${dir}${unique}`;
+
+    // Upload to R2
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      })
+    );
+
+    // Public URL
+    const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
+
+    return res.json({
+      success: true,
+      url: publicURL,
+      key
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed", details: err.message });
+  }
+};
+
+
+
+
+// Export multer middleware
+const multerUpload = upload.single("file");
+
+module.exports = {
+  uploadFile,
+  upload
+};
