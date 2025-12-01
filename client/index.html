@@ -18,17 +18,34 @@
     <meta name="distribution" content="global" />
     <meta name="rating" content="general" />
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/msp-logo-favicon.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/msp-logo-favicon.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/msp-logo-favicon.png" />
-    <link rel="shortcut icon" href="/assets/msp-logo-favicon.png" />
+    <!-- Favicon - Set dynamically using R2 domain -->
+    <script>
+      (function() {
+        const r2Domain = __R2_PUBLIC_DOMAIN__ || '';
+        const faviconPath = '/Assets/msp-logo-favicon.png';
+        const faviconUrl = r2Domain ? `${r2Domain.replace(/\/+$/, '')}${faviconPath}` : '/assets/msp-logo-favicon.png';
+        
+        // Create and set favicon links
+        const setFavicon = (rel, sizes = '') => {
+          const link = document.createElement('link');
+          link.rel = rel;
+          link.type = 'image/png';
+          if (sizes) link.setAttribute('sizes', sizes);
+          link.href = faviconUrl;
+          document.head.appendChild(link);
+        };
+        
+        setFavicon('icon', '32x32');
+        setFavicon('icon', '16x16');
+        setFavicon('apple-touch-icon', '180x180');
+        setFavicon('shortcut icon');
+        setFavicon('apple-touch-icon');
+      })();
+    </script>
     
     <!-- Web App Manifest -->
     <link rel="manifest" href="/manifest.json" />
-    
-    <!-- Apple iOS Support -->
-    <link rel="apple-touch-icon" href="/assets/msp-logo-favicon.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="MSP MIU" />

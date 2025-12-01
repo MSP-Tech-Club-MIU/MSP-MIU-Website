@@ -1,7 +1,14 @@
 const multer = require("multer");
 const path = require("path");
 const { r2, PutObjectCommand } = require("../config/cloud");
-const upload = multer({ storage: multer.memoryStorage() });
+const { fileFilter } = require("../middlewares/multer");
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    fileFilter,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // limit file size to 50MB
+    }
+});
 
 // Map type → directory
 const directoryMap = {

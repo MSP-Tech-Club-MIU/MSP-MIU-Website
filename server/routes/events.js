@@ -11,7 +11,7 @@ router.get('/', getAllEvents);
 router.get('/:id', getEventById);
 
 // Create event (admin and board only)
-router.post('/', authenticateToken, verifyRole('admin', 'board'), optionalMulterFields([
+router.post('/', authenticateToken, verifyRole('admin', 'board'), upload.fields([
         { name: "main_image"},
         { name: "upload_file" }
     ]),  addEvent);
