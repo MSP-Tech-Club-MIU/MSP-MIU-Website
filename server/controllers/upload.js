@@ -1,18 +1,7 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const multer = require("multer");
 const path = require("path");
-
+const { r2, PutObjectCommand } = require("../config/cloud");
 const upload = multer({ storage: multer.memoryStorage() });
-
-// R2 client
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY,
-    secretAccessKey: process.env.R2_SECRET_KEY,
-  },
-});
 
 // Map type → directory
 const directoryMap = {
@@ -41,14 +30,14 @@ const uploadFile = async (req, res) => {
     const key = `${dir}${unique}`;
 
     // Upload to R2
-    await r2.send(
-      new PutObjectCommand({
+    const command = new PutObjectCommand({
         Bucket: process.env.R2_BUCKET,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
-      })
-    );
+      });
+    const result = await r2.send(command);
+    console.log(result);
 
     // Public URL
     const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
