@@ -59,7 +59,7 @@ const addEvent = async (req, res) => {
             event_date,
             location,
             category,
-            upload_file:  req.files.file ? req.files.file[0].path : null,
+            upload_file:  req.files.upload_file ? req.files.upload_file[0].path : null,
             main_image: req.files.main_image ? req.files.main_image[0].path : null,
             attendees: attendees || null,
             registration_enabled: regEnabled
@@ -258,7 +258,7 @@ const updateEvent = async (req, res) => {
             ? convertToBoolean(registration_enabled, true)
             : undefined;
         // Handle file uploads(from multer)
-               const newUploadFile = req.files?.file ? req.files.file[0].path : event.upload_file;
+               const newUploadFile = req.files?.upload_file ? req.files.upload_file[0].path : event.upload_file;
         const newMainImage = req.files?.main_image ? req.files.main_image[0].path : event.main_image;
            
         /*
