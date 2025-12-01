@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
 import ScrollToTop from './components/ScrollToTop';
@@ -26,34 +26,49 @@ const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
+// Helper to check if running in Capacitor (native app) environment
+// Checked synchronously outside render cycle to avoid race conditions
+const isCapacitorEnv = (() => {
+  const hasWindow = typeof window !== 'undefined';
+  const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
+  const ua = hasNavigator ? navigator.userAgent : '';
+  
+  return Boolean(
+    hasWindow &&
+    (
+      window.Capacitor ||
+      window.ionic ||
+      (hasNavigator && /capacitor/i.test(ua)) ||
+      (hasNavigator && /ionic/i.test(ua))
+    )
+  );
+})();
+
 // Wrapper component to conditionally render DownloadAndroidApp only on web
 const DownloadAndroidAppWrapper = () => {
-  const [isWeb, setIsWeb] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if running in Capacitor (native app) environment
-    const checkCapacitor = () => {
-      const isCapacitor = typeof window !== 'undefined' && 
-        (window.Capacitor || 
-         window.ionic || 
-         /capacitor/i.test(navigator.userAgent) || 
-         /ionic/i.test(navigator.userAgent));
-      return isCapacitor;
-    };
-
-    const isCapacitorEnv = checkCapacitor();
-    setIsWeb(!isCapacitorEnv);
-
     // If in Capacitor, redirect to home
     if (isCapacitorEnv) {
       navigate('/', { replace: true });
     }
-  }, [navigate]);
+  }, [navigate]); // navigate is stable, effect runs once
 
-  // Show nothing while checking or if in Capacitor
-  if (!isWeb) {
-    return null;
+  // Render the component only if it's a web environment
+  if (isCapacitorEnv) {
+    // Show a minimal fallback while redirecting
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '40vh',
+        color: '#eaf2ff'
+      }}>
+        <span aria-live="polite">Redirecting…</span>
+      </div>
+    );
   }
 
   return <DownloadAndroidApp />;
