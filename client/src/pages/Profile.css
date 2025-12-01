@@ -638,16 +638,29 @@ select.detail-input option {
     padding: 0.75rem;
   }
 
+  .profile-header {
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+  }
+
   .profile-header h1 {
     font-size: 1.75rem;
+    width: 100%;
   }
 
   .profile-actions {
     flex-direction: column;
+    width: 100%;
   }
 
   .action-btn {
     width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .profile-content-layout {
+    gap: 1.5rem;
   }
 
   .role-badge-container {
@@ -656,34 +669,57 @@ select.detail-input option {
   }
   
   .profile-picture-circle {
-    width: 180px;
-    height: 180px;
+    width: 160px;
+    height: 160px;
+  }
+
+  .profile-name {
+    font-size: 1.5rem;
+  }
+
+  .profile-role-text {
+    font-size: 0.9rem;
   }
 
   .details-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .detail-card {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
     padding: 1rem;
   }
 
   .detail-icon {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    font-size: 1.2rem;
   }
 
   .detail-content {
     width: 100%;
   }
 
+  .detail-label {
+    font-size: 0.8rem;
+  }
+
+  .detail-value {
+    font-size: 0.95rem;
+  }
+
   .upload-schedule-btn {
     font-size: 0.9rem;
     padding: 0.875rem 1.25rem;
+  }
+
+  .file-selected-indicator-profile {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
   }
 }
 

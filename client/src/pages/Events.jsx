@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import './Events.css';
 import { FiCalendar, FiClock, FiMapPin, FiPlus, FiCheckSquare } from 'react-icons/fi';
 
@@ -142,6 +143,7 @@ const Events = () => {
 
   return (
     <section className="EventsPage">
+      <BackButton to="/" label="Back to Home" />
       <SEO
         title="Events & Sessions"
         description="Discover upcoming MSP Tech Club events, workshops, sessions, and hackathons at MIU. Join us for tech talks, hands-on workshops, networking events, and more."

@@ -42,3 +42,22 @@
     position: relative;
     z-index: 2;
 }
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .SiteLayout__main {
+        min-height: 50vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .SiteLayout {
+        /* Ensure proper mobile viewport */
+        min-height: 100vh;
+        min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    }
+
+    .SiteLayout__main {
+        min-height: 40vh;
+    }
+}

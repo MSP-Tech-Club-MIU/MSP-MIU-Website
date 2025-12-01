@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import mspLogo from '../assets/Images/msp-logo.png';
 import './account-activation.css';
 
@@ -178,6 +179,7 @@ const AccountActivation: React.FC = () => {
 
   return (
     <div className="account-activation-container">
+      <BackButton to="/login" label="Back to Login" />
       <div className="activation-card">
         <div className="activation-header">
           <img src={mspLogo} alt="MSP Logo" className="activation-logo" />

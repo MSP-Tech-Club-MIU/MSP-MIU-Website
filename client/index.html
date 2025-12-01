@@ -112,8 +112,11 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/service-worker.js");
+      // Only register service worker if not in Capacitor (native app)
+      if ("serviceWorker" in navigator && typeof window !== 'undefined' && !window.Capacitor) {
+        navigator.serviceWorker.register("/service-worker.js").catch(() => {
+          // Silently fail if service worker doesn't exist
+        });
       }
     </script>
   </body>

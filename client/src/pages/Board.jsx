@@ -4,6 +4,7 @@ import './PageBase.css';
 import BoardHeader from './Board/BoardHeader';
 import ProfileCard from '../components/ProfileCard';
 import DepartmentMenu from './Board/DepartmentMenu';
+import BackButton from '../components/BackButton';
 import './Board/Board.css';
 
 import img5 from '../assets/Images/card.jpg';
@@ -227,6 +228,7 @@ const Board = memo(() => {
         url="https://msp-miu.tech/Meet-the-board"
         structuredData={structuredData}
       />
+      <BackButton to="/" label="Back to Home" />
       <BoardHeader />
       <DepartmentMenu 
         selectedDepartment={selectedDepartment}

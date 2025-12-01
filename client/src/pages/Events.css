@@ -372,21 +372,66 @@
 }
 
 @media (max-width: 480px) {
+    .EventsPage {
+        padding: 90px 0 50px;
+    }
+
+    .EventsPage__container {
+        padding: 0 16px;
+    }
+
+    .EventsPage__header {
+        margin-bottom: 32px;
+    }
+
     .EventsPage__title {
         font-size: 1.8rem;
+        margin-bottom: 12px;
     }
 
     .EventsPage__subtitle {
-        font-size: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .EventsPage__controls {
+        margin-bottom: 32px;
+        gap: 16px;
+    }
+
+    .EventsPage__filters {
+        width: 100%;
+        justify-content: center;
+        gap: 8px;
     }
 
     .EventsPage__filterBtn {
-        padding: 8px 16px;
-        font-size: .8rem;
+        padding: 8px 14px;
+        font-size: 0.75rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .EventsPage__sort {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .EventsPage__sortLabel {
+        font-size: 0.85rem;
+    }
+
+    .EventsPage__sortSelect {
+        padding: 8px 14px;
+        font-size: 0.85rem;
     }
 
     .EventsPage__grid {
         grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .EventCard__media {
+        height: 180px;
     }
 
     .EventCard__body {
@@ -395,13 +440,41 @@
 
     .EventCard__title {
         font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .EventCard__meta {
+        gap: 6px;
+        margin-bottom: 10px;
     }
 
     .EventCard__metaItem {
-        font-size: .75rem;
+        font-size: 0.75rem;
     }
 
     .EventCard__description {
-        font-size: .8rem;
+        font-size: 0.8rem;
+    }
+
+    .EventCard__badge {
+        top: 10px;
+        right: 10px;
+        padding: 4px 10px;
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .EventsPage__title {
+        font-size: 1.6rem;
+    }
+
+    .EventsPage__filterBtn {
+        padding: 7px 12px;
+        font-size: 0.7rem;
+    }
+
+    .EventCard__media {
+        height: 160px;
     }
 }

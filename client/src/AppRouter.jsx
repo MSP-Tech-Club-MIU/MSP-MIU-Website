@@ -2,6 +2,10 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
 import ScrollToTop from './components/ScrollToTop';
+import AndroidBackButtonSetup from './components/AndroidBackButtonSetup';
+
+// Helper function to check if running in Capacitor (native app) environment
+const isCapacitor = () => typeof window !== 'undefined' && window.Capacitor;
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -22,6 +26,7 @@ const AccountActivation = lazy(() => import('./pages/account-activation'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
+// Only load DownloadAndroidApp if not in Capacitor environment (not in native app)
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
@@ -54,10 +59,12 @@ const PageLoader = () => (
   </div>
 );
 
-const AppRouter = () => (
-  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-    <ScrollToTop />
-    <Suspense fallback={<PageLoader />}>
+const AppRouter = () => {
+  return (
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ScrollToTop />
+      <AndroidBackButtonSetup />
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
         <Route path="/about" element={<SiteLayout><AboutUs /></SiteLayout>} />
@@ -77,11 +84,14 @@ const AppRouter = () => (
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        <Route path="/download-android" element={<SiteLayout><DownloadAndroidApp /></SiteLayout>} />
+        {!isCapacitor() && (
+          <Route path="/download-android" element={<SiteLayout><DownloadAndroidApp /></SiteLayout>} />
+        )}
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
   </Router>
-);
+  );
+};
 
 export default AppRouter;

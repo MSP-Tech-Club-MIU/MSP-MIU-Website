@@ -6,6 +6,7 @@ import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -258,6 +259,7 @@ const Profile = () => {
         noindex={true}
       />
       <div className="profile-page-container">
+        <BackButton to="/" label="Back to Home" />
         {/* Header with actions */}
         <div className="profile-header">
           <h1>My Profile</h1>
