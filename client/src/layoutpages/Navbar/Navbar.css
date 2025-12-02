@@ -5,12 +5,19 @@
 
 .Navbar {
     position: sticky;
+    position: -webkit-sticky; /* Safari support */
     top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
     z-index: 1000;
     backdrop-filter: blur(10px);
     background: rgba(3, 28, 53, 0.78);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     transition: background .2s ease, box-shadow .2s ease;
+    /* Ensure sticky works on all devices */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 .Navbar--scrolled {

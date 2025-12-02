@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus, FaAndroid } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
 import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
-import { isCapacitor } from '../../utils/androidBackButton';
+import { isCapacitor, isAndroid } from '../../utils/androidBackButton';
 import mspLogo from '../../assets/Images/msp-logo.png';
 
 const Navbar = memo(() => {
@@ -164,8 +165,52 @@ const Navbar = memo(() => {
     }
   }, [mobileOpen, closeMobile]);
 
+  // Swipe left gesture to open drawer (Android only) using react-use-gesture
+  const edgeThreshold = 30; // Px from the left edge to initiate a swipe
+  
+  const bindSwipeGesture = useDrag(
+    ({ swipe: [swipeX], first, initial: [ix, iy] }) => {
+      // Only enable swipe gesture on Android
+      if (!isAndroid()) {
+        return;
+      }
+
+      // Only handle if drawer is closed
+      if (mobileOpen) {
+        return;
+      }
+
+      // Check if swipe started from the left edge
+      if (first && ix > edgeThreshold) {
+        return; // Don't start tracking if not from edge
+      }
+
+      // Handle swipe left gesture
+      if (swipeX === -1) {
+        // Swipe left detected - open drawer
+        setMobileOpen(true);
+      }
+    },
+    {
+      // Only detect horizontal swipes
+      axis: 'x',
+      // Only trigger on swipe left (negative direction)
+      swipeDistance: [50, 50],
+      swipeVelocity: [0.5, 0.5],
+      // Filter to only allow swipes from left edge
+      filterTaps: true,
+      // Prevent conflicts with vertical gestures (pull-to-refresh)
+      threshold: 10,
+      // Only enable on Android
+      enabled: isAndroid() && !mobileOpen,
+    }
+  );
+
   return (
-    <header className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}>      
+    <header 
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}
+      {...bindSwipeGesture()}
+    >      
       <div className="Navbar__inner">
         <NavLink to="/" className="Navbar__brand" aria-label="MSP Home">
           <img

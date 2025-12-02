@@ -65,6 +65,11 @@
     transition: all .3s ease;
     backdrop-filter: blur(10px);
     letter-spacing: .4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    width: 100%;
 }
 
 .EventsPage__filterBtn:hover {
@@ -400,15 +405,20 @@
 
     .EventsPage__filters {
         width: 100%;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
     }
 
     .EventsPage__filterBtn {
-        padding: 8px 14px;
+        padding: 8px 12px;
         font-size: 0.75rem;
-        flex: 1;
         min-width: 0;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
     }
 
     .EventsPage__sort {
@@ -470,11 +480,38 @@
     }
 
     .EventsPage__filterBtn {
-        padding: 7px 12px;
+        padding: 7px 10px;
         font-size: 0.7rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .EventCard__media {
         height: 160px;
+    }
+
+    .EventCard__badge {
+        top: 8px;
+        right: 8px;
+        padding: 3px 8px;
+        font-size: 0.6rem;
+        border-radius: 12px;
+        letter-spacing: 0.3px;
+    }
+}
+
+@media (max-width: 320px) {
+    .EventCard__badge {
+        top: 6px;
+        right: 6px;
+        padding: 2px 6px;
+        font-size: 0.55rem;
+        border-radius: 10px;
+        letter-spacing: 0.2px;
+        max-width: calc(100% - 12px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
