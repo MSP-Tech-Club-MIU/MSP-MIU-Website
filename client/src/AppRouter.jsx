@@ -33,15 +33,37 @@ const isCapacitorEnv = (() => {
   const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
   const ua = hasNavigator ? navigator.userAgent : '';
   
-  return Boolean(
+  const windowCapacitor = hasWindow ? !!window.Capacitor : false;
+  const windowIonic = hasWindow ? !!window.ionic : false;
+  const uaHasCapacitor = hasNavigator && /capacitor/i.test(ua);
+  const uaHasIonic = hasNavigator && /ionic/i.test(ua);
+  
+  const isCapacitor = Boolean(
     hasWindow &&
     (
-      window.Capacitor ||
-      window.ionic ||
-      (hasNavigator && /capacitor/i.test(ua)) ||
-      (hasNavigator && /ionic/i.test(ua))
+      windowCapacitor ||
+      windowIonic ||
+      uaHasCapacitor ||
+      uaHasIonic
     )
   );
+  
+  // Always log the detection result for debugging
+  if (hasWindow) {
+    console.log('[Capacitor Detection]', {
+      hasWindow,
+      hasNavigator,
+      userAgent: ua.substring(0, 150), // First 150 chars
+      windowCapacitor,
+      windowIonic,
+      uaHasCapacitor,
+      uaHasIonic,
+      isCapacitorEnv: isCapacitor,
+      pathname: window.location.pathname
+    });
+  }
+  
+  return isCapacitor;
 })();
 
 // Wrapper component to conditionally render DownloadAndroidApp only on web
@@ -49,9 +71,16 @@ const DownloadAndroidAppWrapper = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Debug logging
+    console.log('[DownloadAndroidAppWrapper] isCapacitorEnv:', isCapacitorEnv);
+    console.log('[DownloadAndroidAppWrapper] Current pathname:', window.location.pathname);
+    
     // If in Capacitor, redirect to home
     if (isCapacitorEnv) {
+      console.log('[DownloadAndroidAppWrapper] Redirecting to home (Capacitor detected)');
       navigate('/', { replace: true });
+    } else {
+      console.log('[DownloadAndroidAppWrapper] Rendering DownloadAndroidApp (Web environment)');
     }
   }, [navigate]); // navigate is stable, effect runs once
 
@@ -71,6 +100,7 @@ const DownloadAndroidAppWrapper = () => {
     );
   }
 
+  console.log('[DownloadAndroidAppWrapper] Rendering DownloadAndroidApp component');
   return <DownloadAndroidApp />;
 };
 
