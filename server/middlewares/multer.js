@@ -25,7 +25,9 @@ const directoryMap = {
   events: "Events_Thumbnails/",
   images: "Images/",
   mobile: "Mobile Application/",
-  slides: "Slides/"
+  slides: "Slides/",
+  profile_pictures: "Profile_Pictures/",
+  student_schedules: "Student_Schedules/"
 };
 
 // Upload handler
