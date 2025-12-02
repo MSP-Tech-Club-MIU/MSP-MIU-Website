@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus, FaAndroid } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
+import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
+import { isCapacitor, isAndroid } from '../../utils/androidBackButton';
 import mspLogo from '../../assets/Images/msp-logo.png';
 
 const Navbar = memo(() => {
@@ -15,6 +18,8 @@ const Navbar = memo(() => {
   const [showLoginCard, setShowLoginCard] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isAndroidDevice, setIsAndroidDevice] = useState(false);
+  const [statusBarHeight, setStatusBarHeight] = useState(0);
   const location = useLocation();
 
   // Check authentication status and handle token expiration
@@ -74,6 +79,75 @@ const Navbar = memo(() => {
     };
   }, [location.pathname]);
 
+  // Check if running on Android device and detect status bar height
+  useEffect(() => {
+    const android = isAndroid();
+    setIsAndroidDevice(android);
+    
+    if (android) {
+      const getStatusBarHeight = () => {
+        // Method 1: Check visual viewport vs window height difference
+        // This detects if status bar is taking up space
+        if (window.visualViewport) {
+          const diff = window.innerHeight - window.visualViewport.height;
+          // Status bar is typically 24-48px, so use this if it's in a reasonable range
+          if (diff > 0 && diff < 100) {
+            return diff;
+          }
+        }
+        
+        // Method 2: Check if we can detect safe-area-inset via CSS custom property
+        // Try to read it from a test element
+        try {
+          const testEl = document.createElement('div');
+          testEl.style.cssText = 'position:fixed;top:0;left:-9999px;padding-top:env(safe-area-inset-top,0px);';
+          document.body.appendChild(testEl);
+          const computed = window.getComputedStyle(testEl);
+          const paddingTop = computed.paddingTop;
+          const value = parseFloat(paddingTop);
+          document.body.removeChild(testEl);
+          
+          if (value > 0) {
+            return value;
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        // No status bar detected
+        return 0;
+      };
+      
+      // Set initial status bar height after a small delay to ensure viewport is ready
+      const checkHeight = () => {
+        const height = getStatusBarHeight();
+        setStatusBarHeight(height);
+      };
+      
+      // Check immediately and after a short delay
+      checkHeight();
+      const timeoutId = setTimeout(checkHeight, 100);
+      
+      // Re-check on resize/orientation change
+      const handleResize = () => {
+        checkHeight();
+      };
+      
+      window.addEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+      }
+      
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('resize', handleResize);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleResize);
+        }
+      };
+    }
+  }, []);
+
   useEffect(() => { 
     document.body.style.overflow = mobileOpen ? 'hidden' : ''; 
   }, [mobileOpen]);
@@ -124,7 +198,8 @@ const Navbar = memo(() => {
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       // { to: '/exercises', label: 'Exercises', icon: <FaLaptop /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
-      { to: '/download-android', label: 'Download App', icon: <FaAndroid /> },
+      // Only include download link if not in Capacitor environment (not in native app)
+      ...(!isCapacitor() ? [{ to: '/download-android', label: 'Download App', icon: <FaAndroid /> }] : []),
       // { to: '/suggestions', label: 'Suggestions', icon: <FaLightbulb /> },
       // { to: '/leaderboard', label: 'Leaderboard', icon: <FaTrophy /> },
       // { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> }
@@ -132,7 +207,7 @@ const Navbar = memo(() => {
     
     // Add Login or Profile based on authentication status
     if (isAuthenticated) {
-      baseLinks.push({ to: '/profile', label: 'Profile', icon: <FaUser /> });
+      baseLinks.push({ to: '/profile', label: 'Profile', icon: <FaUser />, isProfile: true });
     } else {
       baseLinks.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
     }
@@ -161,8 +236,53 @@ const Navbar = memo(() => {
     }
   }, [mobileOpen, closeMobile]);
 
+  // Swipe left gesture to open drawer (Android only) using react-use-gesture
+  const edgeThreshold = 30; // Px from the left edge to initiate a swipe
+  
+  const bindSwipeGesture = useDrag(
+    ({ swipe: [swipeX], first, initial: [ix, iy] }) => {
+      // Only enable swipe gesture on Android
+      if (!isAndroid()) {
+        return;
+      }
+
+      // Only handle if drawer is closed
+      if (mobileOpen) {
+        return;
+      }
+
+      // Check if swipe started from the left edge
+      if (first && ix > edgeThreshold) {
+        return; // Don't start tracking if not from edge
+      }
+
+      // Handle swipe left gesture
+      if (swipeX === -1) {
+        // Swipe left detected - open drawer
+        setMobileOpen(true);
+      }
+    },
+    {
+      // Only detect horizontal swipes
+      axis: 'x',
+      // Only trigger on swipe left (negative direction)
+      swipeDistance: [50, 50],
+      swipeVelocity: [0.5, 0.5],
+      // Filter to only allow swipes from left edge
+      filterTaps: true,
+      // Prevent conflicts with vertical gestures (pull-to-refresh)
+      threshold: 10,
+      // Only enable on Android
+      enabled: isAndroid() && !mobileOpen,
+    }
+  );
+
   return (
-    <header className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}>      
+    <header 
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''}`}
+      style={isAndroidDevice && statusBarHeight > 0 ? { paddingTop: `${statusBarHeight}px` } : {}}
+      {...bindSwipeGesture()}
+    >      
       <div className="Navbar__inner">
         <NavLink to="/" className="Navbar__brand" aria-label="MSP Home">
           <img
@@ -188,10 +308,33 @@ const Navbar = memo(() => {
               ) : (
                 <NavLink
                   to={l.to}
-                  className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''}`}
+                  className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavItem--profile-only' : ''}`}
                 >
-                  <span className="NavItem__icon">{l.icon}</span>
-                  <span className="NavItem__label">{l.label}</span>
+                  <span className={`NavItem__icon ${l.isProfile ? 'NavItem__icon--profile' : ''}`}>
+                    {l.isProfile ? (
+                      <>
+                        {user?.profile_picture_url ? (
+                          <img
+                            src={user.profile_picture_url}
+                            alt="Profile"
+                            className="NavItem__profile-picture"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              e.target.style.display = 'none';
+                              const fallback = e.target.parentElement.querySelector('.NavItem__profile-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <span className="NavItem__profile-fallback" style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}>
+                          <FaUser />
+                        </span>
+                      </>
+                    ) : (
+                      l.icon
+                    )}
+                  </span>
+                  {!l.isProfile && <span className="NavItem__label">{l.label}</span>}
                 </NavLink>
               )}
             </li>
@@ -265,11 +408,34 @@ const Navbar = memo(() => {
                             e.stopPropagation();
                             closeMobile();
                           }}
-                          className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                          className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavDrawer__link--profile-only' : ''}`}
                           end
                         >
-                          <span className="NavDrawer__icon">{l.icon}</span>
-                          <span className="NavDrawer__label">{l.label}</span>
+                          <span className={`NavDrawer__icon ${l.isProfile ? 'NavDrawer__icon--profile' : ''}`}>
+                            {l.isProfile ? (
+                              <>
+                                {user?.profile_picture_url ? (
+                                  <img
+                                    src={user.profile_picture_url}
+                                    alt="Profile"
+                                    className="NavDrawer__profile-picture"
+                                    onError={(e) => {
+                                      // Fallback to icon if image fails to load
+                                      e.target.style.display = 'none';
+                                      const fallback = e.target.parentElement.querySelector('.NavDrawer__profile-fallback');
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <span className="NavDrawer__profile-fallback" style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}>
+                                  <FaUser />
+                                </span>
+                              </>
+                            ) : (
+                              l.icon
+                            )}
+                          </span>
+                          {!l.isProfile && <span className="NavDrawer__label">{l.label}</span>}
                         </NavLink>
                       )}
                     </li>
@@ -284,6 +450,14 @@ const Navbar = memo(() => {
       
       {/* Login Card Overlay */}
       <LoginCard isOpen={showLoginCard} onClose={closeLoginCard} />
+      
+      {/* Android Back Button Handler */}
+      <AndroidBackButtonHandler
+        onCloseModal={closeLoginCard}
+        onCloseDrawer={closeMobile}
+        isModalOpen={showLoginCard}
+        isDrawerOpen={mobileOpen}
+      />
     </header>
   );
 });

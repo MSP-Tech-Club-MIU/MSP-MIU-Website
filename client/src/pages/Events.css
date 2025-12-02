@@ -49,8 +49,9 @@
 
 .EventsPage__filters {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .EventsPage__filterBtn {
@@ -65,6 +66,9 @@
     transition: all .3s ease;
     backdrop-filter: blur(10px);
     letter-spacing: .4px;
+    white-space: nowrap;
+    min-width: fit-content;
+    flex-shrink: 0;
 }
 
 .EventsPage__filterBtn:hover {
@@ -372,21 +376,69 @@
 }
 
 @media (max-width: 480px) {
+    .EventsPage {
+        padding: 90px 0 50px;
+    }
+
+    .EventsPage__container {
+        padding: 0 16px;
+    }
+
+    .EventsPage__header {
+        margin-bottom: 32px;
+    }
+
     .EventsPage__title {
         font-size: 1.8rem;
+        margin-bottom: 12px;
     }
 
     .EventsPage__subtitle {
-        font-size: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .EventsPage__controls {
+        margin-bottom: 32px;
+        gap: 16px;
+    }
+
+    .EventsPage__filters {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
     }
 
     .EventsPage__filterBtn {
-        padding: 8px 16px;
-        font-size: .8rem;
+        padding: 8px 14px;
+        font-size: 0.75rem;
+        min-width: fit-content;
+        flex: 1;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .EventsPage__sort {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .EventsPage__sortLabel {
+        font-size: 0.85rem;
+    }
+
+    .EventsPage__sortSelect {
+        padding: 8px 14px;
+        font-size: 0.85rem;
     }
 
     .EventsPage__grid {
         grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .EventCard__media {
+        height: 180px;
     }
 
     .EventCard__body {
@@ -395,13 +447,68 @@
 
     .EventCard__title {
         font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .EventCard__meta {
+        gap: 6px;
+        margin-bottom: 10px;
     }
 
     .EventCard__metaItem {
-        font-size: .75rem;
+        font-size: 0.75rem;
     }
 
     .EventCard__description {
-        font-size: .8rem;
+        font-size: 0.8rem;
+    }
+
+    .EventCard__badge {
+        top: 10px;
+        right: 10px;
+        padding: 4px 10px;
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .EventsPage__title {
+        font-size: 1.6rem;
+    }
+
+    .EventsPage__filterBtn {
+        padding: 7px 10px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .EventCard__media {
+        height: 160px;
+    }
+
+    .EventCard__badge {
+        top: 8px;
+        right: 8px;
+        padding: 3px 8px;
+        font-size: 0.6rem;
+        border-radius: 12px;
+        letter-spacing: 0.3px;
+    }
+}
+
+@media (max-width: 320px) {
+    .EventCard__badge {
+        top: 6px;
+        right: 6px;
+        padding: 2px 6px;
+        font-size: 0.55rem;
+        border-radius: 10px;
+        letter-spacing: 0.2px;
+        max-width: calc(100% - 12px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }

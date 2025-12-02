@@ -1,12 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import SEO from '../components/SEO';
+import BackButton from '../components/BackButton';
 import mspLogo from '../assets/Images/msp-logo.png';
 import './NotFound.css';
 
 const NotFound = () => {
   return (
     <main className="NotFound">
+      <BackButton to="/" label="Back to Home" />
       <SEO
         title="404 - Page Not Found"
         description="The page you're looking for doesn't exist."

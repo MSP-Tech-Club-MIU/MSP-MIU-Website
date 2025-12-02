@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ApiService from "../services/api";
 import { getDepartmentNameById } from "../data/departments";
 import PageLoader from "../components/PageLoader";
+import BackButton from "../components/BackButton";
 
 // Import components
 import CommentModal from "../components/CommentModal";
@@ -434,6 +435,7 @@ const FormAdmin = memo(() => {
 
   return (
     <div style={{ padding: "20px" }}>
+      <BackButton to="/" label="Back to Home" />
       <TextModal 
         expandedText={expandedText}
         closeExpandedText={closeExpandedText}

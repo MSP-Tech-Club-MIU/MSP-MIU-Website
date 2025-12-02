@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiArrowLeft, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle, FiEdit2, FiSave, FiX, FiEdit3 } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle, FiEdit2, FiSave, FiX, FiEdit3 } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 
 // Import images
 import mspLogo from '../assets/Images/msp-logo.png';
@@ -604,13 +605,7 @@ const EventDetails = () => {
     return (
       <section className="EventDetailsPage">
         <div className="EventDetailsPage__container">
-          <button 
-            onClick={() => navigate('/events')} 
-            className="EventDetailsPage__backBtn"
-          >
-            <FiArrowLeft />
-            Back to Events
-          </button>
+          <BackButton to="/events" label="Back to Events" />
           <PageLoader message="Loading event details..." />
         </div>
       </section>
@@ -622,13 +617,7 @@ const EventDetails = () => {
     return (
       <section className="EventDetailsPage">
         <div className="EventDetailsPage__container">
-          <button 
-            onClick={() => navigate('/events')} 
-            className="EventDetailsPage__backBtn"
-          >
-            <FiArrowLeft />
-            Back to Events
-          </button>
+          <BackButton to="/events" label="Back to Events" />
           <div className="EventDetailsPage__error">
             <FiCalendar />
             <p>{error || 'Event not found'}</p>
@@ -642,13 +631,7 @@ const EventDetails = () => {
   return (
     <section className="EventDetailsPage">
       <div className="EventDetailsPage__container">
-        <button 
-          onClick={() => navigate('/events')} 
-          className="EventDetailsPage__backBtn"
-        >
-          <FiArrowLeft />
-          Back to Events
-        </button>
+        <BackButton to="/events" label="Back to Events" />
 
         <motion.article 
           className="EventDetails"

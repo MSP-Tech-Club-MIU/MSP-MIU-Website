@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import './PageBase.css';
-import { FiCalendar, FiMapPin, FiImage, FiFile, FiArrowLeft, FiUpload, FiX } from 'react-icons/fi';
+import './CreateEvent.css';
+import { FiCalendar, FiMapPin, FiImage, FiFile, FiUpload, FiX } from 'react-icons/fi';
 
 // Import default event image (same as Events.jsx)
 import mspLogo from '../assets/Images/msp-logo.png';
@@ -249,6 +251,7 @@ const CreateEvent = () => {
 
   return (
     <section className="PageBase">
+      <BackButton to="/events" label="Back to Events" />
       <div className="container">
         <motion.div
           className="neo-card"
@@ -256,21 +259,11 @@ const CreateEvent = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-            <button
-              onClick={() => navigate('/events')}
-              className="btn secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <FiArrowLeft />
-              Back
-            </button>
-            <div>
+          <div style={{ marginBottom: '1.5rem' }}>
               <h1 className="card-title">Create New Event</h1>
               <p className="card-sub">
                 Add a new event to the MSP Tech Club calendar
               </p>
-            </div>
           </div>
 
           <form className="attendance-form" onSubmit={onSubmit}>
@@ -357,7 +350,7 @@ const CreateEvent = () => {
             </label>
 
             {/* Registration Toggle */}
-            <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px' }}>
+            <div className="create-event-registration-toggle">
               <label className="checkbox-label" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
@@ -380,8 +373,8 @@ const CreateEvent = () => {
             <div className="grid" style={{ marginTop: '1rem' }}>
               <label className="floating-input">
                 Main Image
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
+                <div className="create-event-upload-section">
+                  <div>
                     <FiImage style={{ color: '#8EC2F0' }} />
                     <input
                       type="url"
@@ -391,7 +384,6 @@ const CreateEvent = () => {
                       placeholder="https://example.com/image.jpg or upload a file"
                       className="pill"
                       disabled={submitting || uploadingImage}
-                      style={{ flex: '1' }}
                     />
                   </div>
                   <input
@@ -407,13 +399,6 @@ const CreateEvent = () => {
                     onClick={() => imageInputRef.current?.click()}
                     disabled={submitting || uploadingImage}
                     className="btn secondary"
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      whiteSpace: 'nowrap',
-                      padding: '0.5rem 1rem'
-                    }}
                   >
                     <FiUpload />
                     {uploadingImage ? 'Uploading...' : 'Upload'}
@@ -440,24 +425,11 @@ const CreateEvent = () => {
                 </small>
                 {errors.main_image && <span className="error" style={{ marginTop: '0.25rem', display: 'block' }}>{errors.main_image}</span>}
                 {!form.main_image && (
-                  <div style={{ 
-                    marginTop: '0.75rem', 
-                    padding: '0.75rem', 
-                    background: 'rgba(142, 194, 240, 0.1)', 
-                    borderRadius: '8px',
-                    border: '1px solid rgba(142, 194, 240, 0.2)'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <div className="create-event-placeholder-preview">
+                    <div>
                       <img 
                         src={mspLogo} 
-                        alt="MSP Logo - Default event placeholder" 
-                        style={{ 
-                          width: '60px', 
-                          height: '60px', 
-                          objectFit: 'cover', 
-                          borderRadius: '6px',
-                          border: '1px solid rgba(142, 194, 240, 0.3)'
-                        }} 
+                        alt="MSP Logo - Default event placeholder"
                       />
                       <div>
                         <p style={{ margin: 0, fontSize: '0.85rem', color: '#8EC2F0', fontWeight: '500' }}>
@@ -474,8 +446,8 @@ const CreateEvent = () => {
 
               <label className="floating-input">
                 Upload File
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1', minWidth: '200px' }}>
+                <div className="create-event-upload-section">
+                  <div>
                     <FiFile style={{ color: '#8EC2F0' }} />
                     <input
                       type="url"
@@ -485,7 +457,6 @@ const CreateEvent = () => {
                       placeholder="https://example.com/file.pdf or upload a file"
                       className="pill"
                       disabled={submitting || uploadingFile}
-                      style={{ flex: '1' }}
                     />
                   </div>
                   <input
@@ -500,13 +471,6 @@ const CreateEvent = () => {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={submitting || uploadingFile}
                     className="btn secondary"
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      whiteSpace: 'nowrap',
-                      padding: '0.5rem 1rem'
-                    }}
                   >
                     <FiUpload />
                     {uploadingFile ? 'Uploading...' : 'Upload'}

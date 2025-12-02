@@ -5,12 +5,19 @@
 
 .Navbar {
     position: sticky;
+    position: -webkit-sticky; /* Safari support */
     top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
     z-index: 1000;
     backdrop-filter: blur(10px);
     background: rgba(3, 28, 53, 0.78);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     transition: background .2s ease, box-shadow .2s ease;
+    /* Ensure sticky works on all devices */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
 }
 
 .Navbar--scrolled {
@@ -88,6 +95,37 @@
     align-items: center;
     font-size: .9rem;
     opacity: .95;
+}
+
+.NavItem__icon--profile {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+}
+
+.NavItem--profile-only {
+    padding: .3rem;
+}
+
+.NavItem--profile-only .NavItem__icon {
+    margin: 0;
+}
+
+.NavItem__profile-picture {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.NavItem__profile-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1.2rem;
 }
 
 .NavItem:hover {
@@ -246,6 +284,38 @@
     display: flex;
 }
 
+.NavDrawer__icon--profile {
+    position: relative;
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.NavDrawer__link--profile-only {
+    padding: .5rem;
+    justify-content: center;
+}
+
+.NavDrawer__link--profile-only .NavDrawer__icon {
+    margin: 0;
+}
+
+.NavDrawer__profile-picture {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.NavDrawer__profile-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
+}
+
 .NavDrawer__label {
     flex: 1;
 }
@@ -302,7 +372,7 @@
     }
 }
 
-@media (max-width:680px) {
+@media (max-width: 680px) {
     .Navbar__inner {
         padding: 0 .85rem;
     }

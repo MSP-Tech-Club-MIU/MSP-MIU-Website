@@ -229,12 +229,39 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .BoardHeader {
+    padding: 40px 0 30px;
+  }
+
   .BoardHeader__title {
     font-size: 2rem;
   }
 
+  .BoardHeader__subtitle {
+    font-size: 1rem;
+  }
+
+  .DepartmentMenu {
+    padding: 20px 0 30px;
+  }
+
+  .DepartmentMenu__container {
+    padding: 0 16px;
+    gap: 10px;
+  }
+
+  .DepartmentMenu__button {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+  }
+
+  .BoardMembers {
+    padding: 30px 0 60px;
+  }
+
   .BoardMembers__grid {
-    gap: 48px;
+    padding: 0 16px;
+    gap: 40px;
   }
 
   .BoardMembers__department-group {
@@ -248,6 +275,50 @@
 
   .BoardStats__grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .BoardHeader {
+    padding: 30px 0 20px;
+  }
+
+  .BoardHeader__title {
+    font-size: 1.75rem;
+  }
+
+  .BoardHeader__subtitle {
+    font-size: 0.95rem;
+  }
+
+  .DepartmentMenu__container {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .DepartmentMenu__button {
+    padding: 7px 14px;
+    font-size: 0.75rem;
+  }
+
+  .BoardMembers__grid {
+    padding: 0 12px;
+    gap: 32px;
+  }
+
+  .BoardMembers__coheads-container {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .BoardHeader__title {
+    font-size: 1.5rem;
+  }
+
+  .DepartmentMenu__button {
+    padding: 6px 12px;
+    font-size: 0.7rem;
   }
 }
 

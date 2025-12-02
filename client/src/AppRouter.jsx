@@ -1,7 +1,8 @@
-import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
 import ScrollToTop from './components/ScrollToTop';
+import AndroidBackButtonSetup from './components/AndroidBackButtonSetup';
 
 // Lazy load pages for code splitting
 const Home = lazy(() => import('./pages/Home'));
@@ -24,6 +25,91 @@ const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Helper to check if running in Capacitor (native app) environment
+// Checked synchronously outside render cycle to avoid race conditions
+// More robust check: Capacitor must exist AND we must be in a native WebView
+const isCapacitorEnv = (() => {
+  const hasWindow = typeof window !== 'undefined';
+  const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
+  const ua = hasNavigator ? navigator.userAgent : '';
+  
+  // Check if Capacitor exists
+  const windowCapacitor = hasWindow ? !!window.Capacitor : false;
+  const windowIonic = hasWindow ? !!window.ionic : false;
+  
+  // If Capacitor doesn't exist, definitely not in native app
+  if (!windowCapacitor) {
+    return false;
+  }
+  
+  // Check if we're actually in a native WebView (not just a regular browser)
+  // Native apps have specific user agent patterns or are in a WebView
+  const isWebView = hasNavigator && (
+    /wv|WebView/i.test(ua) || // Android WebView
+    (/Mobile.*Safari/i.test(ua) && !/Chrome/i.test(ua)) || // iOS WebView (but not Chrome)
+    /capacitor/i.test(ua) || // Explicit Capacitor user agent
+    /ionic/i.test(ua) // Explicit Ionic user agent
+  );
+  
+  // Try to get platform from Capacitor (safely)
+  let platform = 'unknown';
+  let isNativePlatform = false;
+  
+  try {
+    if (window.Capacitor?.getPlatform) {
+      platform = window.Capacitor.getPlatform();
+      // Platform should be 'android', 'ios', etc. - NOT 'web'
+      isNativePlatform = platform !== 'web' && platform !== 'unknown';
+    }
+  } catch (e) {
+    // If getPlatform fails, assume web
+    platform = 'web';
+    isNativePlatform = false;
+  }
+  
+  // Only consider it Capacitor if we have BOTH:
+  // 1. Capacitor exists (already verified above)
+  // 2. AND (we're in a WebView OR platform is native)
+  // Note: windowIonic is logged for debugging but not used in detection
+  // as Ionic can be present in regular web apps without indicating native context.
+  const isCapacitor = Boolean(
+    windowCapacitor &&
+    (isWebView || isNativePlatform)
+  );
+  
+  return isCapacitor;
+})();
+
+// Wrapper component to conditionally render DownloadAndroidApp only on web
+const DownloadAndroidAppWrapper = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If in Capacitor, redirect to home
+    if (isCapacitorEnv) {
+      navigate('/', { replace: true });
+    }
+  }, [navigate]); // navigate is stable, effect runs once
+
+  // Render the component only if it's a web environment
+  if (isCapacitorEnv) {
+    // Show a minimal fallback while redirecting
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '40vh',
+        color: '#eaf2ff'
+      }}>
+        <span aria-live="polite">Redirecting…</span>
+      </div>
+    );
+  }
+
+  return <DownloadAndroidApp />;
+};
 
 // Enhanced loading component with better UX
 const PageLoader = () => (
@@ -54,9 +140,11 @@ const PageLoader = () => (
   </div>
 );
 
-const AppRouter = () => (
+const AppRouter = () => {
+  return (
   <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <ScrollToTop />
+      <AndroidBackButtonSetup />
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
@@ -77,11 +165,12 @@ const AppRouter = () => (
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        <Route path="/download-android" element={<SiteLayout><DownloadAndroidApp /></SiteLayout>} />
+        <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
   </Router>
 );
+};
 
 export default AppRouter;

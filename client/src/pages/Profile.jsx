@@ -6,6 +6,7 @@ import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -40,9 +41,6 @@ const Profile = () => {
       setUser(userData);
       setEditedData({
         full_name: userData.full_name || '',
-        email: userData.email || '',
-        university_id: userData.university_id || '',
-        department_id: userData.department_id || '',
       });
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -76,9 +74,6 @@ const Profile = () => {
     setIsEditing(true);
     setEditedData({
       full_name: user.full_name || '',
-      email: user.email || '',
-      university_id: user.university_id || '',
-      department_id: user.department_id || '',
     });
   };
 
@@ -86,9 +81,6 @@ const Profile = () => {
     setIsEditing(false);
     setEditedData({
       full_name: user.full_name || '',
-      email: user.email || '',
-      university_id: user.university_id || '',
-      department_id: user.department_id || '',
     });
     setProfileImagePreview(null);
     setProfileImageFile(null);
@@ -103,19 +95,19 @@ const Profile = () => {
     try {
       setSaving(true);
       
-      // Update local state with edited data
-      const updatedUser = { ...user, ...editedData };
+      // Prepare profile data
+      const profileData = {
+        full_name: editedData.full_name || user.full_name
+      };
       
-      // If image was uploaded, update the preview URL
-      if (profileImagePreview) {
-        updatedUser.profile_picture_url = profileImagePreview;
-      }
+      // Call API to update profile with files
+      const updatedUser = await ApiService.updateProfile(
+        profileData,
+        profileImageFile, // Profile picture file
+        scheduleFile      // Schedule file
+      );
       
-      // If schedule was uploaded, store the file name
-      if (scheduleFile && scheduleFileName) {
-        updatedUser.schedule = scheduleFileName;
-      }
-      
+      // Update local state with response from server
       setUser(updatedUser);
       setIsEditing(false);
       
@@ -125,14 +117,17 @@ const Profile = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (scheduleInputRef.current) scheduleInputRef.current.value = '';
       
-      // Clear temporary file states (files are now stored in user object)
+      // Clear temporary file states
       setProfileImagePreview(null);
       setProfileImageFile(null);
       setScheduleFile(null);
       setScheduleFileName(null);
+      
+      // Refresh profile to get updated data
+      await fetchProfile();
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert('Failed to save profile');
+      alert(error.message || 'Failed to save profile');
     } finally {
       setSaving(false);
     }
@@ -198,6 +193,16 @@ const Profile = () => {
     return `${year}`;
   };
 
+  const getScheduleDisplayName = (schedule) => {
+    if (!schedule) return 'No schedule available';
+    // If it's a URL, extract the filename
+    if (schedule.includes('/')) {
+      const parts = schedule.split('/');
+      return parts[parts.length - 1];
+    }
+    return schedule;
+  };
+
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
@@ -245,7 +250,7 @@ const Profile = () => {
     );
   }
 
-  const displayedData = isEditing ? editedData : user;
+  const displayedName = isEditing ? editedData.full_name : user.full_name;
   const profileImageUrl = profileImagePreview || user.profile_picture_url || 
     `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name || user.university_id || 'User')}&background=0077CC&color=fff&size=400`;
 
@@ -258,20 +263,21 @@ const Profile = () => {
         noindex={true}
       />
       <div className="profile-page-container">
+        <BackButton to="/" label="Back to Home" />
         {/* Header with actions */}
         <div className="profile-header">
           <h1>My Profile</h1>
           <div className="profile-actions">
             {!isEditing ? (
               <>
-                {/* <motion.button 
+                <motion.button 
                   className="action-btn edit-btn"
                   onClick={handleEdit}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
                   <FaEdit /> Edit Profile
-                </motion.button> */}
+                </motion.button>
                 <motion.button 
                   className="action-btn logout-btn"
                   onClick={handleLogout}
@@ -317,7 +323,7 @@ const Profile = () => {
               >
                 <img
                   src={profileImageUrl}
-                  alt={displayedData.full_name || 'Profile'}
+                  alt={displayedName || 'Profile'}
                   className="profile-picture-image"
                 />
                 {isEditing && (
@@ -347,7 +353,7 @@ const Profile = () => {
                   <FaCheckCircle /> {profileImageFile.name}
                 </motion.div>
               )}
-              <h2 className="profile-name">{displayedData.full_name || 'No Name'}</h2>
+              <h2 className="profile-name">{displayedName || 'No Name'}</h2>
               <p className="profile-role-text">
                 {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member'}
               </p>
@@ -385,12 +391,12 @@ const Profile = () => {
                       <input
                         type="text"
                         className="detail-input"
-                        value={displayedData.full_name}
+                        value={editedData.full_name || ''}
                         onChange={(e) => handleInputChange('full_name', e.target.value)}
                         placeholder="Enter your full name"
                       />
                     ) : (
-                      <p className="detail-value">{displayedData.full_name || 'Not set'}</p>
+                      <p className="detail-value">{user.full_name || 'Not set'}</p>
                     )}
                   </div>
                 </div>
@@ -402,17 +408,7 @@ const Profile = () => {
                   </div>
                   <div className="detail-content">
                     <label className="detail-label">Email</label>
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        className="detail-input"
-                        value={displayedData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        placeholder="Enter your email"
-                      />
-                    ) : (
-                      <p className="detail-value">{displayedData.email || 'Not set'}</p>
-                    )}
+                    <p className="detail-value">{user.email || 'Not set'}</p>
                   </div>
                 </div>
 
@@ -423,17 +419,7 @@ const Profile = () => {
                   </div>
                   <div className="detail-content">
                     <label className="detail-label">University ID</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        className="detail-input"
-                        value={displayedData.university_id}
-                        onChange={(e) => handleInputChange('university_id', e.target.value)}
-                        placeholder="20XX/XXXXX"
-                      />
-                    ) : (
-                      <p className="detail-value">{displayedData.university_id || 'Not set'}</p>
-                    )}
+                    <p className="detail-value">{user.university_id || 'Not set'}</p>
                   </div>
                 </div>
 
@@ -444,7 +430,7 @@ const Profile = () => {
                   </div>
                   <div className="detail-content">
                     <label className="detail-label">Year</label>
-                    <p className="detail-value">{extractYearFromId(displayedData.university_id)}</p>
+                    <p className="detail-value">{extractYearFromId(user.university_id)}</p>
                   </div>
                 </div>
 
@@ -455,24 +441,11 @@ const Profile = () => {
                   </div>
                   <div className="detail-content">
                     <label className="detail-label">Department</label>
-                    {isEditing ? (
-                      <select
-                        className="detail-input"
-                        value={displayedData.department_id || ''}
-                        onChange={(e) => handleInputChange('department_id', parseInt(e.target.value))}
-                      >
-                        <option value="">Select Department</option>
-                        {departments.map(dept => (
-                          <option key={dept.id} value={dept.id}>{dept.name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="detail-value">
-                        {displayedData.department_id 
-                          ? getDepartmentNameById(displayedData.department_id) 
-                          : 'Not assigned'}
-                      </p>
-                    )}
+                    <p className="detail-value">
+                      {user.department_id 
+                        ? getDepartmentNameById(user.department_id) 
+                        : 'Not assigned'}
+                    </p>
                   </div>
                 </div>
 
@@ -514,14 +487,18 @@ const Profile = () => {
                         {scheduleFile && (
                           <div className="file-selected-info">
                             <FaCheckCircle className="file-check-icon" />
-                            <p className="file-name">{scheduleFileName}</p>
+                            <p className="file-name" title={scheduleFileName}>
+                              {scheduleFileName}
+                            </p>
                           </div>
                         )}
                         {!scheduleFile && user.schedule && (
                           <div className="schedule-display" style={{ marginTop: '1rem' }}>
                             <div className="file-selected-info">
                               <FaFilePdf className="file-check-icon" />
-                              <p className="file-name">{user.schedule}</p>
+                              <p className="file-name" title={getScheduleDisplayName(user.schedule)}>
+                                {getScheduleDisplayName(user.schedule)}
+                              </p>
                             </div>
                           </div>
                         )}
@@ -529,10 +506,17 @@ const Profile = () => {
                     ) : (
                       <div className="schedule-display">
                         {user.schedule ? (
-                          <div className="file-selected-info">
+                          <a 
+                            href={user.schedule} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="file-selected-info"
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            title={getScheduleDisplayName(user.schedule)}
+                          >
                             <FaFilePdf className="file-check-icon" />
-                            <p className="file-name">{user.schedule}</p>
-                          </div>
+                            <p className="file-name">{getScheduleDisplayName(user.schedule)}</p>
+                          </a>
                         ) : (
                           <p className="detail-value">No schedule available</p>
                         )}

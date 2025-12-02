@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
+import BackButton from '../components/BackButton';
 import './PageBase.css';
 
 const AttendanceReview = () => {
@@ -259,6 +260,7 @@ const AttendanceReview = () => {
 
   return (
     <section className="PageBase" style={{ padding: '2rem 1rem' }}>
+      <BackButton to="/" label="Back to Home" />
       <div style={{ maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
         <motion.div
           className="neo-card"
