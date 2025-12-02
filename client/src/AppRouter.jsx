@@ -71,10 +71,10 @@ const isCapacitorEnv = (() => {
   
   // Only consider it Capacitor if we have BOTH:
   // 1. Capacitor exists
-  // 2. AND (we're in a WebView OR platform is native)
+  // 2. AND (we're in a WebView OR platform is native OR Ionic framework is present)
   const isCapacitor = Boolean(
     windowCapacitor &&
-    (isWebView || isNativePlatform)
+    (isWebView || isNativePlatform || windowIonic)
   );
   
   // Always log the detection result for debugging
