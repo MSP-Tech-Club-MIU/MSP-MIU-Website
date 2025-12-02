@@ -57,7 +57,7 @@ const isCapacitorEnv = (() => {
   let isNativePlatform = false;
   
   try {
-    if (windowCapacitor && window.Capacitor?.getPlatform) {
+    if (window.Capacitor?.getPlatform) {
       platform = window.Capacitor.getPlatform();
       // Platform should be 'android', 'ios', etc. - NOT 'web'
       isNativePlatform = platform !== 'web' && platform !== 'unknown';
@@ -70,7 +70,7 @@ const isCapacitorEnv = (() => {
   }
   
   // Only consider it Capacitor if we have BOTH:
-  // 1. Capacitor exists
+  // 1. Capacitor exists (already verified above)
   // 2. AND (we're in a WebView OR platform is native)
   // Note: windowIonic is logged for debugging but not used in detection
   // as Ionic can be present in regular web apps without indicating native context.
