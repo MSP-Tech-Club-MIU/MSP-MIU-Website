@@ -20,12 +20,6 @@
     transform: translateZ(0);
 }
 
-/* Add padding-top for Android to account for status bar (only when status bar is visible) */
-.Navbar--android {
-    /* Padding is set via inline style based on detected status bar height in JavaScript */
-    /* This class is only applied when statusBarHeight > 0 */
-}
-
 .Navbar--scrolled {
     background: rgba(3, 28, 53, 0.9);
     box-shadow: 0 4px 26px -6px rgba(0, 0, 0, 0.55);
