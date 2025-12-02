@@ -63,8 +63,7 @@ const isCapacitorEnv = (() => {
       isNativePlatform = platform !== 'web' && platform !== 'unknown';
     }
   } catch (e) {
-    // If getPlatform fails, log the error and assume web
-    console.warn('[Capacitor Detection] Error getting platform:', e);
+    // If getPlatform fails, assume web
     platform = 'web';
     isNativePlatform = false;
   }
@@ -79,61 +78,22 @@ const isCapacitorEnv = (() => {
     (isWebView || isNativePlatform)
   );
   
-  // Always log the detection result for debugging
-  if (hasWindow) {
-    console.log('[Capacitor Detection]', {
-      hasWindow,
-      hasNavigator,
-      userAgent: ua.substring(0, 150), // First 150 chars
-      windowCapacitor,
-      windowIonic,
-      isWebView,
-      platform,
-      isNativePlatform,
-      isCapacitorEnv: isCapacitor,
-      pathname: window.location.pathname,
-      finalDecision: isCapacitor ? 'NATIVE_APP' : 'WEB_BROWSER'
-    });
-  }
-  
   return isCapacitor;
 })();
-
-// Component to log when route is matched
-const RouteLogger = ({ path }) => {
-  useEffect(() => {
-    console.log(`[AppRouter] Route matched: ${path}`);
-  }, [path]);
-  return null;
-};
 
 // Wrapper component to conditionally render DownloadAndroidApp only on web
 const DownloadAndroidAppWrapper = () => {
   const navigate = useNavigate();
 
-  // Log immediately on render
-  console.log('[DownloadAndroidAppWrapper] Component rendered');
-  console.log('[DownloadAndroidAppWrapper] isCapacitorEnv:', isCapacitorEnv);
-  console.log('[DownloadAndroidAppWrapper] Current pathname:', typeof window !== 'undefined' ? window.location.pathname : 'N/A');
-
   useEffect(() => {
-    // Debug logging
-    console.log('[DownloadAndroidAppWrapper] useEffect triggered');
-    console.log('[DownloadAndroidAppWrapper] isCapacitorEnv:', isCapacitorEnv);
-    console.log('[DownloadAndroidAppWrapper] Current pathname:', window.location.pathname);
-    
     // If in Capacitor, redirect to home
     if (isCapacitorEnv) {
-      console.log('[DownloadAndroidAppWrapper] Redirecting to home (Capacitor detected)');
       navigate('/', { replace: true });
-    } else {
-      console.log('[DownloadAndroidAppWrapper] NOT redirecting - Web environment confirmed');
     }
   }, [navigate]); // navigate is stable, effect runs once
 
   // Render the component only if it's a web environment
   if (isCapacitorEnv) {
-    console.log('[DownloadAndroidAppWrapper] Returning redirect fallback');
     // Show a minimal fallback while redirecting
     return (
       <div style={{ 
@@ -148,23 +108,7 @@ const DownloadAndroidAppWrapper = () => {
     );
   }
 
-  console.log('[DownloadAndroidAppWrapper] Returning DownloadAndroidApp component');
-  try {
-    return <DownloadAndroidApp />;
-  } catch (error) {
-    console.error('[DownloadAndroidAppWrapper] Error rendering DownloadAndroidApp:', error);
-    return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        minHeight: '40vh',
-        color: '#ff6b6b'
-      }}>
-        <span>Error loading page. Check console for details.</span>
-      </div>
-    );
-  }
+  return <DownloadAndroidApp />;
 };
 
 // Enhanced loading component with better UX
@@ -197,16 +141,6 @@ const PageLoader = () => (
 );
 
 const AppRouter = () => {
-  // Log route changes
-  React.useEffect(() => {
-    const logRoute = () => {
-      console.log('[AppRouter] Current route:', window.location.pathname);
-    };
-    logRoute();
-    window.addEventListener('popstate', logRoute);
-    return () => window.removeEventListener('popstate', logRoute);
-  }, []);
-
   return (
   <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <ScrollToTop />
@@ -231,15 +165,7 @@ const AppRouter = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        <Route 
-          path="/download-android" 
-          element={
-            <SiteLayout>
-              <RouteLogger path="/download-android" />
-              <DownloadAndroidAppWrapper />
-            </SiteLayout>
-          } 
-        />
+        <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>
