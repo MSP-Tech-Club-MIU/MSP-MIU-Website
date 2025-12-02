@@ -233,6 +233,63 @@ class ApiService {
     }
   }
 
+  static async updateProfile(profileData, profilePictureFile = null, scheduleFile = null) {
+    try {
+      // Check if token is expired before making request
+      if (this.isTokenExpired()) {
+        this.removeAuthToken();
+        throw new Error('Token expired. Please login again.');
+      }
+
+      const formData = new FormData();
+      
+      // Add text fields
+      if (profileData.full_name) {
+        formData.append('full_name', profileData.full_name);
+      }
+      
+      // Add files if provided
+      if (profilePictureFile) {
+        formData.append('profile_picture', profilePictureFile);
+      }
+      
+      if (scheduleFile) {
+        formData.append('schedule', scheduleFile);
+      }
+
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/users/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
+      
+      // Handle 401 Unauthorized (token expired or invalid)
+      if (response.status === 401) {
+        this.removeAuthToken();
+        throw new Error('Token expired. Please login again.');
+      }
+      
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || 'Failed to update profile');
+      }
+      
+      const result = await response.json();
+      return result.user;
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  }
+
   // Activate account - set password for user by token or email
   static async activateAccount(token, password, email = null) {
     try {
