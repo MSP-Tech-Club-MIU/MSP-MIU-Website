@@ -136,7 +136,7 @@ const Navbar = memo(() => {
     
     // Add Login or Profile based on authentication status
     if (isAuthenticated) {
-      baseLinks.push({ to: '/profile', label: 'Profile', icon: <FaUser /> });
+      baseLinks.push({ to: '/profile', label: 'Profile', icon: <FaUser />, isProfile: true });
     } else {
       baseLinks.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
     }
@@ -236,10 +236,33 @@ const Navbar = memo(() => {
               ) : (
                 <NavLink
                   to={l.to}
-                  className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''}`}
+                  className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavItem--profile-only' : ''}`}
                 >
-                  <span className="NavItem__icon">{l.icon}</span>
-                  <span className="NavItem__label">{l.label}</span>
+                  <span className={`NavItem__icon ${l.isProfile ? 'NavItem__icon--profile' : ''}`}>
+                    {l.isProfile ? (
+                      <>
+                        {user?.profile_picture_url ? (
+                          <img
+                            src={user.profile_picture_url}
+                            alt="Profile"
+                            className="NavItem__profile-picture"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              e.target.style.display = 'none';
+                              const fallback = e.target.parentElement.querySelector('.NavItem__profile-fallback');
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <span className="NavItem__profile-fallback" style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}>
+                          <FaUser />
+                        </span>
+                      </>
+                    ) : (
+                      l.icon
+                    )}
+                  </span>
+                  {!l.isProfile && <span className="NavItem__label">{l.label}</span>}
                 </NavLink>
               )}
             </li>
@@ -313,11 +336,34 @@ const Navbar = memo(() => {
                             e.stopPropagation();
                             closeMobile();
                           }}
-                          className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                          className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavDrawer__link--profile-only' : ''}`}
                           end
                         >
-                          <span className="NavDrawer__icon">{l.icon}</span>
-                          <span className="NavDrawer__label">{l.label}</span>
+                          <span className={`NavDrawer__icon ${l.isProfile ? 'NavDrawer__icon--profile' : ''}`}>
+                            {l.isProfile ? (
+                              <>
+                                {user?.profile_picture_url ? (
+                                  <img
+                                    src={user.profile_picture_url}
+                                    alt="Profile"
+                                    className="NavDrawer__profile-picture"
+                                    onError={(e) => {
+                                      // Fallback to icon if image fails to load
+                                      e.target.style.display = 'none';
+                                      const fallback = e.target.parentElement.querySelector('.NavDrawer__profile-fallback');
+                                      if (fallback) fallback.style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <span className="NavDrawer__profile-fallback" style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}>
+                                  <FaUser />
+                                </span>
+                              </>
+                            ) : (
+                              l.icon
+                            )}
+                          </span>
+                          {!l.isProfile && <span className="NavDrawer__label">{l.label}</span>}
                         </NavLink>
                       )}
                     </li>

@@ -97,6 +97,37 @@
     opacity: .95;
 }
 
+.NavItem__icon--profile {
+    position: relative;
+    width: 2rem;
+    height: 2rem;
+}
+
+.NavItem--profile-only {
+    padding: .3rem;
+}
+
+.NavItem--profile-only .NavItem__icon {
+    margin: 0;
+}
+
+.NavItem__profile-picture {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.NavItem__profile-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1.2rem;
+}
+
 .NavItem:hover {
     background: rgba(0, 119, 204, 0.22);
     color: #fff;
@@ -251,6 +282,38 @@
 .NavDrawer__icon {
     font-size: 1.05rem;
     display: flex;
+}
+
+.NavDrawer__icon--profile {
+    position: relative;
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.NavDrawer__link--profile-only {
+    padding: .5rem;
+    justify-content: center;
+}
+
+.NavDrawer__link--profile-only .NavDrawer__icon {
+    margin: 0;
+}
+
+.NavDrawer__profile-picture {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+}
+
+.NavDrawer__profile-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 1.5rem;
 }
 
 .NavDrawer__label {
