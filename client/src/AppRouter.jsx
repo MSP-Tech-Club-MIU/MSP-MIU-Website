@@ -105,10 +105,10 @@ const PageLoader = () => (
 
 const AppRouter = () => {
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ScrollToTop />
+  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <ScrollToTop />
       <AndroidBackButtonSetup />
-      <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
         <Route path="/about" element={<SiteLayout><AboutUs /></SiteLayout>} />
@@ -133,7 +133,7 @@ const AppRouter = () => {
       </Routes>
     </Suspense>
   </Router>
-  );
+);
 };
 
 export default AppRouter;
