@@ -8,7 +8,7 @@ import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
 import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
-import { isCapacitor } from '../../utils/androidBackButton';
+import { isCapacitor, isAndroid } from '../../utils/androidBackButton';
 import mspLogo from '../../assets/Images/msp-logo.png';
 
 const Navbar = memo(() => {
@@ -163,6 +163,126 @@ const Navbar = memo(() => {
       return () => document.removeEventListener('keydown', handleEscape);
     }
   }, [mobileOpen, closeMobile]);
+
+  // Swipe left gesture to open drawer (Android only)
+  useEffect(() => {
+    // Only enable swipe gesture on Android
+    if (!isAndroid()) {
+      return;
+    }
+
+    let touchStartX = null;
+    let touchStartY = null;
+    let isHorizontalSwipe = false;
+    let isVerticalSwipe = false;
+    const minSwipeDistance = 50; // Minimum distance for a swipe
+    const maxVerticalDistance = 100; // Maximum vertical movement to still count as horizontal swipe
+
+    const handleTouchStart = (e) => {
+      // Only handle if drawer is closed
+      if (mobileOpen) {
+        return;
+      }
+      
+      const touch = e.touches[0];
+      if (touch) {
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        isHorizontalSwipe = false;
+        isVerticalSwipe = false;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      // If we don't have a valid start position, ignore
+      if (touchStartX === null || touchStartY === null || mobileOpen) {
+        return;
+      }
+
+      const touch = e.touches[0];
+      if (!touch) {
+        return;
+      }
+
+      const currentX = touch.clientX;
+      const currentY = touch.clientY;
+      const deltaX = currentX - touchStartX;
+      const deltaY = currentY - touchStartY;
+
+      // Determine swipe direction early to avoid conflicts
+      // If it's clearly vertical (more vertical than horizontal), cancel horizontal swipe
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 20) {
+        isVerticalSwipe = true;
+        isHorizontalSwipe = false;
+        // Cancel the gesture - this is a vertical swipe (for pull-to-refresh)
+        touchStartX = null;
+        touchStartY = null;
+      } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20) {
+        isHorizontalSwipe = true;
+        isVerticalSwipe = false;
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (touchStartX === null || touchStartY === null || mobileOpen) {
+        return;
+      }
+
+      // If it was determined to be a vertical swipe, don't process
+      if (isVerticalSwipe) {
+        touchStartX = null;
+        touchStartY = null;
+        isHorizontalSwipe = false;
+        isVerticalSwipe = false;
+        return;
+      }
+
+      const touch = e.changedTouches[0];
+      if (!touch) {
+        touchStartX = null;
+        touchStartY = null;
+        isHorizontalSwipe = false;
+        isVerticalSwipe = false;
+        return;
+      }
+
+      const touchEndX = touch.clientX;
+      const touchEndY = touch.clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // Check if it's a horizontal swipe (left) and not too vertical
+      // Ensure it's more horizontal than vertical to avoid conflicts with pull-to-refresh
+      if (
+        deltaX < -minSwipeDistance &&
+        Math.abs(deltaY) < maxVerticalDistance &&
+        Math.abs(deltaX) > Math.abs(deltaY) &&
+        isHorizontalSwipe
+      ) {
+        // Swipe left detected - open drawer
+        setMobileOpen(true);
+      }
+
+      touchStartX = null;
+      touchStartY = null;
+      isHorizontalSwipe = false;
+      isVerticalSwipe = false;
+    };
+
+    // Add touch event listeners to the document
+    // Use passive: true to not interfere with SwipeRefreshLayout
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [mobileOpen]);
 
   return (
     <header className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}>      

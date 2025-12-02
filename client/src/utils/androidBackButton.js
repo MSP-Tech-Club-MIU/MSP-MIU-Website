@@ -72,6 +72,33 @@ export const getAppPlugin = async () => {
 };
 
 /**
+ * Check if running on Android platform specifically
+ * Returns true only if running in Android Capacitor app
+ */
+export const isAndroid = () => {
+  if (!isCapacitor()) {
+    return false;
+  }
+  
+  try {
+    const hasWindow = typeof window !== 'undefined';
+    if (hasWindow && window.Capacitor?.getPlatform) {
+      const platform = window.Capacitor.getPlatform();
+      return platform === 'android';
+    }
+  } catch (e) {
+    // If getPlatform fails, check user agent as fallback
+    const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
+    if (hasNavigator) {
+      const ua = navigator.userAgent;
+      return /wv|WebView/i.test(ua) && /Android/i.test(ua);
+    }
+  }
+  
+  return false;
+};
+
+/**
  * Exit the app (only works in Capacitor)
  */
 export const exitApp = async () => {

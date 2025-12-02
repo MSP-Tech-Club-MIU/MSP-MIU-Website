@@ -21,8 +21,8 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Hide notch and status bar for consistent interface
-        hideSystemUI();
+        // Show system UI (notch and status bar) on all devices
+        showSystemUI();
         
         // Setup SwipeRefreshLayout after a short delay to ensure Capacitor is initialized
         setupSwipeRefresh();
@@ -33,7 +33,7 @@ public class MainActivity extends BridgeActivity {
         super.onStart();
         // Ensure setup happens even if onCreate didn't catch it
         setupSwipeRefresh();
-        hideSystemUI();
+        showSystemUI();
     }
 
     private void setupSwipeRefresh() {
@@ -73,6 +73,9 @@ public class MainActivity extends BridgeActivity {
                     // Set progress background color
                     swipeRefreshLayout.setProgressBackgroundColorSchemeResource(android.R.color.white);
                     
+                    // Ensure SwipeRefreshLayout is enabled
+                    swipeRefreshLayout.setEnabled(true);
+                    
                     // Set the refresh listener
                     swipeRefreshLayout.setOnRefreshListener(() -> {
                         // Reload the web view
@@ -98,40 +101,37 @@ public class MainActivity extends BridgeActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
-            hideSystemUI();
+            showSystemUI();
         }
     }
 
-    private void hideSystemUI() {
-        // Enable edge-to-edge display
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+    private void showSystemUI() {
+        // Enable edge-to-edge display but show system bars
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             // For Android 11 (API 30) and above
             WindowInsetsController controller = getWindow().getInsetsController();
             if (controller != null) {
-                controller.hide(android.view.WindowInsets.Type.statusBars() | 
+                // Show status bars and navigation bars
+                controller.show(android.view.WindowInsets.Type.statusBars() | 
                                android.view.WindowInsets.Type.navigationBars());
+                // Use default behavior (bars stay visible)
                 controller.setSystemBarsBehavior(
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    WindowInsetsController.BEHAVIOR_DEFAULT
                 );
             }
         } else {
             // For older Android versions
             View decorView = getWindow().getDecorView();
-            int uiOptions = View.SYSTEM_UI_FLAG_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            // Show system UI with stable layout
+            int uiOptions = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
             decorView.setSystemUiVisibility(uiOptions);
         }
         
-        // Hide the status bar
-        getWindow().setFlags(
-            WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            WindowManager.LayoutParams.FLAG_FULLSCREEN
-        );
+        // Clear fullscreen flag to show status bar
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
 }
