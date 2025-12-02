@@ -63,7 +63,8 @@ const isCapacitorEnv = (() => {
       isNativePlatform = platform !== 'web' && platform !== 'unknown';
     }
   } catch (e) {
-    // If getPlatform fails, assume web
+    // If getPlatform fails, log the error and assume web
+    console.warn('[Capacitor Detection] Error getting platform:', e);
     platform = 'web';
     isNativePlatform = false;
   }
