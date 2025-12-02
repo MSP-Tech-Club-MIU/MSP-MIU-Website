@@ -45,6 +45,13 @@
   white-space: nowrap;
 }
 
+/* Hide BackButton on desktop screens (show only on mobile/tablet) */
+@media (min-width: 769px) {
+  .BackButton {
+    display: none;
+  }
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .BackButton {
