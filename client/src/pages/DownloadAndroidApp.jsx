@@ -7,6 +7,8 @@ import { FaAndroid } from 'react-icons/fa';
 import './DownloadAndroidApp.css';
 
 const DownloadAndroidApp = memo(() => {
+  console.log('[DownloadAndroidApp] Component rendered');
+  
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -68,6 +70,8 @@ const DownloadAndroidApp = memo(() => {
     window.open(apkUrl, '_blank');
   };
 
+  console.log('[DownloadAndroidApp] Rendering JSX');
+  
   return (
     <main className="DownloadAndroidApp">
       <BackButton to="/" label="Back to Home" />

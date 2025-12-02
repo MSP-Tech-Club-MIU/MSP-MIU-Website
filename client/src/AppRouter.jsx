@@ -101,8 +101,14 @@ const isCapacitorEnv = (() => {
 const DownloadAndroidAppWrapper = () => {
   const navigate = useNavigate();
 
+  // Log immediately on render
+  console.log('[DownloadAndroidAppWrapper] Component rendered');
+  console.log('[DownloadAndroidAppWrapper] isCapacitorEnv:', isCapacitorEnv);
+  console.log('[DownloadAndroidAppWrapper] Current pathname:', typeof window !== 'undefined' ? window.location.pathname : 'N/A');
+
   useEffect(() => {
     // Debug logging
+    console.log('[DownloadAndroidAppWrapper] useEffect triggered');
     console.log('[DownloadAndroidAppWrapper] isCapacitorEnv:', isCapacitorEnv);
     console.log('[DownloadAndroidAppWrapper] Current pathname:', window.location.pathname);
     
@@ -111,12 +117,13 @@ const DownloadAndroidAppWrapper = () => {
       console.log('[DownloadAndroidAppWrapper] Redirecting to home (Capacitor detected)');
       navigate('/', { replace: true });
     } else {
-      console.log('[DownloadAndroidAppWrapper] Rendering DownloadAndroidApp (Web environment)');
+      console.log('[DownloadAndroidAppWrapper] NOT redirecting - Web environment confirmed');
     }
   }, [navigate]); // navigate is stable, effect runs once
 
   // Render the component only if it's a web environment
   if (isCapacitorEnv) {
+    console.log('[DownloadAndroidAppWrapper] Returning redirect fallback');
     // Show a minimal fallback while redirecting
     return (
       <div style={{ 
@@ -131,8 +138,23 @@ const DownloadAndroidAppWrapper = () => {
     );
   }
 
-  console.log('[DownloadAndroidAppWrapper] Rendering DownloadAndroidApp component');
-  return <DownloadAndroidApp />;
+  console.log('[DownloadAndroidAppWrapper] Returning DownloadAndroidApp component');
+  try {
+    return <DownloadAndroidApp />;
+  } catch (error) {
+    console.error('[DownloadAndroidAppWrapper] Error rendering DownloadAndroidApp:', error);
+    return (
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '40vh',
+        color: '#ff6b6b'
+      }}>
+        <span>Error loading page. Check console for details.</span>
+      </div>
+    );
+  }
 };
 
 // Enhanced loading component with better UX
