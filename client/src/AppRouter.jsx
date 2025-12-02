@@ -50,14 +50,14 @@ const isCapacitorEnv = (() => {
     (/Mobile.*Safari/i.test(ua) && !/Chrome/i.test(ua)) || // iOS WebView (but not Chrome)
     /capacitor/i.test(ua) || // Explicit Capacitor user agent
     /ionic/i.test(ua) // Explicit Ionic user agent
-  );
+  ) || windowIonic; // Also consider Ionic global as WebView indicator
   
   // Try to get platform from Capacitor (safely)
   let platform = 'unknown';
   let isNativePlatform = false;
   
   try {
-    if (windowCapacitor && window.Capacitor?.getPlatform) {
+    if (window.Capacitor?.getPlatform) {
       platform = window.Capacitor.getPlatform();
       // Platform should be 'android', 'ios', etc. - NOT 'web'
       isNativePlatform = platform !== 'web' && platform !== 'unknown';
@@ -70,12 +70,9 @@ const isCapacitorEnv = (() => {
   }
   
   // Only consider it Capacitor if we have BOTH:
-  // 1. Capacitor exists
+  // 1. Capacitor exists (already verified by early return)
   // 2. AND (we're in a WebView OR platform is native)
-  const isCapacitor = Boolean(
-    windowCapacitor &&
-    (isWebView || isNativePlatform)
-  );
+  const isCapacitor = Boolean(isWebView || isNativePlatform);
   
   // Always log the detection result for debugging
   if (hasWindow) {
