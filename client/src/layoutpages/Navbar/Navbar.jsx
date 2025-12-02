@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus, FaAndroid } from 'react-icons/fa';
 import { MdGroups } from 'react-icons/md';
 import './Navbar.css';
@@ -164,128 +165,52 @@ const Navbar = memo(() => {
     }
   }, [mobileOpen, closeMobile]);
 
-  // Swipe left gesture to open drawer (Android only)
-  useEffect(() => {
-    // Only enable swipe gesture on Android
-    if (!isAndroid()) {
-      return;
-    }
+  // Swipe left gesture to open drawer (Android only) using react-use-gesture
+  const edgeThreshold = 30; // Px from the left edge to initiate a swipe
+  
+  const bindSwipeGesture = useDrag(
+    ({ swipe: [swipeX], first, initial: [ix, iy] }) => {
+      // Only enable swipe gesture on Android
+      if (!isAndroid()) {
+        return;
+      }
 
-    let touchStartX = null;
-    let touchStartY = null;
-    let isHorizontalSwipe = false;
-    let isVerticalSwipe = false;
-    const minSwipeDistance = 50; // Minimum distance for a swipe
-    const maxVerticalDistance = 100; // Maximum vertical movement to still count as horizontal swipe
-
-    const handleTouchStart = (e) => {
       // Only handle if drawer is closed
       if (mobileOpen) {
         return;
       }
-      
-      const touch = e.touches[0];
-      if (touch) {
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        isHorizontalSwipe = false;
-        isVerticalSwipe = false;
-      }
-    };
 
-    const handleTouchMove = (e) => {
-      // If we don't have a valid start position, ignore
-      if (touchStartX === null || touchStartY === null || mobileOpen) {
-        return;
+      // Check if swipe started from the left edge
+      if (first && ix > edgeThreshold) {
+        return; // Don't start tracking if not from edge
       }
 
-      const touch = e.touches[0];
-      if (!touch) {
-        return;
-      }
-
-      const currentX = touch.clientX;
-      const currentY = touch.clientY;
-      const deltaX = currentX - touchStartX;
-      const deltaY = currentY - touchStartY;
-
-      // Determine swipe direction early to avoid conflicts
-      // If it's clearly vertical (more vertical than horizontal), cancel horizontal swipe
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 20) {
-        isVerticalSwipe = true;
-        isHorizontalSwipe = false;
-        // Cancel the gesture - this is a vertical swipe (for pull-to-refresh)
-        touchStartX = null;
-        touchStartY = null;
-      } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20) {
-        isHorizontalSwipe = true;
-        isVerticalSwipe = false;
-      }
-    };
-
-    const handleTouchEnd = (e) => {
-      if (touchStartX === null || touchStartY === null || mobileOpen) {
-        return;
-      }
-
-      // If it was determined to be a vertical swipe, don't process
-      if (isVerticalSwipe) {
-        touchStartX = null;
-        touchStartY = null;
-        isHorizontalSwipe = false;
-        isVerticalSwipe = false;
-        return;
-      }
-
-      const touch = e.changedTouches[0];
-      if (!touch) {
-        touchStartX = null;
-        touchStartY = null;
-        isHorizontalSwipe = false;
-        isVerticalSwipe = false;
-        return;
-      }
-
-      const touchEndX = touch.clientX;
-      const touchEndY = touch.clientY;
-      const deltaX = touchEndX - touchStartX;
-      const deltaY = touchEndY - touchStartY;
-
-      // Check if it's a horizontal swipe (left) and not too vertical
-      // Ensure it's more horizontal than vertical to avoid conflicts with pull-to-refresh
-      if (
-        deltaX < -minSwipeDistance &&
-        Math.abs(deltaY) < maxVerticalDistance &&
-        Math.abs(deltaX) > Math.abs(deltaY) &&
-        isHorizontalSwipe
-      ) {
+      // Handle swipe left gesture
+      if (swipeX === -1) {
         // Swipe left detected - open drawer
         setMobileOpen(true);
       }
-
-      touchStartX = null;
-      touchStartY = null;
-      isHorizontalSwipe = false;
-      isVerticalSwipe = false;
-    };
-
-    // Add touch event listeners to the document
-    // Use passive: true to not interfere with SwipeRefreshLayout
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: true });
-    document.addEventListener('touchend', handleTouchEnd, { passive: true });
-    document.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-      document.removeEventListener('touchcancel', handleTouchEnd);
-    };
-  }, [mobileOpen]);
+    },
+    {
+      // Only detect horizontal swipes
+      axis: 'x',
+      // Only trigger on swipe left (negative direction)
+      swipeDistance: [50, 50],
+      swipeVelocity: [0.5, 0.5],
+      // Filter to only allow swipes from left edge
+      filterTaps: true,
+      // Prevent conflicts with vertical gestures (pull-to-refresh)
+      threshold: 10,
+      // Only enable on Android
+      enabled: isAndroid() && !mobileOpen,
+    }
+  );
 
   return (
-    <header className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}>      
+    <header 
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}
+      {...bindSwipeGesture()}
+    >      
       <div className="Navbar__inner">
         <NavLink to="/" className="Navbar__brand" aria-label="MSP Home">
           <img
