@@ -49,8 +49,9 @@
 
 .EventsPage__filters {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .EventsPage__filterBtn {
@@ -66,10 +67,8 @@
     backdrop-filter: blur(10px);
     letter-spacing: .4px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-    width: 100%;
+    min-width: fit-content;
+    flex-shrink: 0;
 }
 
 .EventsPage__filterBtn:hover {
@@ -411,13 +410,11 @@
     }
 
     .EventsPage__filterBtn {
-        padding: 8px 12px;
+        padding: 8px 14px;
         font-size: 0.75rem;
-        min-width: 0;
-        width: 100%;
+        min-width: fit-content;
+        flex: 1;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         text-align: center;
     }
 
