@@ -487,14 +487,18 @@ const Profile = () => {
                         {scheduleFile && (
                           <div className="file-selected-info">
                             <FaCheckCircle className="file-check-icon" />
-                            <p className="file-name">{scheduleFileName}</p>
+                            <p className="file-name" title={scheduleFileName}>
+                              {scheduleFileName}
+                            </p>
                           </div>
                         )}
                         {!scheduleFile && user.schedule && (
                           <div className="schedule-display" style={{ marginTop: '1rem' }}>
                             <div className="file-selected-info">
                               <FaFilePdf className="file-check-icon" />
-                              <p className="file-name">{getScheduleDisplayName(user.schedule)}</p>
+                              <p className="file-name" title={getScheduleDisplayName(user.schedule)}>
+                                {getScheduleDisplayName(user.schedule)}
+                              </p>
                             </div>
                           </div>
                         )}
@@ -507,7 +511,8 @@ const Profile = () => {
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="file-selected-info"
-                            style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                            style={{ textDecoration: 'none', color: 'inherit' }}
+                            title={getScheduleDisplayName(user.schedule)}
                           >
                             <FaFilePdf className="file-check-icon" />
                             <p className="file-name">{getScheduleDisplayName(user.schedule)}</p>

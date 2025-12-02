@@ -1,8 +1,8 @@
 .BackButton {
   position: fixed;
-  top: 90px;
+  top: calc(var(--nav-height, 70px) + 16px);
   left: 24px;
-  z-index: 999;
+  z-index: 999; /* Below Navbar (z-index: 1000) */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -55,7 +55,7 @@
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .BackButton {
-    top: 95px;
+    top: calc(var(--nav-height, 70px) + 12px);
     left: 20px;
     padding: 8px 16px;
     font-size: 0.85rem;
@@ -68,7 +68,7 @@
 
 @media (max-width: 480px) {
   .BackButton {
-    top: 85px;
+    top: calc(var(--nav-height, 70px) + 10px);
     left: 16px;
     padding: 10px;
     border-radius: 50%;
@@ -84,7 +84,7 @@
 
 @media (max-width: 360px) {
   .BackButton {
-    top: 65px;
+    top: calc(var(--nav-height, 70px) + 8px);
     left: 12px;
     width: 36px;
     height: 36px;
