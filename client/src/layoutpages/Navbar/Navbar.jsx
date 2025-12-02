@@ -18,6 +18,8 @@ const Navbar = memo(() => {
   const [showLoginCard, setShowLoginCard] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
+  const [isAndroidDevice, setIsAndroidDevice] = useState(false);
+  const [statusBarHeight, setStatusBarHeight] = useState(0);
   const location = useLocation();
 
   // Check authentication status and handle token expiration
@@ -76,6 +78,75 @@ const Navbar = memo(() => {
       clearInterval(intervalId);
     };
   }, [location.pathname]);
+
+  // Check if running on Android device and detect status bar height
+  useEffect(() => {
+    const android = isAndroid();
+    setIsAndroidDevice(android);
+    
+    if (android) {
+      const getStatusBarHeight = () => {
+        // Method 1: Check visual viewport vs window height difference
+        // This detects if status bar is taking up space
+        if (window.visualViewport) {
+          const diff = window.innerHeight - window.visualViewport.height;
+          // Status bar is typically 24-48px, so use this if it's in a reasonable range
+          if (diff > 0 && diff < 100) {
+            return diff;
+          }
+        }
+        
+        // Method 2: Check if we can detect safe-area-inset via CSS custom property
+        // Try to read it from a test element
+        try {
+          const testEl = document.createElement('div');
+          testEl.style.cssText = 'position:fixed;top:0;left:-9999px;padding-top:env(safe-area-inset-top,0px);';
+          document.body.appendChild(testEl);
+          const computed = window.getComputedStyle(testEl);
+          const paddingTop = computed.paddingTop;
+          const value = parseFloat(paddingTop);
+          document.body.removeChild(testEl);
+          
+          if (value > 0) {
+            return value;
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+        
+        // No status bar detected
+        return 0;
+      };
+      
+      // Set initial status bar height after a small delay to ensure viewport is ready
+      const checkHeight = () => {
+        const height = getStatusBarHeight();
+        setStatusBarHeight(height);
+      };
+      
+      // Check immediately and after a short delay
+      checkHeight();
+      const timeoutId = setTimeout(checkHeight, 100);
+      
+      // Re-check on resize/orientation change
+      const handleResize = () => {
+        checkHeight();
+      };
+      
+      window.addEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleResize);
+      }
+      
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener('resize', handleResize);
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', handleResize);
+        }
+      };
+    }
+  }, []);
 
   useEffect(() => { 
     document.body.style.overflow = mobileOpen ? 'hidden' : ''; 
@@ -208,7 +279,8 @@ const Navbar = memo(() => {
 
   return (
     <header 
-      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''}`}
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''}`}
+      style={isAndroidDevice && statusBarHeight > 0 ? { paddingTop: `${statusBarHeight}px` } : {}}
       {...bindSwipeGesture()}
     >      
       <div className="Navbar__inner">
