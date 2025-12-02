@@ -38,33 +38,46 @@ const isCapacitorEnv = (() => {
   const windowCapacitor = hasWindow ? !!window.Capacitor : false;
   const windowIonic = hasWindow ? !!window.ionic : false;
   
+  // If Capacitor doesn't exist, definitely not in native app
+  if (!windowCapacitor) {
+    return false;
+  }
+  
   // Check if we're actually in a native WebView (not just a regular browser)
   // Native apps have specific user agent patterns or are in a WebView
   const isWebView = hasNavigator && (
     /wv|WebView/i.test(ua) || // Android WebView
-    /Mobile.*Safari/i.test(ua) && !/Chrome/i.test(ua) || // iOS WebView (but not Chrome)
+    (/Mobile.*Safari/i.test(ua) && !/Chrome/i.test(ua)) || // iOS WebView (but not Chrome)
     /capacitor/i.test(ua) || // Explicit Capacitor user agent
     /ionic/i.test(ua) // Explicit Ionic user agent
   );
   
-  // Check if we're in a native app by checking for native platform indicators
-  const isNativePlatform = hasWindow && (
-    // Check if Capacitor is actually initialized (has platform info)
-    (windowCapacitor && window.Capacitor?.getPlatform && window.Capacitor.getPlatform() !== 'web') ||
-    // Or if we're in a WebView with Capacitor
-    (windowCapacitor && isWebView)
-  );
+  // Try to get platform from Capacitor (safely)
+  let platform = 'unknown';
+  let isNativePlatform = false;
   
-  // Only consider it Capacitor if we have both Capacitor AND native platform indicators
+  try {
+    if (windowCapacitor && window.Capacitor?.getPlatform) {
+      platform = window.Capacitor.getPlatform();
+      // Platform should be 'android', 'ios', etc. - NOT 'web'
+      isNativePlatform = platform !== 'web' && platform !== 'unknown';
+    }
+  } catch (e) {
+    // If getPlatform fails, assume web
+    platform = 'web';
+    isNativePlatform = false;
+  }
+  
+  // Only consider it Capacitor if we have BOTH:
+  // 1. Capacitor exists
+  // 2. AND (we're in a WebView OR platform is native)
   const isCapacitor = Boolean(
-    hasWindow &&
     windowCapacitor &&
     (isWebView || isNativePlatform)
   );
   
   // Always log the detection result for debugging
   if (hasWindow) {
-    const platform = windowCapacitor && window.Capacitor?.getPlatform ? window.Capacitor.getPlatform() : 'unknown';
     console.log('[Capacitor Detection]', {
       hasWindow,
       hasNavigator,
@@ -75,7 +88,8 @@ const isCapacitorEnv = (() => {
       platform,
       isNativePlatform,
       isCapacitorEnv: isCapacitor,
-      pathname: window.location.pathname
+      pathname: window.location.pathname,
+      finalDecision: isCapacitor ? 'NATIVE_APP' : 'WEB_BROWSER'
     });
   }
   
