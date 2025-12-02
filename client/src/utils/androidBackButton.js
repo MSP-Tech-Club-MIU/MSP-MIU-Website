@@ -6,10 +6,51 @@
  */
 
 /**
- * Check if running in Capacitor environment
+ * Check if running in Capacitor (native app) environment
+ * More robust check: Capacitor must exist AND we must be in a native WebView
  */
 export const isCapacitor = () => {
-  return typeof window !== 'undefined' && window.Capacitor;
+  const hasWindow = typeof window !== 'undefined';
+  const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
+  const ua = hasNavigator ? navigator.userAgent : '';
+  
+  // Check if Capacitor exists
+  const windowCapacitor = hasWindow ? !!window.Capacitor : false;
+  
+  // If Capacitor doesn't exist, definitely not in native app
+  if (!windowCapacitor) {
+    return false;
+  }
+  
+  // Check if we're actually in a native WebView (not just a regular browser)
+  const isWebView = hasNavigator && (
+    /wv|WebView/i.test(ua) || // Android WebView
+    (/Mobile.*Safari/i.test(ua) && !/Chrome/i.test(ua)) || // iOS WebView (but not Chrome)
+    /capacitor/i.test(ua) || // Explicit Capacitor user agent
+    /ionic/i.test(ua) // Explicit Ionic user agent
+  );
+  
+  // Try to get platform from Capacitor (safely)
+  let isNativePlatform = false;
+  
+  try {
+    if (windowCapacitor && window.Capacitor?.getPlatform) {
+      const platform = window.Capacitor.getPlatform();
+      // Platform should be 'android', 'ios', etc. - NOT 'web'
+      isNativePlatform = platform !== 'web' && platform !== 'unknown';
+    }
+  } catch (e) {
+    // If getPlatform fails, assume web
+    isNativePlatform = false;
+  }
+  
+  // Only consider it Capacitor if we have BOTH:
+  // 1. Capacitor exists
+  // 2. AND (we're in a WebView OR platform is native)
+  return Boolean(
+    windowCapacitor &&
+    (isWebView || isNativePlatform)
+  );
 };
 
 /**

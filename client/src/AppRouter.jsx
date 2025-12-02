@@ -97,6 +97,14 @@ const isCapacitorEnv = (() => {
   return isCapacitor;
 })();
 
+// Component to log when route is matched
+const RouteLogger = ({ path }) => {
+  useEffect(() => {
+    console.log(`[AppRouter] Route matched: ${path}`);
+  }, [path]);
+  return null;
+};
+
 // Wrapper component to conditionally render DownloadAndroidApp only on web
 const DownloadAndroidAppWrapper = () => {
   const navigate = useNavigate();
@@ -187,6 +195,16 @@ const PageLoader = () => (
 );
 
 const AppRouter = () => {
+  // Log route changes
+  React.useEffect(() => {
+    const logRoute = () => {
+      console.log('[AppRouter] Current route:', window.location.pathname);
+    };
+    logRoute();
+    window.addEventListener('popstate', logRoute);
+    return () => window.removeEventListener('popstate', logRoute);
+  }, []);
+
   return (
   <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <ScrollToTop />
@@ -211,7 +229,15 @@ const AppRouter = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
         <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
+        <Route 
+          path="/download-android" 
+          element={
+            <SiteLayout>
+              <RouteLogger path="/download-android" />
+              <DownloadAndroidAppWrapper />
+            </SiteLayout>
+          } 
+        />
         <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
       </Routes>
     </Suspense>

@@ -8,10 +8,8 @@ import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
 import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
+import { isCapacitor } from '../../utils/androidBackButton';
 import mspLogo from '../../assets/Images/msp-logo.png';
-
-// Helper function to check if running in Capacitor (native app) environment
-const isCapacitor = () => typeof window !== 'undefined' && window.Capacitor;
 
 const Navbar = memo(() => {
   const [mobileOpen, setMobileOpen] = useState(false);
