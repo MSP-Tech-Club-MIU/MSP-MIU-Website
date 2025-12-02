@@ -259,10 +259,10 @@ const CreateEvent = () => {
           transition={{ duration: 0.35 }}
         >
           <div style={{ marginBottom: '1.5rem' }}>
-            <h1 className="card-title">Create New Event</h1>
-            <p className="card-sub">
-              Add a new event to the MSP Tech Club calendar
-            </p>
+              <h1 className="card-title">Create New Event</h1>
+              <p className="card-sub">
+                Add a new event to the MSP Tech Club calendar
+              </p>
           </div>
 
           <form className="attendance-form" onSubmit={onSubmit}>
