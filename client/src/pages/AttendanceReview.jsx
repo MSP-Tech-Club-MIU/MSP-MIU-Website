@@ -470,14 +470,7 @@ const AttendanceReview = () => {
                           textAlign: 'left', 
                           color: '#8EC2F0',
                           fontWeight: '600',
-                          minWidth: '140px'
-                        }}>Phone</th>
-                        <th style={{ 
-                          padding: '0.75rem 1rem', 
-                          textAlign: 'left', 
-                          color: '#8EC2F0',
-                          fontWeight: '600',
-                          minWidth: '200px'
+                          minWidth: '180px'
                         }}>Event</th>
                         <th style={{ 
                           padding: '0.75rem 1rem', 
@@ -539,12 +532,6 @@ const AttendanceReview = () => {
                             fontSize: '0.9rem'
                           }}>
                             {request.university_id}
-                          </td>
-                          <td style={{ 
-                            padding: '0.875rem 1rem', 
-                            color: '#B0C4DE'
-                          }}>
-                            {request.phone_number}
                           </td>
                           <td style={{ 
                             padding: '0.875rem 1rem', 
