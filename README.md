@@ -128,7 +128,7 @@ Back-End/
 
 ![Download Android App screenshot](client/src/assets/Images/MSP-MIU%20Website%20(4).png)
 
-### Profile page
+### Profile page (Logged In as a Board Member)
 
 ![Profile page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(5).png)
 
