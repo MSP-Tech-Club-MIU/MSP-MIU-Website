@@ -110,6 +110,28 @@ Back-End/
 └── uploads/               # Root uploads directory
 ```
 
+## 📷 Screenshots
+
+### Landing page
+
+![Landing page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(1).png)
+
+### Events page
+
+![Events page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(2).png)
+
+### Single event page
+
+![Single event screenshot](client/src/assets/Images/MSP-MIU%20Website%20(3).png)
+
+### Download Android App page
+
+![Download Android App screenshot](client/src/assets/Images/MSP-MIU%20Website%20(4).png)
+
+### Profile page
+
+![Profile page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(5).png)
+
 ## 🎯 Features
 
 - 🔐 **User Authentication**: JWT-based authentication with account activation
