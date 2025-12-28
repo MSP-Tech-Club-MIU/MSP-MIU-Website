@@ -114,23 +114,23 @@ Back-End/
 
 ### Landing page
 
-![Landing page screenshot](../assets/Images/MSP-MIU Website (1).png)
+![Landing page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(1).png)
 
 ### Events page
 
-![Events page screenshot](../assets/Images/MSP-MIU Website (2).png)
+![Events page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(2).png)
 
 ### Single event page
 
-![Single event screenshot](../assets/Images/MSP-MIU Website (3).png)
+![Single event screenshot](client/src/assets/Images/MSP-MIU%20Website%20(3).png)
 
 ### Download Android App page
 
-![Download Android App screenshot](../assets/Images/MSP-MIU Website (4).png)
+![Download Android App screenshot](client/src/assets/Images/MSP-MIU%20Website%20(4).png)
 
 ### Profile page
 
-![Profile page screenshot](../assets/Images/MSP-MIU Website (5).png)
+![Profile page screenshot](client/src/assets/Images/MSP-MIU%20Website%20(5).png)
 
 ## 🎯 Features
 
