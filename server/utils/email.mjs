@@ -4,12 +4,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_SECURE === 'true', // true for SSL (465), false for TLS (587)
+  host: process.env.MAIL_HOST,
+  port: Number(process.env.MAIL_PORT),
+  secure: Number(process.env.MAIL_PORT) === 465, // true for SSL (465), false for TLS (587)
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
   },
   // Allow self-signed certificates (common in development or certain SMTP servers)
   tls: {
@@ -25,15 +25,15 @@ const transporter = nodemailer.createTransport({
  */
 export async function sendEmail(mailOptions) {
   try {
-    const fromName = mailOptions.fromName || process.env.SMTP_FROM_NAME || 'MSP MIU Website';
-    const fromEmail = process.env.SMTP_USER || mailOptions.from || 'noreply@msp-miu.tech';
+    const fromName = mailOptions.fromName || 'MSP MIU Website';
+    const fromEmail = process.env.MAIL_FROM_ADDRESS || mailOptions.from || 'noreply@msp-miu.tech';
     
-    if (!process.env.SMTP_USER && !mailOptions.from) {
-      console.warn('⚠️  Warning: SMTP_USER not set in .env file. Using default from address.');
+    if (!process.env.MAIL_FROM_ADDRESS && !mailOptions.from) {
+      console.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
     }
     
     // Extract domain from email address for proper Message-ID
-    const emailDomain = fromEmail.split('@')[1] || process.env.SMTP_HOST || 'msp-miu.tech';
+    const emailDomain = fromEmail.split('@')[1] || process.env.MAIL_HOST || 'msp-miu.tech';
     
     // Escape quotes in the name and format from address
     const escapedName = fromName.replace(/"/g, '\\"');
