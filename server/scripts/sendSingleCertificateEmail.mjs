@@ -32,9 +32,8 @@ dotenv.config();
 
 // Configuration
 const CERTIFICATES_DIR = path.join(__dirname, '../../certificates');
-const FEEDBACK_FORM_URL = process.env.FEEDBACK_FORM_URL || 'https://forms.gle/YOUR_FEEDBACK_FORM_ID';
-const GITHUB_COPILOT_MODULE_URL = 'https://learn.microsoft.com/en-us/training/modules/introduction-to-github-copilot/';
-const WAEL_CONTRIBUTOR_ID = process.env.WAEL_CONTRIBUTOR_ID || 'YOUR_CONTRIBUTOR_ID';
+const FEEDBACK_FORM_URL = process.env.FEEDBACK_FORM_URL || 'https://forms.gle/fHvgKDML7DEw5TAM9';
+const GITHUB_COPILOT_LEARNING_PATH_URL = process.env.GITHUB_COPILOT_LEARNING_PATH_URL || 'https://learn.microsoft.com/training/paths/copilot/?wt.mc_id=studentamb_503559';
 const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://msp-miu.tech';
 const LOGO_URL = process.env.LOGO_URL || `${WEBSITE_URL}/src/assets/Images/MSP%20-%20Logo.png`;
 
@@ -359,7 +358,7 @@ async function sendSingleCertificateEmail(name, universityId, email = null) {
     
     // Prepare URLs
     const feedbackFormUrl = FEEDBACK_FORM_URL;
-    const githubCopilotUrl = `${GITHUB_COPILOT_MODULE_URL}?wt.mc_id=DT-MVP-${WAEL_CONTRIBUTOR_ID}`;
+    const githubCopilotUrl = GITHUB_COPILOT_LEARNING_PATH_URL;
     
     // Generate LinkedIn post URL (works on mobile and web)
     const linkedInPostText = generateLinkedInPostText(name);
