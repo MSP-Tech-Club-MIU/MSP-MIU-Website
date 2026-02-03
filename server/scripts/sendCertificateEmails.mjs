@@ -266,22 +266,31 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Your Front-End Course Certificate - MSP Tech Club</title>
+  <style>
+    @media only screen and (max-width: 600px) {
+      .content-padding { padding: 25px 20px !important; }
+      .header-padding { padding: 25px 20px !important; }
+      .footer-padding { padding: 20px 20px !important; }
+      .section-padding { padding: 20px 15px !important; }
+      .inner-box-padding { padding: 15px !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
       <td align="center" style="padding: 20px 0;">
-        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <table role="presentation" style="width: 700px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 30px 40px; background-color: #031C35; border-top-left-radius: 8px; border-top-right-radius: 8px; text-align: center;">
+            <td class="header-padding" style="padding: 35px 50px; background-color: #031C35; border-top-left-radius: 8px; border-top-right-radius: 8px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP Tech Club</h1>
               <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Misr International University</p>
             </td>
           </tr>
           <!-- Content -->
           <tr>
-            <td style="padding: 40px;">
+            <td class="content-padding" style="padding: 50px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">
                 Hi ${studentName},
               </p>
@@ -290,7 +299,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
               </p>
               
               <!-- Certificate Section -->
-              <div style="margin: 30px 0; padding: 20px; background-color: #e8f5e9; border-radius: 6px; border-left: 4px solid #4caf50;">
+              <div class="section-padding" style="margin: 30px 0; padding: 25px; background-color: #e8f5e9; border-radius: 6px; border-left: 4px solid #4caf50;">
                 <p style="margin: 0; color: #333333; font-size: 16px; line-height: 1.6;">
                   ✅ <strong>Certificate attached</strong>
                 </p>
@@ -300,7 +309,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
               </div>
               
               <!-- Feedback Form Section -->
-              <div style="margin: 30px 0; padding: 20px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
+              <div class="section-padding" style="margin: 30px 0; padding: 25px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">
                   📝 Feedback Form
                 </h2>
@@ -315,7 +324,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
               </div>
               
               <!-- LinkedIn Sharing Section -->
-              <div style="margin: 30px 0; padding: 20px; background-color: #f5f5f5; border-radius: 6px; border-left: 4px solid #666666;">
+              <div class="section-padding" style="margin: 30px 0; padding: 25px; background-color: #f5f5f5; border-radius: 6px; border-left: 4px solid #666666;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">
                   LinkedIn Sharing
                 </h2>
@@ -323,7 +332,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
                   Share your achievement on LinkedIn. Attach your certificate PDF and add "@" before "MSP Tech Club - MIU" to tag our company page.
                 </p>
                 
-                <div style="margin: 15px 0; padding: 15px; background-color: #ffffff; border-radius: 6px; border: 1px solid #e0e0e0;">
+                <div class="inner-box-padding" style="margin: 15px 0; padding: 20px; background-color: #ffffff; border-radius: 6px; border: 1px solid #e0e0e0;">
                   <p style="margin: 0 0 10px 0; color: #333333; font-size: 13px; font-weight: 600;">
                     Suggested Post:
                   </p>
@@ -340,7 +349,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
               </div>
               
               <!-- Next Steps Section -->
-              <div style="margin: 30px 0; padding: 20px; background-color: #f3e5f5; border-radius: 6px; border-left: 4px solid #9c27b0;">
+              <div class="section-padding" style="margin: 30px 0; padding: 25px; background-color: #f3e5f5; border-radius: 6px; border-left: 4px solid #9c27b0;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">
                   🚀 Next Steps
                 </h2>
@@ -355,7 +364,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
               </div>
               
               <!-- What's Next Section -->
-              <div style="margin: 30px 0; padding: 20px; background-color: #fff9c4; border-radius: 6px; border-left: 4px solid #fbc02d;">
+              <div class="section-padding" style="margin: 30px 0; padding: 25px; background-color: #fff9c4; border-radius: 6px; border-left: 4px solid #fbc02d;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">
                   🏆 What's Next
                 </h2>
@@ -377,7 +386,7 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
           </tr>
           <!-- Footer -->
           <tr>
-            <td style="padding: 20px 40px; background-color: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eeeeee;">
+            <td class="footer-padding" style="padding: 25px 50px; background-color: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.5;">
                 This is an automated email from MSP Tech Club. If you have any questions, please contact us.
               </p>
