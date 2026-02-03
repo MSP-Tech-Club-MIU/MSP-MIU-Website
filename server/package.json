@@ -12,7 +12,9 @@
     "send-acceptance-emails": "node scripts/sendAcceptanceEmails.mjs",
     "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs",
     "send-activation-emails": "node scripts/sendActivationEmails.mjs",
-    "send-board-activation-emails": "node scripts/sendBoardActivationEmails.mjs"
+    "send-board-activation-emails": "node scripts/sendBoardActivationEmails.mjs",
+    "send-certificate-emails": "node scripts/sendCertificateEmails.mjs",
+    "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

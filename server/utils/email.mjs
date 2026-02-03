@@ -21,6 +21,7 @@ const transporter = nodemailer.createTransport({
  * Send an email using the configured transporter
  * @param {Object} mailOptions - Email options (to, subject, text, html, etc.)
  * @param {string} mailOptions.fromName - Optional sender name (defaults to "MSP MIU Website")
+ * @param {Array} mailOptions.attachments - Optional array of attachment objects
  * @returns {Promise} Promise that resolves with email info
  */
 export async function sendEmail(mailOptions) {
@@ -55,6 +56,7 @@ export async function sendEmail(mailOptions) {
       subject: mailOptions.subject,
       text: mailOptions.text, // Always include plain text version
       html: mailOptions.html,
+      attachments: mailOptions.attachments || [], // Support attachments
       // Advanced headers to improve deliverability and reduce spam
       headers: {
         'Message-ID': messageId,

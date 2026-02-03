@@ -79,3 +79,7 @@ Desktop.ini
 
 # Nested duplicate directories (appears to be a mistake)
 /client/Back-End
+
+# Certificates (Front-end course)
+certificates/ 
+Certificates Names - Front End Course .csv
