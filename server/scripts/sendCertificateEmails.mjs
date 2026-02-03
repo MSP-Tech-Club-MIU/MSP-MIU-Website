@@ -235,10 +235,10 @@ Share your achievement on LinkedIn! We encourage you to upload your certificate 
 Share on LinkedIn: ${linkedInPostUrl}
 
 🚀 Next Steps
-Continue your learning journey with the GitHub Copilot module on Microsoft Learn:
+Continue your learning journey with the GitHub Copilot learning path on Microsoft Learn:
 ${githubCopilotUrl}
 
-We highly encourage you to complete this module to further enhance your development skills.
+Explore the learning path and pick the modules that interest you most! This is a great opportunity to enhance your development skills.
 
 🏆 What's Next
 We're excited to announce that a Frontend Competition is coming later this semester! Stay tuned for more details - we'll be sharing information about this exciting opportunity soon.
@@ -345,11 +345,11 @@ Grateful for the opportunity to learn and grow with such an amazing community. L
                   🚀 Next Steps
                 </h2>
                 <p style="margin: 0 0 15px 0; color: #666666; font-size: 14px; line-height: 1.6;">
-                  Continue your learning journey with the GitHub Copilot module on Microsoft Learn. We highly encourage you to complete this module to further enhance your development skills.
+                  Continue your learning journey with the GitHub Copilot learning path on Microsoft Learn. Explore the learning path and pick the modules that interest you most!
                 </p>
                 <div style="margin: 15px 0; text-align: center;">
                   <a href="${githubCopilotUrl}" style="display: inline-block; padding: 12px 24px; background-color: #9c27b0; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 4px rgba(156, 39, 176, 0.3);">
-                    Start GitHub Copilot Module
+                    Explore GitHub Copilot Learning Path
                   </a>
                 </div>
               </div>
