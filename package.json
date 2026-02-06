@@ -22,7 +22,7 @@
     "lint": "cd client && npm run lint"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/client-s3": "^3.984.0",
     "@capacitor/cli": "^7.4.4",
     "@capacitor/core": "^7.4.4",
     "bcrypt": "^5.1.1",

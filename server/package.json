@@ -17,7 +17,7 @@
     "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/client-s3": "^3.984.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.22.0",
