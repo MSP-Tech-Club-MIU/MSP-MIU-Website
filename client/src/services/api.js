@@ -961,6 +961,569 @@ class ApiService {
       throw error;
     }
   }
+
+  // ===== COMPETITIONS API =====
+
+  /**
+   * Get all competitions with optional filters
+   * @param {Object} filters - Optional filters (status, etc.)
+   * @returns {Promise<Array>}
+   */
+  static async getCompetitions(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (filters.status) {
+        queryParams.append('status', filters.status);
+      }
+
+      const url = `${API_BASE_URL}/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(false),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch competitions');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching competitions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single competition by ID
+   * @param {number} id - Competition ID
+   * @returns {Promise<Object>}
+   */
+  static async getCompetitionById(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(false),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch competition');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching competition ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's team for a specific competition
+   * @param {number} competitionId - Competition ID
+   * @returns {Promise<Object|null>}
+   */
+  static async getUserTeamForCompetition(competitionId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/my-team`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null; // User doesn't have a team
+        }
+        throw new Error(result.error || 'Failed to fetch team');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching user team for competition ${competitionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new competition (admin/board only)
+   * @param {Object} competitionData - Competition data
+   * @returns {Promise<Object>}
+   */
+  static async createCompetition(competitionData) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/competitions`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(competitionData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create competition');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating competition:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update competition (admin/board only)
+   * @param {number} id - Competition ID
+   * @param {Object} competitionData - Updated competition data
+   * @returns {Promise<Object>}
+   */
+  static async updateCompetition(id, competitionData) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/competitions/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(competitionData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update competition');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error updating competition ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete competition (admin only)
+   * @param {number} id - Competition ID
+   * @returns {Promise<Object>}
+   */
+  static async deleteCompetition(id) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/competitions/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete competition');
+      }
+
+      return result;
+    } catch (error) {
+      console.error(`Error deleting competition ${id}:`, error);
+      throw error;
+    }
+  }
+
+  // =====================
+  // TEAMS
+  // =====================
+
+  /**
+   * Create a new team for a competition
+   * @param {Object} teamData - { competition_id, team_name }
+   * @returns {Promise<Object>}
+   */
+  static async createTeam(teamData) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/teams`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(teamData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create team');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get team by ID
+   * @param {number} teamId - Team ID
+   * @returns {Promise<Object>}
+   */
+  static async getTeamById(teamId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch team');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching team ${teamId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all teams for a competition
+   * @param {number} competitionId - Competition ID
+   * @returns {Promise<Array>}
+   */
+  static async getCompetitionTeams(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/teams`, {
+        method: 'GET',
+        headers: this.getHeaders(false),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch teams');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching teams for competition ${competitionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Invite member to team via email
+   * @param {number} teamId - Team ID
+   * @param {string} email - Email address to invite
+   * @param {Object} memberDetails - Optional member details { name, university_id }
+   * @returns {Promise<Object>}
+   */
+  static async inviteToTeam(teamId, email, memberDetails = {}) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/teams/${teamId}/invite`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ email, ...memberDetails }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send invitation');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error inviting to team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify team invitation token and get invitation details
+   * @param {string} token - Invitation token
+   * @returns {Promise<Object>} - Invitation details including userExists flag
+   */
+  static async verifyTeamInvitation(token) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/teams/verify-invitation?token=${token}`, {
+        method: 'GET',
+        headers: this.getHeaders(false),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to verify invitation');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error verifying invitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept team invitation for NEW user (create account with password)
+   * @param {string} token - Invitation token
+   * @param {string} password - Password to set for the new account
+   * @returns {Promise<Object>} - Returns authToken and user data
+   */
+  static async acceptTeamInvitationNewUser(token, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/teams/accept-invitation-new-user`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify({ token, password }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to accept invitation');
+      }
+
+      // Store auth token if provided
+      if (result.token) {
+        this.setAuthToken(result.token);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error accepting invitation (new user):', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept team invitation for EXISTING user
+   * @param {string} token - Invitation token
+   * @returns {Promise<Object>}
+   */
+  static async acceptTeamInvitation(token) {
+    try {
+      const authToken = this.getAuthToken();
+      if (!authToken) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/teams/accept-invitation`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ token }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to accept invitation');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Decline team invitation
+   * @param {string} token - Invitation token
+   * @returns {Promise<Object>}
+   */
+  static async declineTeamInvitation(token) {
+    try {
+      const authToken = this.getAuthToken();
+      if (!authToken) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/teams/decline-invitation`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ token }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to decline invitation');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+      throw error;
+    }
+  }
+
+  // =====================
+  // SUBMISSIONS
+  // =====================
+
+  /**
+   * Create or update submission (requires FormData for file upload)
+   * @param {FormData} formData - Form data with file and submission details
+   * @returns {Promise<Object>}
+   */
+  static async createSubmission(formData) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/submissions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it with boundary for FormData
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit work');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating submission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get team submission for a competition
+   * @param {number} teamId - Team ID
+   * @returns {Promise<Object|null>}
+   */
+  static async getTeamSubmission(teamId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/submissions/team/${teamId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      if (response.status === 404) {
+        return null; // No submission yet
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch submission');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching submission for team ${teamId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all submissions for a competition (admin/board only)
+   * @param {number} competitionId - Competition ID
+   * @returns {Promise<Array>}
+   */
+  static async getCompetitionSubmissions(competitionId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/submissions/competition/${competitionId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch submissions');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error fetching submissions for competition ${competitionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Grade a submission (admin/board only)
+   * @param {number} submissionId - Submission ID
+   * @param {number} score - Score (0-100)
+   * @param {string} feedback - Optional feedback text
+   * @returns {Promise<Object>}
+   */
+  static async gradeSubmission(submissionId, score, feedback = '') {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/submissions/${submissionId}/grade`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ score, feedback }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to grade submission');
+      }
+
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error grading submission ${submissionId}:`, error);
+      throw error;
+    }
+  }
 }
 
 export default ApiService;

@@ -18,6 +18,9 @@ router.use("/board", require("./routes/board"));
 router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));
 router.use("/events", require("./routes/events"));
+router.use("/competitions", require("./routes/competitions"));
+router.use("/teams", require("./routes/teams"));
+router.use("/submissions", require("./routes/submissions"));
 router.use("/cloud", require("./routes/cloud"));
 router.use("/upload", require("./routes/upload"));
 

@@ -1,0 +1,406 @@
+.CreateTeamPage {
+    min-height: 80vh;
+    padding: 120px 0 80px;
+    position: relative;
+    background: transparent;
+}
+
+.CreateTeamPage__container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header */
+.CreateTeamPage__header {
+    text-align: center;
+    margin-bottom: 50px;
+    padding: 40px 30px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .3), rgba(29, 79, 130, .15));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.CreateTeamPage__icon {
+    color: #03A9F4;
+    margin-bottom: 20px;
+}
+
+.CreateTeamPage__title {
+    margin: 0 0 12px;
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, #8EC2F0, #03A9F4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.CreateTeamPage__subtitle {
+    margin: 0 0 20px;
+    font-size: 1.1rem;
+    color: #C5DAE9;
+}
+
+.CreateTeamPage__teamInfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: rgba(3, 169, 244, .15);
+    border: 1px solid rgba(3, 169, 244, .3);
+    border-radius: 20px;
+    color: #03A9F4;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+/* Form */
+.CreateTeamPage__form {
+    background: linear-gradient(145deg, rgba(13, 49, 89, .3), rgba(29, 79, 130, .15));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    padding: 40px 30px;
+    backdrop-filter: blur(10px);
+}
+
+.CreateTeamPage__formError {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: rgba(244, 88, 31, .15);
+    border: 1px solid rgba(244, 88, 31, .3);
+    border-radius: 12px;
+    color: #F4581F;
+    margin-bottom: 30px;
+    font-size: .95rem;
+}
+
+.CreateTeamPage__formGroup {
+    margin-bottom: 30px;
+}
+
+.CreateTeamPage__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #8EC2F0;
+}
+
+.CreateTeamPage__label .required {
+    color: #F4581F;
+}
+
+.CreateTeamPage__hint {
+    margin: 0 0 16px;
+    font-size: .9rem;
+    color: #C5DAE9;
+    opacity: .8;
+}
+
+.CreateTeamPage__input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: .95rem;
+    transition: all .3s ease;
+    outline: none;
+}
+
+.CreateTeamPage__input:focus {
+    border-color: #03A9F4;
+    box-shadow: 0 0 0 3px rgba(3, 169, 244, .1);
+}
+
+.CreateTeamPage__input.error {
+    border-color: #F4581F;
+}
+
+.CreateTeamPage__input:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.CreateTeamPage__fieldError {
+    display: block;
+    margin-top: 8px;
+    font-size: .85rem;
+    color: #F4581F;
+}
+
+/* Members List */
+.CreateTeamPage__membersList {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+/* Leader Card */
+.CreateTeamPage__leaderCard {
+    padding: 24px;
+    background: linear-gradient(145deg, rgba(3, 169, 244, .15), rgba(3, 169, 244, .05));
+    border: 2px solid rgba(3, 169, 244, .3);
+    border-radius: 12px;
+    transition: all .3s ease;
+}
+
+.CreateTeamPage__leaderCard:hover {
+    border-color: rgba(3, 169, 244, .5);
+    background: linear-gradient(145deg, rgba(3, 169, 244, .2), rgba(3, 169, 244, .08));
+}
+
+.CreateTeamPage__memberCard {
+    padding: 20px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 12px;
+    transition: all .3s ease;
+}
+
+.CreateTeamPage__memberCard:hover {
+    border-color: rgba(3, 169, 244, .3);
+    background: rgba(0, 0, 0, .25);
+}
+
+.CreateTeamPage__memberHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.CreateTeamPage__memberHeader h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #03A9F4;
+}
+
+.CreateTeamPage__memberFields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.CreateTeamPage__fieldWrapper {
+    position: relative;
+}
+
+.CreateTeamPage__removeBtn {
+    flex-shrink: 0;
+    padding: 14px;
+    background: rgba(244, 88, 31, .2);
+    border: 1px solid rgba(244, 88, 31, .4);
+    border-radius: 10px;
+    color: #F4581F;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.CreateTeamPage__removeBtn:hover:not(:disabled) {
+    background: rgba(244, 88, 31, .3);
+    transform: scale(1.05);
+}
+
+.CreateTeamPage__removeBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.CreateTeamPage__addBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(3, 169, 244, .15);
+    border: 1px solid rgba(3, 169, 244, .3);
+    border-radius: 10px;
+    color: #03A9F4;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.CreateTeamPage__addBtn:hover:not(:disabled) {
+    background: rgba(3, 169, 244, .25);
+    border-color: rgba(3, 169, 244, .5);
+}
+
+.CreateTeamPage__addBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Summary */
+.CreateTeamPage__summary {
+    margin: 30px 0;
+    padding: 24px;
+    background: rgba(0, 0, 0, .2);
+    border-left: 4px solid #03A9F4;
+    border-radius: 12px;
+}
+
+.CreateTeamPage__summary h3 {
+    margin: 0 0 16px;
+    font-size: 1.2rem;
+    font-weight: 650;
+    color: #8EC2F0;
+}
+
+.CreateTeamPage__summary p {
+    margin: 8px 0;
+    font-size: .95rem;
+    color: #C5DAE9;
+}
+
+.CreateTeamPage__summaryLabel {
+    font-weight: 600;
+    color: #8EC2F0;
+    margin-top: 16px !important;
+}
+
+.CreateTeamPage__summary ul {
+    margin: 8px 0;
+    padding-left: 20px;
+    list-style: none;
+}
+
+.CreateTeamPage__summary ul li {
+    padding: 10px 0;
+    color: #C5DAE9;
+    position: relative;
+    line-height: 1.6;
+}
+
+.CreateTeamPage__summary ul li::before {
+    content: "→";
+    position: absolute;
+    left: -20px;
+    color: #03A9F4;
+}
+
+.CreateTeamPage__summaryEmail {
+    font-size: .85rem;
+    color: #8EC2F0;
+    opacity: .9;
+}
+
+.CreateTeamPage__totalCount {
+    margin-top: 16px !important;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+    font-weight: 600;
+    color: #03A9F4 !important;
+}
+
+/* Actions */
+.CreateTeamPage__actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 30px;
+}
+
+.CreateTeamPage__cancelBtn,
+.CreateTeamPage__submitBtn {
+    flex: 1;
+    padding: 14px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.CreateTeamPage__cancelBtn {
+    background: rgba(255, 255, 255, .08);
+    color: #C5DAE9;
+    border: 1px solid rgba(255, 255, 255, .2);
+}
+
+.CreateTeamPage__cancelBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, .12);
+    border-color: rgba(255, 255, 255, .3);
+}
+
+.CreateTeamPage__submitBtn {
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(3, 169, 244, .3);
+}
+
+.CreateTeamPage__submitBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(3, 169, 244, .5);
+}
+
+.CreateTeamPage__cancelBtn:disabled,
+.CreateTeamPage__submitBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Error State */
+.CreateTeamPage__error {
+    text-align: center;
+    padding: 80px 20px;
+    color: #C5DAE9;
+}
+
+.CreateTeamPage__error svg {
+    color: #F4581F;
+    margin-bottom: 24px;
+}
+
+.CreateTeamPage__error h2 {
+    margin: 0 0 16px;
+    font-size: 2rem;
+    font-weight: 650;
+    color: #fff;
+}
+
+.CreateTeamPage__error p {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .CreateTeamPage {
+        padding: 100px 0 60px;
+    }
+
+    .CreateTeamPage__container {
+        padding: 0 16px;
+    }
+
+    .CreateTeamPage__header {
+        padding: 30px 20px;
+    }
+
+    .CreateTeamPage__form {
+        padding: 30px 20px;
+    }
+
+    .CreateTeamPage__actions {
+        flex-direction: column;
+    }
+
+    .CreateTeamPage__memberCard {
+        padding: 16px;
+    }
+
+    .CreateTeamPage__memberHeader {
+        margin-bottom: 12px;
+    }
+}
