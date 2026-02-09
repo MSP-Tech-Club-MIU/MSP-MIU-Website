@@ -14,6 +14,11 @@ const Exercises = lazy(() => import('./pages/Exercises'));
 const Events = lazy(() => import('./pages/Events'));
 const EventDetails = lazy(() => import('./pages/EventDetails'));
 const CreateEvent = lazy(() => import('./pages/CreateEvent'));
+const Competitions = lazy(() => import('./pages/Competitions'));
+const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
+const CreateTeam = lazy(() => import('./pages/CreateTeam'));
+const CompetitionWorkspace = lazy(() => import('./pages/CompetitionWorkspace'));
+const AcceptTeamInvitation = lazy(() => import('./pages/AcceptTeamInvitation'));
 const Suggestions = lazy(() => import('./pages/Suggestions'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Sponsors = lazy(() => import('./pages/Sponsors'));
@@ -154,6 +159,11 @@ const AppRouter = () => {
         <Route path="/events" element={<SiteLayout><Events /></SiteLayout>} />
         <Route path="/events/create" element={<SiteLayout><CreateEvent /></SiteLayout>} />
         <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
+        <Route path="/competitions" element={<SiteLayout><Competitions /></SiteLayout>} />
+        <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
+        <Route path="/competitions/:id/create-team" element={<SiteLayout><CreateTeam /></SiteLayout>} />
+        <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
+        <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
         <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
         <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
         <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
