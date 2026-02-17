@@ -12,6 +12,18 @@ const Leaderboard = require('./Leaderboard');
 const Sponsor = require('./Sponsor');
 const Suggestion = require('./Suggestion');
 
+// Competition-related models
+const Competition = require('./Competition');
+const Team = require('./Team');
+const TeamMember = require('./TeamMember');
+const TeamInvitation = require('./TeamInvitation');
+const Submission = require('./Submission');
+const Quiz = require('./Quiz');
+const QuizQuestion = require('./QuizQuestion');
+const QuizOption = require('./QuizOption');
+const QuizAttempt = require('./QuizAttempt');
+const QuizAnswer = require('./QuizAnswer');
+
 // Initialize models
 const models = {
   Application,
@@ -25,7 +37,17 @@ const models = {
   PasswordToken,
   Leaderboard,
   Sponsor,
-  Suggestion
+  Suggestion,
+  Competition,
+  Team,
+  TeamMember,
+  TeamInvitation,
+  Submission,
+  Quiz,
+  QuizQuestion,
+  QuizOption,
+  QuizAttempt,
+  QuizAnswer
 };
 
 // Set up associations
@@ -134,6 +156,195 @@ Suggestion.belongsTo(Member, {
 Member.hasMany(Suggestion, {
   foreignKey: 'member_id',
   as: 'suggestions'
+});
+
+// ===== COMPETITION ASSOCIATIONS =====
+
+// Competition associations
+Competition.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+User.hasMany(Competition, {
+  foreignKey: 'created_by',
+  as: 'competitions'
+});
+
+// Team associations
+Team.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+Competition.hasMany(Team, {
+  foreignKey: 'competition_id',
+  as: 'teams'
+});
+
+Team.belongsTo(User, {
+  foreignKey: 'created_by_user_id',
+  as: 'creator'
+});
+User.hasMany(Team, {
+  foreignKey: 'created_by_user_id',
+  as: 'createdTeams'
+});
+
+// TeamMember associations
+TeamMember.belongsTo(Team, {
+  foreignKey: 'team_id',
+  as: 'team',
+  onDelete: 'CASCADE'
+});
+Team.hasMany(TeamMember, {
+  foreignKey: 'team_id',
+  as: 'members'
+});
+
+TeamMember.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+  onDelete: 'CASCADE'
+});
+User.hasMany(TeamMember, {
+  foreignKey: 'user_id',
+  as: 'teamMemberships'
+});
+
+// TeamInvitation associations
+TeamInvitation.belongsTo(Team, {
+  foreignKey: 'team_id',
+  as: 'team',
+  onDelete: 'CASCADE'
+});
+Team.hasMany(TeamInvitation, {
+  foreignKey: 'team_id',
+  as: 'invitations'
+});
+
+TeamInvitation.belongsTo(User, {
+  foreignKey: 'invited_user_id',
+  as: 'invitedUser',
+  onDelete: 'SET NULL'
+});
+User.hasMany(TeamInvitation, {
+  foreignKey: 'invited_user_id',
+  as: 'receivedInvitations'
+});
+
+// Submission associations
+Submission.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+Competition.hasMany(Submission, {
+  foreignKey: 'competition_id',
+  as: 'submissions'
+});
+
+Submission.belongsTo(Team, {
+  foreignKey: 'team_id',
+  as: 'team',
+  onDelete: 'CASCADE'
+});
+Team.hasMany(Submission, {
+  foreignKey: 'team_id',
+  as: 'submissions'
+});
+
+// Quiz associations
+Quiz.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+Competition.hasMany(Quiz, {
+  foreignKey: 'competition_id',
+  as: 'quizzes'
+});
+
+Quiz.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+User.hasMany(Quiz, {
+  foreignKey: 'created_by',
+  as: 'createdQuizzes'
+});
+
+// QuizQuestion associations
+QuizQuestion.belongsTo(Quiz, {
+  foreignKey: 'quiz_id',
+  as: 'quiz',
+  onDelete: 'CASCADE'
+});
+Quiz.hasMany(QuizQuestion, {
+  foreignKey: 'quiz_id',
+  as: 'questions'
+});
+
+// QuizOption associations
+QuizOption.belongsTo(QuizQuestion, {
+  foreignKey: 'question_id',
+  as: 'question',
+  onDelete: 'CASCADE'
+});
+QuizQuestion.hasMany(QuizOption, {
+  foreignKey: 'question_id',
+  as: 'options'
+});
+
+// QuizAttempt associations
+QuizAttempt.belongsTo(Quiz, {
+  foreignKey: 'quiz_id',
+  as: 'quiz',
+  onDelete: 'CASCADE'
+});
+Quiz.hasMany(QuizAttempt, {
+  foreignKey: 'quiz_id',
+  as: 'attempts'
+});
+
+QuizAttempt.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+  onDelete: 'CASCADE'
+});
+User.hasMany(QuizAttempt, {
+  foreignKey: 'user_id',
+  as: 'quizAttempts'
+});
+
+// QuizAnswer associations
+QuizAnswer.belongsTo(QuizAttempt, {
+  foreignKey: 'attempt_id',
+  as: 'attempt',
+  onDelete: 'CASCADE'
+});
+QuizAttempt.hasMany(QuizAnswer, {
+  foreignKey: 'attempt_id',
+  as: 'answers'
+});
+
+QuizAnswer.belongsTo(QuizQuestion, {
+  foreignKey: 'question_id',
+  as: 'question',
+  onDelete: 'CASCADE'
+});
+QuizQuestion.hasMany(QuizAnswer, {
+  foreignKey: 'question_id',
+  as: 'answers'
+});
+
+QuizAnswer.belongsTo(QuizOption, {
+  foreignKey: 'selected_option_id',
+  as: 'selectedOption',
+  onDelete: 'SET NULL'
+});
+QuizOption.hasMany(QuizAnswer, {
+  foreignKey: 'selected_option_id',
+  as: 'answers'
 });
 
 // Sync models with database
