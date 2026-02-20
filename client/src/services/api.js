@@ -880,6 +880,91 @@ class ApiService {
     }
   }
 
+  // ========== Event Feedback API Methods ==========
+
+  // Get all feedback for an event
+  static async getEventFeedback(eventId) {
+    try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch feedback');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching event feedback:', error);
+      throw error;
+    }
+  }
+
+  // Add feedback to an event (guests can submit)
+  static async addEventFeedback(eventId, feedback) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'POST',
+        headers: this.getHeaders(), // No auth required for guests
+        body: JSON.stringify({ feedback }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error adding feedback:', error);
+      throw error;
+    }
+  }
+
+  // Delete feedback (admin/board only)
+  static async deleteEventFeedback(eventId, feedbackId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin/board
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      throw error;
+    }
+  }
+
   // Submit attendance request
   static async submitAttendanceRequest(formData) {
     try {

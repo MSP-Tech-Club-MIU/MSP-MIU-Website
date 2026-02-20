@@ -6,6 +6,7 @@ const Member = require('./Member');
 const Session = require('./Session');
 const Attendance = require('./Attendance');
 const Event = require('./Event');
+const EventFeedback = require('./EventFeedback');
 const User = require('./User');
 const PasswordToken = require('./PasswordToken');
 const Leaderboard = require('./Leaderboard');
@@ -34,6 +35,7 @@ const models = {
   Session,
   Attendance,
   Event,
+  EventFeedback,
   User,
   PasswordToken,
   Leaderboard,
@@ -102,6 +104,17 @@ Attendance.belongsTo(Event, {
 Event.hasMany(Attendance, {
   foreignKey: 'event_id',
   as: 'attendanceRequests'
+});
+
+// EventFeedback associations
+EventFeedback.belongsTo(Event, {
+  foreignKey: 'event_id',
+  as: 'event',
+  onDelete: 'CASCADE'
+});
+Event.hasMany(EventFeedback, {
+  foreignKey: 'event_id',
+  as: 'feedbacks'
 });
 
 // User associations
