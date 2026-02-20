@@ -14,6 +14,7 @@ router.use("/users", require("./routes/user"));
 
 // Application routes
 router.use("/applications", require("./routes/applications"));
+router.use("/announcements", require("./routes/announcements"));
 router.use("/board", require("./routes/board"));
 router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));

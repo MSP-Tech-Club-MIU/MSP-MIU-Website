@@ -11,6 +11,7 @@ const PasswordToken = require('./PasswordToken');
 const Leaderboard = require('./Leaderboard');
 const Sponsor = require('./Sponsor');
 const Suggestion = require('./Suggestion');
+const Announcement = require('./Announcement');
 
 // Competition-related models
 const Competition = require('./Competition');
@@ -38,6 +39,7 @@ const models = {
   Leaderboard,
   Sponsor,
   Suggestion,
+  Announcement,
   Competition,
   Team,
   TeamMember,
@@ -124,6 +126,10 @@ User.hasMany(PasswordToken, {
   foreignKey: 'user_id',
   as: 'passwordTokens'
 });
+User.hasMany(Announcement, {
+  foreignKey: 'created_by',
+  as: 'announcements'
+});
 
 Member.belongsTo(User, {
   foreignKey: 'user_id',
@@ -136,6 +142,10 @@ Board.belongsTo(User, {
 PasswordToken.belongsTo(User, {
   foreignKey: 'user_id',
   as: 'user'
+});
+Announcement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
 });
 
 // Leaderboard associations
