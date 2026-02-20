@@ -8,6 +8,10 @@ import BackButton from '../components/BackButton';
 import './Board/Board.css';
 
 import img5 from '../assets/Images/card.jpg';
+import vpPhoto from '../assets/Images/VP H.png';
+import PW from '../assets/Images/Mo-Wael President.png';
+import Founder from '../assets/Images/Founder Photo.png';
+import CoHeadM1 from '../assets/Images/Co Head Joseph.png';
 
 const boardMembers = [
   // Leadership
@@ -16,38 +20,42 @@ const boardMembers = [
     name: 'Mahmoud Mamdouh',
     role: 'Founder',
     department: 9,
+    image: Founder,
   },
   {
     id: 2,
     name: 'Mohamed Wael',
     role: 'President',
     department: 8,
+    image: PW,
+
   },
   {
     id: 3,
     name: 'Mohamed Hesham',
     role: 'Vice President',
     department: 7,
+    image: vpPhoto,
   },
   // Department 1: Software Development
   {
     id: 4,
     name: 'Ahmed Mostafa',
     role: 'Software Development Head',
-    department: 1, 
+    department: 1,
     image: img5
   },
   {
     id: 5,
     name: 'Michael Hisham',
     role: 'Software Development Co-Head',
-    department: 1, 
+    department: 1,
   },
   {
     id: 6,
     name: 'Habiba Ehab',
     role: 'Software Development Co-Head',
-    department: 1, 
+    department: 1,
   },
   // Department 2: Technical Training
   {
@@ -86,6 +94,7 @@ const boardMembers = [
     name: 'Joseph George',
     role: 'Media & Content Creation Co-Head',
     department: 3,
+    image: CoHeadM1,
   },
   {
     id: 13,
@@ -180,11 +189,11 @@ const Board = memo(() => {
     members.forEach(member => {
       const deptId = member.department;
       if (!groups[deptId]) groups[deptId] = { heads: [], coHeads: [] };
-      
+
       const role = member.role.toLowerCase();
       const isSpecial = ['founder', 'president', 'vice president'].includes(member.role.toLowerCase());
       const isHead = role.includes('head') && !role.includes('co-head');
-      
+
       if (isHead || isSpecial) {
         groups[deptId].heads.push(member);
       } else {
@@ -196,15 +205,15 @@ const Board = memo(() => {
     Object.values(groups).forEach(group => {
       group.heads.sort((a, b) => (ROLE_ORDER[a.role] || 999) - (ROLE_ORDER[b.role] || 999));
     });
-    
+
     return groups;
   }, [selectedDepartment]);
 
   const sortedDepartments = Object.entries(groupedMembers).sort(([a], [b]) => {
     const orderA = DEPT_ORDER[a] || 999;
     const orderB = DEPT_ORDER[b] || 999;
-    return (orderA !== 999 && orderB !== 999) ? orderA - orderB : 
-           (orderA !== 999) ? -1 : (orderB !== 999) ? 1 : parseInt(a) - parseInt(b);
+    return (orderA !== 999 && orderB !== 999) ? orderA - orderB :
+      (orderA !== 999) ? -1 : (orderB !== 999) ? 1 : parseInt(a) - parseInt(b);
   });
 
   const structuredData = {
@@ -230,7 +239,7 @@ const Board = memo(() => {
       />
       <BackButton to="/" label="Back to Home" />
       <BoardHeader />
-      <DepartmentMenu 
+      <DepartmentMenu
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
       />
@@ -239,8 +248,8 @@ const Board = memo(() => {
           {sortedDepartments.map(([deptId, group]) => (
             <div key={deptId} className="BoardMembers__department-group">
               {group.heads.map((member, index) => (
-                <div 
-                  key={member.id} 
+                <div
+                  key={member.id}
                   className="BoardMembers__card BoardMembers__card--head BoardMembers__card--animate"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
@@ -257,8 +266,8 @@ const Board = memo(() => {
               {group.coHeads.length > 0 && (
                 <div className="BoardMembers__coheads-container">
                   {group.coHeads.map((member, index) => (
-                    <div 
-                      key={member.id} 
+                    <div
+                      key={member.id}
                       className="BoardMembers__card BoardMembers__card--cohead BoardMembers__card--animate"
                       style={{ animationDelay: `${(group.heads.length + index) * 0.1}s` }}
                     >

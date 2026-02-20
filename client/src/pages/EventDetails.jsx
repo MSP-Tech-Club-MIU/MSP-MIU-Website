@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import './EventDetails.css';
-import { FiCalendar, FiClock, FiMapPin, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle, FiEdit2, FiSave, FiX, FiEdit3 } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin, FiUpload, FiDownload, FiTrash2, FiFile, FiFileText, FiImage, FiVideo, FiMusic, FiUserPlus, FiAlertTriangle, FiEdit2, FiSave, FiX, FiEdit3, FiMessageCircle, FiSend } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
@@ -32,6 +32,11 @@ const EventDetails = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [showFeedbacks, setShowFeedbacks] = useState(false);
 
   // Fetch event from API
   useEffect(() => {
@@ -127,6 +132,8 @@ const EventDetails = () => {
     };
     checkUserRole();
   }, []);
+
+  // Don't fetch feedback automatically - only when admin/board clicks "Show Feedbacks"
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -600,6 +607,58 @@ const EventDetails = () => {
     }
   };
 
+  const handleSubmitFeedback = async (e) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) {
+      alert('Please enter your feedback');
+      return;
+    }
+
+    if (feedbackText.trim().length > 2000) {
+      alert('Feedback must be less than 2000 characters');
+      return;
+    }
+
+    setIsSubmittingFeedback(true);
+    try {
+      const newFeedback = await ApiService.addEventFeedback(event.event_id, feedbackText.trim());
+      
+      // Refresh feedback list if it's currently shown
+      if (showFeedbacks && isBoardOrAdmin) {
+        const updatedFeedbacks = await ApiService.getEventFeedback(parseInt(id));
+        setFeedbacks(updatedFeedbacks || []);
+      }
+      
+      // Clear form
+      setFeedbackText('');
+      alert('Feedback submitted successfully!');
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      alert('Failed to submit feedback: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (!window.confirm('Are you sure you want to delete this feedback?')) {
+      return;
+    }
+
+    try {
+      await ApiService.deleteEventFeedback(event.event_id, feedbackId);
+      
+      // Refresh feedback list
+      const updatedFeedbacks = await ApiService.getEventFeedback(parseInt(id));
+      setFeedbacks(updatedFeedbacks || []);
+      
+      alert('Feedback deleted successfully');
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      alert('Failed to delete feedback: ' + (error.message || 'Unknown error'));
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -1007,6 +1066,272 @@ const EventDetails = () => {
               </div>
             ))}
 
+            {/* Feedback Form - Right below register button */}
+            {!isEditMode && (
+              <div style={{ 
+                marginTop: '1.5rem', 
+                padding: '1.5rem', 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 1rem 0', 
+                  fontSize: '1.2rem', 
+                  color: '#8EC2F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <FiMessageCircle />
+                  Share Your Feedback
+                </h3>
+                <form onSubmit={handleSubmitFeedback}>
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.75rem' 
+                  }}>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder="What did you think about this event? Share your thoughts, suggestions, or experiences..."
+                      rows="4"
+                      maxLength={2000}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.95rem',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        minHeight: '100px'
+                      }}
+                    />
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center' 
+                    }}>
+                      <span style={{ 
+                        color: '#8EC2F0', 
+                        fontSize: '0.85rem' 
+                      }}>
+                        {feedbackText.length}/2000 characters
+                      </span>
+                      <motion.button
+                        type="submit"
+                        disabled={!feedbackText.trim() || isSubmittingFeedback}
+                        whileHover={{ scale: isSubmittingFeedback ? 1 : 1.02 }}
+                        whileTap={{ scale: isSubmittingFeedback ? 1 : 0.98 }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1.5rem',
+                          background: feedbackText.trim() && !isSubmittingFeedback 
+                            ? 'rgba(142, 194, 240, 0.2)' 
+                            : 'rgba(255, 255, 255, 0.1)',
+                          color: feedbackText.trim() && !isSubmittingFeedback 
+                            ? '#8EC2F0' 
+                            : 'rgba(142, 194, 240, 0.5)',
+                          border: `1px solid ${feedbackText.trim() && !isSubmittingFeedback 
+                            ? 'rgba(142, 194, 240, 0.3)' 
+                            : 'rgba(142, 194, 240, 0.1)'}`,
+                          borderRadius: '8px',
+                          cursor: feedbackText.trim() && !isSubmittingFeedback 
+                            ? 'pointer' 
+                            : 'not-allowed',
+                          fontSize: '0.9rem',
+                          fontWeight: '500',
+                          opacity: feedbackText.trim() && !isSubmittingFeedback ? 1 : 0.6
+                        }}
+                      >
+                        <FiSend />
+                        {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
+                      </motion.button>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Show Feedbacks Button - Only for admin/board */}
+                {isBoardOrAdmin && (
+                  <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <motion.button
+                      onClick={() => {
+                        setShowFeedbacks(!showFeedbacks);
+                        if (!showFeedbacks && feedbacks.length === 0) {
+                          // Fetch feedbacks when showing for the first time
+                          const fetchFeedback = async () => {
+                            try {
+                              setLoadingFeedback(true);
+                              const data = await ApiService.getEventFeedback(parseInt(id));
+                              setFeedbacks(data || []);
+                            } catch (error) {
+                              console.error('Error fetching feedback:', error);
+                              setFeedbacks([]);
+                            } finally {
+                              setLoadingFeedback(false);
+                            }
+                          };
+                          fetchFeedback();
+                        }
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1.5rem',
+                        background: 'rgba(142, 194, 240, 0.2)',
+                        color: '#8EC2F0',
+                        border: '1px solid rgba(142, 194, 240, 0.3)',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem',
+                        fontWeight: '500'
+                      }}
+                    >
+                      <FiMessageCircle />
+                      {showFeedbacks ? 'Hide Feedbacks' : 'Show Feedbacks'}
+                      {feedbacks.length > 0 && (
+                        <span style={{ 
+                          marginLeft: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          background: 'rgba(142, 194, 240, 0.3)',
+                          borderRadius: '12px',
+                          fontSize: '0.85rem'
+                        }}>
+                          {feedbacks.length}
+                        </span>
+                      )}
+                    </motion.button>
+                  </div>
+                )}
+
+                {/* Feedback List - Only shown when showFeedbacks is true and user is admin/board */}
+                {showFeedbacks && isBoardOrAdmin && (
+                  <div style={{ marginTop: '1.5rem' }}>
+                    {loadingFeedback ? (
+                      <div style={{ 
+                        padding: '2rem', 
+                        textAlign: 'center', 
+                        color: '#8EC2F0' 
+                      }}>
+                        Loading feedback...
+                      </div>
+                    ) : feedbacks.length === 0 ? (
+                      <div style={{ 
+                        padding: '2rem', 
+                        textAlign: 'center', 
+                        color: '#8EC2F0' 
+                      }}>
+                        <FiMessageCircle style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }} />
+                        <p style={{ margin: 0, fontSize: '1rem' }}>No feedback yet</p>
+                        <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                          Be the first to share your thoughts!
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {feedbacks.map((feedback) => {
+                          const canDelete = userRole === 'admin' || userRole === 'board';
+                          
+                          return (
+                            <div
+                              key={feedback.feedback_id}
+                              style={{
+                                padding: '1rem',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(142, 194, 240, 0.2)'
+                              }}
+                            >
+                              <div style={{ 
+                                display: 'flex', 
+                                justifyContent: 'space-between', 
+                                alignItems: 'flex-start',
+                                marginBottom: '0.75rem'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                  <div style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    background: 'rgba(142, 194, 240, 0.2)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#8EC2F0',
+                                    fontSize: '1.2rem',
+                                    fontWeight: '600'
+                                  }}>
+                                    <FiMessageCircle />
+                                  </div>
+                                  <div>
+                                    <div style={{ 
+                                      color: '#8EC2F0', 
+                                      fontSize: '0.85rem', 
+                                      opacity: 0.7 
+                                    }}>
+                                      {feedback.created_at 
+                                        ? new Date(feedback.created_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          })
+                                        : 'Recently'}
+                                    </div>
+                                  </div>
+                                </div>
+                                {canDelete && (
+                                  <motion.button
+                                    onClick={() => handleDeleteFeedback(feedback.feedback_id)}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    style={{
+                                      background: 'rgba(231, 76, 60, 0.2)',
+                                      border: '1px solid rgba(231, 76, 60, 0.3)',
+                                      borderRadius: '6px',
+                                      padding: '0.5rem',
+                                      color: '#e74c3c',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                    title="Delete feedback"
+                                  >
+                                    <FiTrash2 size={16} />
+                                  </motion.button>
+                                )}
+                              </div>
+                              <p style={{ 
+                                margin: 0, 
+                                color: '#fff', 
+                                fontSize: '0.95rem', 
+                                lineHeight: '1.6',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word'
+                              }}>
+                                {feedback.feedback}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Registration Toggle - Editable in edit mode */}
             {isEditMode && (
               <div style={{ 
@@ -1305,6 +1630,7 @@ const EventDetails = () => {
                 </div>
               )}
             </div>
+
           </div>
         </motion.article>
       </div>

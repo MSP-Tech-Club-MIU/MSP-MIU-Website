@@ -1,4 +1,4 @@
-const { Event } = require('../models');
+const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
 
 /**
@@ -367,11 +367,152 @@ const deleteEvent = async (req, res) => {
     }
 };
 
+/**
+ * Add feedback to an event
+ * POST /api/events/:id/feedback
+ */
+const addFeedback = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { feedback } = req.body;
+
+        // Validation
+        if (!feedback || !feedback.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: 'Feedback text is required'
+            });
+        }
+
+        if (feedback.length > 2000) {
+            return res.status(400).json({
+                success: false,
+                error: 'Feedback must be less than 2000 characters'
+            });
+        }
+
+        // Check if event exists
+        const event = await Event.findByPk(id);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        // Create feedback (guests can submit feedback)
+        const newFeedback = await EventFeedback.create({
+            event_id: id,
+            feedback: feedback.trim()
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Feedback submitted successfully',
+            data: newFeedback
+        });
+
+    } catch (error) {
+        console.error('Error adding feedback:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to submit feedback',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+/**
+ * Get all feedback for an event
+ * GET /api/events/:id/feedback
+ */
+const getEventFeedback = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if event exists
+        const event = await Event.findByPk(id);
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: 'Event not found'
+            });
+        }
+
+        // Get all feedback for this event
+        const feedbacks = await EventFeedback.findAll({
+            where: {
+                event_id: id
+            },
+            order: [['created_at', 'DESC']]
+        });
+
+        res.status(200).json({
+            success: true,
+            data: feedbacks,
+            count: feedbacks.length
+        });
+
+    } catch (error) {
+        console.error('Error fetching feedback:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch feedback'
+        });
+    }
+};
+
+/**
+ * Delete feedback
+ * DELETE /api/events/:eventId/feedback/:feedbackId
+ */
+const deleteFeedback = async (req, res) => {
+    try {
+        const { eventId, feedbackId } = req.params;
+        const userRole = req.user?.role;
+
+        // Only admin and board can delete feedback
+        if (userRole !== 'admin' && userRole !== 'board') {
+            return res.status(403).json({
+                success: false,
+                error: 'Only administrators can delete feedback'
+            });
+        }
+
+        // Find feedback
+        const feedback = await EventFeedback.findByPk(feedbackId);
+
+        if (!feedback) {
+            return res.status(404).json({
+                success: false,
+                error: 'Feedback not found'
+            });
+        }
+
+        await feedback.destroy();
+
+        res.status(200).json({
+            success: true,
+            message: 'Feedback deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Error deleting feedback:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to delete feedback'
+        });
+    }
+};
+
 module.exports = {
     addEvent,
     getAllEvents,
     getEventById,
     updateEvent,
     downloadContent,
-    deleteEvent
+    deleteEvent,
+    addFeedback,
+    getEventFeedback,
+    deleteFeedback
 };

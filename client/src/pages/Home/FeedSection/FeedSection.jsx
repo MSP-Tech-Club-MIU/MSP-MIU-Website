@@ -1,18 +1,157 @@
-import React, { useMemo, memo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, memo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import './FeedSection.css';
+import ApiService from '../../../services/api';
+import { FiPlus, FiX } from 'react-icons/fi';
 
 const FeedSection = memo(() => {
-  const announcements = useMemo(() => ([
-    { id: 'a1', title: 'Welcome New Members', dept: 'Community', date: '2025-10-01', desc: 'Welcome to the MSP Tech Club. We are excited to have you on board. We hope you enjoy your time with us.', priority: true },
-    { id: 'a2', title: 'MSP MIU Opening Session', dept: 'Events', date: '2025-10-22', desc: 'Join us for the grand opening ceremony of MSP Tech Club. We\'ll have guest speakers, networking opportunities, and exciting announcements about upcoming events and initiatives.', priority: false },
-  ]), []);
+  const [announcements, setAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userRole, setUserRole] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    department: '',
+    announcement_date: '',
+    priority: false
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+
+  // Check user role
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (ApiService.isAuthenticated()) {
+        try {
+          const user = await ApiService.getProfile();
+          setUserRole(user.role);
+        } catch (error) {
+          console.error('Error fetching user role:', error);
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
+    };
+    checkUserRole();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await ApiService.getAnnouncements();
+      
+      // Map API response to component format
+      const mappedAnnouncements = Array.isArray(data) ? data.map(announcement => ({
+        id: announcement.announcement_id,
+        title: announcement.title,
+        dept: announcement.department,
+        date: announcement.announcement_date,
+        desc: announcement.description,
+        priority: announcement.priority
+      })) : [];
+      
+      setAnnouncements(mappedAnnouncements);
+    } catch (err) {
+      console.error('Error fetching announcements:', err);
+      // If it's a JSON parse error, the API endpoint might not be available
+      if (err.message && err.message.includes('JSON')) {
+        setError('Announcements API is not available. Please ensure the backend server is running.');
+      } else {
+        setError(err.message || 'Failed to load announcements');
+      }
+      setAnnouncements([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
+  const canCreateAnnouncements = isBoardOrAdmin;
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await ApiService.createAnnouncement(formData);
+      setShowModal(false);
+      setFormData({
+        title: '',
+        description: '',
+        department: '',
+        announcement_date: '',
+        priority: false
+      });
+      // Refresh announcements list
+      await fetchAnnouncements();
+    } catch (err) {
+      console.error('Error creating announcement:', err);
+      setSubmitError(err.message || 'Failed to create announcement');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setFormData({
+      title: '',
+      description: '',
+      department: '',
+      announcement_date: '',
+      priority: false
+    });
+    setSubmitError(null);
+  };
 
   return (
     <section className="Feed" aria-labelledby="feed-heading">
-      <div className="Feed__head"><h2 id="feed-heading" className="Feed__title">Announcements & Updates</h2></div>
+      <div className="Feed__head">
+        <h2 id="feed-heading" className="Feed__title">Announcements & Updates</h2>
+        {canCreateAnnouncements && (
+          <motion.button
+            className="Feed__createBtn"
+            onClick={() => setShowModal(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <FiPlus />
+            Create Announcement
+          </motion.button>
+        )}
+      </div>
       <div className="Feed__grid">
-        {announcements.map(a => (
+        {loading ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#8EC2F0' }}>
+            Loading announcements...
+          </div>
+        ) : error ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#ffb4b4' }}>
+            {error}
+          </div>
+        ) : announcements.length === 0 ? (
+          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: '#8EC2F0' }}>
+            No announcements at the moment.
+          </div>
+        ) : (
+          announcements.map(a => (
           <motion.article
             key={a.id}
             className={`FeedCard ${a.priority ? 'is-priority' : ''}`}
@@ -29,8 +168,127 @@ const FeedSection = memo(() => {
             <p className="FeedCard__desc">{a.desc}</p>
             {/* <motion.a href="/announcements" className="FeedCard__more" whileHover={{ color: '#fff', x: 3 }}>Read more →</motion.a> */}
           </motion.article>
-        ))}
+          ))
+        )}
       </div>
+
+      {/* Create Announcement Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="Feed__modalOverlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleCloseModal}
+          >
+            <motion.div
+              className="Feed__modalContent"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                className="Feed__modalClose"
+                onClick={handleCloseModal}
+                aria-label="Close modal"
+              >
+                <FiX />
+              </button>
+
+              <h3 className="Feed__modalTitle">Create New Announcement</h3>
+
+              <form onSubmit={handleSubmit} className="Feed__form">
+                <div className="Feed__formGroup">
+                  <label htmlFor="title">Title *</label>
+                  <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Enter announcement title"
+                  />
+                </div>
+
+                <div className="Feed__formGroup">
+                  <label htmlFor="description">Description *</label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    required
+                    rows="4"
+                    placeholder="Enter announcement description"
+                  />
+                </div>
+
+                <div className="Feed__formGroup">
+                  <label htmlFor="department">Department *</label>
+                  <input
+                    type="text"
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="e.g., Community, Events, Technical"
+                  />
+                </div>
+
+                <div className="Feed__formGroup">
+                  <label htmlFor="announcement_date">Date *</label>
+                  <input
+                    type="date"
+                    id="announcement_date"
+                    name="announcement_date"
+                    value={formData.announcement_date}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="Feed__formGroup Feed__formGroup--checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="priority"
+                      checked={formData.priority}
+                      onChange={handleInputChange}
+                    />
+                    <span>Priority Announcement</span>
+                  </label>
+                </div>
+
+                {submitError && (
+                  <div className="Feed__formError">{submitError}</div>
+                )}
+
+                <div className="Feed__formActions">
+                  <button
+                    type="button"
+                    className="Feed__formBtn Feed__formBtn--cancel"
+                    onClick={handleCloseModal}
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="Feed__formBtn Feed__formBtn--submit"
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Creating...' : 'Create Announcement'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 });
