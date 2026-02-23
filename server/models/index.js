@@ -6,11 +6,13 @@ const Member = require('./Member');
 const Session = require('./Session');
 const Attendance = require('./Attendance');
 const Event = require('./Event');
+const EventFeedback = require('./EventFeedback');
 const User = require('./User');
 const PasswordToken = require('./PasswordToken');
 const Leaderboard = require('./Leaderboard');
 const Sponsor = require('./Sponsor');
 const Suggestion = require('./Suggestion');
+const Announcement = require('./Announcement');
 
 // Competition-related models
 const Competition = require('./Competition');
@@ -33,11 +35,13 @@ const models = {
   Session,
   Attendance,
   Event,
+  EventFeedback,
   User,
   PasswordToken,
   Leaderboard,
   Sponsor,
   Suggestion,
+  Announcement,
   Competition,
   Team,
   TeamMember,
@@ -102,6 +106,17 @@ Event.hasMany(Attendance, {
   as: 'attendanceRequests'
 });
 
+// EventFeedback associations
+EventFeedback.belongsTo(Event, {
+  foreignKey: 'event_id',
+  as: 'event',
+  onDelete: 'CASCADE'
+});
+Event.hasMany(EventFeedback, {
+  foreignKey: 'event_id',
+  as: 'feedbacks'
+});
+
 // User associations
 User.belongsTo(Department, {
   foreignKey: 'department_id',
@@ -124,6 +139,10 @@ User.hasMany(PasswordToken, {
   foreignKey: 'user_id',
   as: 'passwordTokens'
 });
+User.hasMany(Announcement, {
+  foreignKey: 'created_by',
+  as: 'announcements'
+});
 
 Member.belongsTo(User, {
   foreignKey: 'user_id',
@@ -136,6 +155,10 @@ Board.belongsTo(User, {
 PasswordToken.belongsTo(User, {
   foreignKey: 'user_id',
   as: 'user'
+});
+Announcement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
 });
 
 // Leaderboard associations

@@ -625,6 +625,180 @@ class ApiService {
     }
   }
 
+  // ========== Announcements API Methods ==========
+
+  // Get all announcements
+  static async getAnnouncements(includeInactive = false) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (includeInactive) queryParams.append('includeInactive', 'true');
+      
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/announcements${queryString ? `?${queryString}` : ''}`;
+      
+      const cacheKey = getCacheKey(url);
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('Returning cached announcements data');
+        return cachedData;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response received:', text.substring(0, 200));
+        throw new Error(`Expected JSON but received ${contentType || 'unknown content type'}. The API endpoint may not be available.`);
+      }
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch announcements');
+      }
+
+      const data = result.data || result;
+      
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      throw error;
+    }
+  }
+
+  // Get announcement by ID
+  static async getAnnouncementById(id) {
+    try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/announcements/${id}`);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        console.log('Returning cached announcement data');
+        return cachedData;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch announcement');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching announcement:', error);
+      throw error;
+    }
+  }
+
+  // Create a new announcement (admin/board only)
+  static async createAnnouncement(announcementData) {
+    try {
+      const headers = this.getHeaders(true);
+      
+      // Debug: Log if token is being sent
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/announcements`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(announcementData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Use the actual error message from the server
+        const errorMessage = result.error || result.message || 'Failed to create announcement';
+        
+        // Provide more specific error messages
+        if (response.status === 403) {
+          throw new Error(errorMessage || 'Access denied. You do not have permission to create announcements.');
+        } else if (response.status === 401) {
+          throw new Error('Authentication required. Please log in again.');
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+      
+      return result.data;
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      throw error;
+    }
+  }
+
+  // Update an announcement (admin/board only)
+  static async updateAnnouncement(id, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update announcement');
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+      
+      return result.data;
+    } catch (error) {
+      console.error('Error updating announcement:', error);
+      throw error;
+    }
+  }
+
+  // Delete an announcement (admin/board only)
+  static async deleteAnnouncement(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete announcement');
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+      
+      return result;
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      throw error;
+    }
+  }
+
   // Create a new event (admin only)
   static async createEvent(eventData) {
     try {
@@ -702,6 +876,91 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error deleting event:', error);
+      throw error;
+    }
+  }
+
+  // ========== Event Feedback API Methods ==========
+
+  // Get all feedback for an event
+  static async getEventFeedback(eventId) {
+    try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch feedback');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching event feedback:', error);
+      throw error;
+    }
+  }
+
+  // Add feedback to an event (guests can submit)
+  static async addEventFeedback(eventId, feedback) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'POST',
+        headers: this.getHeaders(), // No auth required for guests
+        body: JSON.stringify({ feedback }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error adding feedback:', error);
+      throw error;
+    }
+  }
+
+  // Delete feedback (admin/board only)
+  static async deleteEventFeedback(eventId, feedbackId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin/board
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
       throw error;
     }
   }
@@ -1774,6 +2033,17 @@ class ApiService {
       console.error('Error updating admin registration:', error);
       throw error;
     }
+  }
+
+  // Clear cache for a specific key pattern
+  static clearCache(pattern) {
+    const keysToDelete = [];
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => cache.delete(key));
   }
 }
 
