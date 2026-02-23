@@ -12,6 +12,9 @@ import vpPhoto from '../assets/Images/VP H.png';
 import PW from '../assets/Images/Mo-Wael President.png';
 import Founder from '../assets/Images/Founder Photo.png';
 import CoHeadM1 from '../assets/Images/Co Head Joseph.png';
+import HeadHR from '../assets/Images/SalmaHR.png';
+import CoHeadH1 from '../assets/Images/RawaaHR.png';
+import CoHeadH2 from '../assets/Images/SherifHR.png';
 
 const boardMembers = [
   // Leadership
@@ -132,18 +135,21 @@ const boardMembers = [
     id: 18,
     name: 'Salma Khalid',
     role: 'Human Resources Head',
+    image: HeadHR,
     department: 5,
   },
   {
     id: 19,
     name: 'Rawaa Ashour',
     role: 'Human Resources Co-Head',
+    image: CoHeadH1,
     department: 5,
   },
   {
     id: 20,
     name: 'Mohamed Sherif',
     role: 'Human Resources Co-Head',
+    image: CoHeadH2,
     department: 5,
   },
   // Department 6: Event Planning
