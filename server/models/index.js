@@ -25,6 +25,7 @@ const QuizQuestion = require('./QuizQuestion');
 const QuizOption = require('./QuizOption');
 const QuizAttempt = require('./QuizAttempt');
 const QuizAnswer = require('./QuizAnswer');
+const AdminNotification = require('./AdminNotification');
 
 // Initialize models
 const models = {
@@ -51,28 +52,29 @@ const models = {
   QuizQuestion,
   QuizOption,
   QuizAttempt,
-  QuizAnswer
+  QuizAnswer,
+  AdminNotification
 };
 
 // Set up associations
 
 // Application associations
-Application.belongsTo(Department, { 
-  foreignKey: 'first_choice', 
-  as: 'firstChoiceDepartment' 
+Application.belongsTo(Department, {
+  foreignKey: 'first_choice',
+  as: 'firstChoiceDepartment'
 });
-Application.belongsTo(Department, { 
-  foreignKey: 'second_choice', 
+Application.belongsTo(Department, {
+  foreignKey: 'second_choice',
   as: 'secondChoiceDepartment',
   allowNull: true
 });
-Department.hasMany(Application, { 
-  foreignKey: 'first_choice', 
-  as: 'firstChoiceApplications' 
+Department.hasMany(Application, {
+  foreignKey: 'first_choice',
+  as: 'firstChoiceApplications'
 });
-Department.hasMany(Application, { 
-  foreignKey: 'second_choice', 
-  as: 'secondChoiceApplications' 
+Department.hasMany(Application, {
+  foreignKey: 'second_choice',
+  as: 'secondChoiceApplications'
 });
 
 // Board associations
@@ -368,6 +370,16 @@ QuizAnswer.belongsTo(QuizOption, {
 QuizOption.hasMany(QuizAnswer, {
   foreignKey: 'selected_option_id',
   as: 'answers'
+});
+
+// AdminNotification associations
+AdminNotification.belongsTo(User, {
+  foreignKey: 'performed_by',
+  as: 'performer'
+});
+User.hasMany(AdminNotification, {
+  foreignKey: 'performed_by',
+  as: 'adminNotifications'
 });
 
 // Sync models with database

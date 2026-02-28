@@ -632,13 +632,13 @@ class ApiService {
     try {
       const queryParams = new URLSearchParams();
       if (includeInactive) queryParams.append('includeInactive', 'true');
-      
+
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/announcements${queryString ? `?${queryString}` : ''}`;
-      
+
       const cacheKey = getCacheKey(url);
       const cachedData = getCachedData(cacheKey);
-      
+
       if (cachedData) {
         console.log('Returning cached announcements data');
         return cachedData;
@@ -658,13 +658,13 @@ class ApiService {
       }
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch announcements');
       }
 
       const data = result.data || result;
-      
+
       // Cache the result
       setCachedData(cacheKey, data);
       return data;
@@ -711,7 +711,7 @@ class ApiService {
   static async createAnnouncement(announcementData) {
     try {
       const headers = this.getHeaders(true);
-      
+
       // Debug: Log if token is being sent
       const token = this.getAuthToken();
       if (!token) {
@@ -729,7 +729,7 @@ class ApiService {
       if (!response.ok) {
         // Use the actual error message from the server
         const errorMessage = result.error || result.message || 'Failed to create announcement';
-        
+
         // Provide more specific error messages
         if (response.status === 403) {
           throw new Error(errorMessage || 'Access denied. You do not have permission to create announcements.');
@@ -742,7 +742,7 @@ class ApiService {
 
       // Clear announcements cache
       this.clearCache('announcements');
-      
+
       return result.data;
     } catch (error) {
       console.error('Error creating announcement:', error);
@@ -767,7 +767,7 @@ class ApiService {
 
       // Clear announcements cache
       this.clearCache('announcements');
-      
+
       return result.data;
     } catch (error) {
       console.error('Error updating announcement:', error);
@@ -791,7 +791,7 @@ class ApiService {
 
       // Clear announcements cache
       this.clearCache('announcements');
-      
+
       return result;
     } catch (error) {
       console.error('Error deleting announcement:', error);
@@ -2035,6 +2035,150 @@ class ApiService {
     }
   }
 
+  /**
+   * Get admin notifications (actions on competitions, attendance, registrations)
+   * Only accessible for President, Vice President, and Head of Software Development
+   */
+  static async getAdminNotifications(limit = 50) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (limit) {
+        queryParams.append('limit', String(limit));
+      }
+
+      const url = `${API_BASE_URL}/admin/notifications${queryParams.toString() ? `?${queryParams.toString()}` : ''
+        }`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch admin notifications');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all suggestions (admin)
+   */
+  static async getAdminSuggestions() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/suggestions`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch suggestions');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin suggestions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all event feedback (admin)
+   */
+  static async getAdminFeedback() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch feedback');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin feedback:', error);
+      throw error;
+    }
+  }
+  // ==========================================
+  // Admin Teams Management
+  // ==========================================
+
+  /**
+   * Get all teams for a specific competition (admin)
+   */
+  static async getAdminCompetitionTeams(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/teams`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch teams');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin competition teams:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a team for a competition (admin)
+   */
+  static async createAdminTeam(competitionId, teamData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/teams`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(teamData)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create team');
+      return result.data;
+    } catch (error) {
+      console.error('Error creating admin team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing team (admin)
+   */
+  static async updateAdminTeam(teamId, teamData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(teamData)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update team');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a team (admin)
+   */
+  static async deleteAdminTeam(teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete team');
+      return result;
+    } catch (error) {
+      console.error('Error deleting admin team:', error);
+      throw error;
+    }
+  }
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];

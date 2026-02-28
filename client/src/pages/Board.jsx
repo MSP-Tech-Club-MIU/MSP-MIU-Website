@@ -17,6 +17,23 @@ import CoHeadH1 from '../assets/Images/RawaaHR.png';
 import CoHeadH2 from '../assets/Images/SherifHR.png';
 
 const boardMembers = [
+  //Ambasador
+  {
+    id: 1,
+    name: 'Mahmoud Mamdouh',
+    role: 'Founder & Ambasador',
+    department: 'ambasador',
+    image: Founder,
+  },
+
+  {
+    id: 2,
+    name: 'Mohamed Wael',
+    role: 'President & Ambasador',
+    department: 'ambasador',
+    image: PW,
+  },
+
   // Leadership
   {
     id: 1,
@@ -31,7 +48,6 @@ const boardMembers = [
     role: 'President',
     department: 8,
     image: PW,
-
   },
   {
     id: 3,
@@ -173,7 +189,7 @@ const boardMembers = [
   },
 ];
 
-const ROLE_ORDER = { 'Founder': 1, 'President': 2, 'Vice President': 3 };
+const ROLE_ORDER = { 'Founder': 1, 'President': 2, 'Vice President': 3, 'Ambasador': 4 };
 const DEPT_ORDER = { 9: 1, 8: 2, 7: 3 };
 
 const Board = memo(() => {
@@ -185,6 +201,8 @@ const Board = memo(() => {
     if (selectedDepartment !== null) {
       if (selectedDepartment === 'president-vp') {
         members = boardMembers.filter(m => m.department === 7 || m.department === 8);
+      } else if (selectedDepartment === 'ambasador') {
+        members = boardMembers.filter(m => m.department === 'ambasador');
       } else {
         members = boardMembers.filter(m => m.department === selectedDepartment);
       }
@@ -193,11 +211,11 @@ const Board = memo(() => {
     // Group by department and role
     const groups = {};
     members.forEach(member => {
-      const deptId = member.department;
+      const deptId = member.role.toLowerCase();
       if (!groups[deptId]) groups[deptId] = { heads: [], coHeads: [] };
 
       const role = member.role.toLowerCase();
-      const isSpecial = ['founder', 'president', 'vice president'].includes(member.role.toLowerCase());
+      const isSpecial = ['founder', 'president', 'vice president', 'ambasador'].includes(member.role.toLowerCase());
       const isHead = role.includes('head') && !role.includes('co-head');
 
       if (isHead || isSpecial) {

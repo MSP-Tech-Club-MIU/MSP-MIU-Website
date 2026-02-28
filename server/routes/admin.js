@@ -11,9 +11,15 @@ const {
     getAttendanceRequests,
     updateAttendanceStatus,
     getRegistrations,
-    updateRegistrationStatus
-} = require('../controllers/admin'); // To get functions that admin does from Competition add, delete, update, get, attendance add,
-// delete, update, get, registrations add, delete, update, get
+    updateRegistrationStatus,
+    getNotifications,
+    getSuggestions,
+    getEventFeedbackAll,
+    getCompetitionTeams,
+    createAdminTeam,
+    updateAdminTeam,
+    deleteAdminTeam
+} = require('../controllers/admin');
 
 // All admin routes require authentication + admin authorization
 router.use(authenticateToken);
@@ -35,5 +41,18 @@ router.put('/attendance/:id', updateAttendanceStatus);
 // Registrations
 router.get('/registrations', getRegistrations);
 router.put('/registrations/:id', updateRegistrationStatus);
+
+// Notifications
+router.get('/notifications', getNotifications);
+
+// Suggestions & Feedback (admin view)
+router.get('/suggestions', getSuggestions);
+router.get('/feedback', getEventFeedbackAll);
+
+// Teams (Admin Management)
+router.get('/competitions/:id/teams', getCompetitionTeams);
+router.post('/competitions/:id/teams', createAdminTeam);
+router.put('/teams/:id', updateAdminTeam);
+router.delete('/teams/:id', deleteAdminTeam);
 
 module.exports = router;
