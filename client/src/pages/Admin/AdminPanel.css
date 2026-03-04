@@ -830,6 +830,103 @@ body.admin-panel-active .SiteLayout__main {
     box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.1);
 }
 
+/* ══ OVERLAY ══ */
+.AdminPanel__modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+/* ══ MODAL CONTENT ══ */
+.AdminPanel__modalContent {
+    background: linear-gradient(145deg, rgba(15, 42, 69, 0.98), rgba(9, 26, 44, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 20px;
+    padding: 32px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 86vh;
+    overflow-y: auto;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.AdminPanel__modalContent--large {
+    max-width: 760px;
+}
+
+.AdminPanel__modalContent::-webkit-scrollbar {
+    width: 5px;
+}
+
+.AdminPanel__modalContent::-webkit-scrollbar-thumb {
+    background: rgba(74, 166, 255, 0.2);
+    border-radius: 3px;
+}
+
+/* ══ MODAL HEADER ══ */
+.AdminPanel__modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.AdminPanel__modalHeader h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #eaf2ff;
+}
+
+.AdminPanel__modalClose {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(197, 218, 233, 0.6);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.AdminPanel__modalClose:hover {
+    background: rgba(244, 67, 54, 0.12);
+    border-color: rgba(244, 67, 54, 0.25);
+    color: #E57373;
+}
+
+/* ══ TEAM FORM CARD — NEW CSS ══ */
+.AdminPanel__teamForm {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.AdminPanel__teamForm h4 {
+    margin: 0 0 20px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #eaf2ff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
 .AdminPanel__formGroup textarea {
     min-height: 100px;
     resize: vertical;
