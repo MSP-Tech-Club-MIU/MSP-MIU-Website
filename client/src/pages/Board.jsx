@@ -15,6 +15,7 @@ import CoHeadM1 from '../assets/Images/Co Head Joseph.png';
 import HeadHR from '../assets/Images/SalmaHR.png';
 import CoHeadH1 from '../assets/Images/RawaaHR.png';
 import CoHeadH2 from '../assets/Images/SherifHR.png';
+import CoHeadPR2 from '../assets/Images/Yousef-AbdelaalPR.png';
 
 const boardMembers = [
   //Ambasador
@@ -144,6 +145,7 @@ const boardMembers = [
     id: 17,
     name: 'Youssef Abdelaal',
     role: 'Public Relations Co-Head',
+    image: CoHeadPR2,
     department: 4,
   },
   // Department 5: Human Resources
