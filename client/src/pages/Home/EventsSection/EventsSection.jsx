@@ -35,10 +35,10 @@ const EventsSection = memo(() => {
           category: event.category
         })) : [];
         
-        // Sort by date (newest first - descending) and limit to latest 5
+        // Sort by date (newest first - descending) and limit to latest 3
         const sortedEvents = mappedEvents
           .sort((a, b) => new Date(b.event_date) - new Date(a.event_date))
-          .slice(0, 5);
+          .slice(0, 3);
         
         console.log('Fetched events:', mappedEvents.length, 'Displaying:', sortedEvents.length);
         setEvents(sortedEvents);
@@ -131,6 +131,18 @@ const EventsSection = memo(() => {
           })
         )}
       </div>
+      {!loading && events.length > 0 && (
+        <div className="Events__seeMoreContainer">
+          <motion.button
+            className="Events__seeMoreBtn"
+            onClick={() => navigate('/events')}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            See More Events
+          </motion.button>
+        </div>
+      )}
     </section>
   );
 });

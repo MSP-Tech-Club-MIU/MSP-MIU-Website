@@ -28,7 +28,7 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.22.0",
     "framer-motion": "^12.23.22",
     "gsap": "^3.13.0",
     "jsonwebtoken": "^9.0.2",
@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "nodemon": "^3.1.4"
+    "nodemon": "^1.0.2"
   },
   "engines": {
     "node": ">=18.0.0",

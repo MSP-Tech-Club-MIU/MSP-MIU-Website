@@ -44,6 +44,10 @@ app.use("/assets", express.static(path.join(__dirname, "client/public/assets")))
 // Catch-all handler: send back React's index.html file for any non-API routes
 // This must be last to not interfere with static file serving
 app.get("*", (req, res) => {
+  // Exclude API routes from catch-all
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'API endpoint not found' });
+  }
   // Don't serve index.html for asset requests
   if (req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
     return res.status(404).send('Not found');

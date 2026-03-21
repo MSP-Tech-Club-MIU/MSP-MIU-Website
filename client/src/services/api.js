@@ -1,23 +1,23 @@
 // Determine API base URL based on environment
 function getApiBaseUrl() {
   // Check if running in Capacitor (mobile app)
-  const isCapacitor = typeof window !== 'undefined' && 
-    (window.Capacitor || window.ionic || 
-     /capacitor/i.test(navigator.userAgent) || 
-     /ionic/i.test(navigator.userAgent));
-  
+  const isCapacitor = typeof window !== 'undefined' &&
+    (window.Capacitor || window.ionic ||
+      /capacitor/i.test(navigator.userAgent) ||
+      /ionic/i.test(navigator.userAgent));
+
   // In Capacitor (mobile app), always use production deployment URL
   // No localhost - mobile apps must connect to the deployed backend
   if (isCapacitor) {
     return import.meta.env.VITE_PRODUCTION_API_URL || 'https://msp-miu.tech/api';
   }
-  
+
   // Web app: use production URL in production, development URL in development
   if (import.meta.env.PROD) {
     // Production web app - use production API URL from env or relative URL as fallback
     return import.meta.env.VITE_PRODUCTION_API_URL || '/api';
   }
-  
+
   // Development web app - use development API URL from env or localhost as fallback
   return import.meta.env.VITE_DEVELOPMENT_API_URL || 'http://localhost:3000/api';
 }
@@ -69,14 +69,14 @@ class ApiService {
     const headers = {
       'Content-Type': 'application/json',
     };
-    
+
     if (includeAuth) {
       const token = this.getAuthToken();
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
     }
-    
+
     return headers;
   }
 
@@ -84,7 +84,7 @@ class ApiService {
   static async login(university_id, password) {
     try {
       console.log('API Service - Attempting login for university ID:', university_id);
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -92,7 +92,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Login failed');
       }
@@ -122,10 +122,10 @@ class ApiService {
         const result = await response.json();
         console.log('Logout successful:', result.message);
       }
-      
+
       // Remove token regardless of response (client-side logout)
       this.removeAuthToken();
-      
+
       return true;
     } catch (error) {
       console.error('Error during logout:', error);
@@ -165,7 +165,7 @@ class ApiService {
   static isTokenExpired() {
     const token = this.getAuthToken();
     if (!token) return true;
-    
+
     try {
       // Decode JWT token (without verification, just to check expiration)
       const payload = JSON.parse(atob(token.split('.')[1]));
@@ -182,14 +182,14 @@ class ApiService {
   static isAuthenticated() {
     const token = this.getAuthToken();
     if (!token) return false;
-    
+
     // Check if token is expired
     if (this.isTokenExpired()) {
       // Token expired, remove it
       this.removeAuthToken();
       return false;
     }
-    
+
     return true;
   }
 
@@ -213,18 +213,18 @@ class ApiService {
       const response = await fetch(`${API_BASE_URL}/users/profile`, {
         headers: this.getHeaders(true),
       });
-      
+
       // Handle 401 Unauthorized (token expired or invalid)
       if (response.status === 401) {
         this.removeAuthToken();
         throw new Error('Token expired. Please login again.');
       }
-      
+
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         throw new Error(result.error || 'Failed to fetch profile');
       }
-      
+
       const result = await response.json();
       return result.user;
     } catch (error) {
@@ -242,17 +242,17 @@ class ApiService {
       }
 
       const formData = new FormData();
-      
+
       // Add text fields
       if (profileData.full_name) {
         formData.append('full_name', profileData.full_name);
       }
-      
+
       // Add files if provided
       if (profilePictureFile) {
         formData.append('profile_picture', profilePictureFile);
       }
-      
+
       if (scheduleFile) {
         formData.append('schedule', scheduleFile);
       }
@@ -270,18 +270,18 @@ class ApiService {
         },
         body: formData,
       });
-      
+
       // Handle 401 Unauthorized (token expired or invalid)
       if (response.status === 401) {
         this.removeAuthToken();
         throw new Error('Token expired. Please login again.');
       }
-      
+
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
         throw new Error(result.error || 'Failed to update profile');
       }
-      
+
       const result = await response.json();
       return result.user;
     } catch (error) {
@@ -294,7 +294,7 @@ class ApiService {
   static async activateAccount(token, password, email = null) {
     try {
       const body = { password };
-      
+
       // Prefer token over email for security
       if (token) {
         body.token = token;
@@ -303,7 +303,7 @@ class ApiService {
       } else {
         throw new Error('Token or email is required');
       }
-      
+
       const response = await fetch(`${API_BASE_URL}/auth/activate`, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -311,7 +311,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Account activation failed');
       }
@@ -333,7 +333,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Token verification failed');
       }
@@ -367,7 +367,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to request password reset');
       }
@@ -396,7 +396,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to reset password');
       }
@@ -412,7 +412,7 @@ class ApiService {
     try {
       console.log('API Service - Sending data:', formData);
       console.log('API Service - JSON stringified:', JSON.stringify(formData));
-      
+
       const response = await fetch(`${API_BASE_URL}/applications`, {
         method: 'POST',
         headers: this.getHeaders(),
@@ -422,7 +422,7 @@ class ApiService {
       console.log('API Service - Response status:', response.status);
       const result = await response.json();
       console.log('API Service - Response data:', result);
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit application');
       }
@@ -445,13 +445,13 @@ class ApiService {
       if (filters.faculty) queryParams.append('faculty', filters.faculty);
       if (filters.year) queryParams.append('year', filters.year);
       if (filters.search) queryParams.append('search', filters.search);
-      
+
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/applications${queryString ? `?${queryString}` : ''}`;
-      
+
       const cacheKey = getCacheKey(url, filters);
       const cachedData = getCachedData(cacheKey);
-      
+
       if (cachedData) {
         console.log('Returning cached applications data');
         return cachedData;
@@ -461,9 +461,9 @@ class ApiService {
         method: 'GET',
         headers: this.getHeaders(true), // Include auth token for protected route
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch applications');
       }
@@ -486,7 +486,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update application status');
       }
@@ -510,7 +510,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update application comment');
       }
@@ -534,7 +534,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete application');
       }
@@ -558,13 +558,13 @@ class ApiService {
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
       if (filters.past) queryParams.append('past', filters.past);
-      
+
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/events${queryString ? `?${queryString}` : ''}`;
-      
+
       const cacheKey = getCacheKey(url, filters);
       const cachedData = getCachedData(cacheKey);
-      
+
       if (cachedData) {
         console.log('Returning cached events data');
         return cachedData;
@@ -576,13 +576,13 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch events');
       }
 
       const data = result.data || result;
-      
+
       // Cache the result
       setCachedData(cacheKey, data);
       return data;
@@ -597,7 +597,7 @@ class ApiService {
     try {
       const cacheKey = getCacheKey(`${API_BASE_URL}/events/${id}`);
       const cachedData = getCachedData(cacheKey);
-      
+
       if (cachedData) {
         console.log('Returning cached event data');
         return cachedData;
@@ -609,18 +609,192 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch event');
       }
 
       const data = result.data || result;
-      
+
       // Cache the result
       setCachedData(cacheKey, data);
       return data;
     } catch (error) {
       console.error('Error fetching event:', error);
+      throw error;
+    }
+  }
+
+  // ========== Announcements API Methods ==========
+
+  // Get all announcements
+  static async getAnnouncements(includeInactive = false) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (includeInactive) queryParams.append('includeInactive', 'true');
+
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/announcements${queryString ? `?${queryString}` : ''}`;
+
+      const cacheKey = getCacheKey(url);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        console.log('Returning cached announcements data');
+        return cachedData;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response received:', text.substring(0, 200));
+        throw new Error(`Expected JSON but received ${contentType || 'unknown content type'}. The API endpoint may not be available.`);
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch announcements');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      throw error;
+    }
+  }
+
+  // Get announcement by ID
+  static async getAnnouncementById(id) {
+    try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/announcements/${id}`);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        console.log('Returning cached announcement data');
+        return cachedData;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch announcement');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching announcement:', error);
+      throw error;
+    }
+  }
+
+  // Create a new announcement (admin/board only)
+  static async createAnnouncement(announcementData) {
+    try {
+      const headers = this.getHeaders(true);
+
+      // Debug: Log if token is being sent
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/announcements`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(announcementData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Use the actual error message from the server
+        const errorMessage = result.error || result.message || 'Failed to create announcement';
+
+        // Provide more specific error messages
+        if (response.status === 403) {
+          throw new Error(errorMessage || 'Access denied. You do not have permission to create announcements.');
+        } else if (response.status === 401) {
+          throw new Error('Authentication required. Please log in again.');
+        } else {
+          throw new Error(errorMessage);
+        }
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+
+      return result.data;
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      throw error;
+    }
+  }
+
+  // Update an announcement (admin/board only)
+  static async updateAnnouncement(id, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update announcement');
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+
+      return result.data;
+    } catch (error) {
+      console.error('Error updating announcement:', error);
+      throw error;
+    }
+  }
+
+  // Delete an announcement (admin/board only)
+  static async deleteAnnouncement(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete announcement');
+      }
+
+      // Clear announcements cache
+      this.clearCache('announcements');
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
       throw error;
     }
   }
@@ -635,7 +809,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to create event');
       }
@@ -661,7 +835,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update event');
       }
@@ -688,7 +862,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete event');
       }
@@ -706,6 +880,91 @@ class ApiService {
     }
   }
 
+  // ========== Event Feedback API Methods ==========
+
+  // Get all feedback for an event
+  static async getEventFeedback(eventId) {
+    try {
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch feedback');
+      }
+
+      const data = result.data || result;
+
+      // Cache the result
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching event feedback:', error);
+      throw error;
+    }
+  }
+
+  // Add feedback to an event (guests can submit)
+  static async addEventFeedback(eventId, feedback) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+        method: 'POST',
+        headers: this.getHeaders(), // No auth required for guests
+        body: JSON.stringify({ feedback }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result.data || result;
+    } catch (error) {
+      console.error('Error adding feedback:', error);
+      throw error;
+    }
+  }
+
+  // Delete feedback (admin/board only)
+  static async deleteEventFeedback(eventId, feedbackId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true), // Include auth token for admin/board
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete feedback');
+      }
+
+      // Invalidate feedback cache for this event
+      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      cache.delete(cacheKey);
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      throw error;
+    }
+  }
+
   // Submit attendance request
   static async submitAttendanceRequest(formData) {
     try {
@@ -716,7 +975,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit attendance request');
       }
@@ -735,17 +994,17 @@ class ApiService {
       if (filters.event_id) queryParams.append('event_id', filters.event_id);
       if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
       if (filters.search) queryParams.append('search', filters.search);
-      
+
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/attendance${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(true), // Include auth token for admin access
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch attendance requests');
       }
@@ -767,7 +1026,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to update attendance request');
       }
@@ -788,7 +1047,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to delete attendance request');
       }
@@ -807,10 +1066,10 @@ class ApiService {
       if (filters.event_id) queryParams.append('event_id', filters.event_id);
       if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
       if (filters.search) queryParams.append('search', filters.search);
-      
+
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/attendance/export/csv${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(true), // Include auth token for admin access
@@ -823,11 +1082,11 @@ class ApiService {
 
       // Get the CSV content as text
       const csvContent = await response.text();
-      
+
       // Get filename from Content-Disposition header or generate one
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `attendance_review_${new Date().toISOString().split('T')[0]}.csv`;
-      
+
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/);
         if (filenameMatch) {
@@ -839,17 +1098,17 @@ class ApiService {
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const urlObj = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', urlObj);
       link.setAttribute('download', filename);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Clean up the object URL
       setTimeout(() => URL.revokeObjectURL(urlObj), 100);
-      
+
       return { success: true };
     } catch (error) {
       console.error('Error exporting attendance requests to CSV:', error);
@@ -866,7 +1125,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || 'Failed to fetch images');
       }
@@ -891,7 +1150,7 @@ class ApiService {
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.error || `Failed to fetch ${assetType}`);
       }
@@ -972,13 +1231,13 @@ class ApiService {
   static async getCompetitions(filters = {}) {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (filters.status) {
         queryParams.append('status', filters.status);
       }
 
       const url = `${API_BASE_URL}/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(false),
@@ -1523,6 +1782,412 @@ class ApiService {
       console.error(`Error grading submission ${submissionId}:`, error);
       throw error;
     }
+  }
+
+
+  // Admin Panel Part
+
+  /**
+   * Check if the current user has admin panel access
+   * @returns {Promise<Object>} - { success, boardMember }
+   */
+  static async checkAdminAccess() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      if (!response.ok) {
+        return { success: false };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * Get admin dashboard statistics
+   */
+  static async getAdminDashboard() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch dashboard stats');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin dashboard:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all competitions (admin)
+   */
+  static async getAdminCompetitions() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch competitions');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin competitions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create competition (admin)
+   */
+  static async createAdminCompetition(data) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create competition');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error creating competition:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update competition (admin)
+   */
+  static async updateAdminCompetition(id, data) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update competition');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error updating competition:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete competition (admin)
+   */
+  static async deleteAdminCompetition(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete competition');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error deleting competition:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get attendance requests (admin)
+   */
+  static async getAdminAttendance(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.event_id) queryParams.append('event_id', filters.event_id);
+      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.date) queryParams.append('date', filters.date);
+
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/admin/attendance${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch attendance');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin attendance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update attendance status (admin)
+   */
+  static async updateAdminAttendance(id, attended) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/attendance/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ attended }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update attendance');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin attendance:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get registrations (admin)
+   */
+  static async getAdminRegistrations(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.search) queryParams.append('search', filters.search);
+
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/admin/registrations${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch registrations');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin registrations:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update registration status (admin)
+   */
+  static async updateAdminRegistration(id, status) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/registrations/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ status }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update registration');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin registration:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get admin notifications (actions on competitions, attendance, registrations)
+   * Only accessible for President, Vice President, and Head of Software Development
+   */
+  static async getAdminNotifications(limit = 50) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (limit) {
+        queryParams.append('limit', String(limit));
+      }
+
+      const url = `${API_BASE_URL}/admin/notifications${queryParams.toString() ? `?${queryParams.toString()}` : ''
+        }`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch admin notifications');
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all suggestions (admin)
+   */
+  static async getAdminSuggestions() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/suggestions`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch suggestions');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin suggestions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all event feedback (admin)
+   */
+  static async getAdminFeedback() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/feedback`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch feedback');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin feedback:', error);
+      throw error;
+    }
+  }
+  // ==========================================
+  // Admin Teams Management
+  // ==========================================
+
+  /**
+   * Get all teams for a specific competition (admin)
+   */
+  static async getAdminCompetitionTeams(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/teams`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch teams');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin competition teams:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a team for a competition (admin)
+   */
+  static async createAdminTeam(competitionId, teamData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/teams`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(teamData)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create team');
+      return result.data;
+    } catch (error) {
+      console.error('Error creating admin team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing team (admin)
+   */
+  static async updateAdminTeam(teamId, teamData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(teamData)
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update team');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a team (admin)
+   */
+  static async deleteAdminTeam(teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete team');
+      return result;
+    } catch (error) {
+      console.error('Error deleting admin team:', error);
+      throw error;
+    }
+  }
+  // Clear cache for a specific key pattern
+  static clearCache(pattern) {
+    const keysToDelete = [];
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => cache.delete(key));
   }
 }
 

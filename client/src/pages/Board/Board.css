@@ -136,6 +136,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -225,6 +226,105 @@
   font-size: 1rem;
   color: #8EC2F0;
   letter-spacing: 0.3px;
+}
+
+/* Board Member Card */
+.BoardMemberCard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+}
+
+.BoardMemberCard__header {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+}
+
+.BoardMemberCard__image {
+  width: 100%;
+  height: 100%;
+}
+
+.BoardMemberCard__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.BoardMemberCard__badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 5px 14px;
+  background: linear-gradient(135deg, #0077CC, #03A9F4);
+  color: #fff;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  z-index: 2;
+}
+
+.BoardMemberCard__body {
+  padding: 20px;
+}
+
+.BoardMemberCard__name {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 650;
+  background: linear-gradient(135deg, #8EC2F0, #03A9F4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.BoardMemberCard__description {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: #8EC2F0;
+  line-height: 1.5;
+}
+
+.BoardMemberCard__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.BoardMemberCard__skill {
+  padding: 4px 10px;
+  background: rgba(3, 169, 244, 0.1);
+  border: 1px solid rgba(3, 169, 244, 0.25);
+  border-radius: 12px;
+  font-size: 0.7rem;
+  color: #8EC2F0;
+  font-weight: 500;
+}
+
+.BoardMemberCard__social {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.BoardMemberCard__social a {
+  color: #8EC2F0;
+  font-size: 1.1rem;
+  transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.BoardMemberCard__social a:hover {
+  color: #03A9F4;
+  transform: translateY(-2px);
 }
 
 /* Responsive */
@@ -321,4 +421,3 @@
     font-size: 0.7rem;
   }
 }
-

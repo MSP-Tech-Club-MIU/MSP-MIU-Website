@@ -30,6 +30,7 @@ const AttendanceRequest = lazy(() => import('./pages/AttendanceRequest'));
 const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
+const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
 
 // Helper to check if running in Capacitor (native app) environment
 // Checked synchronously outside render cycle to avoid race conditions
@@ -38,16 +39,16 @@ const isCapacitorEnv = (() => {
   const hasWindow = typeof window !== 'undefined';
   const hasNavigator = typeof navigator !== 'undefined' && typeof navigator.userAgent === 'string';
   const ua = hasNavigator ? navigator.userAgent : '';
-  
+
   // Check if Capacitor exists
   const windowCapacitor = hasWindow ? !!window.Capacitor : false;
   const windowIonic = hasWindow ? !!window.ionic : false;
-  
+
   // If Capacitor doesn't exist, definitely not in native app
   if (!windowCapacitor) {
     return false;
   }
-  
+
   // Check if we're actually in a native WebView (not just a regular browser)
   // Native apps have specific user agent patterns or are in a WebView
   const isWebView = hasNavigator && (
@@ -56,13 +57,13 @@ const isCapacitorEnv = (() => {
     /capacitor/i.test(ua) || // Explicit Capacitor user agent
     /ionic/i.test(ua) // Explicit Ionic user agent
   );
-  
+
   // Try to get platform from Capacitor (safely)
   let platform = 'unknown';
   let isNativePlatform = false;
-  
+
   try {
-    if (windowCapacitor && window.Capacitor?.getPlatform) {
+    if (window.Capacitor?.getPlatform) {
       platform = window.Capacitor.getPlatform();
       // Platform should be 'android', 'ios', etc. - NOT 'web'
       isNativePlatform = platform !== 'web' && platform !== 'unknown';
@@ -72,15 +73,17 @@ const isCapacitorEnv = (() => {
     platform = 'web';
     isNativePlatform = false;
   }
-  
+
   // Only consider it Capacitor if we have BOTH:
-  // 1. Capacitor exists
+  // 1. Capacitor exists (already verified above)
   // 2. AND (we're in a WebView OR platform is native)
+  // Note: windowIonic is logged for debugging but not used in detection
+  // as Ionic can be present in regular web apps without indicating native context.
   const isCapacitor = Boolean(
     windowCapacitor &&
     (isWebView || isNativePlatform)
   );
-  
+
   return isCapacitor;
 })();
 
@@ -99,10 +102,10 @@ const DownloadAndroidAppWrapper = () => {
   if (isCapacitorEnv) {
     // Show a minimal fallback while redirecting
     return (
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         minHeight: '40vh',
         color: '#eaf2ff'
       }}>
@@ -116,11 +119,11 @@ const DownloadAndroidAppWrapper = () => {
 
 // Enhanced loading component with better UX
 const PageLoader = () => (
-  <div style={{ 
-    display: 'flex', 
+  <div style={{
+    display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center', 
-    alignItems: 'center', 
+    justifyContent: 'center',
+    alignItems: 'center',
     minHeight: '50vh',
     color: '#eaf2ff',
     gap: '16px'
@@ -145,40 +148,41 @@ const PageLoader = () => (
 
 const AppRouter = () => {
   return (
-  <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-    <ScrollToTop />
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ScrollToTop />
       <AndroidBackButtonSetup />
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
-        <Route path="/about" element={<SiteLayout><AboutUs /></SiteLayout>} />
-        <Route path="/Meet-the-board" element={<SiteLayout><Board /></SiteLayout>} />
-        <Route path="/become-member" element={<BecomeMember />} />
-        <Route path="/login" element={<SiteLayout><Login /></SiteLayout>} />
-        <Route path="/exercises" element={<SiteLayout><Exercises /></SiteLayout>} />
-        <Route path="/events" element={<SiteLayout><Events /></SiteLayout>} />
-        <Route path="/events/create" element={<SiteLayout><CreateEvent /></SiteLayout>} />
-        <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
-        <Route path="/competitions" element={<SiteLayout><Competitions /></SiteLayout>} />
-        <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
-        <Route path="/competitions/:id/create-team" element={<SiteLayout><CreateTeam /></SiteLayout>} />
-        <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
-        <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
-        <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
-        <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
-        <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
-        <Route path="/registration-admin" element={<SiteLayout><FormAdmin /></SiteLayout>} />
-        <Route path="/profile" element={<SiteLayout><Profile /></SiteLayout>} />
-        <Route path="/account-activation" element={<AccountActivation />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
-        <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
-        <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
-        <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
-      </Routes>
-    </Suspense>
-  </Router>
-);
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<SiteLayout><Home /></SiteLayout>} />
+          <Route path="/about" element={<SiteLayout><AboutUs /></SiteLayout>} />
+          <Route path="/Meet-the-board" element={<SiteLayout><Board /></SiteLayout>} />
+          <Route path="/become-member" element={<BecomeMember />} />
+          <Route path="/login" element={<SiteLayout><Login /></SiteLayout>} />
+          <Route path="/exercises" element={<SiteLayout><Exercises /></SiteLayout>} />
+          <Route path="/events" element={<SiteLayout><Events /></SiteLayout>} />
+          <Route path="/events/create" element={<SiteLayout><CreateEvent /></SiteLayout>} />
+          <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
+          <Route path="/competitions" element={<SiteLayout><Competitions /></SiteLayout>} />
+          <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
+          <Route path="/competitions/:id/create-team" element={<SiteLayout><CreateTeam /></SiteLayout>} />
+          <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
+          <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
+          <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
+          <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
+          <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
+          <Route path="/registration-admin" element={<SiteLayout><FormAdmin /></SiteLayout>} />
+          <Route path="/profile" element={<SiteLayout><Profile /></SiteLayout>} />
+          <Route path="/account-activation" element={<AccountActivation />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
+          <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
+          <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
+          <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
+          <Route path="/admin" element={<SiteLayout><AdminPanel /></SiteLayout>} />
+        </Routes>
+      </Suspense>
+    </Router>
+  );
 };
 
 export default AppRouter;
