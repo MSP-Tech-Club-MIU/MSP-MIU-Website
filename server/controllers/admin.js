@@ -1,8 +1,29 @@
-const { Competition, Event, Attendance, Application, Member, Board, User, Department } = require('../models');
+const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, TeamMember } = require('../models');
+const AdminNotification = require('../models/AdminNotification');
 const { Op } = require('sequelize');
 
 /**
- * Get dashboard statistics
+ * Helper: Log an admin notification
+ */
+const logAdminAction = async (actionType, message, req, entityType = null, entityId = null) => {
+    try {
+        const boardMember = req.boardMember;
+        await AdminNotification.create({
+            action_type: actionType,
+            message,
+            performed_by: req.user.user_id,
+            performer_name: boardMember?.full_name || 'Admin',
+            performer_position: boardMember?.position || 'Admin',
+            entity_type: entityType,
+            entity_id: entityId
+        });
+    } catch (err) {
+        console.error('Failed to log admin notification:', err);
+    }
+};
+
+/**
+ * Get dashboard statistics + current admin info
  */
 const getDashboardStats = async (req, res) => {
     try {
@@ -22,6 +43,23 @@ const getDashboardStats = async (req, res) => {
             Application.count({ where: { status: 'pending' } })
         ]);
 
+        // Get the logged-in admin's board info
+        const boardMember = req.boardMember;
+        let adminInfo = null;
+        if (boardMember) {
+            // Determine admin title
+            let adminTitle = boardMember.position;
+            if (boardMember.position === 'Head' && boardMember.department_id === 1) {
+                adminTitle = 'Head of Software Development';
+            }
+            adminInfo = {
+                full_name: boardMember.full_name,
+                position: boardMember.position,
+                title: adminTitle,
+                department_id: boardMember.department_id
+            };
+        }
+
         res.json({
             success: true,
             data: {
@@ -30,7 +68,8 @@ const getDashboardStats = async (req, res) => {
                 totalEvents,
                 pendingAttendance,
                 totalApplications,
-                pendingApplications
+                pendingApplications,
+                adminInfo
             }
         });
     } catch (error) {
@@ -66,42 +105,59 @@ const getCompetitions = async (req, res) => {
 
 /**
  * Create a competition
+ * Maps frontend form fields to the actual Competition model fields
  */
 const createCompetition = async (req, res) => {
     try {
         const {
-            name,
+            title,
             description,
-            start_date,
-            end_date,
-            registration_deadline,
+            start_at,
+            end_at,
             max_team_size,
             min_team_size,
-            max_teams,
             status,
-            location
+            location_type,
+            location_details,
+            rules
         } = req.body;
 
-        if (!name || !description) {
+        if (!title || !description) {
             return res.status(400).json({
                 success: false,
-                error: 'Name and description are required'
+                error: 'Title and description are required'
+            });
+        }
+
+        if (!start_at || !end_at) {
+            return res.status(400).json({
+                success: false,
+                error: 'Start date and end date are required'
             });
         }
 
         const competition = await Competition.create({
-            name,
+            title,
             description,
-            start_date,
-            end_date,
-            registration_deadline,
+            start_at,
+            end_at,
             max_team_size: max_team_size || 4,
             min_team_size: min_team_size || 1,
-            max_teams: max_teams || null,
-            status: status || 'upcoming',
-            location: location || null,
+            status: status || 'draft',
+            location_type: location_type || 'on-campus',
+            location_details: location_details || null,
+            rules: (rules != null && String(rules).trim() !== '') ? String(rules).trim() : '',
             created_by: req.user.user_id
         });
+
+        // Log notification
+        await logAdminAction(
+            'competition_created',
+            `Created competition "${title}"`,
+            req,
+            'competition',
+            competition.competition_id
+        );
 
         res.status(201).json({
             success: true,
@@ -111,7 +167,7 @@ const createCompetition = async (req, res) => {
         console.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to create competition'
+            error: error.message || 'Failed to create competition'
         });
     }
 };
@@ -131,7 +187,20 @@ const updateCompetition = async (req, res) => {
             });
         }
 
-        await competition.update(req.body);
+        const updates = { ...req.body };
+        if ('rules' in updates && (updates.rules === null || updates.rules === undefined || (typeof updates.rules === 'string' && updates.rules.trim() === ''))) {
+            updates.rules = '';
+        }
+        await competition.update(updates);
+
+        // Log notification
+        await logAdminAction(
+            'competition_updated',
+            `Updated competition "${competition.title}"`,
+            req,
+            'competition',
+            competition.competition_id
+        );
 
         res.json({
             success: true,
@@ -161,7 +230,17 @@ const deleteCompetition = async (req, res) => {
             });
         }
 
+        const title = competition.title;
         await competition.destroy();
+
+        // Log notification
+        await logAdminAction(
+            'competition_deleted',
+            `Deleted competition "${title}"`,
+            req,
+            'competition',
+            parseInt(id)
+        );
 
         res.json({
             success: true,
@@ -230,6 +309,15 @@ const updateAttendanceStatus = async (req, res) => {
 
         await request.update({ attended });
 
+        // Log notification
+        await logAdminAction(
+            'attendance_updated',
+            `${attended ? 'Confirmed' : 'Revoked'} attendance for ${request.full_name || 'a member'}`,
+            req,
+            'attendance',
+            request.attendance_id
+        );
+
         res.json({
             success: true,
             data: request
@@ -297,6 +385,15 @@ const updateRegistrationStatus = async (req, res) => {
 
         await application.update({ status });
 
+        // Log notification
+        await logAdminAction(
+            `registration_${status}`,
+            `${status.charAt(0).toUpperCase() + status.slice(1)} application from ${application.full_name || 'applicant'}`,
+            req,
+            'registration',
+            application.application_id
+        );
+
         res.json({
             success: true,
             data: application
@@ -310,6 +407,196 @@ const updateRegistrationStatus = async (req, res) => {
     }
 };
 
+/**
+ * Get admin notifications
+ */
+const getNotifications = async (req, res) => {
+    try {
+        const { limit = 50 } = req.query;
+
+        const notifications = await AdminNotification.findAll({
+            order: [['created_at', 'DESC']],
+            limit: parseInt(limit)
+        });
+
+        res.json({
+            success: true,
+            data: notifications
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch notifications'
+        });
+    }
+};
+
+/**
+ * Get all suggestions (admin)
+ */
+const getSuggestions = async (req, res) => {
+    try {
+        const suggestions = await Suggestion.findAll({
+            include: [{ model: Member, as: 'member', attributes: ['member_id', 'full_name', 'email', 'university_id'] }],
+            order: [['created_at', 'DESC']]
+        });
+        res.json({ success: true, data: suggestions });
+    } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        res.status(500).json({ success: false, error: error.message || 'Failed to fetch suggestions' });
+    }
+};
+
+/**
+ * Get all event feedback (admin)
+ */
+const getEventFeedbackAll = async (req, res) => {
+    try {
+        const feedbacks = await EventFeedback.findAll({
+            include: [{ model: Event, as: 'event', attributes: ['event_id', 'name', 'event_date'] }],
+            order: [['created_at', 'DESC']]
+        });
+        res.json({ success: true, data: feedbacks });
+    } catch (error) {
+        console.error('Error fetching feedback:', error);
+        res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedback' });
+    }
+};
+
+// ============================================
+// Teams CRUD (Admin)
+// ============================================
+
+/**
+ * Get teams for a specific competition
+ */
+const getCompetitionTeams = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const teams = await Team.findAll({
+            where: { competition_id: id },
+            include: [{
+                model: User,
+                as: 'creator',
+                attributes: ['full_name', 'email']
+            }],
+            order: [['created_at', 'DESC']]
+        });
+        res.json({ success: true, data: teams });
+    } catch (error) {
+        console.error('Error fetching teams:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch teams' });
+    }
+};
+
+/**
+ * Admin create team directly
+ */
+const createAdminTeam = async (req, res) => {
+    try {
+        const { id } = req.params; // competition_id
+        const { team_name, is_locked } = req.body;
+
+        const competition = await Competition.findByPk(id);
+        if (!competition) {
+            return res.status(404).json({ success: false, error: 'Competition not found' });
+        }
+
+        // Check if team name exists in this competition
+        const existingTeam = await Team.findOne({
+            where: { competition_id: id, team_name }
+        });
+
+        if (existingTeam) {
+            return res.status(400).json({ success: false, error: 'Team name already exists in this competition' });
+        }
+
+        const team = await Team.create({
+            competition_id: id,
+            team_name,
+            is_locked: is_locked || false,
+            created_by_user_id: req.user.user_id // The admin creating it
+        });
+
+        await logAdminAction(
+            'team_created',
+            `Created team "${team_name}" in ${competition.title}`,
+            req,
+            'team',
+            team.team_id
+        );
+
+        res.status(201).json({ success: true, data: team });
+    } catch (error) {
+        console.error('Error creating team:', error);
+        res.status(500).json({ success: false, error: 'Failed to create team' });
+    }
+};
+
+/**
+ * Admin update team
+ */
+const updateAdminTeam = async (req, res) => {
+    try {
+        const { id } = req.params; // team_id
+        const { team_name, is_locked } = req.body;
+
+        const team = await Team.findByPk(id);
+        if (!team) {
+            return res.status(404).json({ success: false, error: 'Team not found' });
+        }
+
+        await team.update({
+            team_name: team_name || team.team_name,
+            is_locked: is_locked !== undefined ? is_locked : team.is_locked
+        });
+
+        await logAdminAction(
+            'team_updated',
+            `Updated team "${team.team_name}"`,
+            req,
+            'team',
+            team.team_id
+        );
+
+        res.json({ success: true, data: team });
+    } catch (error) {
+        console.error('Error updating team:', error);
+        res.status(500).json({ success: false, error: 'Failed to update team' });
+    }
+};
+
+/**
+ * Admin delete team
+ */
+const deleteAdminTeam = async (req, res) => {
+    try {
+        const { id } = req.params; // team_id
+
+        const team = await Team.findByPk(id);
+        if (!team) {
+            return res.status(404).json({ success: false, error: 'Team not found' });
+        }
+
+        const teamName = team.team_name;
+        await team.destroy();
+
+        await logAdminAction(
+            'team_deleted',
+            `Deleted team "${teamName}"`,
+            req,
+            'team',
+            id
+        );
+
+        res.json({ success: true, message: 'Team deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting team:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete team' });
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getCompetitions,
@@ -319,5 +606,12 @@ module.exports = {
     getAttendanceRequests,
     updateAttendanceStatus,
     getRegistrations,
-    updateRegistrationStatus
+    updateRegistrationStatus,
+    getNotifications,
+    getSuggestions,
+    getEventFeedbackAll,
+    getCompetitionTeams,
+    createAdminTeam,
+    updateAdminTeam,
+    deleteAdminTeam
 };
