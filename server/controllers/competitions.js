@@ -551,6 +551,140 @@ const deleteCompetition = async (req, res) => {
     }
 };
 
+/**
+ * Public leaderboard for a competition: teams ranked by combined auto + judge score.
+ * GET /api/competitions/:id/leaderboard
+ */
+const getCompetitionLeaderboard = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const competitionId = parseInt(id, 10);
+        if (Number.isNaN(competitionId)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid competition id'
+            });
+        }
+
+        const existing = await db.query(
+            `SELECT competition_id FROM competitions WHERE competition_id = ?`,
+            {
+                replacements: [competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+
+        if (!existing || existing.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Competition not found'
+            });
+        }
+
+        const rows = await db.query(
+            `SELECT
+                t.team_id,
+                t.team_name,
+                s.submission_id,
+                e.total_auto_score,
+                js.design_score,
+                js.creativity_score,
+                js.ux_score,
+                js.innovation_score
+            FROM teams t
+            INNER JOIN submissions s
+                ON s.team_id = t.team_id
+                AND s.competition_id = ?
+                AND s.submission_id = (
+                    SELECT MAX(s2.submission_id)
+                    FROM submissions s2
+                    WHERE s2.team_id = t.team_id AND s2.competition_id = ?
+                )
+            LEFT JOIN evaluations e ON e.submission_id = s.submission_id
+            LEFT JOIN judge_scores js ON js.submission_id = s.submission_id
+            WHERE t.competition_id = ?
+            ORDER BY t.team_id, js.judge_score_id`,
+            {
+                replacements: [competitionId, competitionId, competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+
+        const byTeam = new Map();
+        for (const row of rows) {
+            const tid = row.team_id;
+            if (!byTeam.has(tid)) {
+                byTeam.set(tid, {
+                    team_id: tid,
+                    team_name: row.team_name,
+                    submission_id: row.submission_id,
+                    total_auto_score:
+                        row.total_auto_score != null
+                            ? parseFloat(row.total_auto_score, 10)
+                            : null,
+                    judgeRows: []
+                });
+            }
+            const entry = byTeam.get(tid);
+            if (
+                row.design_score != null &&
+                row.creativity_score != null &&
+                row.ux_score != null &&
+                row.innovation_score != null
+            ) {
+                entry.judgeRows.push({
+                    design_score: parseFloat(row.design_score, 10),
+                    creativity_score: parseFloat(row.creativity_score, 10),
+                    ux_score: parseFloat(row.ux_score, 10),
+                    innovation_score: parseFloat(row.innovation_score, 10)
+                });
+            }
+        }
+
+        const leaderboard = [];
+        for (const entry of byTeam.values()) {
+            const judgeAvg = meanJudgeScore(entry.judgeRows);
+            const finalScore = computeFinalScore(entry.total_auto_score, judgeAvg);
+            leaderboard.push({
+                rank: 0,
+                team_id: entry.team_id,
+                team_name: entry.team_name,
+                submission_id: entry.submission_id,
+                total_auto_score: entry.total_auto_score,
+                judge_average: judgeAvg,
+                final_score: finalScore
+            });
+        }
+
+        leaderboard.sort((a, b) => {
+            const fa = a.final_score;
+            const fb = b.final_score;
+            if (fa == null && fb == null) {
+                return (a.team_name || '').localeCompare(b.team_name || '');
+            }
+            if (fa == null) return 1;
+            if (fb == null) return -1;
+            if (fb !== fa) return fb - fa;
+            return (a.team_name || '').localeCompare(b.team_name || '');
+        });
+
+        leaderboard.forEach((row, i) => {
+            row.rank = i + 1;
+        });
+
+        res.status(200).json({
+            success: true,
+            data: leaderboard
+        });
+    } catch (error) {
+        console.error('Error fetching competition leaderboard:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch leaderboard'
+        });
+    }
+};
+
 module.exports = {
     getAllCompetitions,
     getCompetitionById,
