@@ -136,8 +136,8 @@ const CompetitionDetails = () => {
   const isCompetitionActive = () => {
     if (!competition) return false;
     const now = new Date();
-    const startDate = new Date(competition.start_date);
-    const endDate = new Date(competition.end_date);
+    const startDate = new Date(competition.start_at);
+    const endDate = new Date(competition.end_at);
     // Competition is active if current time is between start and end dates
     return now >= startDate && now < endDate;
   };

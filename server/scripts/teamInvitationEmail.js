@@ -19,7 +19,8 @@ function generateNewUserInvitationEmailHTML(data) {
     expiresAt,
     invitedName,
     invitedUniversityId,
-    email
+    email,
+    competitionUrl
   } = data;
 
   const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
@@ -99,11 +100,15 @@ function generateNewUserInvitationEmailHTML(data) {
                 <tr>
                   <td align="center">
                     <a href="${acceptLink}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
-                      ✓ Create Account & Join Team
+                      ✓ Create Account to Participate
                     </a>
                   </td>
                 </tr>
               </table>
+              <p style="font-size: 14px; color: #C5DAE9; line-height: 1.5; margin: 0 0 20px;">
+                After creating your account, use this competition link:<br>
+                <a href="${competitionUrl}" style="color: #03A9F4; word-break: break-all;">${competitionUrl}</a>
+              </p>
               <p style="font-size: 13px; color: #8EC2F0; line-height: 1.5; margin: 0 0 20px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px;">
                 <strong>Note:</strong> If the button doesn't work, copy and paste this link in your browser:<br>
                 <a href="${acceptLink}" style="color: #03A9F4; word-break: break-all;">${acceptLink}</a>
@@ -149,13 +154,10 @@ function generateExistingUserInvitationEmailHTML(data) {
     competitionTitle,
     competitionStartDate,
     competitionEndDate,
-    invitationToken,
-    acceptUrl,
+    competitionUrl,
     expiresAt,
     email
   } = data;
-
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
 
   return `
 <!DOCTYPE html>
@@ -187,7 +189,7 @@ function generateExistingUserInvitationEmailHTML(data) {
               </p>
               <p style="font-size: 16px; color: #C5DAE9; line-height: 1.6; margin: 0 0 25px;">
                 <strong style="color: #03A9F4;">${inviterName}</strong> has invited you to join their team 
-                <strong style="color: #03A9F4;">"${teamName}"</strong> for the upcoming competition:
+                <strong style="color: #03A9F4;">"${teamName}"</strong>.
               </p>
               <table role="presentation" style="width: 100%; background: rgba(3, 169, 244, 0.1); border-left: 4px solid #03A9F4; border-radius: 8px; margin: 0 0 30px;">
                 <tr>
@@ -205,21 +207,22 @@ function generateExistingUserInvitationEmailHTML(data) {
                 </tr>
               </table>
               <p style="font-size: 16px; color: #C5DAE9; line-height: 1.6; margin: 0 0 30px;">
-                <strong>Welcome back!</strong> We found your existing account (<strong style="color: #03A9F4;">${email}</strong>). Click the button below to join the team:
+                <strong>Welcome back!</strong> We found your existing account (<strong style="color: #03A9F4;">${email}</strong>) and added you to the team automatically.
               </p>
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 30px;">
                 <tr>
                   <td align="center">
-                    <a href="${acceptLink}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
-                      ✓ Accept Invitation & Join Team
+                    <a href="${competitionUrl}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
+                      View Competition
                     </a>
                   </td>
                 </tr>
               </table>
               <p style="font-size: 13px; color: #8EC2F0; line-height: 1.5; margin: 0 0 20px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px;">
-                <strong>Note:</strong> If the button doesn't work, copy and paste this link in your browser:<br>
-                <a href="${acceptLink}" style="color: #03A9F4; word-break: break-all;">${acceptLink}</a>
+                <strong>Competition Link:</strong><br>
+                <a href="${competitionUrl}" style="color: #03A9F4; word-break: break-all;">${competitionUrl}</a>
               </p>
+              ${expiresAt ? `
               <table role="presentation" style="width: 100%; background: rgba(244, 88, 31, 0.15); border: 1px solid rgba(244, 88, 31, 0.3); border-radius: 8px;">
                 <tr>
                   <td style="padding: 15px;">
@@ -228,7 +231,7 @@ function generateExistingUserInvitationEmailHTML(data) {
                     </p>
                   </td>
                 </tr>
-              </table>
+              </table>` : ''}
             </td>
           </tr>
           <tr>
@@ -251,6 +254,98 @@ function generateExistingUserInvitationEmailHTML(data) {
 }
 
 /**
+ * Guest registered a team and already has an account (no activation link needed).
+ */
+function generateGuestLeaderTeamCreatedEmailHTML(data) {
+  const {
+    teamName,
+    competitionTitle,
+    competitionStartDate,
+    competitionEndDate,
+    competitionUrl,
+    workspaceUrl,
+    email
+  } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Created - MSP MIU</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0D3159; color: #ffffff;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; background: linear-gradient(145deg, rgba(13, 49, 89, 0.9), rgba(29, 79, 130, 0.8)); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #0077CC, #03A9F4); padding: 30px 40px; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #ffffff;">✅ Team Created</h1>
+              <p style="margin: 10px 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.95);">MSP MIU Competitions</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="font-size: 16px; color: #C5DAE9; line-height: 1.6;">
+                Your team <strong style="color: #03A9F4;">"${teamName}"</strong> is registered for:
+              </p>
+              <h2 style="margin: 16px 0; font-size: 22px; color: #8EC2F0;">${competitionTitle}</h2>
+              <p style="margin: 0 0 8px; font-size: 14px; color: #C5DAE9;"><strong>Start:</strong> ${competitionStartDate}</p>
+              <p style="margin: 0 0 24px; font-size: 14px; color: #C5DAE9;"><strong>End:</strong> ${competitionEndDate}</p>
+              <p style="margin: 0 0 8px; font-size: 14px; color: #C5DAE9;">Account: <strong style="color: #03A9F4;">${email}</strong></p>
+              <table role="presentation" style="width: 100%; margin: 24px 0;">
+                <tr><td align="center">
+                  <a href="${workspaceUrl}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">Open Team Workspace</a>
+                </td></tr>
+              </table>
+              <p style="font-size: 13px; color: #8EC2F0;"><strong>Competition:</strong><br><a href="${competitionUrl}" style="color: #03A9F4; word-break: break-all;">${competitionUrl}</a></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function generateGuestLeaderTeamCreatedEmailText(data) {
+  const {
+    teamName,
+    competitionTitle,
+    competitionStartDate,
+    competitionEndDate,
+    competitionUrl,
+    workspaceUrl,
+    email
+  } = data;
+
+  return `
+TEAM CREATED - MSP MIU
+======================
+
+Your team "${teamName}" is registered for: ${competitionTitle}
+
+When: ${competitionStartDate} → ${competitionEndDate}
+Account: ${email}
+
+Open your team workspace: ${workspaceUrl}
+
+Competition page: ${competitionUrl}
+
+---
+Microsoft Student Partners - Misr International University
+  `.trim();
+}
+
+function getGuestLeaderTeamCreatedSubject(teamName, competitionTitle) {
+  return `✅ Team "${teamName}" created for ${competitionTitle} - MSP MIU`;
+}
+
+/**
  * Plain text versions
  */
 function generateNewUserInvitationEmailText(data) {
@@ -265,7 +360,8 @@ function generateNewUserInvitationEmailText(data) {
     expiresAt,
     invitedName,
     invitedUniversityId,
-    email
+    email,
+    competitionUrl
   } = data;
 
   const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
@@ -291,11 +387,13 @@ University ID: ${invitedUniversityId || 'Not provided'}
 Email: ${email}
 Role: Competitor
 
-CREATE ACCOUNT & JOIN TEAM
----------------------------
+CREATE ACCOUNT TO PARTICIPATE
+-----------------------------
 You don't have an account yet. Click the link below to create your competitor account:
 
 ${acceptLink}
+
+Competition link: ${competitionUrl}
 
 IMPORTANT
 ---------
@@ -314,13 +412,10 @@ function generateExistingUserInvitationEmailText(data) {
     competitionTitle,
     competitionStartDate,
     competitionEndDate,
-    invitationToken,
-    acceptUrl,
+    competitionUrl,
     expiresAt,
     email
   } = data;
-
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
 
   return `
 TEAM INVITATION - MSP MIU
@@ -328,7 +423,7 @@ TEAM INVITATION - MSP MIU
 
 Hello!
 
-${inviterName} has invited you to join their team "${teamName}" for the upcoming competition.
+${inviterName} has added you to their team "${teamName}" for the upcoming competition.
 
 COMPETITION DETAILS
 -------------------
@@ -338,15 +433,15 @@ End Date: ${competitionEndDate}
 
 WELCOME BACK!
 -------------
-We found your existing account (${email}).
+We found your existing account (${email}) and added you to the team automatically.
 
-ACCEPT INVITATION
------------------
-Click here to join the team: ${acceptLink}
+VIEW COMPETITION
+----------------
+${competitionUrl}
 
-IMPORTANT
+${expiresAt ? `IMPORTANT
 ---------
-⚠️ This invitation expires on ${expiresAt}
+⚠️ This invitation expires on ${expiresAt}` : ''}
 
 ---
 Microsoft Student Partners - Misr International University
@@ -357,7 +452,10 @@ This is an automated email. Please do not reply to this message.
 /**
  * Get email subject line
  */
-function getInvitationEmailSubject(teamName, competitionTitle) {
+function getInvitationEmailSubject(teamName, competitionTitle, userExists = false) {
+  if (userExists) {
+    return `✅ You were added to "${teamName}" for ${competitionTitle} - MSP MIU`;
+  }
   return `🎯 Team Invitation: Join "${teamName}" for ${competitionTitle} - MSP MIU`;
 }
 
@@ -366,5 +464,8 @@ module.exports = {
   generateExistingUserInvitationEmailHTML,
   generateNewUserInvitationEmailText,
   generateExistingUserInvitationEmailText,
-  getInvitationEmailSubject
+  getInvitationEmailSubject,
+  generateGuestLeaderTeamCreatedEmailHTML,
+  generateGuestLeaderTeamCreatedEmailText,
+  getGuestLeaderTeamCreatedSubject
 };
