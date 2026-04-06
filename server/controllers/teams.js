@@ -179,6 +179,31 @@ const createTeam = async (req, res) => {
             });
         }
 
+        // Validate submitted team size against competition constraints.
+        // Leader counts as 1 member.
+        const normalizedMembers = members.filter((member) => (
+            member &&
+            typeof member === 'object' &&
+            String(member.name || '').trim() &&
+            String(member.university_id || '').trim() &&
+            String(member.email || '').trim()
+        ));
+        const submittedTeamSize = 1 + normalizedMembers.length;
+
+        if (submittedTeamSize < competition.min_team_size) {
+            return res.status(400).json({
+                success: false,
+                error: `Team must have at least ${competition.min_team_size} member(s). You submitted ${submittedTeamSize}.`
+            });
+        }
+
+        if (submittedTeamSize > competition.max_team_size) {
+            return res.status(400).json({
+                success: false,
+                error: `Team cannot exceed ${competition.max_team_size} member(s). You submitted ${submittedTeamSize}.`
+            });
+        }
+
         // Create team (created_by_user_id can be NULL for pending teams)
         const teamResult = await db.query(
             `INSERT INTO teams (competition_id, team_name, created_by_user_id, is_locked)
@@ -266,12 +291,12 @@ const createTeam = async (req, res) => {
 
         // Process initial member invitations/additions from team creation form
         // This supports guest team creation without requiring authenticated invite endpoint.
-        if (members.length > 0) {
+        if (normalizedMembers.length > 0) {
             const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
             const universityIdRegex = /^\d{4}\/\d{5}$/;
             const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
 
-            for (const member of members) {
+            for (const member of normalizedMembers) {
                 const memberEmail = (member?.email || '').trim().toLowerCase();
                 const memberName = (member?.name || '').trim();
                 const memberUniversityId = (member?.university_id || '').trim();
@@ -443,6 +468,22 @@ const createTeam = async (req, res) => {
 
     } catch (error) {
         console.error('Error creating team:', error);
+
+        // Convert common DB constraint issues into user-friendly responses.
+        if (error?.name === 'SequelizeUniqueConstraintError' || error?.original?.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({
+                success: false,
+                error: 'One of the provided emails/university IDs is already assigned in a conflicting way. Please review team members and try again.'
+            });
+        }
+
+        if (error?.name === 'SequelizeForeignKeyConstraintError') {
+            return res.status(400).json({
+                success: false,
+                error: 'Some provided member data is invalid or no longer available. Please refresh and try again.'
+            });
+        }
+
         res.status(500).json({
             success: false,
             error: 'Failed to create team',

@@ -1429,7 +1429,8 @@ class ApiService {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create team');
+        const serverMessage = [result.error, result.details].filter(Boolean).join(' - ');
+        throw new Error(serverMessage || 'Failed to create team');
       }
 
       return result.data || result;
