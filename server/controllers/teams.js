@@ -65,7 +65,7 @@ const createTeam = async (req, res) => {
 
         // Check if competition exists and is open
         const competitions = await db.query(
-            `SELECT competition_id, status, max_team_size, min_team_size 
+            `SELECT competition_id, title, start_at, end_at, status, max_team_size, min_team_size 
              FROM competitions 
              WHERE competition_id = ?`,
             {
@@ -214,12 +214,12 @@ const createTeam = async (req, res) => {
                 teamName: team_name,
                 inviterName: leader_name,
                 competitionTitle: competition.title || 'Competition',
-                competitionStartDate: new Date(competition.start_date).toLocaleDateString('en-US', {
+                competitionStartDate: new Date(competition.start_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                 }),
-                competitionEndDate: new Date(competition.end_date).toLocaleDateString('en-US', {
+                competitionEndDate: new Date(competition.end_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -533,7 +533,7 @@ const inviteToTeam = async (req, res) => {
 
         // Get team and competition details for email
         const teamDetails = await db.query(
-            `SELECT t.team_name, c.title, c.start_date, c.end_date, u.name as inviter_name
+            `SELECT t.team_name, c.title, c.start_at, c.end_at, u.full_name as inviter_name
              FROM teams t
              INNER JOIN competitions c ON t.competition_id = c.competition_id
              INNER JOIN users u ON t.created_by_user_id = u.user_id
@@ -564,8 +564,8 @@ const inviteToTeam = async (req, res) => {
             teamName: details.team_name,
             inviterName: details.inviter_name,
             competitionTitle: details.title,
-            competitionStartDate: formatDate(details.start_date),
-            competitionEndDate: formatDate(details.end_date),
+            competitionStartDate: formatDate(details.start_at),
+            competitionEndDate: formatDate(details.end_at),
             invitationToken: token,
             acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
             expiresAt: formatDate(expiresAt),
@@ -638,7 +638,7 @@ const inviteToTeam = async (req, res) => {
  */
 const acceptInvitation = async (req, res) => {
     try {
-        const { token } = req.params;
+        const token = req.params.token || req.body.token;
         const userId = req.user.user_id;
         const userEmail = req.user.email;
 
@@ -849,10 +849,11 @@ const verifyInvitation = async (req, res) => {
 
         // Get invitation details
         const invitations = await db.query(
-            `SELECT i.*, t.team_name, c.title as competition_title
+            `SELECT i.*, t.team_name, c.title as competition_title, u.full_name as inviter_name
              FROM team_invitations i
              INNER JOIN teams t ON i.team_id = t.team_id
              INNER JOIN competitions c ON t.competition_id = c.competition_id
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
              WHERE i.token = ?`,
             {
                 replacements: [token],
@@ -907,7 +908,9 @@ const verifyInvitation = async (req, res) => {
             data: {
                 team_name: invitation.team_name,
                 competition_title: invitation.competition_title,
+                inviter_name: invitation.inviter_name,
                 invited_email: invitation.invited_email,
+                email: invitation.invited_email,
                 invited_name: invitation.invited_name,
                 invited_university_id: invitation.invited_university_id,
                 expires_at: invitation.expires_at,
@@ -1030,7 +1033,7 @@ const acceptInvitationNewUser = async (req, res) => {
 
         // Create new user account with 'competitor' role
         const userResult = await db.query(
-            `INSERT INTO users (name, university_id, email, password, role, is_active)
+            `INSERT INTO users (full_name, university_id, email, password_hash, role, is_active)
              VALUES (?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
