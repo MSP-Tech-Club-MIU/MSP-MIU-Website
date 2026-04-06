@@ -8,7 +8,10 @@ const {
     generateExistingUserInvitationEmailHTML,
     generateNewUserInvitationEmailText,
     generateExistingUserInvitationEmailText,
-    getInvitationEmailSubject
+    getInvitationEmailSubject,
+    generateGuestLeaderTeamCreatedEmailHTML,
+    generateGuestLeaderTeamCreatedEmailText,
+    getGuestLeaderTeamCreatedSubject
 } = require('../scripts/teamInvitationEmail');
 
 // Import sendEmail utility (using dynamic import for ESM)
@@ -17,6 +20,14 @@ let sendEmail;
     const emailModule = await import('../utils/email.mjs');
     sendEmail = emailModule.sendEmail;
 })();
+
+/** Avoid race: first requests may run before the IIFE assigns sendEmail */
+async function ensureSendEmail() {
+    if (typeof sendEmail === 'function') return sendEmail;
+    const emailModule = await import('../utils/email.mjs');
+    sendEmail = emailModule.sendEmail;
+    return sendEmail;
+}
 
 /** Sequelize/MySQL INSERT can return a number, ResultSetHeader, or [rows, fields] — normalize to numeric id */
 function normalizeInsertId(raw) {
@@ -243,6 +254,42 @@ const createTeam = async (req, res) => {
                     type: db.QueryTypes.INSERT
                 }
             );
+
+            // Guest + email already in users DB: they don't get an activation link — send team confirmation
+            if (isGuest && userExists && leaderEmail) {
+                try {
+                    const mail = await ensureSendEmail();
+                    if (mail) {
+                        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                        const competitionUrl = `${baseUrl}/competitions/${competition_id}`;
+                        const workspaceUrl = `${baseUrl}/competitions/${competition_id}/team/${teamId}`;
+                        const fmt = (d) => new Date(d).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        const leaderCreatedPayload = {
+                            teamName: team_name,
+                            competitionTitle: competition.title,
+                            competitionStartDate: fmt(competition.start_at),
+                            competitionEndDate: fmt(competition.end_at),
+                            competitionUrl,
+                            workspaceUrl,
+                            email: leaderEmail
+                        };
+                        await mail({
+                            to: leaderEmail,
+                            fromName: 'MSP MIU - Competitions',
+                            subject: getGuestLeaderTeamCreatedSubject(team_name, competition.title),
+                            text: generateGuestLeaderTeamCreatedEmailText(leaderCreatedPayload),
+                            html: generateGuestLeaderTeamCreatedEmailHTML(leaderCreatedPayload)
+                        });
+                        console.log(`✅ Guest leader team-created email sent to ${leaderEmail}`);
+                    }
+                } catch (emailErr) {
+                    console.error('Failed to send guest leader team-created email:', emailErr);
+                }
+            }
         } else {
             // User doesn't exist - create an invitation for the leader to create their account
             const token = crypto.randomBytes(32).toString('hex');
@@ -287,21 +334,24 @@ const createTeam = async (req, res) => {
                 invitedUniversityId: leader_university_id
             };
 
-            // Send leader invitation email
+            // Send leader invitation email (new user — create account + join as leader)
             try {
-                if (sendEmail) {
+                const mail = await ensureSendEmail();
+                if (mail) {
                     const htmlContent = generateNewUserInvitationEmailHTML(emailData);
                     const textContent = generateNewUserInvitationEmailText(emailData);
 
-                    await sendEmail({
+                    await mail({
                         to: leader_email,
                         fromName: 'MSP MIU - Competitions',
                         subject: `🎯 Team Leader Invitation: Create Account for "${team_name}" - MSP MIU`,
                         text: textContent,
                         html: htmlContent
                     });
-                    
+
                     console.log(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
+                } else {
+                    console.warn('sendEmail unavailable: leader invitation not sent');
                 }
             } catch (emailError) {
                 console.error('Failed to send leader invitation email:', emailError);
@@ -381,10 +431,12 @@ const createTeam = async (req, res) => {
                         }
                     );
 
-                    if (sendEmail) {
+                    try {
+                        const mail = await ensureSendEmail();
+                        if (!mail) continue;
                         const existingEmailData = {
                             teamName: team_name,
-                            inviterName: leaderName || 'Team Leader',
+                            inviterName: leaderName || leader_name || 'Team Leader',
                             competitionTitle: competition.title,
                             competitionStartDate: new Date(competition.start_at).toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -401,17 +453,15 @@ const createTeam = async (req, res) => {
                             email: memberEmail
                         };
 
-                        try {
-                            await sendEmail({
+                            await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
                                 subject: getInvitationEmailSubject(team_name, competition.title, true),
                                 text: generateExistingUserInvitationEmailText(existingEmailData),
                                 html: generateExistingUserInvitationEmailHTML(existingEmailData)
                             });
-                        } catch (emailErr) {
-                            console.error('Failed to send member notification email (existing user):', emailErr);
-                        }
+                    } catch (emailErr) {
+                        console.error('Failed to send member notification email (existing user):', emailErr);
                     }
                 } else {
                     const token = crypto.randomBytes(32).toString('hex');
@@ -427,10 +477,12 @@ const createTeam = async (req, res) => {
                         }
                     );
 
-                    if (sendEmail) {
+                    try {
+                        const mail = await ensureSendEmail();
+                        if (!mail) continue;
                         const newUserEmailData = {
                             teamName: team_name,
-                            inviterName: leaderName || 'Team Leader',
+                            inviterName: leaderName || leader_name || 'Team Leader',
                             competitionTitle: competition.title,
                             competitionStartDate: new Date(competition.start_at).toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -455,17 +507,15 @@ const createTeam = async (req, res) => {
                             invitedUniversityId: memberUniversityId
                         };
 
-                        try {
-                            await sendEmail({
+                            await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
                                 subject: getInvitationEmailSubject(team_name, competition.title, false),
                                 text: generateNewUserInvitationEmailText(newUserEmailData),
                                 html: generateNewUserInvitationEmailHTML(newUserEmailData)
                             });
-                        } catch (emailErr) {
-                            console.error('Failed to send member invitation email (new user):', emailErr);
-                        }
+                    } catch (emailErr) {
+                        console.error('Failed to send member invitation email (new user):', emailErr);
                     }
                 }
             }
@@ -848,18 +898,19 @@ const inviteToTeam = async (req, res) => {
 
         // Send email
         try {
-            if (sendEmail) {
-                await sendEmail({
+            const mail = await ensureSendEmail();
+            if (mail) {
+                await mail({
                     to: email,
                     fromName: 'MSP MIU - Competitions',
                     subject: getInvitationEmailSubject(details.team_name, details.title, userExists),
                     text: textContent,
                     html: htmlContent
                 });
-                
+
                 console.log(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);
             } else {
-                console.warn('⚠️  sendEmail not initialized yet, email not sent');
+                console.warn('⚠️  sendEmail not available, email not sent');
             }
         } catch (emailError) {
             console.error('Failed to send invitation email:', emailError);
