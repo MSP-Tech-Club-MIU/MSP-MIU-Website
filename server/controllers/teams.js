@@ -18,6 +18,20 @@ let sendEmail;
     sendEmail = emailModule.sendEmail;
 })();
 
+/** Sequelize/MySQL INSERT can return a number, ResultSetHeader, or [rows, fields] — normalize to numeric id */
+function normalizeInsertId(raw) {
+    if (raw == null) return null;
+    if (typeof raw === 'number' && !Number.isNaN(raw)) return raw;
+    if (typeof raw === 'bigint') return Number(raw);
+    if (typeof raw === 'string' && /^\d+$/.test(raw)) return parseInt(raw, 10);
+    if (typeof raw === 'object') {
+        if (raw.insertId != null) return Number(raw.insertId);
+        if (Array.isArray(raw) && raw.length > 0) return normalizeInsertId(raw[0]);
+    }
+    const n = Number(raw);
+    return Number.isNaN(n) ? null : n;
+}
+
 /**
  * Create a new team for a competition
  * POST /api/teams
@@ -214,7 +228,10 @@ const createTeam = async (req, res) => {
             }
         );
 
-        const teamId = teamResult;
+        const teamId = normalizeInsertId(teamResult);
+        if (teamId == null) {
+            throw new Error('Failed to resolve new team id after insert');
+        }
 
         // If leader user exists, add them as team leader
         if (leaderUserId) {
@@ -242,6 +259,7 @@ const createTeam = async (req, res) => {
             );
 
             // Get competition details for email
+            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
             const emailData = {
                 teamName: team_name,
                 inviterName: leader_name,
@@ -258,6 +276,7 @@ const createTeam = async (req, res) => {
                 }),
                 invitationToken: token,
                 acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                competitionUrl,
                 expiresAt: expiresAt.toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -382,13 +401,17 @@ const createTeam = async (req, res) => {
                             email: memberEmail
                         };
 
-                        await sendEmail({
-                            to: memberEmail,
-                            fromName: 'MSP MIU - Competitions',
-                            subject: getInvitationEmailSubject(team_name, competition.title, true),
-                            text: generateExistingUserInvitationEmailText(existingEmailData),
-                            html: generateExistingUserInvitationEmailHTML(existingEmailData)
-                        });
+                        try {
+                            await sendEmail({
+                                to: memberEmail,
+                                fromName: 'MSP MIU - Competitions',
+                                subject: getInvitationEmailSubject(team_name, competition.title, true),
+                                text: generateExistingUserInvitationEmailText(existingEmailData),
+                                html: generateExistingUserInvitationEmailHTML(existingEmailData)
+                            });
+                        } catch (emailErr) {
+                            console.error('Failed to send member notification email (existing user):', emailErr);
+                        }
                     }
                 } else {
                     const token = crypto.randomBytes(32).toString('hex');
@@ -432,36 +455,40 @@ const createTeam = async (req, res) => {
                             invitedUniversityId: memberUniversityId
                         };
 
-                        await sendEmail({
-                            to: memberEmail,
-                            fromName: 'MSP MIU - Competitions',
-                            subject: getInvitationEmailSubject(team_name, competition.title, false),
-                            text: generateNewUserInvitationEmailText(newUserEmailData),
-                            html: generateNewUserInvitationEmailHTML(newUserEmailData)
-                        });
+                        try {
+                            await sendEmail({
+                                to: memberEmail,
+                                fromName: 'MSP MIU - Competitions',
+                                subject: getInvitationEmailSubject(team_name, competition.title, false),
+                                text: generateNewUserInvitationEmailText(newUserEmailData),
+                                html: generateNewUserInvitationEmailHTML(newUserEmailData)
+                            });
+                        } catch (emailErr) {
+                            console.error('Failed to send member invitation email (new user):', emailErr);
+                        }
                     }
                 }
             }
         }
 
-        // Fetch the created team with member count
+        // Fetch the created team with member count (avoid GROUP BY + t.* issues on strict MySQL)
         const newTeams = await db.query(
-            `SELECT t.*, COUNT(tm.team_member_id) as member_count
+            `SELECT t.*, (SELECT COUNT(*) FROM team_members tm WHERE tm.team_id = t.team_id) AS member_count
              FROM teams t
-             LEFT JOIN team_members tm ON t.team_id = tm.team_id
-             WHERE t.team_id = ?
-             GROUP BY t.team_id`,
+             WHERE t.team_id = ?`,
             {
                 replacements: [teamId],
                 type: db.QueryTypes.SELECT
             }
         );
 
+        const teamPayload = newTeams && newTeams[0] ? newTeams[0] : { team_id: teamId };
+
         res.status(201).json({
             success: true,
             message: leaderUserId ? 'Team created successfully' : 'Team created! Check your email to activate your account.',
             data: {
-                ...newTeams[0],
+                ...teamPayload,
                 pending_leader_activation: !leaderUserId
             }
         });
