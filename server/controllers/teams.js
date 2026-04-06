@@ -121,7 +121,7 @@ const createTeam = async (req, res) => {
         } else {
             // For guest users, check if email exists in users table
             const users = await db.query(
-                `SELECT user_id, name, university_id FROM users WHERE email = ?`,
+                `SELECT user_id, full_name, university_id FROM users WHERE email = ?`,
                 {
                     replacements: [leader_email],
                     type: db.QueryTypes.SELECT
