@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
@@ -22,6 +22,7 @@ import {
 const CompetitionWorkspace = () => {
   const { id: competitionId, teamId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -36,11 +37,7 @@ const CompetitionWorkspace = () => {
   const [liveUrl, setLiveUrl] = useState('');
   const [submitType, setSubmitType] = useState('zip'); // 'zip' | 'links' | 'zip_and_links'
 
-  useEffect(() => {
-    fetchData();
-  }, [competitionId, teamId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -55,7 +52,6 @@ const CompetitionWorkspace = () => {
       setTeam(teamData);
       setSubmission(submissionData);
 
-      // Pre-fill form if submission exists
       if (submissionData) {
         setSubmitType(submissionData.submit_type);
         setGithubUrl(submissionData.github_url || '');
@@ -67,7 +63,16 @@ const CompetitionWorkspace = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [competitionId, teamId]);
+
+  useEffect(() => {
+    if (!ApiService.isAuthenticated()) {
+      setLoading(false);
+      navigate('/login', { replace: true, state: { from: location } });
+      return;
+    }
+    fetchData();
+  }, [competitionId, teamId, location, navigate, fetchData]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];

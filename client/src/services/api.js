@@ -1448,10 +1448,13 @@ class ApiService {
   static async getTeamById(teamId) {
     try {
       const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
       const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
         method: 'GET',
-        headers: this.getHeaders(!!token),
+        headers: this.getHeaders(true),
       });
 
       const result = await response.json();
@@ -1690,12 +1693,15 @@ class ApiService {
   static async getTeamSubmission(competitionId, teamId) {
     try {
       const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
       const response = await fetch(
         `${API_BASE_URL}/submissions/competitions/${competitionId}/teams/${teamId}`,
         {
           method: 'GET',
-          headers: this.getHeaders(!!token),
+          headers: this.getHeaders(true),
         }
       );
 

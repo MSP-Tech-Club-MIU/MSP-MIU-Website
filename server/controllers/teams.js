@@ -572,11 +572,13 @@ const createTeam = async (req, res) => {
 /**
  * Get team by ID with members
  * GET /api/teams/:id
- * Authenticated route
+ * Authenticated — team members or admin/board
  */
 const getTeamById = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.user_id;
+        const isPrivileged = ['admin', 'board'].includes(req.user.role);
 
         const teams = await db.query(
             `SELECT t.*, c.title as competition_title, c.max_team_size, c.min_team_size
@@ -594,6 +596,22 @@ const getTeamById = async (req, res) => {
                 success: false,
                 error: 'Team not found'
             });
+        }
+
+        if (!isPrivileged) {
+            const membership = await db.query(
+                `SELECT 1 FROM team_members WHERE team_id = ? AND user_id = ? LIMIT 1`,
+                {
+                    replacements: [id, userId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (!membership || membership.length === 0) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Access denied'
+                });
+            }
         }
 
         // Get team members

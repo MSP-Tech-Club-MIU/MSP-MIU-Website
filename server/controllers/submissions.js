@@ -209,12 +209,33 @@ const createSubmission = async (req, res) => {
 
 /**
  * Get team's submission for a competition
- * GET /api/competitions/:competitionId/teams/:teamId/submission
- * Authenticated route
+ * GET /api/submissions/competitions/:competitionId/teams/:teamId
+ * Authenticated — team members or admin/board
  */
 const getTeamSubmission = async (req, res) => {
     try {
         const { competitionId, teamId } = req.params;
+        const userId = req.user.user_id;
+        const isPrivileged = ['admin', 'board'].includes(req.user.role);
+
+        if (!isPrivileged) {
+            const membership = await db.query(
+                `SELECT tm.team_member_id
+                 FROM team_members tm
+                 INNER JOIN teams t ON tm.team_id = t.team_id
+                 WHERE tm.team_id = ? AND tm.user_id = ? AND t.competition_id = ?`,
+                {
+                    replacements: [teamId, userId, competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (!membership || membership.length === 0) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Access denied'
+                });
+            }
+        }
 
         const submissions = await db.query(
             `SELECT s.*, t.team_name
