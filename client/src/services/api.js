@@ -1450,13 +1450,10 @@ class ApiService {
   static async getTeamById(teamId) {
     try {
       const token = this.getAuthToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
 
       const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
         method: 'GET',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(!!token),
       });
 
       const result = await response.json();
@@ -1689,20 +1686,21 @@ class ApiService {
 
   /**
    * Get team submission for a competition
-   * @param {number} teamId - Team ID
+   * @param {number|string} competitionId - Competition ID
+   * @param {number|string} teamId - Team ID
    * @returns {Promise<Object|null>}
    */
-  static async getTeamSubmission(teamId) {
+  static async getTeamSubmission(competitionId, teamId) {
     try {
       const token = this.getAuthToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
 
-      const response = await fetch(`${API_BASE_URL}/submissions/team/${teamId}`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/submissions/competitions/${competitionId}/teams/${teamId}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(!!token),
+        }
+      );
 
       if (response.status === 404) {
         return null; // No submission yet
