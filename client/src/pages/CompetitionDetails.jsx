@@ -326,7 +326,7 @@ const CompetitionDetails = () => {
               <h3>Competition is Live!</h3>
               <p>Team: <strong>{userTeam.team_name}</strong></p>
               <button onClick={handleStartCompetition} className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary">
-                Start Competition
+                Access Team Workspace
               </button>
             </div>
           ) : userTeam ? (
