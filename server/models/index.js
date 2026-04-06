@@ -20,6 +20,8 @@ const Team = require('./Team');
 const TeamMember = require('./TeamMember');
 const TeamInvitation = require('./TeamInvitation');
 const Submission = require('./Submission');
+const Evaluation = require('./Evaluation');
+const JudgeScore = require('./JudgeScore');
 const Quiz = require('./Quiz');
 const QuizQuestion = require('./QuizQuestion');
 const QuizOption = require('./QuizOption');
@@ -48,6 +50,8 @@ const models = {
   TeamMember,
   TeamInvitation,
   Submission,
+  Evaluation,
+  JudgeScore,
   Quiz,
   QuizQuestion,
   QuizOption,
@@ -276,6 +280,37 @@ Submission.belongsTo(Team, {
 Team.hasMany(Submission, {
   foreignKey: 'team_id',
   as: 'submissions'
+});
+
+Submission.hasOne(Evaluation, {
+  foreignKey: 'submission_id',
+  as: 'evaluation',
+  onDelete: 'CASCADE'
+});
+Evaluation.belongsTo(Submission, {
+  foreignKey: 'submission_id',
+  as: 'submission',
+  onDelete: 'CASCADE'
+});
+
+Submission.hasMany(JudgeScore, {
+  foreignKey: 'submission_id',
+  as: 'judgeScores',
+  onDelete: 'CASCADE'
+});
+JudgeScore.belongsTo(Submission, {
+  foreignKey: 'submission_id',
+  as: 'submission',
+  onDelete: 'CASCADE'
+});
+JudgeScore.belongsTo(User, {
+  foreignKey: 'judge_id',
+  as: 'judge',
+  onDelete: 'CASCADE'
+});
+User.hasMany(JudgeScore, {
+  foreignKey: 'judge_id',
+  as: 'submissionJudgeScores'
 });
 
 // Quiz associations
