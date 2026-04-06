@@ -37,10 +37,12 @@ const CompetitionDetails = () => {
         setLoading(true);
         setError(null);
 
-        // Check if user is authenticated
+        let resolvedUserId = null;
+
         if (ApiService.isAuthenticated()) {
           try {
             const user = await ApiService.getProfile();
+            resolvedUserId = user.user_id;
             setUserRole(user.role);
             setUserId(user.user_id);
           } catch (err) {
@@ -48,21 +50,23 @@ const CompetitionDetails = () => {
             setUserRole(null);
             setUserId(null);
           }
+        } else {
+          setUserRole(null);
+          setUserId(null);
         }
 
-        // Fetch competition details
         const compData = await ApiService.getCompetitionById(id);
         setCompetition(compData);
 
-        // If user is authenticated and competition is fetched, check for their team
-        if (userId && compData) {
+        if (resolvedUserId && compData) {
           try {
             const team = await ApiService.getUserTeamForCompetition(id);
             setUserTeam(team);
           } catch (err) {
-            // User might not have a team yet - this is okay
             setUserTeam(null);
           }
+        } else {
+          setUserTeam(null);
         }
 
       } catch (err) {
@@ -74,7 +78,7 @@ const CompetitionDetails = () => {
     };
 
     fetchData();
-  }, [id, userId]);
+  }, [id]);
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '';
@@ -322,7 +326,7 @@ const CompetitionDetails = () => {
               <h3>Competition is Live!</h3>
               <p>Team: <strong>{userTeam.team_name}</strong></p>
               <button onClick={handleStartCompetition} className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary">
-                Start Competition
+                Access Team Workspace
               </button>
             </div>
           ) : userTeam ? (
@@ -331,7 +335,7 @@ const CompetitionDetails = () => {
               <h3>You're Part of a Team</h3>
               <p>Team: <strong>{userTeam.team_name}</strong></p>
               <button onClick={handleViewTeam} className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary">
-                View My Team
+                Access Team Workspace
               </button>
             </div>
           ) : canRegister() ? (

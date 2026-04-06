@@ -6,7 +6,7 @@ import ApiService from '../services/api';
 import WelcomeModal from './WelcomeModal';
 import './LoginCard.css';
 
-const LoginCard = memo(({ isOpen, onClose }) => {
+const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
   const [formData, setFormData] = useState({ university_id: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -185,9 +185,15 @@ const LoginCard = memo(({ isOpen, onClose }) => {
 
   const handleWelcomeModalClose = useCallback(() => {
     setShowWelcomeModal(false);
-    // Redirect to profile after modal closes
-    window.location.href = '/profile';
-  }, []);
+    const target =
+      postLoginRedirect &&
+      typeof postLoginRedirect === 'string' &&
+      postLoginRedirect.startsWith('/') &&
+      !postLoginRedirect.startsWith('//')
+        ? postLoginRedirect
+        : '/profile';
+    window.location.href = target;
+  }, [postLoginRedirect]);
 
   useEffect(() => {
     if (!isOpen) return;
