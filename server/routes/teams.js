@@ -29,7 +29,9 @@ router.post('/accept-invitation-new-user', acceptInvitationNewUser);
 
 // Accept invitation for existing user (authenticated)
 router.post('/accept-invitation', authenticateToken, acceptInvitation);
+router.post('/invitations/:token/accept', authenticateToken, acceptInvitation);
 // Decline invitation (authenticated)
 router.post('/invitations/:token/decline', authenticateToken, declineInvitation);
+router.post('/decline-invitation', authenticateToken, declineInvitation);
 
 module.exports = router;

@@ -1419,13 +1419,10 @@ class ApiService {
   static async createTeam(teamData) {
     try {
       const token = this.getAuthToken();
-      if (!token) {
-        throw new Error('Authentication required');
-      }
 
       const response = await fetch(`${API_BASE_URL}/teams`, {
         method: 'POST',
-        headers: this.getHeaders(true),
+        headers: this.getHeaders(!!token),
         body: JSON.stringify(teamData),
       });
 
@@ -1630,10 +1627,9 @@ class ApiService {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${API_BASE_URL}/teams/decline-invitation`, {
+      const response = await fetch(`${API_BASE_URL}/teams/invitations/${token}/decline`, {
         method: 'POST',
         headers: this.getHeaders(true),
-        body: JSON.stringify({ token }),
       });
 
       const result = await response.json();

@@ -19,7 +19,8 @@ function generateNewUserInvitationEmailHTML(data) {
     expiresAt,
     invitedName,
     invitedUniversityId,
-    email
+    email,
+    competitionUrl
   } = data;
 
   const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
@@ -99,11 +100,15 @@ function generateNewUserInvitationEmailHTML(data) {
                 <tr>
                   <td align="center">
                     <a href="${acceptLink}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
-                      ✓ Create Account & Join Team
+                      ✓ Create Account to Participate
                     </a>
                   </td>
                 </tr>
               </table>
+              <p style="font-size: 14px; color: #C5DAE9; line-height: 1.5; margin: 0 0 20px;">
+                After creating your account, use this competition link:<br>
+                <a href="${competitionUrl}" style="color: #03A9F4; word-break: break-all;">${competitionUrl}</a>
+              </p>
               <p style="font-size: 13px; color: #8EC2F0; line-height: 1.5; margin: 0 0 20px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px;">
                 <strong>Note:</strong> If the button doesn't work, copy and paste this link in your browser:<br>
                 <a href="${acceptLink}" style="color: #03A9F4; word-break: break-all;">${acceptLink}</a>
@@ -149,13 +154,10 @@ function generateExistingUserInvitationEmailHTML(data) {
     competitionTitle,
     competitionStartDate,
     competitionEndDate,
-    invitationToken,
-    acceptUrl,
+    competitionUrl,
     expiresAt,
     email
   } = data;
-
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
 
   return `
 <!DOCTYPE html>
@@ -187,7 +189,7 @@ function generateExistingUserInvitationEmailHTML(data) {
               </p>
               <p style="font-size: 16px; color: #C5DAE9; line-height: 1.6; margin: 0 0 25px;">
                 <strong style="color: #03A9F4;">${inviterName}</strong> has invited you to join their team 
-                <strong style="color: #03A9F4;">"${teamName}"</strong> for the upcoming competition:
+                <strong style="color: #03A9F4;">"${teamName}"</strong>.
               </p>
               <table role="presentation" style="width: 100%; background: rgba(3, 169, 244, 0.1); border-left: 4px solid #03A9F4; border-radius: 8px; margin: 0 0 30px;">
                 <tr>
@@ -205,20 +207,20 @@ function generateExistingUserInvitationEmailHTML(data) {
                 </tr>
               </table>
               <p style="font-size: 16px; color: #C5DAE9; line-height: 1.6; margin: 0 0 30px;">
-                <strong>Welcome back!</strong> We found your existing account (<strong style="color: #03A9F4;">${email}</strong>). Click the button below to join the team:
+                <strong>Welcome back!</strong> We found your existing account (<strong style="color: #03A9F4;">${email}</strong>) and added you to the team automatically.
               </p>
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 0 0 30px;">
                 <tr>
                   <td align="center">
-                    <a href="${acceptLink}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
-                      ✓ Accept Invitation & Join Team
+                    <a href="${competitionUrl}" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #0077CC, #03A9F4); color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 20px rgba(3, 169, 244, 0.4);">
+                      View Competition
                     </a>
                   </td>
                 </tr>
               </table>
               <p style="font-size: 13px; color: #8EC2F0; line-height: 1.5; margin: 0 0 20px; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px;">
-                <strong>Note:</strong> If the button doesn't work, copy and paste this link in your browser:<br>
-                <a href="${acceptLink}" style="color: #03A9F4; word-break: break-all;">${acceptLink}</a>
+                <strong>Competition Link:</strong><br>
+                <a href="${competitionUrl}" style="color: #03A9F4; word-break: break-all;">${competitionUrl}</a>
               </p>
               <table role="presentation" style="width: 100%; background: rgba(244, 88, 31, 0.15); border: 1px solid rgba(244, 88, 31, 0.3); border-radius: 8px;">
                 <tr>
@@ -265,7 +267,8 @@ function generateNewUserInvitationEmailText(data) {
     expiresAt,
     invitedName,
     invitedUniversityId,
-    email
+    email,
+    competitionUrl
   } = data;
 
   const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
@@ -291,11 +294,13 @@ University ID: ${invitedUniversityId || 'Not provided'}
 Email: ${email}
 Role: Competitor
 
-CREATE ACCOUNT & JOIN TEAM
----------------------------
+CREATE ACCOUNT TO PARTICIPATE
+-----------------------------
 You don't have an account yet. Click the link below to create your competitor account:
 
 ${acceptLink}
+
+Competition link: ${competitionUrl}
 
 IMPORTANT
 ---------
@@ -314,13 +319,10 @@ function generateExistingUserInvitationEmailText(data) {
     competitionTitle,
     competitionStartDate,
     competitionEndDate,
-    invitationToken,
-    acceptUrl,
+    competitionUrl,
     expiresAt,
     email
   } = data;
-
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
 
   return `
 TEAM INVITATION - MSP MIU
@@ -328,7 +330,7 @@ TEAM INVITATION - MSP MIU
 
 Hello!
 
-${inviterName} has invited you to join their team "${teamName}" for the upcoming competition.
+${inviterName} has added you to their team "${teamName}" for the upcoming competition.
 
 COMPETITION DETAILS
 -------------------
@@ -338,11 +340,11 @@ End Date: ${competitionEndDate}
 
 WELCOME BACK!
 -------------
-We found your existing account (${email}).
+We found your existing account (${email}) and added you to the team automatically.
 
-ACCEPT INVITATION
------------------
-Click here to join the team: ${acceptLink}
+VIEW COMPETITION
+----------------
+${competitionUrl}
 
 IMPORTANT
 ---------
@@ -357,7 +359,10 @@ This is an automated email. Please do not reply to this message.
 /**
  * Get email subject line
  */
-function getInvitationEmailSubject(teamName, competitionTitle) {
+function getInvitationEmailSubject(teamName, competitionTitle, userExists = false) {
+  if (userExists) {
+    return `✅ You were added to "${teamName}" for ${competitionTitle} - MSP MIU`;
+  }
   return `🎯 Team Invitation: Join "${teamName}" for ${competitionTitle} - MSP MIU`;
 }
 
