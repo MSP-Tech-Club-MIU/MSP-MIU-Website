@@ -504,9 +504,9 @@ const inviteToTeam = async (req, res) => {
             });
         }
 
-        // Get user_id if user exists
+        // Get user_id and role if user exists
         const users = await db.query(
-            `SELECT user_id FROM users WHERE email = ?`,
+            `SELECT user_id, role FROM users WHERE email = ?`,
             {
                 replacements: [email],
                 type: db.QueryTypes.SELECT
@@ -516,20 +516,46 @@ const inviteToTeam = async (req, res) => {
         const invitedUserId = users && users.length > 0 ? users[0].user_id : null;
         const userExists = invitedUserId !== null;
 
-        // Generate token
-        const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        let token = null;
+        let expiresAt = null;
+        let invitationResult = null;
 
-        // Create invitation with member details
-        const invitationResult = await db.query(
-            `INSERT INTO team_invitations 
-             (team_id, invited_email, invited_user_id, invited_name, invited_university_id, token, expires_at, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            {
-                replacements: [id, email, invitedUserId, name || null, university_id || null, token, expiresAt, 'pending'],
-                type: db.QueryTypes.INSERT
-            }
-        );
+        // Existing account: add directly to team and notify
+        if (userExists) {
+            await db.query(
+                `INSERT INTO team_members (team_id, user_id, role)
+                 VALUES (?, ?, ?)`,
+                {
+                    replacements: [id, invitedUserId, 'member'],
+                    type: db.QueryTypes.INSERT
+                }
+            );
+
+            // Ensure normal members invited to competitions can access competitor dashboard
+            await db.query(
+                `UPDATE users
+                 SET role = 'competitor'
+                 WHERE user_id = ? AND role = 'member'`,
+                {
+                    replacements: [invitedUserId],
+                    type: db.QueryTypes.UPDATE
+                }
+            );
+        } else {
+            // New account: create invitation token and email password-setup flow
+            token = crypto.randomBytes(32).toString('hex');
+            expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+            invitationResult = await db.query(
+                `INSERT INTO team_invitations 
+                 (team_id, invited_email, invited_user_id, invited_name, invited_university_id, token, expires_at, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                {
+                    replacements: [id, email, invitedUserId, name || null, university_id || null, token, expiresAt, 'pending'],
+                    type: db.QueryTypes.INSERT
+                }
+            );
+        }
 
         // Get team and competition details for email
         const teamDetails = await db.query(
@@ -568,7 +594,8 @@ const inviteToTeam = async (req, res) => {
             competitionEndDate: formatDate(details.end_at),
             invitationToken: token,
             acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-            expiresAt: formatDate(expiresAt),
+            competitionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${membership.competition_id}`,
+            expiresAt: expiresAt ? formatDate(expiresAt) : null,
             email: email
         };
 
@@ -595,7 +622,7 @@ const inviteToTeam = async (req, res) => {
                 await sendEmail({
                     to: email,
                     fromName: 'MSP MIU - Competitions',
-                    subject: getInvitationEmailSubject(details.team_name, details.title),
+                    subject: getInvitationEmailSubject(details.team_name, details.title, userExists),
                     text: textContent,
                     html: htmlContent
                 });
@@ -611,7 +638,7 @@ const inviteToTeam = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: 'Invitation sent successfully',
+            message: userExists ? 'Member added to team and notified successfully' : 'Invitation sent successfully',
             data: {
                 invitation_id: invitationResult,
                 email: email,
