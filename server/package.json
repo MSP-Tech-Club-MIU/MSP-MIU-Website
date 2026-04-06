@@ -27,7 +27,7 @@
     "htmlhint": "^1.1.4",
     "lighthouse": "^12.2.1",
     "mysql2": "^3.11.3",
-    "nodemailer": "^7.0.11",
+    "nodemailer": "^8.0.4",
     "sequelize": "^6.37.3",
     "stylelint": "^14.16.1",
     "stylelint-config-standard": "^29.0.0"
