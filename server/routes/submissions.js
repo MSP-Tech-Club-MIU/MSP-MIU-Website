@@ -12,8 +12,8 @@ const { upload } = require('../middlewares/multer');
 // Create/update submission (authenticated, team members)
 router.post('/', authenticateToken, upload.single('file'), createSubmission);
 
-// Get team submission (authenticated)
-router.get('/competitions/:competitionId/teams/:teamId', authenticateToken, getTeamSubmission);
+// Get team submission (public — workspace URL is shared / guest team creators)
+router.get('/competitions/:competitionId/teams/:teamId', getTeamSubmission);
 
 // Get all submissions for competition (admin/board)
 router.get('/competitions/:competitionId', authenticateToken, verifyRole('admin', 'board'), getCompetitionSubmissions);

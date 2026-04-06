@@ -193,23 +193,25 @@ const CreateTeam = () => {
         ? `Solo - ${leaderData.name} - ${Date.now()}`
         : teamName;
 
+      const validMembers = teamMembers.filter(member => 
+        member.name.trim() && member.university_id.trim() && member.email.trim()
+      );
+
       // Create team with leader data
       const teamData = await ApiService.createTeam({
         competition_id: competitionId,
         team_name: finalTeamName,
         leader_name: leaderData.name,
         leader_university_id: leaderData.university_id,
-        leader_email: leaderData.email
+        leader_email: leaderData.email,
+        members: validMembers
       });
 
       // Skip member invitations for solo competitions
       if (competition?.max_team_size !== 1) {
-        // Send invitations with member details
-        const validMembers = teamMembers.filter(member => 
-          member.name.trim() && member.university_id.trim() && member.email.trim()
-        );
-        
-        if (validMembers.length > 0) {
+        // For authenticated leader accounts, preserve existing invite endpoint flow.
+        // For guests, backend already processes members from createTeam payload.
+        if (validMembers.length > 0 && ApiService.getAuthToken()) {
           await Promise.all(
             validMembers.map(member =>
               ApiService.inviteToTeam(teamData.team_id, member.email, {

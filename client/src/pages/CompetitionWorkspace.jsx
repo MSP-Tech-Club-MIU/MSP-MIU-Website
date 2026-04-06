@@ -48,7 +48,7 @@ const CompetitionWorkspace = () => {
       const [competitionData, teamData, submissionData] = await Promise.all([
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
-        ApiService.getTeamSubmission(teamId).catch(() => null)
+        ApiService.getTeamSubmission(competitionId, teamId).catch(() => null)
       ]);
 
       setCompetition(competitionData);
