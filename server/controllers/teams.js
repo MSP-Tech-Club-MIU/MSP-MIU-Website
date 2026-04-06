@@ -25,7 +25,7 @@ let sendEmail;
  */
 const createTeam = async (req, res) => {
     try {
-        const { competition_id, team_name, leader_name, leader_university_id, leader_email } = req.body;
+        const { competition_id, team_name, leader_name, leader_university_id, leader_email, members = [] } = req.body;
 
         // Validation
         if (!competition_id || !team_name) {
@@ -172,6 +172,13 @@ const createTeam = async (req, res) => {
             });
         }
 
+        if (!Array.isArray(members)) {
+            return res.status(400).json({
+                success: false,
+                error: 'members must be an array'
+            });
+        }
+
         // Create team (created_by_user_id can be NULL for pending teams)
         const teamResult = await db.query(
             `INSERT INTO teams (competition_id, team_name, created_by_user_id, is_locked)
@@ -254,6 +261,161 @@ const createTeam = async (req, res) => {
                 }
             } catch (emailError) {
                 console.error('Failed to send leader invitation email:', emailError);
+            }
+        }
+
+        // Process initial member invitations/additions from team creation form
+        // This supports guest team creation without requiring authenticated invite endpoint.
+        if (members.length > 0) {
+            const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+            const universityIdRegex = /^\d{4}\/\d{5}$/;
+            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
+
+            for (const member of members) {
+                const memberEmail = (member?.email || '').trim().toLowerCase();
+                const memberName = (member?.name || '').trim();
+                const memberUniversityId = (member?.university_id || '').trim();
+
+                // Skip malformed or duplicate-with-leader entries defensively.
+                if (!memberEmail || !memberName || !memberUniversityId) continue;
+                if (!miuEmailRegex.test(memberEmail) || !universityIdRegex.test(memberUniversityId)) continue;
+                if (leaderEmail && memberEmail === String(leaderEmail).toLowerCase()) continue;
+
+                // Skip if already in a competition team.
+                const existingCompetitionMembers = await db.query(
+                    `SELECT tm.team_member_id
+                     FROM team_members tm
+                     INNER JOIN users u ON tm.user_id = u.user_id
+                     INNER JOIN teams t ON tm.team_id = t.team_id
+                     WHERE t.competition_id = ? AND u.email = ?`,
+                    {
+                        replacements: [competition_id, memberEmail],
+                        type: db.QueryTypes.SELECT
+                    }
+                );
+                if (existingCompetitionMembers && existingCompetitionMembers.length > 0) continue;
+
+                // Skip if pending invitation already exists for this team/email.
+                const existingPendingInvite = await db.query(
+                    `SELECT invitation_id
+                     FROM team_invitations
+                     WHERE team_id = ? AND invited_email = ? AND status = 'pending'`,
+                    {
+                        replacements: [teamId, memberEmail],
+                        type: db.QueryTypes.SELECT
+                    }
+                );
+                if (existingPendingInvite && existingPendingInvite.length > 0) continue;
+
+                const users = await db.query(
+                    `SELECT user_id FROM users WHERE email = ?`,
+                    {
+                        replacements: [memberEmail],
+                        type: db.QueryTypes.SELECT
+                    }
+                );
+                const memberUserId = users && users.length > 0 ? users[0].user_id : null;
+                const memberUserExists = !!memberUserId;
+
+                if (memberUserExists) {
+                    await db.query(
+                        `INSERT INTO team_members (team_id, user_id, role)
+                         VALUES (?, ?, ?)`,
+                        {
+                            replacements: [teamId, memberUserId, 'member'],
+                            type: db.QueryTypes.INSERT
+                        }
+                    );
+
+                    await db.query(
+                        `UPDATE users
+                         SET role = 'competitor'
+                         WHERE user_id = ? AND role = 'member'`,
+                        {
+                            replacements: [memberUserId],
+                            type: db.QueryTypes.UPDATE
+                        }
+                    );
+
+                    if (sendEmail) {
+                        const existingEmailData = {
+                            teamName: team_name,
+                            inviterName: leaderName || 'Team Leader',
+                            competitionTitle: competition.title,
+                            competitionStartDate: new Date(competition.start_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }),
+                            competitionEndDate: new Date(competition.end_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }),
+                            competitionUrl,
+                            expiresAt: null,
+                            email: memberEmail
+                        };
+
+                        await sendEmail({
+                            to: memberEmail,
+                            fromName: 'MSP MIU - Competitions',
+                            subject: getInvitationEmailSubject(team_name, competition.title, true),
+                            text: generateExistingUserInvitationEmailText(existingEmailData),
+                            html: generateExistingUserInvitationEmailHTML(existingEmailData)
+                        });
+                    }
+                } else {
+                    const token = crypto.randomBytes(32).toString('hex');
+                    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+                    await db.query(
+                        `INSERT INTO team_invitations 
+                         (team_id, invited_email, invited_user_id, invited_name, invited_university_id, token, expires_at, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                        {
+                            replacements: [teamId, memberEmail, null, memberName, memberUniversityId, token, expiresAt, 'pending'],
+                            type: db.QueryTypes.INSERT
+                        }
+                    );
+
+                    if (sendEmail) {
+                        const newUserEmailData = {
+                            teamName: team_name,
+                            inviterName: leaderName || 'Team Leader',
+                            competitionTitle: competition.title,
+                            competitionStartDate: new Date(competition.start_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }),
+                            competitionEndDate: new Date(competition.end_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }),
+                            invitationToken: token,
+                            acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                            competitionUrl,
+                            expiresAt: expiresAt.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }),
+                            email: memberEmail,
+                            invitedName: memberName,
+                            invitedUniversityId: memberUniversityId
+                        };
+
+                        await sendEmail({
+                            to: memberEmail,
+                            fromName: 'MSP MIU - Competitions',
+                            subject: getInvitationEmailSubject(team_name, competition.title, false),
+                            text: generateNewUserInvitationEmailText(newUserEmailData),
+                            html: generateNewUserInvitationEmailHTML(newUserEmailData)
+                        });
+                    }
+                }
             }
         }
 
