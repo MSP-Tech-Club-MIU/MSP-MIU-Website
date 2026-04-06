@@ -1,5 +1,7 @@
 const db = require('../config/db');
 const { Op } = require('sequelize');
+const { Submission, Team, Evaluation, JudgeScore } = require('../models');
+const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 
 /**
  * Get all competitions
@@ -552,6 +554,7 @@ const deleteCompetition = async (req, res) => {
 module.exports = {
     getAllCompetitions,
     getCompetitionById,
+    getCompetitionLeaderboard,
     getUserTeamForCompetition,
     createCompetition,
     updateCompetition,
