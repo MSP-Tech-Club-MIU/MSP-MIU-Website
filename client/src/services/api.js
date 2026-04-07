@@ -1290,8 +1290,17 @@ class ApiService {
       method: 'GET',
       headers: this.getHeaders(true),
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to fetch quiz');
+    let result = {};
+    try {
+      const text = await response.text();
+      result = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`Quiz request failed (${response.status})`);
+    }
+    if (!response.ok) {
+      const msg = [result.error, result.details].filter(Boolean).join(' — ');
+      throw new Error(msg || `Failed to fetch quiz (${response.status})`);
+    }
     return result.data || result;
   }
 
