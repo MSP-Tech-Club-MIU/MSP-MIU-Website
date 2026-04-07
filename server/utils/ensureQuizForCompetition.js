@@ -21,7 +21,6 @@ async function ensureQuizForCompetition(competition, created_by) {
   await Quiz.create({
     ...payload,
     competition_id: cid,
-    time_limit: null,
     status: 'draft',
     created_by
   });
