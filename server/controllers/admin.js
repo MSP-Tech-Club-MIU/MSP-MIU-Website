@@ -1,4 +1,5 @@
 const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, TeamMember } = require('../models');
+const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
 const { Op } = require('sequelize');
 
@@ -119,7 +120,12 @@ const createCompetition = async (req, res) => {
             status,
             location_type,
             location_details,
-            rules
+            rules,
+            type,
+            submission_mode,
+            evaluation_mode,
+            is_team_based,
+            config
         } = req.body;
 
         if (!title || !description) {
@@ -136,19 +142,42 @@ const createCompetition = async (req, res) => {
             });
         }
 
+        const resolvedType = type || 'project';
+        let resolvedSubmission = submission_mode ?? 'upload';
+        let resolvedEvaluation = evaluation_mode ?? 'manual';
+        if (resolvedType === 'quiz' || resolvedType === 'external') {
+            resolvedSubmission = 'none';
+            resolvedEvaluation = 'none';
+        }
+
+        const effectiveIsTeamBased = is_team_based !== undefined ? Boolean(is_team_based) : true;
+        let minSize = min_team_size || 1;
+        let maxSize = max_team_size || 4;
+        if (!effectiveIsTeamBased) {
+            minSize = 1;
+            maxSize = 1;
+        }
+
         const competition = await Competition.create({
             title,
             description,
             start_at,
             end_at,
-            max_team_size: max_team_size || 4,
-            min_team_size: min_team_size || 1,
+            max_team_size: maxSize,
+            min_team_size: minSize,
             status: status || 'draft',
             location_type: location_type || 'on-campus',
             location_details: location_details || null,
             rules: (rules != null && String(rules).trim() !== '') ? String(rules).trim() : '',
+            type: resolvedType,
+            submission_mode: resolvedSubmission,
+            evaluation_mode: resolvedEvaluation,
+            is_team_based: effectiveIsTeamBased,
+            config: config ?? null,
             created_by: req.user.user_id
         });
+
+        await ensureQuizForCompetition(competition.get({ plain: true }), req.user.user_id);
 
         // Log notification
         await logAdminAction(
@@ -191,7 +220,16 @@ const updateCompetition = async (req, res) => {
         if ('rules' in updates && (updates.rules === null || updates.rules === undefined || (typeof updates.rules === 'string' && updates.rules.trim() === ''))) {
             updates.rules = '';
         }
+
+        const nextType = updates.type !== undefined ? updates.type : competition.type;
+        if (nextType === 'quiz' || nextType === 'external') {
+            updates.submission_mode = 'none';
+            updates.evaluation_mode = 'none';
+        }
+
         await competition.update(updates);
+        await competition.reload();
+        await ensureQuizForCompetition(competition.get({ plain: true }), req.user.user_id);
 
         // Log notification
         await logAdminAction(

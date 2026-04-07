@@ -6,8 +6,9 @@ const {
   getQuizAttemptByUser
 } = require('../controllers/quiz.controller');
 
-router.get('/:id', authenticateToken, getQuizById);
+// More specific path first so it is not captured by /:id
 router.get('/:quizId/attempts/:userId', authenticateToken, getQuizAttemptByUser);
+router.get('/:id', authenticateToken, getQuizById);
 
 module.exports = router;
 
