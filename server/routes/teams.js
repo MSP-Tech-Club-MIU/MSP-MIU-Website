@@ -10,10 +10,10 @@ const {
     verifyInvitation,
     acceptInvitationNewUser
 } = require('../controllers/teams');
-const { authenticateToken } = require('../middlewares/auth');
+const { authenticateToken, optionalAuth } = require('../middlewares/auth');
 
-// Create team (public - no auth required for guests to create teams)
-router.post('/', createTeam);
+// Create team: optional JWT — guests create without auth; logged-in users must send Bearer so req.user is set
+router.post('/', optionalAuth, createTeam);
 
 // Get team by ID (authenticated — team members or admin/board)
 router.get('/:id', authenticateToken, getTeamById);

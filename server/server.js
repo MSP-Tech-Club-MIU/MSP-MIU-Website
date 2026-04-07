@@ -22,6 +22,8 @@ router.use("/events", require("./routes/events"));
 router.use("/competitions", require("./routes/competitions"));
 router.use("/teams", require("./routes/teams"));
 router.use("/submissions", require("./routes/submissions"));
+router.use("/quizzes", require("./routes/quizzes"));
+router.use("/quiz_attempts", require("./routes/quiz_attempts"));
 router.use("/evaluation", require("./routes/evaluation.routes"));
 router.use("/cloud", require("./routes/cloud"));
 router.use("/upload", require("./routes/upload"));
