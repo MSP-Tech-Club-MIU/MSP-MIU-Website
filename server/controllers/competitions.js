@@ -23,7 +23,23 @@ function parseCompetitionConfig(competition) {
             competition.config = null;
         }
     }
+    if ('is_team_based' in competition && competition.is_team_based != null) {
+        competition.is_team_based = Boolean(Number(competition.is_team_based));
+    }
     return competition;
+}
+
+function coerceIsTeamBased(value, defaultValue = true) {
+    if (value === undefined) return defaultValue;
+    if (value === null) return defaultValue;
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+        const s = value.toLowerCase();
+        if (s === 'false' || s === '0') return false;
+        if (s === 'true' || s === '1') return true;
+    }
+    return defaultValue;
 }
 
 /**
@@ -80,6 +96,7 @@ const getAllCompetitions = async (req, res) => {
                 end_at,
                 max_team_size,
                 min_team_size,
+                is_team_based,
                 status,
                 location_type,
                 location_details,
@@ -132,6 +149,7 @@ const getCompetitionById = async (req, res) => {
                 end_at,
                 max_team_size,
                 min_team_size,
+                is_team_based,
                 status,
                 location_type,
                 location_details,
@@ -234,6 +252,7 @@ const createCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            is_team_based,
             status,
             location_type,
             location_details,
@@ -307,10 +326,16 @@ const createCompetition = async (req, res) => {
             });
         }
 
-        // Validate team size
-        const minSize = min_team_size || 1;
-        const maxSize = max_team_size;
-        
+        const effectiveIsTeamBased = coerceIsTeamBased(is_team_based, true);
+
+        // Validate team size (non-team-based / solo: exactly one slot)
+        let minSize = min_team_size || 1;
+        let maxSize = max_team_size;
+        if (!effectiveIsTeamBased) {
+            minSize = 1;
+            maxSize = 1;
+        }
+
         if (minSize > maxSize) {
             return res.status(400).json({
                 success: false,
@@ -341,8 +366,8 @@ const createCompetition = async (req, res) => {
         // Insert competition
         const result = await db.query(
             `INSERT INTO competitions 
-            (title, description, rules, start_at, end_at, max_team_size, min_team_size, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (title, description, rules, start_at, end_at, max_team_size, min_team_size, is_team_based, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
                     title,
@@ -350,8 +375,9 @@ const createCompetition = async (req, res) => {
                     rules || null,
                     start_at,
                     end_at,
-                    max_team_size,
-                    min_team_size || 1,
+                    maxSize,
+                    minSize,
+                    effectiveIsTeamBased,
                     status || 'draft',
                     location_type || 'on-campus',
                     location_details || null,
@@ -407,6 +433,7 @@ const updateCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            is_team_based,
             status,
             location_type,
             location_details,
@@ -415,6 +442,8 @@ const updateCompetition = async (req, res) => {
             evaluation_mode,
             config
         } = req.body;
+
+        const soloFromBody = is_team_based !== undefined && !coerceIsTeamBased(is_team_based);
 
         // Check if competition exists
         const existing = await db.query(
@@ -490,8 +519,8 @@ const updateCompetition = async (req, res) => {
             }
         }
 
-        // Validate team size if provided
-        if (min_team_size && max_team_size && min_team_size > max_team_size) {
+        // Validate team size if provided (skip cross-check when switching to non-team-based; sizes are forced to 1)
+        if (!soloFromBody && min_team_size && max_team_size && min_team_size > max_team_size) {
             return res.status(400).json({
                 success: false,
                 error: 'min_team_size cannot be greater than max_team_size'
@@ -542,13 +571,24 @@ const updateCompetition = async (req, res) => {
             updates.push('end_at = ?');
             values.push(end_at);
         }
-        if (max_team_size !== undefined) {
+        if (max_team_size !== undefined && !soloFromBody) {
             updates.push('max_team_size = ?');
             values.push(max_team_size);
         }
-        if (min_team_size !== undefined) {
+        if (min_team_size !== undefined && !soloFromBody) {
             updates.push('min_team_size = ?');
             values.push(min_team_size);
+        }
+        if (is_team_based !== undefined) {
+            const itb = coerceIsTeamBased(is_team_based);
+            updates.push('is_team_based = ?');
+            values.push(itb);
+            if (!itb) {
+                updates.push('min_team_size = ?');
+                values.push(1);
+                updates.push('max_team_size = ?');
+                values.push(1);
+            }
         }
         if (status !== undefined) {
             updates.push('status = ?');
