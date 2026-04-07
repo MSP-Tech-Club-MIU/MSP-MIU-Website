@@ -42,11 +42,6 @@ const Quiz = sequelize.define('Quiz', {
       }
     }
   },
-  time_limit: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
-    comment: 'Time limit in minutes'
-  },
   status: {
     type: DataTypes.ENUM('draft', 'published', 'active', 'closed'),
     allowNull: false,

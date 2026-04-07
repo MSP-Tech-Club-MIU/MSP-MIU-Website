@@ -1,6 +1,14 @@
 const { Op } = require('sequelize');
 const { Quiz, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer } = require('../models');
 
+/** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
+function num(v, fallback = 0) {
+  if (v == null) return fallback;
+  if (typeof v === 'bigint') return Number(v);
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 /**
  * Resolve quiz from route/body id. The app passes competition_id from CompetitionWorkspace
  * (`QuizCompetitionPanel quizId={competitionId}`), so we must look up by competition_id first.
@@ -47,10 +55,10 @@ async function getQuizById(req, res) {
 
     const byQuestion = new Map();
     options.forEach((o) => {
-      const key = Number(o.question_id);
+      const key = num(o.question_id, 0);
       if (!byQuestion.has(key)) byQuestion.set(key, []);
       byQuestion.get(key).push({
-        option_id: o.option_id,
+        option_id: num(o.option_id),
         option_text: o.option_text
       });
     });
@@ -58,30 +66,32 @@ async function getQuizById(req, res) {
     return res.status(200).json({
       success: true,
       data: {
-        quiz_id: quiz.quiz_id,
-        competition_id: quiz.competition_id,
+        quiz_id: num(quiz.quiz_id),
+        competition_id: num(quiz.competition_id),
         title: quiz.title,
         description: quiz.description,
         start_at: quiz.start_at,
         end_at: quiz.end_at,
-        time_limit: quiz.time_limit,
+        time_limit: null,
         status: quiz.status,
         questions: questions.map((q) => ({
-          question_id: q.question_id,
+          question_id: num(q.question_id),
           question_type: q.question_type,
           question_text: q.question_text,
-          points: q.points != null ? Number(q.points) : 0,
-          position: q.position,
-          options: byQuestion.get(Number(q.question_id)) || []
+          points: q.points != null ? num(q.points, 0) : 0,
+          position: num(q.position, 0),
+          options: byQuestion.get(num(q.question_id, 0)) || []
         }))
       }
     });
   } catch (error) {
     console.error('Error fetching quiz:', error);
+    const expose =
+      process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1';
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch quiz',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      details: expose ? error.message : undefined
     });
   }
 }
