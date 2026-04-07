@@ -146,9 +146,8 @@ const CompetitionDetails = () => {
     return now >= startDate && now < endDate;
   };
 
-  const isSoloCompetition = () => {
-    return competition && competition.max_team_size === 1;
-  };
+  const isSoloCompetition = () =>
+    competition && (competition.is_team_based === false || competition.is_team_based === 0);
 
   const handleJoinSoloCompetition = async () => {
     try {

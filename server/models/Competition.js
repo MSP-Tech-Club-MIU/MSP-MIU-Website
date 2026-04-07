@@ -64,6 +64,11 @@ const Competition = sequelize.define('Competition', {
       }
     }
   },
+  is_team_based: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
   status: {
     type: DataTypes.ENUM('draft', 'open', 'locked', 'judging', 'finished'),
     allowNull: false,

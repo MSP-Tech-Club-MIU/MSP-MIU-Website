@@ -166,7 +166,8 @@ const AdminPanel = () => {
         registration_deadline: '', max_team_size: 4, min_team_size: 1,
         max_teams: '', status: 'draft', location: '', rules: '',
         type: 'project', submission_mode: 'upload', evaluation_mode: 'manual',
-        is_multitask: false
+        is_multitask: false,
+        is_team_based: true
     });
 
     // Competition Teams state
@@ -416,7 +417,8 @@ const AdminPanel = () => {
                 type: comp.type || 'project',
                 submission_mode: comp.submission_mode || 'upload',
                 evaluation_mode: comp.evaluation_mode || 'manual',
-                is_multitask: comp?.config?.multiTask === true
+                is_multitask: comp?.config?.multiTask === true,
+                is_team_based: !(comp.is_team_based === false || comp.is_team_based === 0)
             });
         } else {
             setEditingComp(null);
@@ -425,7 +427,8 @@ const AdminPanel = () => {
                 registration_deadline: '', max_team_size: 4, min_team_size: 1,
                 max_teams: '', status: 'draft', location: '', rules: '',
                 type: 'project', submission_mode: 'upload', evaluation_mode: 'manual',
-                is_multitask: false
+                is_multitask: false,
+                is_team_based: true
             });
         }
         setShowCompModal(true);
@@ -447,7 +450,8 @@ const AdminPanel = () => {
                 type: compForm.type,
                 submission_mode: compForm.type === 'external' ? 'none' : compForm.submission_mode,
                 evaluation_mode: compForm.type === 'external' ? 'none' : compForm.evaluation_mode,
-                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : null
+                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : null,
+                is_team_based: !!compForm.is_team_based
             };
 
             if (editingComp) {
@@ -946,7 +950,8 @@ const AdminPanel = () => {
                                                     <th>Status</th>
                                                     <th>Start Date</th>
                                                     <th>End Date</th>
-                                                    <th>Teams</th>
+                                                    <th>Format</th>
+                                                    <th>Max size</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
@@ -962,6 +967,9 @@ const AdminPanel = () => {
                                                         </td>
                                                         <td>{formatDate(comp.start_at)}</td>
                                                         <td>{formatDate(comp.end_at)}</td>
+                                                        <td>
+                                                            {comp.is_team_based === false || comp.is_team_based === 0 ? 'Individual' : 'Team'}
+                                                        </td>
                                                         <td>{comp.max_team_size || '-'}</td>
                                                         <td>
                                                             <button
@@ -1134,6 +1142,24 @@ const AdminPanel = () => {
                                             />
                                         </div>
 
+                                        <div className="AdminPanel__formGroup">
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!compForm.is_team_based}
+                                                    onChange={(e) => {
+                                                        const individual = e.target.checked;
+                                                        setCompForm((f) => ({
+                                                            ...f,
+                                                            is_team_based: !individual,
+                                                            ...(individual ? { min_team_size: 1, max_team_size: 1 } : {})
+                                                        }));
+                                                    }}
+                                                />
+                                                {' '}Individual competition (single participant; one “team” slot only)
+                                            </label>
+                                        </div>
+
                                         <div className="AdminPanel__formRow">
                                             <div className="AdminPanel__formGroup">
                                                 <label>Min Team Size</label>
@@ -1142,6 +1168,7 @@ const AdminPanel = () => {
                                                     value={compForm.min_team_size}
                                                     onChange={e => setCompForm({ ...compForm, min_team_size: parseInt(e.target.value) || 1 })}
                                                     min="1"
+                                                    disabled={!compForm.is_team_based}
                                                 />
                                             </div>
                                             <div className="AdminPanel__formGroup">
@@ -1151,6 +1178,7 @@ const AdminPanel = () => {
                                                     value={compForm.max_team_size}
                                                     onChange={e => setCompForm({ ...compForm, max_team_size: parseInt(e.target.value) || 4 })}
                                                     min="1"
+                                                    disabled={!compForm.is_team_based}
                                                 />
                                             </div>
                                         </div>
