@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { Op } = require('sequelize');
 const { Submission, Team, Evaluation, JudgeScore } = require('../models');
+const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external'];
@@ -401,6 +402,7 @@ const createCompetition = async (req, res) => {
         );
 
         const normalizedCompetition = parseCompetitionConfig(newCompetitions[0]);
+        await ensureQuizForCompetition(normalizedCompetition, created_by);
         res.status(201).json({
             success: true,
             message: 'Competition created successfully',
@@ -646,6 +648,7 @@ const updateCompetition = async (req, res) => {
         );
 
         const normalizedCompetition = parseCompetitionConfig(updated[0]);
+        await ensureQuizForCompetition(normalizedCompetition, req.user.user_id);
         res.status(200).json({
             success: true,
             message: 'Competition updated successfully',
