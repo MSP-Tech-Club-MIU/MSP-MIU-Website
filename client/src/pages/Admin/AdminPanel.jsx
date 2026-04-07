@@ -447,7 +447,7 @@ const AdminPanel = () => {
                 type: compForm.type,
                 submission_mode: compForm.type === 'external' ? 'none' : compForm.submission_mode,
                 evaluation_mode: compForm.type === 'external' ? 'none' : compForm.evaluation_mode,
-                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : {}
+                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : null
             };
 
             if (editingComp) {

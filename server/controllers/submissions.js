@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { uploadToR2 } = require('../config/cloud');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
+const { normalizeInsertId } = require('../utils/normalizeInsertId');
 
 /**
  * Submit team work (ZIP file and/or links)
@@ -64,6 +65,13 @@ const createSubmission = async (req, res) => {
         }
 
         const competition = competitions[0];
+
+        if (competition.type === 'quiz') {
+            return res.status(400).json({
+                success: false,
+                error: 'Quiz competitions use quiz attempts and do not accept submissions'
+            });
+        }
 
         if (competition.type === 'external' || competition.submission_mode === 'none') {
             return res.status(400).json({
@@ -213,7 +221,14 @@ const createSubmission = async (req, res) => {
             }
         );
 
-        const submissionId = Array.isArray(result) ? result[0] : result;
+        const submissionId = normalizeInsertId(result);
+        if (!Number.isFinite(submissionId)) {
+            console.error('Failed to resolve submission insert id:', result);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to resolve created submission id'
+            });
+        }
 
         if (req.file && (submit_type === 'zip' || submit_type === 'zip_and_links')) {
             try {

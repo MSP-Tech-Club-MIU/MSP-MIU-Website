@@ -7,6 +7,25 @@ const VALID_COMP_TYPES = ['project', 'quiz', 'external'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
 const VALID_EVALUATION_MODES = ['none', 'manual', 'auto', 'hybrid'];
 
+function normalizeConfigForWrite(config) {
+    if (config === undefined) return undefined;
+    if (config === null) return null;
+    if (typeof config === 'string') return config;
+    return JSON.stringify(config);
+}
+
+function parseCompetitionConfig(competition) {
+    if (!competition) return competition;
+    if (typeof competition.config === 'string') {
+        try {
+            competition.config = JSON.parse(competition.config);
+        } catch (_) {
+            competition.config = null;
+        }
+    }
+    return competition;
+}
+
 /**
  * Get all competitions
  * GET /api/competitions
@@ -79,9 +98,10 @@ const getAllCompetitions = async (req, res) => {
             }
         );
 
+        const normalizedCompetitions = competitions.map(parseCompetitionConfig);
         res.status(200).json({
             success: true,
-            data: competitions
+            data: normalizedCompetitions
         });
 
     } catch (error) {
@@ -136,9 +156,10 @@ const getCompetitionById = async (req, res) => {
             });
         }
 
+        const normalizedCompetition = parseCompetitionConfig(competitions[0]);
         res.status(200).json({
             success: true,
-            data: competitions[0]
+            data: normalizedCompetition
         });
 
     } catch (error) {
@@ -273,10 +294,16 @@ const createCompetition = async (req, res) => {
             });
         }
 
-        if (resolvedType === 'external' && resolvedSubmissionMode !== 'none') {
+        if ((resolvedType === 'external' || resolvedType === 'quiz') && resolvedSubmissionMode !== 'none') {
             return res.status(400).json({
                 success: false,
-                error: 'external competitions must use submission_mode = none'
+                error: `${resolvedType} competitions must use submission_mode = none`
+            });
+        }
+        if ((resolvedType === 'external' || resolvedType === 'quiz') && resolvedEvaluationMode !== 'none') {
+            return res.status(400).json({
+                success: false,
+                error: `${resolvedType} competitions must use evaluation_mode = none`
             });
         }
 
@@ -309,6 +336,8 @@ const createCompetition = async (req, res) => {
             });
         }
 
+        const serializedConfig = normalizeConfigForWrite(config || null);
+
         // Insert competition
         const result = await db.query(
             `INSERT INTO competitions 
@@ -329,7 +358,7 @@ const createCompetition = async (req, res) => {
                     resolvedType,
                     resolvedSubmissionMode,
                     resolvedEvaluationMode,
-                    config || null,
+                    serializedConfig,
                     created_by
                 ],
                 type: db.QueryTypes.INSERT
@@ -345,10 +374,11 @@ const createCompetition = async (req, res) => {
             }
         );
 
+        const normalizedCompetition = parseCompetitionConfig(newCompetitions[0]);
         res.status(201).json({
             success: true,
             message: 'Competition created successfully',
-            data: newCompetitions[0]
+            data: normalizedCompetition
         });
 
     } catch (error) {
@@ -388,7 +418,7 @@ const updateCompetition = async (req, res) => {
 
         // Check if competition exists
         const existing = await db.query(
-            `SELECT competition_id FROM competitions WHERE competition_id = ?`,
+            `SELECT competition_id, type FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
@@ -441,6 +471,23 @@ const updateCompetition = async (req, res) => {
                 success: false,
                 error: `evaluation_mode must be one of: ${VALID_EVALUATION_MODES.join(', ')}`
             });
+        }
+
+        // Enforce invariants for restrictive competition types (current or requested)
+        const effectiveType = type || existing[0].type;
+        if (effectiveType === 'external' || effectiveType === 'quiz') {
+            if (submission_mode !== undefined && submission_mode !== 'none') {
+                return res.status(400).json({
+                    success: false,
+                    error: `${effectiveType} competitions must use submission_mode = none`
+                });
+            }
+            if (evaluation_mode !== undefined && evaluation_mode !== 'none') {
+                return res.status(400).json({
+                    success: false,
+                    error: `${effectiveType} competitions must use evaluation_mode = none`
+                });
+            }
         }
 
         // Validate team size if provided
@@ -529,7 +576,7 @@ const updateCompetition = async (req, res) => {
         }
         if (config !== undefined) {
             updates.push('config = ?');
-            values.push(config);
+            values.push(normalizeConfigForWrite(config));
         }
 
         if (updates.length === 0) {
@@ -558,10 +605,11 @@ const updateCompetition = async (req, res) => {
             }
         );
 
+        const normalizedCompetition = parseCompetitionConfig(updated[0]);
         res.status(200).json({
             success: true,
             message: 'Competition updated successfully',
-            data: updated[0]
+            data: normalizedCompetition
         });
 
     } catch (error) {
