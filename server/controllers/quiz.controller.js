@@ -1,9 +1,18 @@
+const { Op } = require('sequelize');
 const { Quiz, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer } = require('../models');
 
+/**
+ * Resolve quiz from route/body id. The app passes competition_id from CompetitionWorkspace
+ * (`QuizCompetitionPanel quizId={competitionId}`), so we must look up by competition_id first.
+ * Fallback: treat id as quizzes.quiz_id for direct/admin-style calls.
+ */
 async function resolveQuiz(idOrCompetition) {
-  let quiz = await Quiz.findByPk(idOrCompetition);
+  const n = parseInt(idOrCompetition, 10);
+  if (Number.isNaN(n)) return null;
+
+  let quiz = await Quiz.findOne({ where: { competition_id: n } });
   if (!quiz) {
-    quiz = await Quiz.findOne({ where: { competition_id: idOrCompetition } });
+    quiz = await Quiz.findByPk(n);
   }
   return quiz;
 }
@@ -28,17 +37,17 @@ async function getQuizById(req, res) {
       order: [['position', 'ASC']]
     });
 
-    const questionIds = questions.map((q) => q.question_id);
+    const questionIds = questions.map((q) => q.question_id).filter((id) => id != null);
     const options = questionIds.length > 0
       ? await QuizOption.findAll({
-          where: { question_id: questionIds },
+          where: { question_id: { [Op.in]: questionIds } },
           order: [['position', 'ASC']]
         })
       : [];
 
     const byQuestion = new Map();
     options.forEach((o) => {
-      const key = o.question_id;
+      const key = Number(o.question_id);
       if (!byQuestion.has(key)) byQuestion.set(key, []);
       byQuestion.get(key).push({
         option_id: o.option_id,
@@ -61,15 +70,19 @@ async function getQuizById(req, res) {
           question_id: q.question_id,
           question_type: q.question_type,
           question_text: q.question_text,
-          points: q.points,
+          points: q.points != null ? Number(q.points) : 0,
           position: q.position,
-          options: byQuestion.get(q.question_id) || []
+          options: byQuestion.get(Number(q.question_id)) || []
         }))
       }
     });
   } catch (error) {
     console.error('Error fetching quiz:', error);
-    return res.status(500).json({ success: false, error: 'Failed to fetch quiz' });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch quiz',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
 
