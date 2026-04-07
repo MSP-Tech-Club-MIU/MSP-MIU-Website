@@ -78,6 +78,25 @@ const Competition = sequelize.define('Competition', {
     type: DataTypes.STRING(255),
     allowNull: true
   },
+  type: {
+    type: DataTypes.ENUM('project', 'quiz', 'external'),
+    allowNull: false,
+    defaultValue: 'project'
+  },
+  submission_mode: {
+    type: DataTypes.ENUM('none', 'upload', 'link', 'both'),
+    allowNull: false,
+    defaultValue: 'upload'
+  },
+  evaluation_mode: {
+    type: DataTypes.ENUM('none', 'manual', 'auto', 'hybrid'),
+    allowNull: false,
+    defaultValue: 'manual'
+  },
+  config: {
+    type: DataTypes.JSON,
+    allowNull: true
+  },
   created_by: {
     type: DataTypes.INTEGER,
     allowNull: false,

@@ -3,6 +3,10 @@ const { Op } = require('sequelize');
 const { Submission, Team, Evaluation, JudgeScore } = require('../models');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 
+const VALID_COMP_TYPES = ['project', 'quiz', 'external'];
+const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
+const VALID_EVALUATION_MODES = ['none', 'manual', 'auto', 'hybrid'];
+
 /**
  * Get all competitions
  * GET /api/competitions
@@ -60,6 +64,10 @@ const getAllCompetitions = async (req, res) => {
                 status,
                 location_type,
                 location_details,
+                type,
+                submission_mode,
+                evaluation_mode,
+                config,
                 created_by,
                 created_at
             FROM competitions
@@ -107,6 +115,10 @@ const getCompetitionById = async (req, res) => {
                 status,
                 location_type,
                 location_details,
+                type,
+                submission_mode,
+                evaluation_mode,
+                config,
                 created_by,
                 created_at
             FROM competitions
@@ -203,7 +215,11 @@ const createCompetition = async (req, res) => {
             min_team_size,
             status,
             location_type,
-            location_details
+            location_details,
+            type,
+            submission_mode,
+            evaluation_mode,
+            config
         } = req.body;
 
         const created_by = req.user.user_id;
@@ -231,6 +247,36 @@ const createCompetition = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: `Location type must be one of: ${validLocationTypes.join(', ')}`
+            });
+        }
+
+        const resolvedType = type || 'project';
+        const resolvedSubmissionMode = submission_mode || 'upload';
+        const resolvedEvaluationMode = evaluation_mode || 'manual';
+
+        if (!VALID_COMP_TYPES.includes(resolvedType)) {
+            return res.status(400).json({
+                success: false,
+                error: `type must be one of: ${VALID_COMP_TYPES.join(', ')}`
+            });
+        }
+        if (!VALID_SUBMISSION_MODES.includes(resolvedSubmissionMode)) {
+            return res.status(400).json({
+                success: false,
+                error: `submission_mode must be one of: ${VALID_SUBMISSION_MODES.join(', ')}`
+            });
+        }
+        if (!VALID_EVALUATION_MODES.includes(resolvedEvaluationMode)) {
+            return res.status(400).json({
+                success: false,
+                error: `evaluation_mode must be one of: ${VALID_EVALUATION_MODES.join(', ')}`
+            });
+        }
+
+        if (resolvedType === 'external' && resolvedSubmissionMode !== 'none') {
+            return res.status(400).json({
+                success: false,
+                error: 'external competitions must use submission_mode = none'
             });
         }
 
@@ -266,8 +312,8 @@ const createCompetition = async (req, res) => {
         // Insert competition
         const result = await db.query(
             `INSERT INTO competitions 
-            (title, description, rules, start_at, end_at, max_team_size, min_team_size, status, location_type, location_details, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (title, description, rules, start_at, end_at, max_team_size, min_team_size, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
                     title,
@@ -280,6 +326,10 @@ const createCompetition = async (req, res) => {
                     status || 'draft',
                     location_type || 'on-campus',
                     location_details || null,
+                    resolvedType,
+                    resolvedSubmissionMode,
+                    resolvedEvaluationMode,
+                    config || null,
                     created_by
                 ],
                 type: db.QueryTypes.INSERT
@@ -329,7 +379,11 @@ const updateCompetition = async (req, res) => {
             min_team_size,
             status,
             location_type,
-            location_details
+            location_details,
+            type,
+            submission_mode,
+            evaluation_mode,
+            config
         } = req.body;
 
         // Check if competition exists
@@ -368,6 +422,25 @@ const updateCompetition = async (req, res) => {
                     error: `Location type must be one of: ${validLocationTypes.join(', ')}`
                 });
             }
+        }
+
+        if (type && !VALID_COMP_TYPES.includes(type)) {
+            return res.status(400).json({
+                success: false,
+                error: `type must be one of: ${VALID_COMP_TYPES.join(', ')}`
+            });
+        }
+        if (submission_mode && !VALID_SUBMISSION_MODES.includes(submission_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: `submission_mode must be one of: ${VALID_SUBMISSION_MODES.join(', ')}`
+            });
+        }
+        if (evaluation_mode && !VALID_EVALUATION_MODES.includes(evaluation_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: `evaluation_mode must be one of: ${VALID_EVALUATION_MODES.join(', ')}`
+            });
         }
 
         // Validate team size if provided
@@ -442,6 +515,22 @@ const updateCompetition = async (req, res) => {
             updates.push('location_details = ?');
             values.push(location_details);
         }
+        if (type !== undefined) {
+            updates.push('type = ?');
+            values.push(type);
+        }
+        if (submission_mode !== undefined) {
+            updates.push('submission_mode = ?');
+            values.push(submission_mode);
+        }
+        if (evaluation_mode !== undefined) {
+            updates.push('evaluation_mode = ?');
+            values.push(evaluation_mode);
+        }
+        if (config !== undefined) {
+            updates.push('config = ?');
+            values.push(config);
+        }
 
         if (updates.length === 0) {
             return res.status(400).json({
@@ -496,7 +585,7 @@ const deleteCompetition = async (req, res) => {
 
         // Check if competition exists
         const existing = await db.query(
-            `SELECT competition_id FROM competitions WHERE competition_id = ?`,
+            `SELECT competition_id, type, evaluation_mode FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
@@ -581,6 +670,33 @@ const getCompetitionLeaderboard = async (req, res) => {
             });
         }
 
+        const competition = existing[0];
+        if (competition.type === 'quiz') {
+            const quizRows = await db.query(
+                `SELECT
+                    qa.user_id,
+                    u.full_name AS participant_name,
+                    MAX(qa.score) AS final_score
+                FROM quiz_attempts qa
+                INNER JOIN quizzes q ON q.quiz_id = qa.quiz_id
+                INNER JOIN users u ON u.user_id = qa.user_id
+                WHERE q.competition_id = ?
+                GROUP BY qa.user_id, u.full_name
+                ORDER BY final_score DESC, participant_name ASC`,
+                {
+                    replacements: [competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            const data = quizRows.map((row, idx) => ({
+                rank: idx + 1,
+                participant_id: row.user_id,
+                participant_name: row.participant_name,
+                final_score: row.final_score != null ? parseFloat(row.final_score) : null
+            }));
+            return res.status(200).json({ success: true, data });
+        }
+
         const rows = await db.query(
             `SELECT
                 t.team_id,
@@ -644,7 +760,9 @@ const getCompetitionLeaderboard = async (req, res) => {
         const leaderboard = [];
         for (const entry of byTeam.values()) {
             const judgeAvg = meanJudgeScore(entry.judgeRows);
-            const finalScore = computeFinalScore(entry.total_auto_score, judgeAvg);
+            const finalScore = competition.evaluation_mode === 'hybrid'
+                ? computeFinalScore(entry.total_auto_score, judgeAvg)
+                : (entry.total_auto_score ?? judgeAvg);
             leaderboard.push({
                 rank: 0,
                 team_id: entry.team_id,

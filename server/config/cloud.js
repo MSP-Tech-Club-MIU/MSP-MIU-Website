@@ -34,9 +34,31 @@ async function downloadFromR2(key) {
   return Buffer.concat(chunks);
 }
 
+/**
+ * Upload object to R2 and return stored key.
+ * @param {Buffer} body
+ * @param {string} key
+ * @param {string} contentType
+ */
+async function uploadToR2(body, key, contentType = 'application/octet-stream') {
+  const bucket = process.env.R2_BUCKET;
+  if (!bucket) {
+    throw new Error('R2_BUCKET is not configured');
+  }
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: body,
+    ContentType: contentType
+  });
+  await r2.send(command);
+  return { key };
+}
+
 module.exports = {
   r2,
   PutObjectCommand,
   GetObjectCommand,
-  downloadFromR2
+  downloadFromR2,
+  uploadToR2
 };

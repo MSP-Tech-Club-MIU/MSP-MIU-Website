@@ -4,7 +4,7 @@ const path = require('path');
 const os = require('os');
 const AdmZip = require('adm-zip');
 const { downloadFromR2 } = require('../config/cloud');
-const { Submission, Evaluation } = require('../models');
+const { Submission, Evaluation, Competition } = require('../models');
 const { runStaticAnalysis } = require('./codeEvaluator');
 const { runLighthouseOnExtracted } = require('./lighthouseRunner');
 const { computeTotalAutoScore } = require('../utils/scoreCalculator');
@@ -25,7 +25,9 @@ async function runEvaluationForSubmission(submissionId, options = {}) {
   let workDir = null;
 
   try {
-    const submission = await Submission.findByPk(submissionId);
+    const submission = await Submission.findByPk(submissionId, {
+      include: [{ model: Competition, as: 'competition' }]
+    });
     if (!submission) {
       const err = new Error('Submission not found');
       err.statusCode = 404;
@@ -53,38 +55,81 @@ async function runEvaluationForSubmission(submissionId, options = {}) {
 
     log('extract.done', { bytes: buffer.length });
 
-    const staticResult = await runStaticAnalysis(extractDir, { log });
-    const lh = await runLighthouseOnExtracted(extractDir, { log });
-
-    const totalAuto = computeTotalAutoScore({
-      html: staticResult.htmlScore,
-      css: staticResult.cssScore,
-      js: staticResult.jsScore,
-      performance: lh.performance,
-      accessibility: lh.accessibility
-    });
-
-    const feedbackJson = {
-      issues: staticResult.feedback?.custom?.issues || [],
-      strengths: staticResult.feedback?.custom?.strengths || [],
-      linters: staticResult.feedback?.linters,
-      lighthouse: {
-        performance: lh.performance,
-        accessibility: lh.accessibility,
-        skipped: lh.skipped === true
+    const isMultiTask = submission.competition?.config?.multiTask === true;
+    const taskDirs = isMultiTask ? ['task1', 'task2'] : ['.'];
+    if (isMultiTask) {
+      const missing = taskDirs.filter((t) => !fsSync.existsSync(path.join(extractDir, t)));
+      if (missing.length > 0) {
+        const err = new Error(`Invalid submission structure. Missing: ${missing.join(', ')}`);
+        err.statusCode = 400;
+        throw err;
       }
-    };
+    }
+
+    const taskResults = {};
+    for (const task of taskDirs) {
+      const targetDir = task === '.' ? extractDir : path.join(extractDir, task);
+      const staticResult = await runStaticAnalysis(targetDir, { log });
+      const lh = await runLighthouseOnExtracted(targetDir, { log });
+      const totalAuto = computeTotalAutoScore({
+        html: staticResult.htmlScore,
+        css: staticResult.cssScore,
+        js: staticResult.jsScore,
+        performance: lh.performance,
+        accessibility: lh.accessibility
+      });
+      taskResults[task] = {
+        total: totalAuto,
+        staticResult,
+        lh
+      };
+    }
+
+    const totalAuto = isMultiTask
+      ? Math.round(((taskResults.task1.total + taskResults.task2.total) / 2) * 100) / 100
+      : taskResults['.'].total;
+
+    const feedbackJson = isMultiTask
+      ? {
+          task1: {
+            total_auto_score: taskResults.task1.total,
+            linters: taskResults.task1.staticResult.feedback?.linters,
+            lighthouse: {
+              performance: taskResults.task1.lh.performance,
+              accessibility: taskResults.task1.lh.accessibility
+            }
+          },
+          task2: {
+            total_auto_score: taskResults.task2.total,
+            linters: taskResults.task2.staticResult.feedback?.linters,
+            lighthouse: {
+              performance: taskResults.task2.lh.performance,
+              accessibility: taskResults.task2.lh.accessibility
+            }
+          },
+          final: totalAuto
+        }
+      : {
+          issues: taskResults['.'].staticResult.feedback?.custom?.issues || [],
+          strengths: taskResults['.'].staticResult.feedback?.custom?.strengths || [],
+          linters: taskResults['.'].staticResult.feedback?.linters,
+          lighthouse: {
+            performance: taskResults['.'].lh.performance,
+            accessibility: taskResults['.'].lh.accessibility,
+            skipped: taskResults['.'].lh.skipped === true
+          }
+        };
 
     const existing = await Evaluation.findOne({
       where: { submission_id: submissionId }
     });
 
     const scoresPayload = {
-      html_score: staticResult.htmlScore,
-      css_score: staticResult.cssScore,
-      js_score: staticResult.jsScore,
-      performance_score: lh.performance,
-      accessibility_score: lh.accessibility,
+      html_score: isMultiTask ? 0 : taskResults['.'].staticResult.htmlScore,
+      css_score: isMultiTask ? 0 : taskResults['.'].staticResult.cssScore,
+      js_score: isMultiTask ? 0 : taskResults['.'].staticResult.jsScore,
+      performance_score: isMultiTask ? 0 : taskResults['.'].lh.performance,
+      accessibility_score: isMultiTask ? 0 : taskResults['.'].lh.accessibility,
       total_auto_score: totalAuto,
       feedback_json: feedbackJson
     };
@@ -106,11 +151,11 @@ async function runEvaluationForSubmission(submissionId, options = {}) {
     return {
       evaluation,
       breakdown: {
-        html_score: staticResult.htmlScore,
-        css_score: staticResult.cssScore,
-        js_score: staticResult.jsScore,
-        performance_score: lh.performance,
-        accessibility_score: lh.accessibility,
+        html_score: scoresPayload.html_score,
+        css_score: scoresPayload.css_score,
+        js_score: scoresPayload.js_score,
+        performance_score: scoresPayload.performance_score,
+        accessibility_score: scoresPayload.accessibility_score,
         total_auto_score: totalAuto
       },
       feedback: feedbackJson
