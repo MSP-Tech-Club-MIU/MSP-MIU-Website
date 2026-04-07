@@ -1,4 +1,4 @@
-const { Submission, Evaluation, JudgeScore, User, Team } = require('../models');
+const { Submission, Evaluation, JudgeScore, User, Team, Competition } = require('../models');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const {
   meanJudgeScore,
@@ -24,6 +24,20 @@ const runEvaluation = async (req, res) => {
   }
 
   try {
+    const submission = await Submission.findByPk(submissionId, {
+      include: [{ model: Competition, as: 'competition' }]
+    });
+    if (!submission) {
+      return res.status(404).json({ success: false, error: 'Submission not found' });
+    }
+    const mode = submission.competition?.evaluation_mode || 'manual';
+    if (mode !== 'auto' && mode !== 'hybrid') {
+      return res.status(400).json({
+        success: false,
+        error: 'Automated evaluation is disabled for this competition'
+      });
+    }
+
     evalLog('RUN_START', { submissionId });
     const result = await runEvaluationForSubmission(submissionId, {
       log: (msg, data) => evalLog(msg, { submissionId, ...data })

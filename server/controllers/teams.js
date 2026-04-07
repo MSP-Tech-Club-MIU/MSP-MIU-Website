@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const crypto = require('crypto');
 const path = require('path');
+const { normalizeInsertId } = require('../utils/normalizeInsertId');
 
 // Import email templates
 const {
@@ -27,20 +28,6 @@ async function ensureSendEmail() {
     const emailModule = await import('../utils/email.mjs');
     sendEmail = emailModule.sendEmail;
     return sendEmail;
-}
-
-/** Sequelize/MySQL INSERT can return a number, ResultSetHeader, or [rows, fields] — normalize to numeric id */
-function normalizeInsertId(raw) {
-    if (raw == null) return null;
-    if (typeof raw === 'number' && !Number.isNaN(raw)) return raw;
-    if (typeof raw === 'bigint') return Number(raw);
-    if (typeof raw === 'string' && /^\d+$/.test(raw)) return parseInt(raw, 10);
-    if (typeof raw === 'object') {
-        if (raw.insertId != null) return Number(raw.insertId);
-        if (Array.isArray(raw) && raw.length > 0) return normalizeInsertId(raw[0]);
-    }
-    const n = Number(raw);
-    return Number.isNaN(n) ? null : n;
 }
 
 /**
