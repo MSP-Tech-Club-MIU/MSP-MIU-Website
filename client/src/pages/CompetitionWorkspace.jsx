@@ -5,6 +5,7 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import QuizCompetitionPanel from '../components/quiz/QuizCompetitionPanel';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
@@ -28,6 +29,7 @@ const CompetitionWorkspace = () => {
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
   const [submission, setSubmission] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [error, setError] = useState(null);
 
   // Form state
@@ -44,12 +46,15 @@ const CompetitionWorkspace = () => {
       const [competitionData, teamData, submissionData] = await Promise.all([
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
-        ApiService.getTeamSubmission(competitionId, teamId).catch(() => null)
+        ApiService.getTeamSubmission(competitionId, teamId).catch(() => null),
       ]);
 
       setCompetition(competitionData);
       setTeam(teamData);
       setSubmission(submissionData);
+
+      const profile = await ApiService.getProfile().catch(() => null);
+      setCurrentUserId(profile?.user_id || null);
 
       if (submissionData) {
         setSubmitType(submissionData.submit_type);
@@ -519,10 +524,14 @@ const CompetitionWorkspace = () => {
                   <FiFileText size={20} />
                   Quiz Competition
                 </h3>
-                <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
-                  <FiAlertCircle size={18} />
-                  <span>This competition uses the quiz system. Submissions are disabled in workspace.</span>
-                </div>
+                {currentUserId ? (
+                  <QuizCompetitionPanel quizId={competitionId} userId={currentUserId} />
+                ) : (
+                  <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
+                    <FiAlertCircle size={18} />
+                    <span>Unable to load current user for quiz attempt.</span>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
