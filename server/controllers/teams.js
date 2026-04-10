@@ -534,7 +534,11 @@ const createTeam = async (req, res) => {
         console.error('Error creating team:', error);
 
         // Convert common DB constraint issues into user-friendly responses.
-        if (error?.name === 'SequelizeUniqueConstraintError' || error?.original?.code === 'ER_DUP_ENTRY') {
+        const sqlCode = error?.original?.code || error?.parent?.code;
+        if (
+            error?.name === 'SequelizeUniqueConstraintError' ||
+            sqlCode === 'ER_DUP_ENTRY'
+        ) {
             return res.status(400).json({
                 success: false,
                 error: 'One of the provided emails/university IDs is already assigned in a conflicting way. Please review team members and try again.'
@@ -551,7 +555,7 @@ const createTeam = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to create team',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 };
@@ -646,7 +650,7 @@ const getCompetitionTeams = async (req, res) => {
                     COUNT(tm.team_member_id) as member_count,
                     u.full_name as creator_name
              FROM teams t
-             INNER JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE t.competition_id = ?
              GROUP BY t.team_id
@@ -844,10 +848,13 @@ const inviteToTeam = async (req, res) => {
 
         // Get team and competition details for email
         const teamDetails = await db.query(
-            `SELECT t.team_name, c.title, c.start_at, c.end_at, u.full_name as inviter_name
+            `SELECT t.team_name, c.title, c.start_at, c.end_at,
+                    COALESCE(u.full_name, ul.full_name, 'Team Leader') as inviter_name
              FROM teams t
              INNER JOIN competitions c ON t.competition_id = c.competition_id
-             INNER JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN team_members tml ON tml.team_id = t.team_id AND tml.role = 'leader'
+             LEFT JOIN users ul ON tml.user_id = ul.user_id
              WHERE t.team_id = ?`,
             {
                 replacements: [id],
