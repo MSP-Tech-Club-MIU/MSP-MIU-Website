@@ -514,11 +514,24 @@ const getCompetitionTeams = async (req, res) => {
         const { id } = req.params;
         const teams = await Team.findAll({
             where: { competition_id: id },
-            include: [{
-                model: User,
-                as: 'creator',
-                attributes: ['full_name', 'email']
-            }],
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['full_name', 'email', 'university_id']
+                },
+                {
+                    model: TeamMember,
+                    as: 'members',
+                    attributes: ['team_member_id', 'role', 'joined_at'],
+                    required: false,
+                    include: [{
+                        model: User,
+                        as: 'user',
+                        attributes: ['user_id', 'full_name', 'email', 'university_id']
+                    }]
+                }
+            ],
             order: [['created_at', 'DESC']]
         });
         res.json({ success: true, data: teams });

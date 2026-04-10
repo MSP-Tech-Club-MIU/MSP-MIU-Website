@@ -178,7 +178,7 @@ const AppRouter = () => {
           <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
           <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
           <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
-          <Route path="/admin" element={<SiteLayout><AdminPanel /></SiteLayout>} />
+          <Route path="/admin/*" element={<SiteLayout><AdminPanel /></SiteLayout>} />
         </Routes>
       </Suspense>
     </Router>
