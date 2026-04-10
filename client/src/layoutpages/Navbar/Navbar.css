@@ -68,7 +68,7 @@
     padding: 0;
     display: flex;
     align-items: center;
-    gap: clamp(0.65rem, 2vw, 1.35rem);
+    gap: clamp(1rem, 2.5vw, 2rem);
     flex: 1;
 }
 
@@ -149,13 +149,13 @@
     position: relative;
     display: flex;
     align-items: center;
-    gap: .45rem;
+    gap: .5rem;
     text-decoration: none;
     color: #8EC2F0;
     font-size: .74rem;
     font-weight: 500;
     letter-spacing: .35px;
-    padding: .55rem .7rem;
+    padding: .55rem .85rem;
     border-radius: 10px;
 }
 
@@ -319,7 +319,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: .4rem;
+    gap: .55rem;
     overflow-y: auto;
 }
 
@@ -394,12 +394,12 @@
 
 .NavDrawer__nestedList {
     list-style: none;
-    margin: 0.35rem 0 0;
+    margin: 0.45rem 0 0;
     padding: 0 0 0 0.35rem;
     border-left: 2px solid rgba(3, 169, 244, 0.35);
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.45rem;
 }
 
 .NavDrawer__nestedList > li {
@@ -507,7 +507,7 @@
 @media (max-width:1450px) {
     .NavItem {
         font-size: .68rem;
-        padding: .5rem .55rem;
+        padding: .5rem .7rem;
     }
 
     .Navbar__inner {
