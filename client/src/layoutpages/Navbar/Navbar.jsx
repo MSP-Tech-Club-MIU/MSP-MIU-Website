@@ -28,6 +28,7 @@ const Navbar = memo(() => {
   const [moreOpen, setMoreOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const moreWrapRef = useRef(null);
+  const moreMegaRef = useRef(null);
   const location = useLocation();
 
   // Check authentication status and handle token expiration
@@ -244,12 +245,24 @@ const Navbar = memo(() => {
   useEffect(() => {
     if (!moreOpen) return;
     const onPointerDown = (e) => {
-      if (moreWrapRef.current && !moreWrapRef.current.contains(e.target)) {
+      const inTrigger = moreWrapRef.current?.contains(e.target);
+      const inMega = moreMegaRef.current?.contains(e.target);
+      if (!inTrigger && !inMega) {
         setMoreOpen(false);
       }
     };
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [moreOpen]);
+
+  useEffect(() => {
+    const onResize = () => {
+      if (typeof window !== 'undefined' && window.innerWidth <= 1180 && moreOpen) {
+        setMoreOpen(false);
+      }
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, [moreOpen]);
 
   useEffect(() => {
@@ -412,7 +425,7 @@ const Navbar = memo(() => {
 
   return (
     <header 
-      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''}`}
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${moreOpen ? 'Navbar--megaOpen' : ''} ${isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''}`}
       style={isAndroidDevice && statusBarHeight > 0 ? { paddingTop: `${statusBarHeight}px` } : {}}
       {...bindSwipeGesture()}
     >      
@@ -455,36 +468,6 @@ const Navbar = memo(() => {
                 </span>
                 <span className="NavItem__label">More</span>
               </button>
-              <AnimatePresence>
-                {moreOpen && (
-                  <motion.div
-                    id="navbar-more-panel"
-                    role="region"
-                    aria-labelledby="navbar-more-trigger"
-                    className="Navbar__morePanel"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    <p className="Navbar__moreGroupLabel">About &amp; extras</p>
-                    <ul className="Navbar__moreList">
-                      {navSections.extended.map((l) => (
-                        <li key={l.to}>
-                          <NavLink
-                            to={l.to}
-                            className={({ isActive }) => `NavItem NavItem--morePanel ${isActive ? 'is-active' : ''}`}
-                            onClick={() => setMoreOpen(false)}
-                          >
-                            <span className="NavItem__icon">{l.icon}</span>
-                            <span className="NavItem__label">{l.label}</span>
-                          </NavLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </li>
           )}
           {navSections.account.map((l) => renderDesktopItem(l))}
@@ -500,6 +483,65 @@ const Navbar = memo(() => {
           <span />
         </button>
       </div>
+      <AnimatePresence>
+        {moreOpen && navSections.extended.length > 0 && (
+          <motion.div
+            ref={moreMegaRef}
+            id="navbar-more-panel"
+            role="region"
+            aria-labelledby="navbar-more-heading navbar-more-trigger"
+            className="Navbar__mega"
+            initial={{ opacity: 0, clipPath: 'inset(0 0 100% 0 round 0 0 14px 14px)' }}
+            animate={{ opacity: 1, clipPath: 'inset(0 0 0% 0 round 0 0 14px 14px)' }}
+            exit={{
+              opacity: 0,
+              clipPath: 'inset(0 0 100% 0 round 0 0 14px 14px)',
+              transition: { duration: 0.36, ease: [0.4, 0, 0.2, 1] },
+            }}
+            transition={{
+              duration: 0.56,
+              ease: [0.16, 1, 0.3, 1],
+              opacity: { duration: 0.42, ease: [0.16, 1, 0.3, 1] },
+            }}
+          >
+            <motion.div
+              className="Navbar__megaInner"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.5,
+                delay: 0.06,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+            >
+              <div className="Navbar__megaHeader">
+                <p className="Navbar__megaTitle" id="navbar-more-heading">
+                  Explore more
+                </p>
+                <p className="Navbar__megaSubtitle">
+                  Learn about the club, get the app, and access member tools
+                </p>
+              </div>
+              <ul className="Navbar__megaGrid">
+                {navSections.extended.map((l) => (
+                  <li key={l.to} className="Navbar__megaCell">
+                    <NavLink
+                      to={l.to}
+                      className={({ isActive }) =>
+                        `Navbar__megaCard ${isActive ? 'Navbar__megaCard--active' : ''}`
+                      }
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      <span className="Navbar__megaCardIcon">{l.icon}</span>
+                      <span className="Navbar__megaCardLabel">{l.label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {createPortal(
         <AnimatePresence>
           {mobileOpen && (
