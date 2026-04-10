@@ -6,13 +6,17 @@ const {
   createCompetition,
   updateCompetition,
   deleteCompetition,
-  getUserTeamForCompetition
+  getUserTeamForCompetition,
+  getCompetitionLeaderboard
 } = require('../controllers/competitions');
 const { getCompetitionTeams } = require('../controllers/teams');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
 // Get all competitions (public - shows only open/finished; admin/board sees all)
 router.get('/', getAllCompetitions);
+
+// Leaderboard (public)
+router.get('/:id/leaderboard', getCompetitionLeaderboard);
 
 // Get competition by ID (public)
 router.get('/:id', getCompetitionById);

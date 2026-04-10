@@ -14,7 +14,10 @@ const sequelize = new Sequelize(
       ssl: {
         require: true,
         rejectUnauthorized: false
-      }
+      },
+      // Avoid BIGINT → JS BigInt from mysql2, which breaks JSON.stringify / res.json()
+      supportBigNumbers: true,
+      bigNumberStrings: true
     }
   }
 );

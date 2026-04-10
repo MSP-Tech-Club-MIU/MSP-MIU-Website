@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { uploadToR2 } = require('../config/cloud');
-const path = require('path');
+const { runEvaluationForSubmission } = require('../services/evaluationRunner');
+const { normalizeInsertId } = require('../utils/normalizeInsertId');
 
 /**
  * Submit team work (ZIP file and/or links)
@@ -49,7 +50,7 @@ const createSubmission = async (req, res) => {
 
         // Check competition status
         const competitions = await db.query(
-            `SELECT status, end_at FROM competitions WHERE competition_id = ?`,
+            `SELECT status, end_at, type, submission_mode, evaluation_mode FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [competition_id],
                 type: db.QueryTypes.SELECT
@@ -64,6 +65,20 @@ const createSubmission = async (req, res) => {
         }
 
         const competition = competitions[0];
+
+        if (competition.type === 'quiz') {
+            return res.status(400).json({
+                success: false,
+                error: 'Quiz competitions use quiz attempts and do not accept submissions'
+            });
+        }
+
+        if (competition.type === 'external' || competition.submission_mode === 'none') {
+            return res.status(400).json({
+                success: false,
+                error: 'This competition does not accept submissions'
+            });
+        }
 
         if (competition.status === 'draft') {
             return res.status(400).json({
@@ -87,7 +102,20 @@ const createSubmission = async (req, res) => {
             });
         }
 
-        // Validate submit_type requirements
+        // Validate submit_type against competition submission_mode
+        const allowedByMode = {
+            upload: ['zip'],
+            link: ['links'],
+            both: ['zip', 'links', 'zip_and_links']
+        };
+        const allowedTypes = allowedByMode[competition.submission_mode] || [];
+        if (!allowedTypes.includes(submit_type)) {
+            return res.status(400).json({
+                success: false,
+                error: `submit_type ${submit_type} is not allowed for submission_mode=${competition.submission_mode}`
+            });
+        }
+
         if ((submit_type === 'links' || submit_type === 'zip_and_links') && (!repo_url && !live_url)) {
             return res.status(400).json({
                 success: false,
@@ -95,33 +123,9 @@ const createSubmission = async (req, res) => {
             });
         }
 
-        // Handle file upload if provided
-        let r2Key = null;
-        if (req.file && (submit_type === 'zip' || submit_type === 'zip_and_links')) {
-            try {
-                // Upload to R2: competitions/{competition_id}/teams/{team_id}/submission.zip
-                const fileName = `competitions/${competition_id}/teams/${team_id}/submission_${Date.now()}${path.extname(req.file.originalname)}`;
-                const uploadResult = await uploadToR2(req.file.buffer, fileName, req.file.mimetype);
-                r2Key = uploadResult.key;
-            } catch (uploadError) {
-                console.error('Error uploading file to R2:', uploadError);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to upload file'
-                });
-            }
-        }
-
-        if ((submit_type === 'zip' || submit_type === 'zip_and_links') && !r2Key) {
-            return res.status(400).json({
-                success: false,
-                error: 'ZIP file is required for this submission type'
-            });
-        }
-
         // Check if submission already exists
         const existingSubmissions = await db.query(
-            `SELECT submission_id FROM submissions 
+            `SELECT submission_id, r2_key FROM submissions 
              WHERE competition_id = ? AND team_id = ?`,
             {
                 replacements: [competition_id, team_id],
@@ -130,10 +134,32 @@ const createSubmission = async (req, res) => {
         );
 
         if (existingSubmissions && existingSubmissions.length > 0) {
+            if ((submit_type === 'zip' || submit_type === 'zip_and_links') && !req.file && !existingSubmissions[0].r2_key) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'ZIP file is required for this submission type'
+                });
+            }
+
+            let r2Key = null;
+            if (req.file && (submit_type === 'zip' || submit_type === 'zip_and_links')) {
+                try {
+                    const fileName = `competitions/${competition_id}/submissions/${existingSubmissions[0].submission_id}/submission.zip`;
+                    const uploadResult = await uploadToR2(req.file.buffer, fileName, req.file.mimetype || 'application/zip');
+                    r2Key = uploadResult.key;
+                } catch (uploadError) {
+                    console.error('Error uploading file to R2:', uploadError);
+                    return res.status(500).json({
+                        success: false,
+                        error: 'Failed to upload file'
+                    });
+                }
+            }
+
             // Update existing submission
             await db.query(
                 `UPDATE submissions 
-                 SET submit_type = ?, r2_key = ?, repo_url = ?, live_url = ?, notes = ?, 
+                 SET submit_type = ?, r2_key = COALESCE(?, r2_key), repo_url = ?, live_url = ?, notes = ?, 
                      status = 'submitted', submitted_at = NOW()
                  WHERE submission_id = ?`,
                 {
@@ -157,6 +183,12 @@ const createSubmission = async (req, res) => {
                 }
             );
 
+            if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+                runEvaluationForSubmission(existingSubmissions[0].submission_id).catch((err) => {
+                    console.error('Auto evaluation failed:', err.message);
+                });
+            }
+
             return res.status(200).json({
                 success: true,
                 message: 'Submission updated successfully',
@@ -164,17 +196,23 @@ const createSubmission = async (req, res) => {
             });
         }
 
+        if ((submit_type === 'zip' || submit_type === 'zip_and_links') && !req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'ZIP file is required for this submission type'
+            });
+        }
+
         // Create new submission
         const result = await db.query(
             `INSERT INTO submissions 
              (competition_id, team_id, submit_type, r2_key, repo_url, live_url, notes, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+             VALUES (?, ?, ?, NULL, ?, ?, ?, 'submitted')`,
             {
                 replacements: [
                     competition_id,
                     team_id,
                     submit_type,
-                    r2Key,
                     repo_url || null,
                     live_url || null,
                     notes || null
@@ -183,13 +221,48 @@ const createSubmission = async (req, res) => {
             }
         );
 
+        const submissionId = normalizeInsertId(result);
+        if (!Number.isFinite(submissionId)) {
+            console.error('Failed to resolve submission insert id:', result);
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to resolve created submission id'
+            });
+        }
+
+        if (req.file && (submit_type === 'zip' || submit_type === 'zip_and_links')) {
+            try {
+                const fileName = `competitions/${competition_id}/submissions/${submissionId}/submission.zip`;
+                const uploadResult = await uploadToR2(req.file.buffer, fileName, req.file.mimetype || 'application/zip');
+                await db.query(
+                    `UPDATE submissions SET r2_key = ? WHERE submission_id = ?`,
+                    {
+                        replacements: [uploadResult.key, submissionId],
+                        type: db.QueryTypes.UPDATE
+                    }
+                );
+            } catch (uploadError) {
+                console.error('Error uploading file to R2:', uploadError);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Failed to upload file'
+                });
+            }
+        }
+
         const newSubmissions = await db.query(
             `SELECT * FROM submissions WHERE submission_id = ?`,
             {
-                replacements: [result],
+                replacements: [submissionId],
                 type: db.QueryTypes.SELECT
             }
         );
+
+        if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+            runEvaluationForSubmission(submissionId).catch((err) => {
+                console.error('Auto evaluation failed:', err.message);
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -209,12 +282,33 @@ const createSubmission = async (req, res) => {
 
 /**
  * Get team's submission for a competition
- * GET /api/competitions/:competitionId/teams/:teamId/submission
- * Authenticated route
+ * GET /api/submissions/competitions/:competitionId/teams/:teamId
+ * Authenticated — team members or admin/board
  */
 const getTeamSubmission = async (req, res) => {
     try {
         const { competitionId, teamId } = req.params;
+        const userId = req.user.user_id;
+        const isPrivileged = ['admin', 'board'].includes(req.user.role);
+
+        if (!isPrivileged) {
+            const membership = await db.query(
+                `SELECT tm.team_member_id
+                 FROM team_members tm
+                 INNER JOIN teams t ON tm.team_id = t.team_id
+                 WHERE tm.team_id = ? AND tm.user_id = ? AND t.competition_id = ?`,
+                {
+                    replacements: [teamId, userId, competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (!membership || membership.length === 0) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Access denied'
+                });
+            }
+        }
 
         const submissions = await db.query(
             `SELECT s.*, t.team_name

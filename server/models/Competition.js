@@ -64,6 +64,11 @@ const Competition = sequelize.define('Competition', {
       }
     }
   },
+  is_team_based: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
+  },
   status: {
     type: DataTypes.ENUM('draft', 'open', 'locked', 'judging', 'finished'),
     allowNull: false,
@@ -76,6 +81,25 @@ const Competition = sequelize.define('Competition', {
   },
   location_details: {
     type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  type: {
+    type: DataTypes.ENUM('project', 'quiz', 'external'),
+    allowNull: false,
+    defaultValue: 'project'
+  },
+  submission_mode: {
+    type: DataTypes.ENUM('none', 'upload', 'link', 'both'),
+    allowNull: false,
+    defaultValue: 'upload'
+  },
+  evaluation_mode: {
+    type: DataTypes.ENUM('none', 'manual', 'auto', 'hybrid'),
+    allowNull: false,
+    defaultValue: 'manual'
+  },
+  config: {
+    type: DataTypes.JSON,
     allowNull: true
   },
   created_by: {

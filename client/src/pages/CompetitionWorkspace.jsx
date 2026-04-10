@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import QuizCompetitionPanel from '../components/quiz/QuizCompetitionPanel';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
-  FiDownload,
   FiAlertCircle,
   FiCheckCircle,
   FiClock,
@@ -22,12 +22,14 @@ import {
 const CompetitionWorkspace = () => {
   const { id: competitionId, teamId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
   const [submission, setSubmission] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [error, setError] = useState(null);
 
   // Form state
@@ -36,29 +38,29 @@ const CompetitionWorkspace = () => {
   const [liveUrl, setLiveUrl] = useState('');
   const [submitType, setSubmitType] = useState('zip'); // 'zip' | 'links' | 'zip_and_links'
 
-  useEffect(() => {
-    fetchData();
-  }, [competitionId, teamId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const [competitionData, teamData, submissionData] = await Promise.all([
+      const [competitionData, teamData] = await Promise.all([
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
-        ApiService.getTeamSubmission(competitionId, teamId).catch(() => null)
       ]);
+      const submissionData = competitionData?.type === 'quiz'
+        ? null
+        : await ApiService.getTeamSubmission(competitionId, teamId).catch(() => null);
 
       setCompetition(competitionData);
       setTeam(teamData);
       setSubmission(submissionData);
 
-      // Pre-fill form if submission exists
+      const profile = await ApiService.getProfile().catch(() => null);
+      setCurrentUserId(profile?.user_id || null);
+
       if (submissionData) {
         setSubmitType(submissionData.submit_type);
-        setGithubUrl(submissionData.github_url || '');
+        setGithubUrl(submissionData.repo_url || '');
         setLiveUrl(submissionData.live_url || '');
       }
     } catch (err) {
@@ -67,7 +69,16 @@ const CompetitionWorkspace = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [competitionId, teamId]);
+
+  useEffect(() => {
+    if (!ApiService.isAuthenticated()) {
+      setLoading(false);
+      navigate('/login', { replace: true, state: { from: location } });
+      return;
+    }
+    fetchData();
+  }, [competitionId, teamId, location, navigate, fetchData]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -81,8 +92,22 @@ const CompetitionWorkspace = () => {
     }
   };
 
+  const getAllowedSubmitTypes = () => {
+    if (!competition) return ['zip', 'links', 'zip_and_links'];
+    if (competition.submission_mode === 'upload') return ['zip'];
+    if (competition.submission_mode === 'link') return ['links'];
+    if (competition.submission_mode === 'both') return ['zip', 'links', 'zip_and_links'];
+    return [];
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const allowedTypes = getAllowedSubmitTypes();
+    if (!allowedTypes.includes(submitType)) {
+      setError('Selected submission type is not allowed for this competition');
+      return;
+    }
 
     // Validation
     if (submitType === 'zip' && !selectedFile && !submission?.r2_key) {
@@ -119,7 +144,7 @@ const CompetitionWorkspace = () => {
       }
 
       if (githubUrl) {
-        formData.append('github_url', githubUrl);
+        formData.append('repo_url', githubUrl);
       }
 
       if (liveUrl) {
@@ -172,12 +197,17 @@ const CompetitionWorkspace = () => {
 
   const canSubmit = () => {
     if (!competition) return false;
+    if (competition.type === 'quiz') return false;
+    if (competition.type === 'external' || competition.submission_mode === 'none') return false;
     if (competition.status !== 'open') return false;
-    
+
     const now = new Date();
     const end = new Date(competition.end_at);
     return now < end;
   };
+  const allowedSubmitTypes = getAllowedSubmitTypes();
+  const isFrontendMultitask = competition?.config?.multiTask === true;
+  const isQuizCompetition = competition?.type === 'quiz';
 
   if (loading) {
     return <PageLoader />;
@@ -283,7 +313,7 @@ const CompetitionWorkspace = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             {/* Current Submission Status */}
-            {submission && (
+            {!isQuizCompetition && submission && (
               <div className="CompetitionWorkspace__currentSubmission">
                 <h3 className="CompetitionWorkspace__submissionTitle">
                   <FiCheckCircle size={20} />
@@ -296,11 +326,11 @@ const CompetitionWorkspace = () => {
                   <p>
                     <strong>Type:</strong> {submission.submit_type.replace('_', ' + ').toUpperCase()}
                   </p>
-                  {submission.github_url && (
+                  {submission.repo_url && (
                     <p>
                       <strong>GitHub:</strong>{' '}
-                      <a href={submission.github_url} target="_blank" rel="noopener noreferrer">
-                        {submission.github_url}
+                      <a href={submission.repo_url} target="_blank" rel="noopener noreferrer">
+                        {submission.repo_url}
                       </a>
                     </p>
                   )}
@@ -333,6 +363,7 @@ const CompetitionWorkspace = () => {
             )}
 
             {/* Submission Form */}
+            {!isQuizCompetition ? (
             <div className="CompetitionWorkspace__submitForm">
               <h3 className="CompetitionWorkspace__submissionTitle">
                 <FiSend size={20} />
@@ -343,10 +374,19 @@ const CompetitionWorkspace = () => {
                 <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
                   <FiAlertCircle size={18} />
                   <span>
-                    {competition?.status !== 'open'
+                    {competition?.type === 'external' || competition?.submission_mode === 'none'
+                      ? 'This is an external competition. Submissions are disabled.'
+                      : competition?.status !== 'open'
                       ? 'Competition is not open for submissions'
                       : 'Submission deadline has passed'}
                   </span>
+                </div>
+              )}
+
+              {isFrontendMultitask && (
+                <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
+                  <FiAlertCircle size={18} />
+                  <span>Multi-task submission: ZIP must contain `/task1` and `/task2` folders.</span>
                 </div>
               )}
 
@@ -368,7 +408,7 @@ const CompetitionWorkspace = () => {
                         value="zip"
                         checked={submitType === 'zip'}
                         onChange={(e) => setSubmitType(e.target.value)}
-                        disabled={!canSubmit() || submitting}
+                        disabled={!canSubmit() || submitting || !allowedSubmitTypes.includes('zip')}
                       />
                       <span>ZIP File Only</span>
                     </label>
@@ -378,7 +418,7 @@ const CompetitionWorkspace = () => {
                         value="links"
                         checked={submitType === 'links'}
                         onChange={(e) => setSubmitType(e.target.value)}
-                        disabled={!canSubmit() || submitting}
+                        disabled={!canSubmit() || submitting || !allowedSubmitTypes.includes('links')}
                       />
                       <span>Links Only</span>
                     </label>
@@ -388,7 +428,7 @@ const CompetitionWorkspace = () => {
                         value="zip_and_links"
                         checked={submitType === 'zip_and_links'}
                         onChange={(e) => setSubmitType(e.target.value)}
-                        disabled={!canSubmit() || submitting}
+                        disabled={!canSubmit() || submitting || !allowedSubmitTypes.includes('zip_and_links')}
                       />
                       <span>ZIP + Links</span>
                     </label>
@@ -480,6 +520,22 @@ const CompetitionWorkspace = () => {
                 </button>
               </form>
             </div>
+            ) : (
+              <div className="CompetitionWorkspace__submitForm">
+                <h3 className="CompetitionWorkspace__submissionTitle">
+                  <FiFileText size={20} />
+                  Quiz Competition
+                </h3>
+                {currentUserId ? (
+                  <QuizCompetitionPanel quizId={competitionId} userId={currentUserId} />
+                ) : (
+                  <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
+                    <FiAlertCircle size={18} />
+                    <span>Unable to load current user for quiz attempt.</span>
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

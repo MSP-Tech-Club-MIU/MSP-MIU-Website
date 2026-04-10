@@ -203,7 +203,7 @@ const AdminPanel = () => {
     const [compForm, setCompForm] = useState({
         name: '', description: '', start_date: '', end_date: '',
         registration_deadline: '', max_team_size: 4, min_team_size: 1,
-        max_teams: '', status: 'draft', location_type: 'on-campus', location: '', rules: '',
+        max_teams: '', status: 'draft', location: '', rules: '',
         type: 'project', submission_mode: 'upload', evaluation_mode: 'manual',
         is_multitask: false,
         is_team_based: true
@@ -453,7 +453,12 @@ const AdminPanel = () => {
                 status: comp.status || 'draft',
                 location_type: comp.location_type || 'on-campus',
                 location: comp.location_details || '',
-                rules: comp.rules != null ? String(comp.rules) : ''
+                rules: comp.rules != null ? String(comp.rules) : '',
+                type: comp.type || 'project',
+                submission_mode: comp.submission_mode || 'upload',
+                evaluation_mode: comp.evaluation_mode || 'manual',
+                is_multitask: comp?.config?.multiTask === true,
+                is_team_based: !(comp.is_team_based === false || comp.is_team_based === 0)
             });
         } else {
             setEditingComp(null);
@@ -481,7 +486,12 @@ const AdminPanel = () => {
                 status: compForm.status,
                 location_type: compForm.location_type || 'on-campus',
                 location_details: compForm.location || null,
-                rules: compForm.rules != null && String(compForm.rules).trim() !== '' ? String(compForm.rules).trim() : ''
+                rules: compForm.rules != null && String(compForm.rules).trim() !== '' ? String(compForm.rules).trim() : '',
+                type: compForm.type,
+                submission_mode: compForm.type === 'external' ? 'none' : compForm.submission_mode,
+                evaluation_mode: compForm.type === 'external' ? 'none' : compForm.evaluation_mode,
+                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : null,
+                is_team_based: !!compForm.is_team_based
             };
 
             if (editingComp) {
@@ -988,10 +998,12 @@ const AdminPanel = () => {
                                             <thead>
                                                 <tr>
                                                     <th>Name</th>
+                                                    <th>Type</th>
                                                     <th>Status</th>
                                                     <th>Start Date</th>
                                                     <th>End Date</th>
-                                                    <th>Teams</th>
+                                                    <th>Format</th>
+                                                    <th>Max size</th>
                                                     <th>Actions</th>
                                                 </tr>
                                             </thead>
@@ -999,6 +1011,7 @@ const AdminPanel = () => {
                                                 {filtered.map(comp => (
                                                     <tr key={comp.competition_id}>
                                                         <td style={{ fontWeight: 600 }}>{comp.title}</td>
+                                                        <td>{comp.type || 'project'}</td>
                                                         <td>
                                                             <span className={`AdminPanel__badge AdminPanel__badge--${comp.status || 'draft'}`}>
                                                                 {comp.status}
@@ -1006,6 +1019,9 @@ const AdminPanel = () => {
                                                         </td>
                                                         <td>{formatDate(comp.start_at)}</td>
                                                         <td>{formatDate(comp.end_at)}</td>
+                                                        <td>
+                                                            {comp.is_team_based === false || comp.is_team_based === 0 ? 'Individual' : 'Team'}
+                                                        </td>
                                                         <td>{comp.max_team_size || '-'}</td>
                                                         <td>
                                                             <button
@@ -1082,6 +1098,17 @@ const AdminPanel = () => {
 
                                         <div className="AdminPanel__formRow">
                                             <div className="AdminPanel__formGroup">
+                                                <label>Competition Type</label>
+                                                <select
+                                                    value={compForm.type}
+                                                    onChange={e => setCompForm({ ...compForm, type: e.target.value })}
+                                                >
+                                                    <option value="project">Project</option>
+                                                    <option value="quiz">Quiz</option>
+                                                    <option value="external">External</option>
+                                                </select>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
                                                 <label>Registration Deadline</label>
                                                 <input
                                                     type="date"
@@ -1104,6 +1131,59 @@ const AdminPanel = () => {
                                             </div>
                                         </div>
 
+                                        <div className="AdminPanel__formRow">
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Submission Mode</label>
+                                                <select
+                                                    value={compForm.type === 'external' ? 'none' : compForm.submission_mode}
+                                                    disabled={compForm.type === 'external'}
+                                                    onChange={e => setCompForm({ ...compForm, submission_mode: e.target.value })}
+                                                >
+                                                    {compForm.type === 'external' ? (
+                                                        <option value="none">None</option>
+                                                    ) : (
+                                                        <>
+                                                            <option value="upload">Upload (ZIP)</option>
+                                                            <option value="link">Link</option>
+                                                            <option value="both">Both</option>
+                                                        </>
+                                                    )}
+                                                </select>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Evaluation Mode</label>
+                                                <select
+                                                    value={compForm.type === 'external' ? 'none' : compForm.evaluation_mode}
+                                                    disabled={compForm.type === 'external'}
+                                                    onChange={e => setCompForm({ ...compForm, evaluation_mode: e.target.value })}
+                                                >
+                                                    {compForm.type === 'external' ? (
+                                                        <option value="none">None</option>
+                                                    ) : (
+                                                        <>
+                                                            <option value="manual">Manual</option>
+                                                            <option value="auto">Auto</option>
+                                                            <option value="hybrid">Hybrid</option>
+                                                            <option value="none">None</option>
+                                                        </>
+                                                    )}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {compForm.type === 'project' && (
+                                            <div className="AdminPanel__formGroup">
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={compForm.is_multitask}
+                                                        onChange={e => setCompForm({ ...compForm, is_multitask: e.target.checked })}
+                                                    />
+                                                    {' '}Frontend multi-task mode (expects `task1` + `task2` folders)
+                                                </label>
+                                            </div>
+                                        )}
+
                                         <div className="AdminPanel__formGroup">
                                             <label>Rules (optional)</label>
                                             <textarea
@@ -1114,6 +1194,24 @@ const AdminPanel = () => {
                                             />
                                         </div>
 
+                                        <div className="AdminPanel__formGroup">
+                                            <label>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!compForm.is_team_based}
+                                                    onChange={(e) => {
+                                                        const individual = e.target.checked;
+                                                        setCompForm((f) => ({
+                                                            ...f,
+                                                            is_team_based: !individual,
+                                                            ...(individual ? { min_team_size: 1, max_team_size: 1 } : {})
+                                                        }));
+                                                    }}
+                                                />
+                                                {' '}Individual competition (single participant; one “team” slot only)
+                                            </label>
+                                        </div>
+
                                         <div className="AdminPanel__formRow">
                                             <div className="AdminPanel__formGroup">
                                                 <label>Min Team Size</label>
@@ -1122,6 +1220,7 @@ const AdminPanel = () => {
                                                     value={compForm.min_team_size}
                                                     onChange={e => setCompForm({ ...compForm, min_team_size: parseInt(e.target.value) || 1 })}
                                                     min="1"
+                                                    disabled={!compForm.is_team_based}
                                                 />
                                             </div>
                                             <div className="AdminPanel__formGroup">
@@ -1131,6 +1230,7 @@ const AdminPanel = () => {
                                                     value={compForm.max_team_size}
                                                     onChange={e => setCompForm({ ...compForm, max_team_size: parseInt(e.target.value) || 4 })}
                                                     min="1"
+                                                    disabled={!compForm.is_team_based}
                                                 />
                                             </div>
                                         </div>

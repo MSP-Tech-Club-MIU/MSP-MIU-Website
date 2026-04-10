@@ -1281,6 +1281,73 @@ class ApiService {
     }
   }
 
+  // =====================
+  // QUIZZES
+  // =====================
+
+  static async getQuizById(quizId) {
+    const response = await fetch(`${API_BASE_URL}/quizzes/${quizId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    let result = {};
+    try {
+      const text = await response.text();
+      result = text ? JSON.parse(text) : {};
+    } catch {
+      throw new Error(`Quiz request failed (${response.status})`);
+    }
+    if (!response.ok) {
+      const msg = [result.error, result.details].filter(Boolean).join(' — ');
+      throw new Error(msg || `Failed to fetch quiz (${response.status})`);
+    }
+    return result.data || result;
+  }
+
+  static async getQuizAttemptByUser(quizId, userId) {
+    const response = await fetch(`${API_BASE_URL}/quizzes/${quizId}/attempts/${userId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    if (response.status === 404) return null;
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch attempt');
+    return result.data || result;
+  }
+
+  static async createQuizAttempt(payload) {
+    const response = await fetch(`${API_BASE_URL}/quiz_attempts`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create attempt');
+    return result.data || result;
+  }
+
+  static async saveQuizAnswer(attemptId, payload) {
+    const response = await fetch(`${API_BASE_URL}/quiz_attempts/${attemptId}/answers`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to save answer');
+    return result.data || result;
+  }
+
+  static async submitQuizAttempt(attemptId, payload = {}) {
+    const response = await fetch(`${API_BASE_URL}/quiz_attempts/${attemptId}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to submit attempt');
+    return result.data || result;
+  }
+
   /**
    * Get user's team for a specific competition
    * @param {number} competitionId - Competition ID
@@ -1448,10 +1515,13 @@ class ApiService {
   static async getTeamById(teamId) {
     try {
       const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
       const response = await fetch(`${API_BASE_URL}/teams/${teamId}`, {
         method: 'GET',
-        headers: this.getHeaders(!!token),
+        headers: this.getHeaders(true),
       });
 
       const result = await response.json();
@@ -1690,12 +1760,15 @@ class ApiService {
   static async getTeamSubmission(competitionId, teamId) {
     try {
       const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
 
       const response = await fetch(
         `${API_BASE_URL}/submissions/competitions/${competitionId}/teams/${teamId}`,
         {
           method: 'GET',
-          headers: this.getHeaders(!!token),
+          headers: this.getHeaders(true),
         }
       );
 

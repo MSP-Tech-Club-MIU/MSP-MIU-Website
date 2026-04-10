@@ -8,6 +8,9 @@ import BackButton from '../components/BackButton';
 import './CreateTeam.css';
 import { FiUsers, FiMail, FiPlusCircle, FiX, FiAlertCircle } from 'react-icons/fi';
 
+/** Non-team-based (individual) competition — DB column `is_team_based` false */
+const isSoloStyleCompetition = (c) => c && (c.is_team_based === false || c.is_team_based === 0);
+
 const CreateTeam = () => {
   const { id: competitionId } = useParams();
   const navigate = useNavigate();
@@ -32,8 +35,8 @@ const CreateTeam = () => {
         const data = await ApiService.getCompetitionById(competitionId);
         setCompetition(data);
         
-        // For solo competitions (max_team_size = 1), auto-create team
-        if (data.max_team_size === 1) {
+        // Individual competitions: solo registration flow
+        if (isSoloStyleCompetition(data)) {
           // Set loading to false to show the form briefly before redirect
           setLoading(false);
           return; // Let the user fill the form for solo registration
@@ -78,7 +81,7 @@ const CreateTeam = () => {
     const errors = {};
 
     // Skip team name validation for solo competitions
-    if (competition?.max_team_size !== 1) {
+    if (!isSoloStyleCompetition(competition)) {
       if (!teamName.trim()) {
         errors.teamName = 'Team name is required';
       } else if (teamName.length < 3) {
@@ -109,7 +112,7 @@ const CreateTeam = () => {
     }
     
     // Skip team validation for solo competitions
-    if (competition.max_team_size === 1) {
+    if (isSoloStyleCompetition(competition)) {
       return errors;
     }
 
@@ -189,7 +192,7 @@ const CreateTeam = () => {
       setError(null);
 
       // Auto-generate team name for solo competitions
-      const finalTeamName = competition?.max_team_size === 1 
+      const finalTeamName = isSoloStyleCompetition(competition) 
         ? `Solo - ${leaderData.name} - ${Date.now()}`
         : teamName;
 
@@ -208,7 +211,7 @@ const CreateTeam = () => {
       });
 
       // Skip member invitations for solo competitions
-      if (competition?.max_team_size !== 1) {
+      if (!isSoloStyleCompetition(competition)) {
         // For authenticated leader accounts, preserve existing invite endpoint flow.
         // For guests, backend already processes members from createTeam payload.
         if (validMembers.length > 0 && ApiService.getAuthToken()) {
@@ -226,7 +229,7 @@ const CreateTeam = () => {
       // Check if leader needs to activate account
       if (teamData.pending_leader_activation) {
         // Show success message and redirect to home
-        const message = competition?.max_team_size === 1
+        const message = isSoloStyleCompetition(competition)
           ? 'Registration successful! Check your email to activate your account and start the competition.'
           : 'Team created! Check your email to activate your account and access your team.';
         
@@ -265,8 +268,8 @@ const CreateTeam = () => {
     <section className="CreateTeamPage">
       <BackButton to={`/competitions/${competitionId}`} label="Back to Competition" />
       <SEO
-        title={`${competition?.max_team_size === 1 ? 'Join Competition' : 'Create Team'} - ${competition?.title}`}
-        description={competition?.max_team_size === 1 ? 'Register for the competition' : 'Create a team for the competition'}
+        title={`${isSoloStyleCompetition(competition) ? 'Join Competition' : 'Create Team'} - ${competition?.title}`}
+        description={isSoloStyleCompetition(competition) ? 'Register for the competition' : 'Create a team for the competition'}
       />
 
       <div className="CreateTeamPage__container">
@@ -278,12 +281,12 @@ const CreateTeam = () => {
         >
           <FiUsers size={48} className="CreateTeamPage__icon" />
           <h1 className="CreateTeamPage__title">
-            {competition?.max_team_size === 1 ? 'Join Competition' : 'Create Your Team'}
+            {isSoloStyleCompetition(competition) ? 'Join Competition' : 'Create Your Team'}
           </h1>
           <p className="CreateTeamPage__subtitle">
             {competition?.title}
           </p>
-          {competition?.max_team_size !== 1 && (
+          {!isSoloStyleCompetition(competition) && (
             <div className="CreateTeamPage__teamInfo">
               <span>Team Size: {competition?.min_team_size}-{competition?.max_team_size} members</span>
             </div>
@@ -304,7 +307,7 @@ const CreateTeam = () => {
             </div>
           )}
 
-          {competition?.max_team_size !== 1 && (
+          {!isSoloStyleCompetition(competition) && (
             <div className="CreateTeamPage__formGroup">
               <label htmlFor="teamName" className="CreateTeamPage__label">
                 Team Name <span className="required">*</span>
@@ -327,10 +330,10 @@ const CreateTeam = () => {
           <div className="CreateTeamPage__formGroup">
             <label className="CreateTeamPage__label">
               <FiUsers size={18} />
-              {competition?.max_team_size === 1 ? 'Your Information' : 'Team Leader Information'} <span className="required">*</span>
+              {isSoloStyleCompetition(competition) ? 'Your Information' : 'Team Leader Information'} <span className="required">*</span>
             </label>
             <p className="CreateTeamPage__hint">
-              {competition?.max_team_size === 1 
+              {isSoloStyleCompetition(competition) 
                 ? 'Please provide your details. You must use your MIU email (@miuegypt.edu.eg)'
                 : 'As the team leader, please provide your details. You must use your MIU email (@miuegypt.edu.eg)'
               }
@@ -383,7 +386,7 @@ const CreateTeam = () => {
             </div>
           </div>
 
-          {competition?.max_team_size !== 1 && (
+          {!isSoloStyleCompetition(competition) && (
             <div className="CreateTeamPage__formGroup">
               <label className="CreateTeamPage__label">
                 <FiMail size={18} />
@@ -499,7 +502,7 @@ const CreateTeam = () => {
                 <strong>You</strong> (Team Leader)
               </p>
             )}
-            {competition?.max_team_size !== 1 && teamMembers.filter(m => m.name.trim() && m.email.trim()).length > 0 && (
+            {!isSoloStyleCompetition(competition) && teamMembers.filter(m => m.name.trim() && m.email.trim()).length > 0 && (
               <>
                 <p className="CreateTeamPage__summaryLabel">Invited Members:</p>
                 <ul>
@@ -512,7 +515,7 @@ const CreateTeam = () => {
                 </ul>
               </>
             )}
-            {competition?.max_team_size !== 1 && (
+            {!isSoloStyleCompetition(competition) && (
               <p className="CreateTeamPage__totalCount">
                 Total: {teamMembers.filter(m => m.name.trim() && m.email.trim()).length + 1} / {competition?.max_team_size} members
               </p>
@@ -534,8 +537,8 @@ const CreateTeam = () => {
               disabled={submitting}
             >
               {submitting 
-                ? (competition?.max_team_size === 1 ? 'Registering...' : 'Creating Team...') 
-                : (competition?.max_team_size === 1 ? 'Register' : 'Create Team')
+                ? (isSoloStyleCompetition(competition) ? 'Registering...' : 'Creating Team...') 
+                : (isSoloStyleCompetition(competition) ? 'Register' : 'Create Team')
               }
             </button>
           </div>

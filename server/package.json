@@ -18,14 +18,21 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
+    "adm-zip": "^0.5.16",
+    "chrome-launcher": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
+    "eslint": "^8.57.1",
     "express": "^4.22.0",
+    "htmlhint": "^1.1.4",
+    "lighthouse": "^12.2.1",
     "mysql2": "^3.11.3",
-    "nodemailer": "^7.0.11",
-    "sequelize": "^6.37.3"
+    "nodemailer": "^8.0.4",
+    "sequelize": "^6.37.3",
+    "stylelint": "^14.16.1",
+    "stylelint-config-standard": "^29.0.0"
   },
   "devDependencies": {
-    "nodemon": "^1.0.2"
+    "nodemon": "^3.1.9"
   }
 }
