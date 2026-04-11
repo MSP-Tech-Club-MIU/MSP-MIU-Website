@@ -1,4 +1,5 @@
-const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, TeamMember } = require('../models');
+const { QueryTypes } = require('sequelize');
+const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, sequelize } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
 const { Op } = require('sequelize');
@@ -512,15 +513,49 @@ const getEventFeedbackAll = async (req, res) => {
 const getCompetitionTeams = async (req, res) => {
     try {
         const { id } = req.params;
-        const teams = await Team.findAll({
-            where: { competition_id: id },
-            include: [{
-                model: User,
-                as: 'creator',
-                attributes: ['full_name', 'email']
-            }],
-            order: [['created_at', 'DESC']]
-        });
+        const rows = await sequelize.query(
+            `SELECT t.team_id,
+                    t.competition_id,
+                    t.team_name,
+                    t.is_locked,
+                    t.created_at,
+                    t.created_by_user_id,
+                    u.full_name AS creator_full_name,
+                    u.email AS creator_email,
+                    (SELECT COUNT(*) FROM team_members tm WHERE tm.team_id = t.team_id) AS member_count,
+                    (SELECT COUNT(*) FROM team_invitations ti
+                     WHERE ti.team_id = t.team_id AND ti.status = 'pending') AS pending_invitations_count,
+                    (SELECT ti2.invited_name FROM team_invitations ti2
+                     WHERE ti2.team_id = t.team_id ORDER BY ti2.invitation_id ASC LIMIT 1) AS guest_contact_name
+             FROM teams t
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
+             WHERE t.competition_id = ?
+             ORDER BY t.created_at DESC`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        const teams = rows.map((row) => ({
+            team_id: row.team_id,
+            competition_id: row.competition_id,
+            team_name: row.team_name,
+            is_locked: row.is_locked,
+            created_at: row.created_at,
+            created_by_user_id: row.created_by_user_id,
+            member_count: Number(row.member_count) || 0,
+            pending_invitations_count: Number(row.pending_invitations_count) || 0,
+            creator: row.creator_full_name
+                ? { full_name: row.creator_full_name, email: row.creator_email }
+                : row.guest_contact_name
+                    ? {
+                        full_name: `${row.guest_contact_name} (pending signup)`,
+                        email: null
+                    }
+                    : null
+        }));
+
         res.json({ success: true, data: teams });
     } catch (error) {
         console.error('Error fetching teams:', error);

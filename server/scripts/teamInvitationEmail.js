@@ -3,6 +3,12 @@
  * Two versions: For new users (no account) and existing users
  */
 
+function buildAcceptInvitationUrl(acceptUrl, invitationToken) {
+  const base = String(acceptUrl || 'http://localhost:5173').trim().replace(/\/+$/, '');
+  const token = encodeURIComponent(String(invitationToken || ''));
+  return `${base}/accept-team-invitation?token=${token}`;
+}
+
 /**
  * Generate team invitation email HTML for NEW users (no existing account)
  * User needs to create account with password
@@ -23,7 +29,7 @@ function generateNewUserInvitationEmailHTML(data) {
     competitionUrl
   } = data;
 
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
+  const acceptLink = buildAcceptInvitationUrl(acceptUrl, invitationToken);
 
   return `
 <!DOCTYPE html>
@@ -364,7 +370,7 @@ function generateNewUserInvitationEmailText(data) {
     competitionUrl
   } = data;
 
-  const acceptLink = `${acceptUrl}/accept-team-invitation?token=${invitationToken}`;
+  const acceptLink = buildAcceptInvitationUrl(acceptUrl, invitationToken);
 
   return `
 TEAM INVITATION - MSP MIU

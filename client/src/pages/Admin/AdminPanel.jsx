@@ -1286,6 +1286,8 @@ const AdminPanel = () => {
                                                     <thead>
                                                         <tr>
                                                             <th>Team Name</th>
+                                                            <th>Members</th>
+                                                            <th>Pending invites</th>
                                                             <th>Created By</th>
                                                             <th>Status</th>
                                                             <th>Actions</th>
@@ -1295,7 +1297,9 @@ const AdminPanel = () => {
                                                         {teamsList.map(team => (
                                                             <tr key={team.team_id}>
                                                                 <td style={{ fontWeight: 600 }}>{team.team_name}</td>
-                                                                <td>{team.creator?.full_name || 'Admin'}</td>
+                                                                <td>{team.member_count ?? 0}</td>
+                                                                <td>{team.pending_invitations_count ?? 0}</td>
+                                                                <td>{team.creator?.full_name || '—'}</td>
                                                                 <td>
                                                                     <span className={`AdminPanel__badge AdminPanel__badge--${team.is_locked ? 'rejected' : 'approved'}`}>
                                                                         {team.is_locked ? 'Locked' : 'Open'}

@@ -1602,7 +1602,7 @@ class ApiService {
    */
   static async verifyTeamInvitation(token) {
     try {
-      const response = await fetch(`${API_BASE_URL}/teams/verify-invitation?token=${token}`, {
+      const response = await fetch(`${API_BASE_URL}/teams/verify-invitation?token=${encodeURIComponent(token)}`, {
         method: 'GET',
         headers: this.getHeaders(false),
       });
