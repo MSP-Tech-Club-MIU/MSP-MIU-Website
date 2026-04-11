@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MdDashboard, MdEmojiEvents, MdFactCheck, MdAppRegistration,
@@ -135,12 +135,41 @@ const ParticleBackground = () => {
     return <canvas ref={canvasRef} className="AdminPanel__particleBg" />;
 };
 
+const ADMIN_TAB_TO_ROUTE = {
+    dashboard: 'dashboard',
+    competitions: 'competitions',
+    attendance: 'attendance',
+    registrations: 'registrations',
+    notifications: 'notifications',
+    announcements: 'announcements',
+    suggestions: 'suggestions'
+};
+
+const ADMIN_ROUTE_TO_TAB = {
+    dashboard: 'dashboard',
+    competitions: 'competitions',
+    attendance: 'attendance',
+    registrations: 'registrations',
+    notifications: 'notifications',
+    announcements: 'announcements',
+    suggestions: 'suggestions'
+};
+
 /* ═══════════════════════════════════════════════════════════
    Admin Panel Component
    ═══════════════════════════════════════════════════════════ */
 const AdminPanel = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const location = useLocation();
+
+    const getAdminTabFromPath = useCallback((pathname) => {
+        if (!pathname.startsWith('/admin')) return 'dashboard';
+        const segment = pathname.split('/')[2];
+        if (!segment) return 'dashboard';
+        return ADMIN_ROUTE_TO_TAB[segment] || 'dashboard';
+    }, []);
+
+    const [activeTab, setActiveTab] = useState(() => getAdminTabFromPath(location.pathname));
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
     const [alert, setAlert] = useState(null);
@@ -153,6 +182,16 @@ const AdminPanel = () => {
             document.body.classList.remove('admin-panel-active');
         };
     }, []);
+
+    useEffect(() => {
+        if (location.pathname === '/admin' || location.pathname === '/admin/') {
+            navigate('/admin/dashboard', { replace: true });
+            return;
+        }
+
+        const tabFromPath = getAdminTabFromPath(location.pathname);
+        setActiveTab((prev) => (prev === tabFromPath ? prev : tabFromPath));
+    }, [location.pathname, navigate, getAdminTabFromPath]);
 
     // Dashboard state
     const [stats, setStats] = useState(null);
@@ -344,7 +383,7 @@ const AdminPanel = () => {
         try {
             if (showLoading) setAnnouncementsLoading(true);
             setAnnouncementsError(null);
-            const data = await ApiService.getAnnouncements(true);
+            const data = await ApiService.getAnnouncements(false);
             setAnnouncements(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Failed to load announcements:', err);
@@ -412,6 +451,7 @@ const AdminPanel = () => {
                 min_team_size: comp.min_team_size || 1,
                 max_teams: '',
                 status: comp.status || 'draft',
+                location_type: comp.location_type || 'on-campus',
                 location: comp.location_details || '',
                 rules: comp.rules != null ? String(comp.rules) : '',
                 type: comp.type || 'project',
@@ -444,7 +484,7 @@ const AdminPanel = () => {
                 max_team_size: compForm.max_team_size,
                 min_team_size: compForm.min_team_size,
                 status: compForm.status,
-                location_type: 'on-campus',
+                location_type: compForm.location_type || 'on-campus',
                 location_details: compForm.location || null,
                 rules: compForm.rules != null && String(compForm.rules).trim() !== '' ? String(compForm.rules).trim() : '',
                 type: compForm.type,
@@ -611,6 +651,7 @@ const AdminPanel = () => {
         if (!window.confirm('Are you sure you want to remove this announcement?')) return;
         try {
             await ApiService.deleteAnnouncement(id);
+            setAnnouncements((prev) => prev.filter((a) => a.announcement_id !== id));
             setAlert({ type: 'success', message: 'Announcement removed!' });
             fetchAnnouncementsAdmin(false);
         } catch (err) {
@@ -625,6 +666,9 @@ const AdminPanel = () => {
         });
     };
 
+    const getLeaderMember = (team) => (team?.members || []).find((member) => member.role === 'leader');
+    const getTeammates = (team) => (team?.members || []).filter((member) => member.role !== 'leader');
+
     const handleTabChange = (key) => {
         const item = navItems.find(n => n.key === key);
         if (item?.onClick) {
@@ -633,6 +677,14 @@ const AdminPanel = () => {
         }
         setActiveTab(key);
         setMobileMenuOpen(false);
+
+        const routeSegment = ADMIN_TAB_TO_ROUTE[key];
+        if (routeSegment) {
+            const targetPath = `/admin/${routeSegment}`;
+            if (location.pathname !== targetPath) {
+                navigate(targetPath);
+            }
+        }
     };
 
     // Get current page title
@@ -1195,11 +1247,21 @@ const AdminPanel = () => {
                                                 />
                                             </div>
                                             <div className="AdminPanel__formGroup">
-                                                <label>Location</label>
+                                                <label>Location Type</label>
+                                                <select
+                                                    value={compForm.location_type}
+                                                    onChange={e => setCompForm({ ...compForm, location_type: e.target.value })}
+                                                >
+                                                    <option value="on-campus">On Campus</option>
+                                                    <option value="online">Online</option>
+                                                </select>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Location Details</label>
                                                 <input
                                                     value={compForm.location}
                                                     onChange={e => setCompForm({ ...compForm, location: e.target.value })}
-                                                    placeholder="e.g. MIU Campus"
+                                                    placeholder={compForm.location_type === 'online' ? 'e.g. Zoom / Google Meet link' : 'e.g. MIU Campus'}
                                                 />
                                             </div>
                                         </div>
