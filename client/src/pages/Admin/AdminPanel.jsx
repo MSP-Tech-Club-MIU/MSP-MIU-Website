@@ -1348,74 +1348,41 @@ const AdminPanel = () => {
                                                     <thead>
                                                         <tr>
                                                             <th>Team Name</th>
-                                                            <th>Participants</th>
+                                                            <th>Members</th>
+                                                            <th>Pending invites</th>
                                                             <th>Created By</th>
                                                             <th>Status</th>
                                                             <th>Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {teamsList.map(team => {
-                                                            const leader = getLeaderMember(team);
-                                                            const teammates = getTeammates(team);
-
-                                                            return (
-                                                                <tr key={team.team_id}>
-                                                                    <td style={{ fontWeight: 600 }}>{team.team_name}</td>
-                                                                    <td>
-                                                                        {(team.members || []).length === 0 ? (
-                                                                            <span>No participants yet</span>
-                                                                        ) : (
-                                                                            <div style={{ display: 'grid', gap: '8px' }}>
-                                                                                <div>
-                                                                                    <strong>Leader:</strong>{' '}
-                                                                                    {leader?.user?.full_name || team.creator?.full_name || 'Unknown'}
-                                                                                    {leader?.user?.university_id ? ` (${leader.user.university_id})` : ''}
-                                                                                    {leader?.user?.email ? ` - ${leader.user.email}` : ''}
-                                                                                </div>
-
-                                                                                {teammates.length > 0 ? (
-                                                                                    <div>
-                                                                                        <strong>Teammates:</strong>
-                                                                                        <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
-                                                                                            {teammates.map((member) => (
-                                                                                                <li key={member.team_member_id}>
-                                                                                                    {member?.user?.full_name || 'Unknown'}
-                                                                                                    {member?.user?.university_id ? ` (${member.user.university_id})` : ''}
-                                                                                                    {member?.user?.email ? ` - ${member.user.email}` : ''}
-                                                                                                </li>
-                                                                                            ))}
-                                                                                        </ul>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div><strong>Teammates:</strong> No teammates yet</div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </td>
-                                                                    <td>{team.creator?.full_name || 'Admin'}</td>
-                                                                    <td>
-                                                                        <span className={`AdminPanel__badge AdminPanel__badge--${team.is_locked ? 'rejected' : 'approved'}`}>
-                                                                            {team.is_locked ? 'Locked' : 'Open'}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <button
-                                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                                                            onClick={() => editTeamSettings(team)}
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                        <button
-                                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                                                            onClick={() => deleteTeam(team.team_id)}
-                                                                        >
-                                                                            Delete
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
+                                                        {teamsList.map(team => (
+                                                            <tr key={team.team_id}>
+                                                                <td style={{ fontWeight: 600 }}>{team.team_name}</td>
+                                                                <td>{team.member_count ?? 0}</td>
+                                                                <td>{team.pending_invitations_count ?? 0}</td>
+                                                                <td>{team.creator?.full_name || '—'}</td>
+                                                                <td>
+                                                                    <span className={`AdminPanel__badge AdminPanel__badge--${team.is_locked ? 'rejected' : 'approved'}`}>
+                                                                        {team.is_locked ? 'Locked' : 'Open'}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <button
+                                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                                                                        onClick={() => editTeamSettings(team)}
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                                                        onClick={() => deleteTeam(team.team_id)}
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
                                                     </tbody>
                                                 </table>
                                             )}

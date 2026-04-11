@@ -30,6 +30,49 @@ async function ensureSendEmail() {
     return sendEmail;
 }
 
+function publicFrontendOrigin() {
+    return String(process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/+$/, '');
+}
+
+/**
+ * Guest-created teams insert the leader invitation before member invitations.
+ * Until a leader row exists in team_members, only that first pending invitation may be accepted.
+ */
+async function resolveInvitationRoleForAcceptance(invitation) {
+    const teamId = invitation.team_id;
+    const [leaderRow] = await db.query(
+        `SELECT COUNT(*) as c FROM team_members WHERE team_id = ? AND role = 'leader'`,
+        {
+            replacements: [teamId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+    if (Number(leaderRow.c) > 0) {
+        return { ok: true, role: 'member', updateTeamCreatedBy: false };
+    }
+
+    const [firstPending] = await db.query(
+        `SELECT invitation_id FROM team_invitations
+         WHERE team_id = ? AND status = 'pending'
+         ORDER BY invitation_id ASC
+         LIMIT 1`,
+        {
+            replacements: [teamId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+
+    if (!firstPending || firstPending.invitation_id !== invitation.invitation_id) {
+        return {
+            ok: false,
+            status: 400,
+            error: 'The team leader must accept their invitation first. Ask them to check their email, then try your link again.'
+        };
+    }
+
+    return { ok: true, role: 'leader', updateTeamCreatedBy: true };
+}
+
 /**
  * Create a new team for a competition
  * POST /api/teams
@@ -247,7 +290,7 @@ const createTeam = async (req, res) => {
                 try {
                     const mail = await ensureSendEmail();
                     if (mail) {
-                        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                        const baseUrl = publicFrontendOrigin();
                         const competitionUrl = `${baseUrl}/competitions/${competition_id}`;
                         const workspaceUrl = `${baseUrl}/competitions/${competition_id}/team/${teamId}`;
                         const fmt = (d) => new Date(d).toLocaleDateString('en-US', {
@@ -293,7 +336,7 @@ const createTeam = async (req, res) => {
             );
 
             // Get competition details for email
-            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
+            const competitionUrl = `${publicFrontendOrigin()}/competitions/${competition_id}`;
             const emailData = {
                 teamName: team_name,
                 inviterName: leader_name,
@@ -309,7 +352,7 @@ const createTeam = async (req, res) => {
                     day: 'numeric'
                 }),
                 invitationToken: token,
-                acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                acceptUrl: publicFrontendOrigin(),
                 competitionUrl,
                 expiresAt: expiresAt.toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -350,7 +393,7 @@ const createTeam = async (req, res) => {
         if (normalizedMembers.length > 0) {
             const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
             const universityIdRegex = /^\d{4}\/\d{5}$/;
-            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
+            const competitionUrl = `${publicFrontendOrigin()}/competitions/${competition_id}`;
 
             for (const member of normalizedMembers) {
                 const memberEmail = (member?.email || '').trim().toLowerCase();
@@ -482,7 +525,7 @@ const createTeam = async (req, res) => {
                                 day: 'numeric'
                             }),
                             invitationToken: token,
-                            acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                            acceptUrl: publicFrontendOrigin(),
                             competitionUrl,
                             expiresAt: expiresAt.toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -885,8 +928,8 @@ const inviteToTeam = async (req, res) => {
             competitionStartDate: formatDate(details.start_at),
             competitionEndDate: formatDate(details.end_at),
             invitationToken: token,
-            acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-            competitionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${membership.competition_id}`,
+            acceptUrl: publicFrontendOrigin(),
+            competitionUrl: `${publicFrontendOrigin()}/competitions/${membership.competition_id}`,
             expiresAt: expiresAt ? formatDate(expiresAt) : null,
             email: email
         };
@@ -986,7 +1029,7 @@ const acceptInvitation = async (req, res) => {
 
         const invitation = invitations[0];
 
-        if (invitation.invited_email !== userEmail) {
+        if (String(invitation.invited_email).toLowerCase() !== String(userEmail).toLowerCase()) {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
@@ -1047,15 +1090,33 @@ const acceptInvitation = async (req, res) => {
             });
         }
 
+        const rolePlan = await resolveInvitationRoleForAcceptance(invitation);
+        if (!rolePlan.ok) {
+            return res.status(rolePlan.status).json({
+                success: false,
+                error: rolePlan.error
+            });
+        }
+
         // Add user to team
         await db.query(
             `INSERT INTO team_members (team_id, user_id, role)
              VALUES (?, ?, ?)`,
             {
-                replacements: [invitation.team_id, userId, 'member'],
+                replacements: [invitation.team_id, userId, rolePlan.role],
                 type: db.QueryTypes.INSERT
             }
         );
+
+        if (rolePlan.updateTeamCreatedBy) {
+            await db.query(
+                `UPDATE teams SET created_by_user_id = ? WHERE team_id = ?`,
+                {
+                    replacements: [userId, invitation.team_id],
+                    type: db.QueryTypes.UPDATE
+                }
+            );
+        }
 
         // Update invitation status
         await db.query(
@@ -1113,7 +1174,7 @@ const declineInvitation = async (req, res) => {
 
         const invitation = invitations[0];
 
-        if (invitation.invited_email !== userEmail) {
+        if (String(invitation.invited_email).toLowerCase() !== String(userEmail).toLowerCase()) {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
@@ -1169,7 +1230,12 @@ const verifyInvitation = async (req, res) => {
 
         // Get invitation details
         const invitations = await db.query(
-            `SELECT i.*, t.team_name, c.title as competition_title, u.full_name as inviter_name
+            `SELECT i.*, t.team_name, c.title as competition_title,
+                    COALESCE(
+                        u.full_name,
+                        (SELECT ti2.invited_name FROM team_invitations ti2
+                         WHERE ti2.team_id = t.team_id ORDER BY ti2.invitation_id ASC LIMIT 1)
+                    ) as inviter_name
              FROM team_invitations i
              INNER JOIN teams t ON i.team_id = t.team_id
              INNER JOIN competitions c ON t.competition_id = c.competition_id
@@ -1347,6 +1413,14 @@ const acceptInvitationNewUser = async (req, res) => {
             });
         }
 
+        const rolePlan = await resolveInvitationRoleForAcceptance(invitation);
+        if (!rolePlan.ok) {
+            return res.status(rolePlan.status).json({
+                success: false,
+                error: rolePlan.error
+            });
+        }
+
         // Hash password
         const bcrypt = require('bcryptjs');
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -1368,34 +1442,22 @@ const acceptInvitationNewUser = async (req, res) => {
             }
         );
 
-        const newUserId = userResult;
-
-        // Check if this is a team leader invitation (team has no leader yet)
-        const teamMembers = await db.query(
-            `SELECT COUNT(*) as leader_count 
-             FROM team_members 
-             WHERE team_id = ? AND role = 'leader'`,
-            {
-                replacements: [invitation.team_id],
-                type: db.QueryTypes.SELECT
-            }
-        );
-
-        const isLeaderInvitation = teamMembers[0].leader_count === 0;
-        const memberRole = isLeaderInvitation ? 'leader' : 'member';
+        const newUserId = normalizeInsertId(userResult);
+        if (newUserId == null) {
+            throw new Error('Failed to resolve new user id after insert');
+        }
 
         // Add user to team
         await db.query(
             `INSERT INTO team_members (team_id, user_id, role)
              VALUES (?, ?, ?)`,
             {
-                replacements: [invitation.team_id, newUserId, memberRole],
+                replacements: [invitation.team_id, newUserId, rolePlan.role],
                 type: db.QueryTypes.INSERT
             }
         );
 
-        // If this was a leader invitation, update the team's created_by_user_id
-        if (isLeaderInvitation) {
+        if (rolePlan.updateTeamCreatedBy) {
             await db.query(
                 `UPDATE teams SET created_by_user_id = ? WHERE team_id = ?`,
                 {
