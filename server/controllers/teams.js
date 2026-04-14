@@ -451,16 +451,6 @@ const createTeam = async (req, res) => {
                         }
                     );
 
-                    await db.query(
-                        `UPDATE users
-                         SET role = 'competitor'
-                         WHERE user_id = ? AND role = 'member'`,
-                        {
-                            replacements: [memberUserId],
-                            type: db.QueryTypes.UPDATE
-                        }
-                    );
-
                     try {
                         const mail = await ensureSendEmail();
                         if (!mail) continue;
@@ -860,17 +850,6 @@ const inviteToTeam = async (req, res) => {
                 {
                     replacements: [id, invitedUserId, 'member'],
                     type: db.QueryTypes.INSERT
-                }
-            );
-
-            // Ensure normal members invited to competitions can access competitor dashboard
-            await db.query(
-                `UPDATE users
-                 SET role = 'competitor'
-                 WHERE user_id = ? AND role = 'member'`,
-                {
-                    replacements: [invitedUserId],
-                    type: db.QueryTypes.UPDATE
                 }
             );
         } else {
