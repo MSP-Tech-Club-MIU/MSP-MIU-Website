@@ -10,6 +10,20 @@
   gap: 16px;
 }
 
+.QuizPage__takeQuiz {
+  margin-top: 4px;
+}
+
+.QuizPage__loginHint {
+  margin: 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(234, 242, 255, 0.85);
+  font-size: 0.95rem;
+}
+
 .QuizPage__error {
   max-width: 700px;
   margin: 32px auto;
