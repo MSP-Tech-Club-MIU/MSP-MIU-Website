@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const db = require('../config/db');
 const { Quiz, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer } = require('../models');
 
 /** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
@@ -149,6 +150,24 @@ async function createQuizAttempt(req, res) {
     if (!quiz) return res.status(404).json({ success: false, error: 'Quiz not found' });
 
     const userId = req.user.user_id;
+    const memberships = await db.query(
+      `SELECT t.team_id
+       FROM teams t
+       INNER JOIN team_members tm ON tm.team_id = t.team_id
+       WHERE t.competition_id = ? AND tm.user_id = ?
+       LIMIT 1`,
+      {
+        replacements: [quiz.competition_id, userId],
+        type: db.QueryTypes.SELECT
+      }
+    );
+    if (!memberships || memberships.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'You must complete team registration for this quiz before starting an attempt'
+      });
+    }
+
     let attempt = await QuizAttempt.findOne({
       where: { quiz_id: quiz.quiz_id, user_id: userId, status: 'in_progress' },
       order: [['attempt_id', 'DESC']]

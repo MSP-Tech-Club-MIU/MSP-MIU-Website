@@ -34,6 +34,50 @@ function publicFrontendOrigin() {
     return String(process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/+$/, '');
 }
 
+function getQuizRegistrationCloseReason(competition, quizStatus) {
+    if (!competition || competition.type !== 'quiz') {
+        return null;
+    }
+
+    if (quizStatus === 'active') {
+        return 'Quiz registration is closed because the quiz has been activated by an admin';
+    }
+
+    const now = new Date();
+    const startDate = new Date(competition.start_at);
+    if (!Number.isNaN(startDate.getTime()) && now >= startDate) {
+        return 'Quiz registration is closed because the start time has been reached';
+    }
+
+    return null;
+}
+
+async function assertQuizRegistrationOpen(competitionId) {
+    const rows = await db.query(
+        `SELECT c.competition_id, c.type, c.start_at, q.status AS quiz_status
+         FROM competitions c
+         LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+         WHERE c.competition_id = ?
+         LIMIT 1`,
+        {
+            replacements: [competitionId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+
+    if (!rows || rows.length === 0) {
+        return { ok: false, status: 404, error: 'Competition not found' };
+    }
+
+    const row = rows[0];
+    const closeReason = getQuizRegistrationCloseReason(row, row.quiz_status);
+    if (closeReason) {
+        return { ok: false, status: 400, error: closeReason };
+    }
+
+    return { ok: true };
+}
+
 /**
  * Guest-created teams insert the leader invitation before member invitations.
  * Until a leader row exists in team_members, only that first pending invitation may be accepted.
@@ -120,9 +164,11 @@ const createTeam = async (req, res) => {
 
         // Check if competition exists and is open
         const competitions = await db.query(
-            `SELECT competition_id, title, start_at, end_at, status, max_team_size, min_team_size 
-             FROM competitions 
-             WHERE competition_id = ?`,
+            `SELECT c.competition_id, c.title, c.start_at, c.end_at, c.status, c.max_team_size, c.min_team_size, c.type,
+                    q.status AS quiz_status
+             FROM competitions c
+             LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+             WHERE c.competition_id = ?`,
             {
                 replacements: [competition_id],
                 type: db.QueryTypes.SELECT
@@ -142,6 +188,13 @@ const createTeam = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Competition is not open for team registration'
+            });
+        }
+        const quizCloseReason = getQuizRegistrationCloseReason(competition, competition.quiz_status);
+        if (quizCloseReason) {
+            return res.status(400).json({
+                success: false,
+                error: quizCloseReason
             });
         }
 
@@ -448,16 +501,6 @@ const createTeam = async (req, res) => {
                         {
                             replacements: [teamId, memberUserId, 'member'],
                             type: db.QueryTypes.INSERT
-                        }
-                    );
-
-                    await db.query(
-                        `UPDATE users
-                         SET role = 'competitor'
-                         WHERE user_id = ? AND role = 'member'`,
-                        {
-                            replacements: [memberUserId],
-                            type: db.QueryTypes.UPDATE
                         }
                     );
 
@@ -776,6 +819,13 @@ const inviteToTeam = async (req, res) => {
         }
 
         const membership = teamMembers[0];
+        const registrationGate = await assertQuizRegistrationOpen(membership.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
         if (membership.role !== 'leader') {
             return res.status(403).json({
@@ -860,17 +910,6 @@ const inviteToTeam = async (req, res) => {
                 {
                     replacements: [id, invitedUserId, 'member'],
                     type: db.QueryTypes.INSERT
-                }
-            );
-
-            // Ensure normal members invited to competitions can access competitor dashboard
-            await db.query(
-                `UPDATE users
-                 SET role = 'competitor'
-                 WHERE user_id = ? AND role = 'member'`,
-                {
-                    replacements: [invitedUserId],
-                    type: db.QueryTypes.UPDATE
                 }
             );
         } else {
@@ -1028,6 +1067,13 @@ const acceptInvitation = async (req, res) => {
         }
 
         const invitation = invitations[0];
+        const registrationGate = await assertQuizRegistrationOpen(invitation.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
         if (String(invitation.invited_email).toLowerCase() !== String(userEmail).toLowerCase()) {
             return res.status(403).json({
@@ -1360,6 +1406,13 @@ const acceptInvitationNewUser = async (req, res) => {
         }
 
         const invitation = invitations[0];
+        const registrationGate = await assertQuizRegistrationOpen(invitation.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
         if (invitation.status !== 'pending') {
             return res.status(400).json({
