@@ -111,9 +111,7 @@ const QuizPage = () => {
         ) : (
           <p className="QuizPage__loginHint">Sign in to answer questions and submit your attempt.</p>
         )}
-        {attempt?.status === 'submitted' && (
-          <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
-        )}
+        <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
       </div>
     </section>
   );
