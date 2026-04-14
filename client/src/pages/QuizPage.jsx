@@ -76,7 +76,10 @@ const QuizPage = () => {
   if (error || !quiz) {
     return (
       <section className="QuizPage">
-        <BackButton to="/competitions" label="Back to Competitions" />
+        <BackButton
+          to={quizId ? `/competitions/${quizId}` : '/competitions'}
+          label={quizId ? 'Back to competition' : 'Back to Competitions'}
+        />
         <div className="QuizPage__error">
           <h2>Unable to load quiz</h2>
           <p>{error || 'Quiz not found.'}</p>
@@ -87,7 +90,10 @@ const QuizPage = () => {
 
   return (
     <section className="QuizPage">
-      <BackButton to="/competitions" label="Back to Competitions" />
+      <BackButton
+        to={quizId ? `/competitions/${quizId}` : '/competitions'}
+        label={quizId ? 'Back to competition' : 'Back to Competitions'}
+      />
       <SEO
         title={quiz.title || 'Quiz Page'}
         description={quiz.description || 'Quiz details and your attempt overview'}

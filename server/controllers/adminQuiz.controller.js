@@ -143,12 +143,22 @@ async function patchAdminQuiz(req, res) {
           error: `status must be one of: ${QUIZ_STATUSES.join(', ')}`
         });
       }
-      await quiz.update({ status });
+      // Status-only change: skip full model validation. The Quiz model validates
+      // end_at vs start_at on every save; legacy or synced rows can fail that check
+      // even when only `status` changes, which caused 500s on PATCH.
+      // Note: MySQL reports 0 affected rows when status is unchanged — that is still OK.
+      await Quiz.update(
+        { status },
+        { where: { quiz_id: quiz.quiz_id }, validate: false }
+      );
     }
 
-    await quiz.reload();
+    const quizFresh = await Quiz.findByPk(quiz.quiz_id);
+    if (!quizFresh) {
+      return res.status(404).json({ success: false, error: 'Quiz not found' });
+    }
     const questions = await QuizQuestion.findAll({
-      where: { quiz_id: quiz.quiz_id },
+      where: { quiz_id: quizFresh.quiz_id },
       order: [['position', 'ASC']]
     });
     const questionIds = questions.map((q) => q.question_id);
@@ -168,11 +178,17 @@ async function patchAdminQuiz(req, res) {
 
     return res.status(200).json({
       success: true,
-      data: formatAdminQuizPayload(quiz, questions, byQuestion)
+      data: formatAdminQuizPayload(quizFresh, questions, byQuestion)
     });
   } catch (err) {
     console.error('patchAdminQuiz:', err);
-    return res.status(500).json({ success: false, error: 'Failed to update quiz' });
+    const expose =
+      process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1';
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to update quiz',
+      details: expose ? err.message : undefined
+    });
   }
 }
 

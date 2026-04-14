@@ -111,6 +111,33 @@
     margin-bottom: 12px;
 }
 
+.CompetitionDetailsPage__quizCta {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.CompetitionDetailsPage__quizCtaHint {
+    margin: 0 0 14px 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgba(197, 218, 233, 0.95);
+}
+
+.CompetitionDetailsPage__quizCtaButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.CompetitionDetailsPage__btn--quizStart {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
 .CompetitionDetailsPage__infoIcon {
     color: #03A9F4;
     margin-bottom: 16px;

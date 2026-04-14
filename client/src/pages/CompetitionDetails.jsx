@@ -17,7 +17,8 @@ import {
   FiEye,
   FiAlertCircle,
   FiFileText,
-  FiUserPlus
+  FiUserPlus,
+  FiPlayCircle
 } from 'react-icons/fi';
 
 const CompetitionDetails = () => {
@@ -346,6 +347,49 @@ const CompetitionDetails = () => {
             <p style={{ marginTop: 8 }}>
               <strong>Evaluation:</strong> {formatEvaluationLabel()}
             </p>
+            {competition.type === 'quiz' && (
+              <div className="CompetitionDetailsPage__quizCta">
+                <p className="CompetitionDetailsPage__quizCtaHint">
+                  {competition.quiz_status && (
+                    <>
+                      Quiz status: <strong>{competition.quiz_status}</strong>
+                      {competition.quiz_status === 'active'
+                        ? ' — the quiz is live; you can open the quiz page to begin.'
+                        : competition.quiz_status === 'published'
+                          ? ' — review questions on the quiz page; taking the quiz may require the organizers to set it to active.'
+                          : ' — check back when organizers publish or activate the quiz.'}
+                    </>
+                  )}
+                  {!competition.quiz_status && (
+                    <>Quiz details will appear once the quiz is set up for this competition.</>
+                  )}
+                </p>
+                <div className="CompetitionDetailsPage__quizCtaButtons">
+                  {competition.quiz_status === 'active' && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/quizpage/${id}`)}
+                      className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary CompetitionDetailsPage__btn--quizStart"
+                    >
+                      <FiPlayCircle size={20} aria-hidden />
+                      Start Quiz
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/quizpage/${id}`)}
+                    className={
+                      competition.quiz_status === 'active'
+                        ? 'CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary'
+                        : 'CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary'
+                    }
+                  >
+                    <FiFileText size={18} aria-hidden style={{ marginRight: 8 }} />
+                    {competition.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
 
