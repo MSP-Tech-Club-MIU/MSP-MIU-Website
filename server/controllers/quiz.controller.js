@@ -69,6 +69,31 @@ async function getQuizById(req, res) {
       });
     });
 
+    // Summary-only for draft/published: hide stems and choices until quiz is active (or closed for review).
+    const includeQuestionBodies = quiz.status === 'active' || quiz.status === 'closed';
+
+    const questionsPayload = questions.map((q) => {
+      const qid = num(q.question_id, 0);
+      const base = {
+        question_id: qid,
+        question_type: q.question_type,
+        points: q.points != null ? num(q.points, 0) : 0,
+        position: num(q.position, 0)
+      };
+      if (includeQuestionBodies) {
+        return {
+          ...base,
+          question_text: q.question_text,
+          options: byQuestion.get(qid) || []
+        };
+      }
+      return {
+        ...base,
+        question_text: null,
+        options: []
+      };
+    });
+
     return res.status(200).json({
       success: true,
       data: {
@@ -80,14 +105,7 @@ async function getQuizById(req, res) {
         end_at: quiz.end_at,
         time_limit: null,
         status: quiz.status,
-        questions: questions.map((q) => ({
-          question_id: num(q.question_id),
-          question_type: q.question_type,
-          question_text: q.question_text,
-          points: q.points != null ? num(q.points, 0) : 0,
-          position: num(q.position, 0),
-          options: byQuestion.get(num(q.question_id, 0)) || []
-        }))
+        questions: questionsPayload
       }
     });
   } catch (error) {
@@ -231,7 +249,12 @@ async function saveQuizAnswer(req, res) {
     let isCorrect = null;
     let awardedPoints = 0;
     const normalizedText = (answer_text ?? text_answer ?? '').toString().trim();
-    const normalizedOptionId = selected_option_id ? parseInt(selected_option_id, 10) : null;
+    const normalizedOptionId = (() => {
+      const v = selected_option_id;
+      if (v === null || v === undefined || v === '') return null;
+      const n = parseInt(String(v), 10);
+      return Number.isNaN(n) ? null : n;
+    })();
 
     if (question.question_type === 'mcq') {
       const correct = await QuizOption.findOne({

@@ -538,7 +538,7 @@ const CompetitionWorkspace = () => {
                     <button
                       type="button"
                       className="CompetitionWorkspace__submitBtn CompetitionWorkspace__submitBtn--quizStart"
-                      onClick={() => navigate(`/quizpage/${competitionId}`)}
+                      onClick={() => navigate(`/quizpage/${competitionId}/take/1`)}
                     >
                       <FiPlayCircle size={20} aria-hidden />
                       Start Quiz

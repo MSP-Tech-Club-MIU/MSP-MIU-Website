@@ -19,6 +19,7 @@ const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
 const CreateTeam = lazy(() => import('./pages/CreateTeam'));
 const CompetitionWorkspace = lazy(() => import('./pages/CompetitionWorkspace'));
 const QuizPage = lazy(() => import('./pages/QuizPage'));
+const QuizTakeSession = lazy(() => import('./pages/QuizTakeSession'));
 const AcceptTeamInvitation = lazy(() => import('./pages/AcceptTeamInvitation'));
 const Suggestions = lazy(() => import('./pages/Suggestions'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
@@ -169,6 +170,7 @@ const AppRouter = () => {
           <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
           <Route path="/quizpage" element={<SiteLayout><QuizPage /></SiteLayout>} />
           <Route path="/quizpage/:quizId" element={<SiteLayout><QuizPage /></SiteLayout>} />
+          <Route path="/quizpage/:quizId/take/:step" element={<SiteLayout><QuizTakeSession /></SiteLayout>} />
           <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
           <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
           <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />

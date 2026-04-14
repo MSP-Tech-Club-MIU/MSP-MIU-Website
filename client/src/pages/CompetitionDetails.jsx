@@ -356,7 +356,7 @@ const CompetitionDetails = () => {
                       {competition.quiz_status === 'active'
                         ? ' — the quiz is live; you can open the quiz page to begin.'
                         : competition.quiz_status === 'published'
-                          ? ' — review questions on the quiz page; taking the quiz may require the organizers to set it to active.'
+                          ? ' — open the quiz page for schedule and rules; question wording appears when the quiz is active.'
                           : ' — check back when organizers publish or activate the quiz.'}
                     </>
                   )}
@@ -368,7 +368,7 @@ const CompetitionDetails = () => {
                   {competition.quiz_status === 'active' && (
                     <button
                       type="button"
-                      onClick={() => navigate(`/quizpage/${id}`)}
+                      onClick={() => navigate(`/quizpage/${id}/take/1`)}
                       className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary CompetitionDetailsPage__btn--quizStart"
                     >
                       <FiPlayCircle size={20} aria-hidden />
