@@ -8,6 +8,7 @@ import QuizPageHeader from '../components/quizpage/QuizPageHeader';
 import QuizOverviewCards from '../components/quizpage/QuizOverviewCards';
 import QuizAttemptCard from '../components/quizpage/QuizAttemptCard';
 import QuizQuestionsList from '../components/quizpage/QuizQuestionsList';
+import QuizCompetitionPanel from '../components/quiz/QuizCompetitionPanel';
 import './QuizPage.css';
 
 const QuizPage = () => {
@@ -103,7 +104,16 @@ const QuizPage = () => {
         <QuizPageHeader quiz={quiz} />
         <QuizOverviewCards quiz={quiz} questions={normalizedQuestions} />
         <QuizAttemptCard attempt={attempt} currentUser={currentUser} />
-        <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
+        {currentUser?.user_id ? (
+          <div className="QuizPage__takeQuiz">
+            <QuizCompetitionPanel quizId={quizId} userId={currentUser.user_id} />
+          </div>
+        ) : (
+          <p className="QuizPage__loginHint">Sign in to answer questions and submit your attempt.</p>
+        )}
+        {attempt?.status === 'submitted' && (
+          <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
+        )}
       </div>
     </section>
   );

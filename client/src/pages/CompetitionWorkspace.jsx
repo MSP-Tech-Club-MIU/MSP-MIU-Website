@@ -5,7 +5,6 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
-import QuizCompetitionPanel from '../components/quiz/QuizCompetitionPanel';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
@@ -16,7 +15,8 @@ import {
   FiFileText,
   FiLink,
   FiFile,
-  FiSend
+  FiSend,
+  FiPlayCircle
 } from 'react-icons/fi';
 
 const CompetitionWorkspace = () => {
@@ -29,7 +29,6 @@ const CompetitionWorkspace = () => {
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
   const [submission, setSubmission] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
   const [error, setError] = useState(null);
 
   // Form state
@@ -54,9 +53,6 @@ const CompetitionWorkspace = () => {
       setCompetition(competitionData);
       setTeam(teamData);
       setSubmission(submissionData);
-
-      const profile = await ApiService.getProfile().catch(() => null);
-      setCurrentUserId(profile?.user_id || null);
 
       if (submissionData) {
         setSubmitType(submissionData.submit_type);
@@ -526,23 +522,41 @@ const CompetitionWorkspace = () => {
                   <FiFileText size={20} />
                   Quiz Competition
                 </h3>
-                <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning" style={{ marginBottom: 16 }}>
-                  <FiAlertCircle size={18} />
-                  <span>
-                    Complete the quiz below. There is no ZIP or link submission for this format—answers are
-                    saved automatically. Automated scoring applies when you submit the quiz. The organizers must
-                    set the quiz to <strong>published</strong> or <strong>active</strong> before attempts are
-                    accepted.
-                  </span>
+                <p className="CompetitionWorkspace__quizIntro">
+                  There is no file or link submission here. Open the quiz page to answer questions; scoring is
+                  automatic when you submit. The quiz must be <strong>published</strong> or{' '}
+                  <strong>active</strong> for attempts.
+                  {competition?.quiz_status ? (
+                    <>
+                      {' '}
+                      Current quiz status: <strong>{competition.quiz_status}</strong>.
+                    </>
+                  ) : null}
+                </p>
+                <div className="CompetitionWorkspace__quizActions">
+                  {competition?.quiz_status === 'active' && (
+                    <button
+                      type="button"
+                      className="CompetitionWorkspace__submitBtn CompetitionWorkspace__submitBtn--quizStart"
+                      onClick={() => navigate(`/quizpage/${competitionId}`)}
+                    >
+                      <FiPlayCircle size={20} aria-hidden />
+                      Start Quiz
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={
+                      competition?.quiz_status === 'active'
+                        ? 'CompetitionWorkspace__quizBtnSecondary'
+                        : 'CompetitionWorkspace__submitBtn'
+                    }
+                    onClick={() => navigate(`/quizpage/${competitionId}`)}
+                  >
+                    <FiFileText size={18} aria-hidden />
+                    {competition?.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
+                  </button>
                 </div>
-                {currentUserId ? (
-                  <QuizCompetitionPanel quizId={competitionId} userId={currentUserId} />
-                ) : (
-                  <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
-                    <FiAlertCircle size={18} />
-                    <span>Unable to load current user for quiz attempt.</span>
-                  </div>
-                )}
               </div>
             )}
           </motion.div>
