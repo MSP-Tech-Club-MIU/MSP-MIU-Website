@@ -1413,6 +1413,22 @@ const acceptInvitationNewUser = async (req, res) => {
             });
         }
 
+        if (invitation.invited_university_id) {
+            const existingUniversityId = await db.query(
+                `SELECT user_id FROM users WHERE university_id = ?`,
+                {
+                    replacements: [invitation.invited_university_id],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (existingUniversityId && existingUniversityId.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'This university ID is already registered. Please log in or contact support.'
+                });
+            }
+        }
+
         const rolePlan = await resolveInvitationRoleForAcceptance(invitation);
         if (!rolePlan.ok) {
             return res.status(rolePlan.status).json({
@@ -1502,10 +1518,17 @@ const acceptInvitationNewUser = async (req, res) => {
 
     } catch (error) {
         console.error('Error accepting invitation (new user):', error);
+        const sqlCode = error?.original?.code || error?.parent?.code;
+        if (sqlCode === 'ER_DUP_ENTRY' || error?.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                success: false,
+                error: 'This invitation email or university ID is already linked to an account. Please log in or reset your password.'
+            });
+        }
         res.status(500).json({
             success: false,
             error: 'Failed to accept invitation',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 };
