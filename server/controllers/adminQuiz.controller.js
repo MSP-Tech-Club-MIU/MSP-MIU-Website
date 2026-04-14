@@ -7,6 +7,7 @@ const {
   sequelize
 } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
+const { cairoLocalInputToUtc } = require('../utils/cairoQuizTime');
 
 const QUIZ_STATUSES = ['draft', 'published', 'active', 'closed'];
 
@@ -70,6 +71,11 @@ function formatAdminQuizPayload(quiz, questions, optionsByQuestion) {
     description: quiz.description,
     start_at: quiz.start_at,
     end_at: quiz.end_at,
+    time_limit_minutes:
+      quiz.time_limit_minutes != null && Number(quiz.time_limit_minutes) > 0
+        ? num(quiz.time_limit_minutes, 0)
+        : null,
+    display_timezone: 'Africa/Cairo',
     status: quiz.status,
     questions: questions.map((q) => ({
       question_id: num(q.question_id),
@@ -134,7 +140,8 @@ async function patchAdminQuiz(req, res) {
       return res.status(loaded.status).json({ success: false, error: loaded.error });
     }
     const { quiz } = loaded;
-    const { status } = req.body || {};
+    const body = req.body || {};
+    const { status } = body;
 
     if (status !== undefined) {
       if (!QUIZ_STATUSES.includes(status)) {
@@ -167,6 +174,58 @@ async function patchAdminQuiz(req, res) {
               : undefined
         });
       }
+    }
+
+    const quizBase = await Quiz.findByPk(quiz.quiz_id);
+    if (!quizBase) {
+      return res.status(404).json({ success: false, error: 'Quiz not found' });
+    }
+
+    const scheduleUpdates = {};
+    if (body.start_at_cairo != null && body.end_at_cairo != null) {
+      try {
+        scheduleUpdates.start_at = cairoLocalInputToUtc(body.start_at_cairo);
+        scheduleUpdates.end_at = cairoLocalInputToUtc(body.end_at_cairo);
+      } catch (e) {
+        return res.status(400).json({
+          success: false,
+          error: e.message || 'Invalid Cairo start/end datetime'
+        });
+      }
+    } else {
+      if (body.start_at !== undefined) {
+        scheduleUpdates.start_at = new Date(body.start_at);
+      }
+      if (body.end_at !== undefined) {
+        scheduleUpdates.end_at = new Date(body.end_at);
+      }
+    }
+
+    if (body.time_limit_minutes !== undefined) {
+      if (body.time_limit_minutes === null || body.time_limit_minutes === '') {
+        scheduleUpdates.time_limit_minutes = null;
+      } else {
+        const tl = parseInt(body.time_limit_minutes, 10);
+        if (!Number.isFinite(tl) || tl <= 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'time_limit_minutes must be a positive integer, or empty/null to clear'
+          });
+        }
+        scheduleUpdates.time_limit_minutes = tl;
+      }
+    }
+
+    if (Object.keys(scheduleUpdates).length > 0) {
+      const mergedStart = scheduleUpdates.start_at ?? quizBase.start_at;
+      const mergedEnd = scheduleUpdates.end_at ?? quizBase.end_at;
+      if (!(new Date(mergedEnd) > new Date(mergedStart))) {
+        return res.status(400).json({
+          success: false,
+          error: 'Quiz end must be after start'
+        });
+      }
+      await Quiz.update(scheduleUpdates, { where: { quiz_id: quiz.quiz_id } });
     }
 
     const quizFresh = await Quiz.findByPk(quiz.quiz_id);

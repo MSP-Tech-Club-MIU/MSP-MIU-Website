@@ -15,7 +15,11 @@ async function ensureQuizForCompetition(competition, created_by) {
   };
   const existing = await Quiz.findOne({ where: { competition_id: cid } });
   if (existing) {
-    await existing.update(payload);
+    // Keep admin-set quiz window; only sync title/description from the competition card.
+    await existing.update({
+      title: payload.title,
+      description: payload.description
+    });
     return;
   }
   await Quiz.create({

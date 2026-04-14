@@ -1,6 +1,12 @@
 const { Op } = require('sequelize');
 const db = require('../config/db');
 const { Quiz, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer } = require('../models');
+const {
+  computeAttemptScore,
+  finalizeQuizAttempt,
+  getEffectiveDeadlineDate,
+  isWithinQuizLiveWindow
+} = require('../services/quizAttemptLifecycle');
 
 /** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
 function num(v, fallback = 0) {
@@ -29,13 +35,6 @@ async function resolveQuiz(idOrCompetition) {
 /** Participant attempts allowed only when quiz is published or active (not draft/closed). */
 function quizAllowsParticipantAttempts(status) {
   return status === 'published' || status === 'active';
-}
-
-async function computeAttemptScore(attemptId) {
-  const answers = await QuizAnswer.findAll({ where: { attempt_id: attemptId } });
-  const total = answers.reduce((acc, a) => acc + Number(a.awarded_points || 0), 0);
-  await QuizAttempt.update({ score: total }, { where: { attempt_id: attemptId } });
-  return total;
 }
 
 async function getQuizById(req, res) {
@@ -103,7 +102,11 @@ async function getQuizById(req, res) {
         description: quiz.description,
         start_at: quiz.start_at,
         end_at: quiz.end_at,
-        time_limit: null,
+        time_limit_minutes:
+          quiz.time_limit_minutes != null && Number(quiz.time_limit_minutes) > 0
+            ? num(quiz.time_limit_minutes, 0)
+            : null,
+        display_timezone: 'Africa/Cairo',
         status: quiz.status,
         questions: questionsPayload
       }
@@ -136,6 +139,17 @@ async function getQuizAttemptByUser(req, res) {
       order: [['attempt_id', 'DESC']]
     });
     if (!attempt) return res.status(404).json({ success: false, error: 'Attempt not found' });
+
+    if (attempt.status === 'in_progress') {
+      const qz = await Quiz.findByPk(attempt.quiz_id);
+      if (qz) {
+        const deadline = getEffectiveDeadlineDate(qz, attempt);
+        if (deadline && new Date() >= deadline) {
+          await finalizeQuizAttempt(attempt.attempt_id);
+          await attempt.reload();
+        }
+      }
+    }
 
     const answers = await QuizAnswer.findAll({ where: { attempt_id: attempt.attempt_id } });
     return res.status(200).json({
@@ -197,11 +211,42 @@ async function createQuizAttempt(req, res) {
       });
     }
 
+    const submitted = await QuizAttempt.findOne({
+      where: { quiz_id: quiz.quiz_id, user_id: userId, status: 'submitted' },
+      order: [['attempt_id', 'DESC']]
+    });
+    if (submitted) {
+      return res.status(200).json({ success: true, data: submitted });
+    }
+
     let attempt = await QuizAttempt.findOne({
       where: { quiz_id: quiz.quiz_id, user_id: userId, status: 'in_progress' },
       order: [['attempt_id', 'DESC']]
     });
+    if (attempt) {
+      const deadline = getEffectiveDeadlineDate(quiz, attempt);
+      if (deadline && new Date() >= deadline) {
+        await finalizeQuizAttempt(attempt.attempt_id);
+        const after = await QuizAttempt.findOne({
+          where: { quiz_id: quiz.quiz_id, user_id: userId, status: 'submitted' },
+          order: [['attempt_id', 'DESC']]
+        });
+        if (after) {
+          return res.status(200).json({ success: true, data: after });
+        }
+        attempt = null;
+      }
+    }
+
     if (!attempt) {
+      const now = new Date();
+      if (!isWithinQuizLiveWindow(quiz, now)) {
+        return res.status(403).json({
+          success: false,
+          error:
+            'The quiz is only available between its scheduled start and end (Egypt / Africa-Cairo times on the quiz page).'
+        });
+      }
       attempt = await QuizAttempt.create({
         quiz_id: quiz.quiz_id,
         user_id: userId,
@@ -238,6 +283,16 @@ async function saveQuizAnswer(req, res) {
       return res.status(403).json({
         success: false,
         error: 'This quiz is not open for attempts'
+      });
+    }
+
+    const deadline = getEffectiveDeadlineDate(quizForAttempt, attempt);
+    if (deadline && new Date() >= deadline) {
+      await finalizeQuizAttempt(attemptId);
+      return res.status(400).json({
+        success: false,
+        error: 'Quiz time has ended; your attempt was submitted with saved answers.',
+        code: 'QUIZ_TIME_ENDED'
       });
     }
 
@@ -332,13 +387,14 @@ async function submitQuizAttempt(req, res) {
       });
     }
 
-    const score = await computeAttemptScore(attemptId);
-    await attempt.update({
-      status: 'submitted',
-      submitted_at: new Date(),
-      score
-    });
-    return res.status(200).json({ success: true, data: attempt });
+    const result = await finalizeQuizAttempt(attemptId);
+    if (!result.ok) {
+      return res.status(400).json({
+        success: false,
+        error: 'Attempt is not in progress or could not be submitted'
+      });
+    }
+    return res.status(200).json({ success: true, data: result.attempt });
   } catch (error) {
     console.error('Error submitting attempt:', error);
     return res.status(500).json({ success: false, error: 'Failed to submit attempt' });

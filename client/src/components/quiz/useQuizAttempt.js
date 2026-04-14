@@ -28,6 +28,7 @@ function normalizeAttempt(rawAttempt) {
     attempt_id: rawAttempt.attempt_id ?? rawAttempt.id,
     score: rawAttempt.score ?? null,
     status: rawAttempt.status || 'in_progress',
+    started_at: rawAttempt.started_at || null,
     submitted_at: rawAttempt.submitted_at || null,
     answers: rawAttempt.answers || rawAttempt.quiz_answers || []
   };
