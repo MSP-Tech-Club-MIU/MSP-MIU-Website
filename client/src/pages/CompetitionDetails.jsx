@@ -127,14 +127,24 @@ const CompetitionDetails = () => {
 
   const canRegister = () => {
     if (!competition) return false;
+    if (competition.type === 'quiz' && !isQuizRegistrationOpen()) return false;
     // Can register if competition is open and user doesn't have a team (or is a guest)
     return competition.status === 'open' && !userTeam;
   };
 
   const canCreateTeam = () => {
     if (!competition) return false;
+    if (competition.type === 'quiz' && !isQuizRegistrationOpen()) return false;
     // Guests can create teams, authenticated users can if they don't have a team
     return competition.status === 'open' && (!userId || !userTeam);
+  };
+
+  const isQuizRegistrationOpen = () => {
+    if (!competition || competition.type !== 'quiz') return true;
+    const now = new Date();
+    const startDate = new Date(competition.start_at);
+    if (Number.isNaN(startDate.getTime())) return true;
+    return now < startDate;
   };
 
   const isCompetitionActive = () => {
@@ -366,6 +376,12 @@ const CompetitionDetails = () => {
                   {isSoloCompetition() ? 'Join Competition' : 'Create Team'}
                 </button>
               </div>
+            </div>
+          ) : competition?.type === 'quiz' && competition?.status === 'open' && !isQuizRegistrationOpen() ? (
+            <div className="CompetitionDetailsPage__lockedNotice">
+              <FiLock size={32} />
+              <h3>Quiz Registration Closed</h3>
+              <p>Registrations for this quiz are no longer accepted after the quiz start time.</p>
             </div>
           ) : competition?.status === 'locked' ? (
             <div className="CompetitionDetailsPage__lockedNotice">
