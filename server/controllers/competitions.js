@@ -142,26 +142,28 @@ const getCompetitionById = async (req, res) => {
 
         const competitions = await db.query(
             `SELECT 
-                competition_id,
-                title,
-                description,
-                rules,
-                start_at,
-                end_at,
-                max_team_size,
-                min_team_size,
-                is_team_based,
-                status,
-                location_type,
-                location_details,
-                type,
-                submission_mode,
-                evaluation_mode,
-                config,
-                created_by,
-                created_at
-            FROM competitions
-            WHERE competition_id = ?`,
+                c.competition_id,
+                c.title,
+                c.description,
+                c.rules,
+                c.start_at,
+                c.end_at,
+                c.max_team_size,
+                c.min_team_size,
+                c.is_team_based,
+                c.status,
+                c.location_type,
+                c.location_details,
+                c.type,
+                c.submission_mode,
+                c.evaluation_mode,
+                c.config,
+                c.created_by,
+                c.created_at,
+                q.status AS quiz_status
+            FROM competitions c
+            LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+            WHERE c.competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
