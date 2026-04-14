@@ -72,6 +72,21 @@ const QuizPage = () => {
     }));
   }, [quiz]);
 
+  /** Full stems + options with `is_correct` after submit (from attempt API); else public quiz payload. */
+  const questionsForReview = useMemo(() => {
+    const rev = attempt?.review?.questions;
+    if (!Array.isArray(rev) || rev.length === 0) return normalizedQuestions;
+    return rev.map((q, index) => ({
+      question_id: q.question_id,
+      question_type: q.question_type || 'text',
+      question_text: q.question_text || `Question ${index + 1}`,
+      points: Number(q.points || 0),
+      position: Number(q.position || index + 1),
+      options: Array.isArray(q.options) ? q.options : [],
+      correct_answer_text: q.correct_answer_text != null ? q.correct_answer_text : null
+    }));
+  }, [attempt?.review?.questions, normalizedQuestions]);
+
   const quizStatus = quiz?.status;
   const isActive = quizStatus === 'active';
   const isClosed = quizStatus === 'closed';
@@ -140,7 +155,7 @@ const QuizPage = () => {
         )}
 
         {showQuestionReview && (
-          <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
+          <QuizQuestionsList questions={questionsForReview} attempt={attempt} />
         )}
       </div>
     </section>

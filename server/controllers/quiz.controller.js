@@ -123,12 +123,65 @@ async function getQuizById(req, res) {
   }
 }
 
+async function buildSubmittedAttemptReview(quizId) {
+  const questions = await QuizQuestion.findAll({
+    where: { quiz_id: quizId },
+    order: [['position', 'ASC']]
+  });
+  const questionIds = questions.map((q) => q.question_id).filter((id) => id != null);
+  const allOptions =
+    questionIds.length > 0
+      ? await QuizOption.findAll({
+          where: { question_id: { [Op.in]: questionIds } },
+          order: [['position', 'ASC']]
+        })
+      : [];
+
+  const byQuestion = new Map();
+  allOptions.forEach((o) => {
+    const key = num(o.question_id, 0);
+    if (!byQuestion.has(key)) byQuestion.set(key, []);
+    byQuestion.get(key).push(o);
+  });
+
+  return {
+    questions: questions.map((q) => {
+      const qid = num(q.question_id, 0);
+      const opts = byQuestion.get(qid) || [];
+      const correctTextOpt =
+        q.question_type === 'text' ? opts.find((o) => o.is_correct) : null;
+      return {
+        question_id: qid,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        points: q.points != null ? num(q.points, 0) : 0,
+        position: num(q.position, 0),
+        options:
+          q.question_type === 'mcq'
+            ? opts.map((o) => ({
+                option_id: num(o.option_id),
+                option_text: o.option_text,
+                is_correct: !!o.is_correct
+              }))
+            : [],
+        correct_answer_text: correctTextOpt ? String(correctTextOpt.option_text || '') : null
+      };
+    })
+  };
+}
+
 async function getQuizAttemptByUser(req, res) {
   try {
     const quizIdParam = parseInt(req.params.quizId, 10);
     const userId = parseInt(req.params.userId, 10);
     if (Number.isNaN(quizIdParam) || Number.isNaN(userId)) {
       return res.status(400).json({ success: false, error: 'Invalid ids' });
+    }
+
+    const viewerId = req.user?.user_id;
+    const isStaff = ['admin', 'board'].includes(req.user?.role);
+    if (!isStaff && (!viewerId || viewerId !== userId)) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
     const quiz = await resolveQuiz(quizIdParam);
@@ -152,6 +205,12 @@ async function getQuizAttemptByUser(req, res) {
     }
 
     const answers = await QuizAnswer.findAll({ where: { attempt_id: attempt.attempt_id } });
+
+    let review = null;
+    if (attempt.status === 'submitted' || attempt.status === 'graded') {
+      review = await buildSubmittedAttemptReview(quiz.quiz_id);
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -169,7 +228,8 @@ async function getQuizAttemptByUser(req, res) {
           answer_text: a.text_answer,
           is_correct: a.is_correct,
           points_awarded: a.awarded_points
-        }))
+        })),
+        review
       }
     });
   } catch (error) {
