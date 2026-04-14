@@ -24,6 +24,52 @@
   font-size: 0.95rem;
 }
 
+.QuizPage__publishedHint {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(74, 166, 255, 0.1);
+  border: 1px solid rgba(74, 166, 255, 0.22);
+  color: rgba(234, 242, 255, 0.88);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.QuizPage__takeCta {
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.QuizPage__takeCtaText {
+  margin: 0 0 16px 0;
+  color: rgba(234, 242, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.QuizPage__takeCtaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #0077cc, #03a9f4);
+  box-shadow: 0 4px 20px rgba(3, 169, 244, 0.35);
+}
+
+.QuizPage__takeCtaBtn:hover {
+  filter: brightness(1.06);
+}
+
 .QuizPage__error {
   max-width: 700px;
   margin: 32px auto;

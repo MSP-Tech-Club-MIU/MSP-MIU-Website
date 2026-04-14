@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { FiPlayCircle } from 'react-icons/fi';
 import SEO from '../components/SEO';
 import BackButton from '../components/BackButton';
 import PageLoader from '../components/PageLoader';
@@ -8,11 +9,12 @@ import QuizPageHeader from '../components/quizpage/QuizPageHeader';
 import QuizOverviewCards from '../components/quizpage/QuizOverviewCards';
 import QuizAttemptCard from '../components/quizpage/QuizAttemptCard';
 import QuizQuestionsList from '../components/quizpage/QuizQuestionsList';
-import QuizCompetitionPanel from '../components/quiz/QuizCompetitionPanel';
 import './QuizPage.css';
 
 const QuizPage = () => {
   const { quizId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quiz, setQuiz] = useState(null);
@@ -56,7 +58,7 @@ const QuizPage = () => {
     };
 
     load();
-  }, [quizId]);
+  }, [quizId, location.pathname]);
 
   const normalizedQuestions = useMemo(() => {
     const questions = quiz?.questions || [];
@@ -69,6 +71,11 @@ const QuizPage = () => {
       options: Array.isArray(q.options) ? q.options : []
     }));
   }, [quiz]);
+
+  const quizStatus = quiz?.status;
+  const isActive = quizStatus === 'active';
+  const isClosed = quizStatus === 'closed';
+  const showQuestionReview = isClosed || (isActive && attempt?.status === 'submitted');
 
   if (loading) {
     return <PageLoader />;
@@ -104,14 +111,37 @@ const QuizPage = () => {
         <QuizPageHeader quiz={quiz} />
         <QuizOverviewCards quiz={quiz} questions={normalizedQuestions} />
         <QuizAttemptCard attempt={attempt} currentUser={currentUser} />
-        {currentUser?.user_id ? (
-          <div className="QuizPage__takeQuiz">
-            <QuizCompetitionPanel quizId={quizId} userId={currentUser.user_id} />
-          </div>
-        ) : (
-          <p className="QuizPage__loginHint">Sign in to answer questions and submit your attempt.</p>
+
+        {quizStatus === 'published' && currentUser?.user_id && (
+          <p className="QuizPage__publishedHint">
+            Question wording stays hidden until this quiz is set to <strong>Active</strong>. You can still see
+            your attempt summary above.
+          </p>
         )}
-        <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
+
+        {isActive && currentUser?.user_id && attempt?.status !== 'submitted' && (
+          <div className="QuizPage__takeCta">
+            <p className="QuizPage__takeCtaText">
+              This quiz uses one page per question. When you are ready, continue below.
+            </p>
+            <button
+              type="button"
+              className="QuizPage__takeCtaBtn"
+              onClick={() => navigate(`/quizpage/${quizId}/take/1`)}
+            >
+              <FiPlayCircle size={20} aria-hidden />
+              {attempt ? 'Continue quiz' : 'Start quiz'}
+            </button>
+          </div>
+        )}
+
+        {!currentUser?.user_id && (
+          <p className="QuizPage__loginHint">Sign in to take the quiz when it is active.</p>
+        )}
+
+        {showQuestionReview && (
+          <QuizQuestionsList questions={normalizedQuestions} attempt={attempt} />
+        )}
       </div>
     </section>
   );
