@@ -1438,7 +1438,7 @@ const acceptInvitationNewUser = async (req, res) => {
         }
 
         // Hash password
-        const bcrypt = require('bcryptjs');
+        const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create new user account with 'competitor' role
