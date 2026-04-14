@@ -143,14 +143,30 @@ async function patchAdminQuiz(req, res) {
           error: `status must be one of: ${QUIZ_STATUSES.join(', ')}`
         });
       }
-      // Status-only change: skip full model validation. The Quiz model validates
-      // end_at vs start_at on every save; legacy or synced rows can fail that check
-      // even when only `status` changes, which caused 500s on PATCH.
-      // Note: MySQL reports 0 affected rows when status is unchanged — that is still OK.
-      await Quiz.update(
-        { status },
-        { where: { quiz_id: quiz.quiz_id }, validate: false }
-      );
+      // Raw UPDATE avoids Sequelize model/hook issues and matches DB ENUM exactly.
+      // If production DB still has an old ENUM (e.g. only 'draft'), MySQL errors here — return 400 + hint.
+      try {
+        await sequelize.query(
+          'UPDATE quizzes SET status = ? WHERE quiz_id = ?',
+          { replacements: [status, quiz.quiz_id] }
+        );
+      } catch (sqlErr) {
+        const sqlMsg = sqlErr?.parent?.sqlMessage || sqlErr?.message || '';
+        console.error('patchAdminQuiz SQL:', sqlMsg, sqlErr);
+        const enumHint =
+          /Data truncated|Incorrect|ENUM|invalid/i.test(sqlMsg) ||
+          sqlErr?.name === 'SequelizeDatabaseError';
+        return res.status(enumHint ? 400 : 500).json({
+          success: false,
+          error: enumHint
+            ? `Cannot save quiz status "${status}". The database column quizzes.status may use an older ENUM. Run the migration in server/scripts/alter-quizzes-status-enum.sql (or equivalent) to include: ${QUIZ_STATUSES.join(', ')}.`
+            : 'Failed to update quiz status',
+          details:
+            process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1'
+              ? sqlMsg
+              : undefined
+        });
+      }
     }
 
     const quizFresh = await Quiz.findByPk(quiz.quiz_id);
@@ -184,10 +200,11 @@ async function patchAdminQuiz(req, res) {
     console.error('patchAdminQuiz:', err);
     const expose =
       process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1';
+    const sqlMsg = err?.parent?.sqlMessage || err?.message;
     return res.status(500).json({
       success: false,
       error: 'Failed to update quiz',
-      details: expose ? err.message : undefined
+      details: expose ? sqlMsg : undefined
     });
   }
 }
