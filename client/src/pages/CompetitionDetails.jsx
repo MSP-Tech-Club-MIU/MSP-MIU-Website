@@ -159,6 +159,32 @@ const CompetitionDetails = () => {
   const isSoloCompetition = () =>
     competition && (competition.is_team_based === false || competition.is_team_based === 0);
 
+  const formatSubmissionLabel = () => {
+    if (!competition) return '';
+    if (competition.type === 'quiz') {
+      return 'Answer in the team workspace (no ZIP or repository upload).';
+    }
+    const mode = competition.submission_mode;
+    if (mode === 'upload') return 'ZIP file via workspace upload (stored securely).';
+    if (mode === 'link') return 'Repository and/or live demo links.';
+    if (mode === 'both') return 'ZIP upload and/or links.';
+    if (mode === 'none' || competition.type === 'external') return 'No submission through this site.';
+    return mode || '—';
+  };
+
+  const formatEvaluationLabel = () => {
+    if (!competition) return '';
+    if (competition.type === 'quiz') {
+      return 'Auto-graded from your quiz answers.';
+    }
+    const ev = competition.evaluation_mode;
+    if (ev === 'manual') return 'Judges review submissions manually.';
+    if (ev === 'auto') return 'Automated scoring runs on your uploaded ZIP (when a ZIP is on file).';
+    if (ev === 'hybrid') return 'Automated scoring on ZIP plus manual judge input.';
+    if (ev === 'none') return 'No automated scoring pipeline for this competition.';
+    return ev || '—';
+  };
+
   const handleJoinSoloCompetition = async () => {
     try {
       // For solo competitions, create a team automatically with user's name
@@ -300,6 +326,25 @@ const CompetitionDetails = () => {
               {competition.min_team_size === competition.max_team_size
                 ? `Exactly ${competition.max_team_size} member${competition.max_team_size > 1 ? 's' : ''}`
                 : `${competition.min_team_size}-${competition.max_team_size} members`}
+            </p>
+          </div>
+
+          <div className="CompetitionDetailsPage__infoCard CompetitionDetailsPage__infoCard--wide">
+            <FiFileText size={24} className="CompetitionDetailsPage__infoIcon" />
+            <h3>How this competition works</h3>
+            <p>
+              <strong>Type:</strong>{' '}
+              {competition.type === 'quiz'
+                ? 'Quiz'
+                : competition.type === 'external'
+                  ? 'External'
+                  : 'Project'}
+            </p>
+            <p style={{ marginTop: 8 }}>
+              <strong>Submissions:</strong> {formatSubmissionLabel()}
+            </p>
+            <p style={{ marginTop: 8 }}>
+              <strong>Evaluation:</strong> {formatEvaluationLabel()}
             </p>
           </div>
         </motion.div>

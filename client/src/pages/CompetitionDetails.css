@@ -102,6 +102,15 @@
     box-shadow: 0 8px 30px rgba(3, 169, 244, .2);
 }
 
+.CompetitionDetailsPage__infoCard--wide {
+    grid-column: 1 / -1;
+    text-align: left;
+}
+
+.CompetitionDetailsPage__infoCard--wide .CompetitionDetailsPage__infoIcon {
+    margin-bottom: 12px;
+}
+
 .CompetitionDetailsPage__infoIcon {
     color: #03A9F4;
     margin-bottom: 16px;

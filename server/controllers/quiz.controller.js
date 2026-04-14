@@ -26,6 +26,11 @@ async function resolveQuiz(idOrCompetition) {
   return quiz;
 }
 
+/** Participant attempts allowed only when quiz is published or active (not draft/closed). */
+function quizAllowsParticipantAttempts(status) {
+  return status === 'published' || status === 'active';
+}
+
 async function computeAttemptScore(attemptId) {
   const answers = await QuizAnswer.findAll({ where: { attempt_id: attemptId } });
   const total = answers.reduce((acc, a) => acc + Number(a.awarded_points || 0), 0);
@@ -148,6 +153,12 @@ async function createQuizAttempt(req, res) {
 
     const quiz = await resolveQuiz(quizIdInput);
     if (!quiz) return res.status(404).json({ success: false, error: 'Quiz not found' });
+    if (!quizAllowsParticipantAttempts(quiz.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'This quiz is not open for attempts yet'
+      });
+    }
 
     const userId = req.user.user_id;
     const memberships = await db.query(
@@ -202,6 +213,14 @@ async function saveQuizAnswer(req, res) {
     }
     if (attempt.status !== 'in_progress') {
       return res.status(400).json({ success: false, error: 'Attempt is already submitted' });
+    }
+
+    const quizForAttempt = await Quiz.findByPk(attempt.quiz_id);
+    if (!quizForAttempt || !quizAllowsParticipantAttempts(quizForAttempt.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'This quiz is not open for attempts'
+      });
     }
 
     const question = await QuizQuestion.findByPk(question_id);
@@ -280,6 +299,14 @@ async function submitQuizAttempt(req, res) {
     if (!attempt) return res.status(404).json({ success: false, error: 'Attempt not found' });
     if (attempt.user_id !== req.user.user_id && !['admin', 'board'].includes(req.user.role)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const quizForAttempt = await Quiz.findByPk(attempt.quiz_id);
+    if (!quizForAttempt || !quizAllowsParticipantAttempts(quizForAttempt.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'This quiz is not open for attempts'
+      });
     }
 
     const score = await computeAttemptScore(attemptId);

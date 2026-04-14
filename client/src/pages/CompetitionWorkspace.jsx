@@ -526,6 +526,15 @@ const CompetitionWorkspace = () => {
                   <FiFileText size={20} />
                   Quiz Competition
                 </h3>
+                <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning" style={{ marginBottom: 16 }}>
+                  <FiAlertCircle size={18} />
+                  <span>
+                    Complete the quiz below. There is no ZIP or link submission for this format—answers are
+                    saved automatically. Automated scoring applies when you submit the quiz. The organizers must
+                    set the quiz to <strong>published</strong> or <strong>active</strong> before attempts are
+                    accepted.
+                  </span>
+                </div>
                 {currentUserId ? (
                   <QuizCompetitionPanel quizId={competitionId} userId={currentUserId} />
                 ) : (

@@ -183,7 +183,11 @@ const createSubmission = async (req, res) => {
                 }
             );
 
-            if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+            const updatedRow = updatedSubmissions[0];
+            if (
+                (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') &&
+                updatedRow.r2_key
+            ) {
                 runEvaluationForSubmission(existingSubmissions[0].submission_id).catch((err) => {
                     console.error('Auto evaluation failed:', err.message);
                 });
@@ -258,7 +262,11 @@ const createSubmission = async (req, res) => {
             }
         );
 
-        if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+        const createdRow = newSubmissions[0];
+        if (
+            (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') &&
+            createdRow.r2_key
+        ) {
             runEvaluationForSubmission(submissionId).catch((err) => {
                 console.error('Auto evaluation failed:', err.message);
             });
