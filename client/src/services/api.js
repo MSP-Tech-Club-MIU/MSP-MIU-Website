@@ -1994,6 +1994,92 @@ class ApiService {
     }
   }
 
+  /** Full quiz for admin (includes is_correct on options). competitionId = competition_id. */
+  static async getAdminQuiz(competitionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to load quiz');
+    return result.data;
+  }
+
+  static async patchAdminQuiz(competitionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update quiz');
+    return result.data;
+  }
+
+  static async createAdminQuizQuestion(competitionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz/questions`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create question');
+    return result.data;
+  }
+
+  static async updateAdminQuizQuestion(questionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update question');
+    return result.data;
+  }
+
+  static async deleteAdminQuizQuestion(questionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete question');
+    return result.data;
+  }
+
+  static async createAdminQuizOption(questionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}/options`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create option');
+    return result.data;
+  }
+
+  static async updateAdminQuizOption(optionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/options/${optionId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update option');
+    return result.data;
+  }
+
+  static async deleteAdminQuizOption(optionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/options/${optionId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete option');
+    return result.data;
+  }
+
   /**
    * Get attendance requests (admin)
    */

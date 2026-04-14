@@ -5,11 +5,13 @@ import {
     MdDashboard, MdEmojiEvents, MdFactCheck, MdAppRegistration,
     MdSearch, MdNotifications, MdLogout, MdHome, MdAdd, MdMenu,
     MdClose, MdPeople, MdEvent, MdPendingActions, MdDescription,
-    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson
+    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson,
+    MdQuiz
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import mspLogo from '../../assets/Images/msp-logo.png';
+import AdminQuizManageModal from './AdminQuizManageModal';
 import './AdminPanel.css';
 
 /* ═══════════════════════════════════════════════════════════
@@ -212,6 +214,8 @@ const AdminPanel = () => {
     // Competition Teams state
     const [showTeamModal, setShowTeamModal] = useState(false);
     const [viewingCompTeams, setViewingCompTeams] = useState(null); // The competition we are viewing teams for
+    const [showQuizModal, setShowQuizModal] = useState(false);
+    const [viewingQuizComp, setViewingQuizComp] = useState(null);
     const [teamsList, setTeamsList] = useState([]);
     const [teamsLoading, setTeamsLoading] = useState(false);
     const [editingTeam, setEditingTeam] = useState(null);
@@ -547,6 +551,16 @@ const AdminPanel = () => {
         setShowTeamModal(false);
         setViewingCompTeams(null);
         setTeamsList([]);
+    };
+
+    const openQuizModal = (comp) => {
+        setViewingQuizComp(comp);
+        setShowQuizModal(true);
+    };
+
+    const closeQuizModal = () => {
+        setShowQuizModal(false);
+        setViewingQuizComp(null);
     };
 
     const saveTeam = async () => {
@@ -1024,6 +1038,16 @@ const AdminPanel = () => {
                                                         </td>
                                                         <td>{comp.max_team_size || '-'}</td>
                                                         <td>
+                                                            {comp.type === 'quiz' && (
+                                                                <button
+                                                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
+                                                                    onClick={() => openQuizModal(comp)}
+                                                                    title="Questions, answers, quiz status"
+                                                                >
+                                                                    <MdQuiz style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                                    Manage quiz
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
                                                                 onClick={() => openTeamModal(comp)}
@@ -1285,6 +1309,14 @@ const AdminPanel = () => {
                             )}
 
                             {/* Teams Modal */}
+                            {showQuizModal && viewingQuizComp && (
+                                <AdminQuizManageModal
+                                    competition={viewingQuizComp}
+                                    onClose={closeQuizModal}
+                                    setAlert={setAlert}
+                                />
+                            )}
+
                             {showTeamModal && viewingCompTeams && (
                                 <div className="AdminPanel__modalOverlay" onClick={closeTeamModal}>
                                     <div className="AdminPanel__modalContent AdminPanel__modalContent--large" onClick={e => e.stopPropagation()}>

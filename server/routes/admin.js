@@ -20,6 +20,16 @@ const {
     updateAdminTeam,
     deleteAdminTeam
 } = require('../controllers/admin');
+const {
+    getAdminQuiz,
+    patchAdminQuiz,
+    postAdminQuizQuestion,
+    putAdminQuizQuestion,
+    deleteAdminQuizQuestion,
+    postAdminQuizOption,
+    putAdminQuizOption,
+    deleteAdminQuizOption
+} = require('../controllers/adminQuiz.controller');
 
 // All admin routes require authentication + admin authorization
 router.use(authenticateToken);
@@ -33,6 +43,16 @@ router.get('/competitions', getCompetitions);
 router.post('/competitions', createCompetition);
 router.put('/competitions/:id', updateCompetition);
 router.delete('/competitions/:id', deleteCompetition);
+
+// Quiz (admin) — tied to quiz-type competitions
+router.get('/competitions/:id/quiz', getAdminQuiz);
+router.patch('/competitions/:id/quiz', patchAdminQuiz);
+router.post('/competitions/:id/quiz/questions', postAdminQuizQuestion);
+router.put('/quiz/questions/:questionId', putAdminQuizQuestion);
+router.delete('/quiz/questions/:questionId', deleteAdminQuizQuestion);
+router.post('/quiz/questions/:questionId/options', postAdminQuizOption);
+router.put('/quiz/options/:optionId', putAdminQuizOption);
+router.delete('/quiz/options/:optionId', deleteAdminQuizOption);
 
 // Attendance
 router.get('/attendance', getAttendanceRequests);

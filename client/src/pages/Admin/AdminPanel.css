@@ -1308,3 +1308,154 @@ body.admin-panel-active .SiteLayout__main {
         padding: 24px;
     }
 }
+
+/* ── Quiz manage modal (admin builder) ── */
+.AdminPanel__quizModal .AdminPanel__modalHeader h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.25rem;
+}
+
+.AdminPanel__quizModalSub {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(234, 242, 255, 0.65);
+}
+
+.AdminPanel__quizModalBody {
+    max-height: min(72vh, 640px);
+    overflow-y: auto;
+    padding-right: 6px;
+    margin-top: 12px;
+}
+
+.AdminPanel__quizHint {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: rgba(234, 242, 255, 0.75);
+    margin: 0 0 16px 0;
+    padding: 12px;
+    background: rgba(74, 166, 255, 0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(74, 166, 255, 0.15);
+}
+
+.AdminPanel__quizStatusRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 24px;
+}
+
+.AdminPanel__quizNewQuestion {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.15);
+    margin-bottom: 24px;
+}
+
+.AdminPanel__quizNewQuestion h4 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+}
+
+.AdminPanel__quizQuestionList h4 {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+}
+
+.AdminPanel__quizQuestionCard {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.AdminPanel__quizQuestionCardHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.AdminPanel__quizMeta {
+    font-size: 0.8rem;
+    color: rgba(234, 242, 255, 0.5);
+}
+
+.AdminPanel__quizQuestionActions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.AdminPanel__quizOptionsBlock {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.AdminPanel__quizOptionsTitle {
+    margin: 0 0 10px 0;
+    font-size: 0.88rem;
+    color: rgba(234, 242, 255, 0.8);
+}
+
+.AdminPanel__quizOptionList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.AdminPanel__quizOptionRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.AdminPanel__quizRadio input {
+    width: auto;
+    margin: 0;
+}
+
+.AdminPanel__quizOptionInput {
+    flex: 1;
+    min-width: 140px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
+    color: inherit;
+}
+
+.AdminPanel__quizAddOption {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+}
+
+.AdminPanel__quizAddOption input {
+    flex: 1;
+    min-width: 160px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.25);
+    color: inherit;
+}
+
+.AdminPanel__quizTextAnswerRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
