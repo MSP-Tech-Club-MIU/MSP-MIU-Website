@@ -3,6 +3,7 @@ import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
 import TaskQuizAssetMedia from '../../components/TaskQuizAssetMedia';
 import { safeTaskAssetUrl } from '../../utils/taskQuizAssets';
+import AdminQuizManageModal from './AdminQuizManageModal';
 
 /**
  * Admin: task_quiz tasks (R2 reference assets under competitions_tasks_assets/… plus manual URL).
@@ -170,6 +171,17 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
               uploaded (same pipeline as project submissions). Reference files upload to R2 under{' '}
               <code>competitions_tasks_assets/</code> and the public URL is saved on the task.
             </p>
+
+            <div className="AdminTaskQuizManage__timing">
+              <h4 className="AdminTaskQuizManage__timingTitle">Quiz status &amp; schedule</h4>
+              <AdminQuizManageModal
+                competition={competition}
+                onClose={() => {}}
+                setAlert={setAlert}
+                variant="embedded"
+                sections="timing"
+              />
+            </div>
 
             <div className="AdminPanel__quizNewQuestion">
               <h4>Add task</h4>

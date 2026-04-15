@@ -2,10 +2,11 @@ const { Quiz } = require('../models');
 
 /**
  * Quiz workspace loads by competition_id (see quiz.controller resolveQuiz).
- * Quiz-type competitions must have a row in `quizzes` linked by competition_id.
+ * `quiz` and `task_quiz` competitions share a `quizzes` row for admin status / Cairo schedule
+ * (task quizzes use the same timing controls; MCQ questions remain quiz-only in admin API).
  */
 async function ensureQuizForCompetition(competition, created_by) {
-  if (!competition || competition.type !== 'quiz') return;
+  if (!competition || !['quiz', 'task_quiz'].includes(competition.type)) return;
   const cid = competition.competition_id;
   const payload = {
     title: competition.title,

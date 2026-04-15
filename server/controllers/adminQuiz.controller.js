@@ -27,8 +27,8 @@ async function loadQuizForAdminCompetition(competitionId, adminUserId) {
   if (!competition) {
     return { error: 'Competition not found', status: 404 };
   }
-  if (competition.type !== 'quiz') {
-    return { error: 'Competition is not a quiz type', status: 400 };
+  if (!['quiz', 'task_quiz'].includes(competition.type)) {
+    return { error: 'Competition is not a quiz or task quiz type', status: 400 };
   }
   let quiz = await Quiz.findOne({ where: { competition_id: cid } });
   if (!quiz) {
@@ -274,7 +274,13 @@ async function postAdminQuizQuestion(req, res) {
     if (loaded.error) {
       return res.status(loaded.status).json({ success: false, error: loaded.error });
     }
-    const { quiz } = loaded;
+    const { competition, quiz } = loaded;
+    if (competition.type !== 'quiz') {
+      return res.status(400).json({
+        success: false,
+        error: 'Quiz questions can only be managed for quiz-type competitions, not task quizzes.'
+      });
+    }
     const { question_type, question_text, points, position } = req.body || {};
 
     if (!question_type || !['mcq', 'text'].includes(question_type)) {

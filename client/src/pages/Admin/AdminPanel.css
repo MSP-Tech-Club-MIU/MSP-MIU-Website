@@ -938,6 +938,24 @@ body.admin-panel-active .SiteLayout__main {
     gap: 16px;
 }
 
+/* Quiz admin: four date/time fields on one row on wide screens */
+.AdminPanel__formRow--quizScheduleQuad {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+}
+
+@media (max-width: 1100px) {
+    .AdminPanel__formRow--quizScheduleQuad {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 520px) {
+    .AdminPanel__formRow--quizScheduleQuad {
+        grid-template-columns: 1fr;
+    }
+}
+
 .AdminPanel__modalActions {
     display: flex;
     gap: 12px;
@@ -1345,6 +1363,12 @@ body.admin-panel-active .SiteLayout__main {
     gap: 12px;
     align-items: flex-end;
     margin-bottom: 24px;
+    width: 100%;
+}
+
+.AdminPanel__quizStatusRow .AdminPanel__formGroup {
+    flex: 1 1 220px;
+    min-width: 0;
 }
 
 .AdminPanel__quizScheduleBlock {
@@ -1353,6 +1377,14 @@ body.admin-panel-active .SiteLayout__main {
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(0, 0, 0, 0.2);
     margin-bottom: 24px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.AdminPanel__quizScheduleBlock .AdminPanel__formGroup input,
+.AdminPanel__quizScheduleBlock .AdminPanel__formGroup select {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .AdminPanel__quizScheduleBlock h4 {
