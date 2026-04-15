@@ -129,12 +129,12 @@ const CompetitionWorkspace = () => {
     const hasReq =
       typeof competition.requirements === 'string' && competition.requirements.trim() !== '';
     const bc = (hasRules ? 1 : 0) + (hasReq ? 1 : 0);
-    const submitStep = bc + tasks.length;
-    if (taskQuizWizardStep >= bc && taskQuizWizardStep < submitStep) {
-      const idx = taskQuizWizardStep - bc;
-      const tid = tasks[idx]?.task_id;
-      if (tid != null) setSelectedTaskId(tid);
-    }
+    if (taskQuizWizardStep < bc) return;
+    const rel = taskQuizWizardStep - bc;
+    if (rel >= 2 * tasks.length) return;
+    const taskIdx = rel % 2 === 0 ? rel / 2 : (rel - 1) / 2;
+    const tid = tasks[taskIdx]?.task_id;
+    if (tid != null) setSelectedTaskId(tid);
   }, [
     competition?.type,
     competition?.requirements,
@@ -149,7 +149,7 @@ const CompetitionWorkspace = () => {
     const hasReq =
       typeof competition.requirements === 'string' && competition.requirements.trim() !== '';
     const bc = (hasRules ? 1 : 0) + (hasReq ? 1 : 0);
-    const maxStep = tasks.length > 0 ? bc + tasks.length : bc;
+    const maxStep = tasks.length > 0 ? bc + 2 * tasks.length - 1 : bc;
     setTaskQuizWizardStep((s) => Math.min(s, maxStep));
   }, [competition?.type, competition?.requirements, competition?.rules, tasks.length]);
 
@@ -321,10 +321,25 @@ const CompetitionWorkspace = () => {
       ? 1
       : 0
     : -1;
-  const taskQuizSubmitStepIndex =
-    tasks.length > 0 ? taskQuizBriefingCount + tasks.length : -1;
+  const taskQuizRelativeStep =
+    isTaskQuiz && taskQuizWizardStep >= taskQuizBriefingCount
+      ? taskQuizWizardStep - taskQuizBriefingCount
+      : -1;
   const taskQuizIsSubmitStep =
-    isTaskQuiz && tasks.length > 0 && taskQuizWizardStep === taskQuizSubmitStepIndex;
+    isTaskQuiz &&
+    tasks.length > 0 &&
+    taskQuizRelativeStep >= 0 &&
+    taskQuizRelativeStep % 2 === 1 &&
+    taskQuizRelativeStep < 2 * tasks.length;
+  const taskQuizIsTaskStep =
+    isTaskQuiz &&
+    tasks.length > 0 &&
+    taskQuizRelativeStep >= 0 &&
+    taskQuizRelativeStep % 2 === 0 &&
+    taskQuizRelativeStep < 2 * tasks.length;
+  const taskQuizSubmitForTaskIndex = taskQuizIsSubmitStep
+    ? (taskQuizRelativeStep - 1) / 2
+    : -1;
   const taskQuizIsRulesStep =
     isTaskQuiz && taskQuizHasRulesContent && taskQuizWizardStep === taskQuizRulesStepIndex;
   const taskQuizIsRequirementsStep =
@@ -332,21 +347,14 @@ const CompetitionWorkspace = () => {
     taskQuizHasRequirementsContent &&
     taskQuizWizardStep === taskQuizRequirementsStepIndex;
   const taskQuizIsBriefingStep = taskQuizIsRulesStep || taskQuizIsRequirementsStep;
-  const taskQuizIsTaskStep =
-    isTaskQuiz &&
-    tasks.length > 0 &&
-    taskQuizWizardStep >= taskQuizBriefingCount &&
-    taskQuizWizardStep < taskQuizBriefingCount + tasks.length;
-  const taskQuizWizardTaskIndex = taskQuizIsTaskStep
-    ? taskQuizWizardStep - taskQuizBriefingCount
-    : -1;
+  const taskQuizWizardTaskIndex = taskQuizIsTaskStep ? taskQuizRelativeStep / 2 : -1;
   const taskQuizPageTask =
     taskQuizWizardTaskIndex >= 0 ? tasks[taskQuizWizardTaskIndex] : null;
   const taskQuizPageRefUrl = taskQuizPageTask
     ? safeTaskAssetUrl(taskQuizPageTask.assets_url)
     : null;
   const taskQuizTotalPages =
-    tasks.length > 0 ? taskQuizBriefingCount + tasks.length + 1 : taskQuizBriefingCount + 1;
+    tasks.length > 0 ? taskQuizBriefingCount + 2 * tasks.length : taskQuizBriefingCount + 1;
   const taskQuizCurrentPage = taskQuizWizardStep + 1;
 
   const taskQuizGoBack = () => setTaskQuizWizardStep((s) => Math.max(0, s - 1));
@@ -355,7 +363,7 @@ const CompetitionWorkspace = () => {
     if (!isTaskQuiz) return;
     const bc = taskQuizBriefingCount;
     const T = tasks.length;
-    const maxStep = T > 0 ? bc + T : bc;
+    const maxStep = T > 0 ? bc + 2 * T - 1 : bc;
     setTaskQuizWizardStep((s) => Math.min(s + 1, maxStep));
   };
 
@@ -475,7 +483,9 @@ const CompetitionWorkspace = () => {
               <p className="CompetitionWorkspace__taskQuizBriefingIntro">
                 Read the rules carefully. Confirm to continue
                 {taskQuizHasRequirementsContent ? ' to the requirements page' : ''}
-                {tasks.length > 0 ? ', then through each task.' : '.'}
+                {tasks.length > 0
+                  ? ', then each task on its own page followed by a submission page for that task.'
+                  : '.'}
               </p>
               <div className="CompetitionWorkspace__taskQuizBriefingScroll">
                 <div className="CompetitionWorkspace__taskQuizBriefingBlock">
@@ -516,7 +526,7 @@ const CompetitionWorkspace = () => {
               <h2 className="CompetitionWorkspace__taskQuizBriefingTitle">Requirements</h2>
               <p className="CompetitionWorkspace__taskQuizBriefingIntro">
                 Confirm when you have read the requirements
-                {tasks.length > 0 ? ' to open the tasks.' : '.'}
+                {tasks.length > 0 ? ' to start the tasks (each task, then submit for that task).' : '.'}
               </p>
               <div className="CompetitionWorkspace__taskQuizBriefingScroll">
                 <div className="CompetitionWorkspace__taskQuizBriefingBlock">
@@ -595,17 +605,8 @@ const CompetitionWorkspace = () => {
                   disabled={!taskQuizPageTask}
                   onClick={taskQuizGoNext}
                 >
-                  {taskQuizWizardStep === taskQuizBriefingCount + tasks.length - 1 ? (
-                    <>
-                      Next — Submit
-                      <FiChevronRight size={22} aria-hidden />
-                    </>
-                  ) : (
-                    <>
-                      Next
-                      <FiChevronRight size={22} aria-hidden />
-                    </>
-                  )}
+                  Next — Submit for this task
+                  <FiChevronRight size={22} aria-hidden />
                 </button>
               </div>
             </motion.div>
@@ -646,6 +647,11 @@ const CompetitionWorkspace = () => {
 
           {(!isTaskQuiz || taskQuizIsSubmitStep) && (
           <motion.div
+            key={
+              isTaskQuiz && taskQuizIsSubmitStep
+                ? `task-quiz-submit-${taskQuizSubmitForTaskIndex}`
+                : 'workspace-submission'
+            }
             className={
               isTaskQuiz
                 ? 'CompetitionWorkspace__submission CompetitionWorkspace__submission--taskQuizFull'
@@ -660,17 +666,14 @@ const CompetitionWorkspace = () => {
                 <button
                   type="button"
                   className="CompetitionWorkspace__taskQuizBackBtn"
-                  onClick={() =>
-                    setTaskQuizWizardStep(
-                      taskQuizSubmitStepIndex > 0 ? taskQuizSubmitStepIndex - 1 : 0
-                    )
-                  }
+                  onClick={taskQuizGoBack}
                 >
                   <FiArrowLeft size={20} aria-hidden />
-                  Back to tasks
+                  Back to task
                 </button>
                 <span className="CompetitionWorkspace__taskQuizWizardProgress">
-                  Page {taskQuizCurrentPage} of {taskQuizTotalPages} — submission
+                  Page {taskQuizCurrentPage} of {taskQuizTotalPages} — submission ·{' '}
+                  {tasks[taskQuizSubmitForTaskIndex]?.title || `Task ${taskQuizSubmitForTaskIndex + 1}`}
                 </span>
               </div>
             )}
@@ -897,6 +900,21 @@ const CompetitionWorkspace = () => {
                   )}
                 </button>
               </form>
+              {isTaskQuiz && taskQuizIsSubmitStep && taskQuizSubmitForTaskIndex < tasks.length - 1 && (
+                <div className="CompetitionWorkspace__taskQuizPostSubmit">
+                  <p className="CompetitionWorkspace__taskQuizPostSubmitHint">
+                    When you are finished submitting for this task, continue to the next one.
+                  </p>
+                  <button
+                    type="button"
+                    className="CompetitionWorkspace__taskQuizNextBtn"
+                    onClick={taskQuizGoNext}
+                  >
+                    Continue to next task
+                    <FiChevronRight size={22} aria-hidden />
+                  </button>
+                </div>
+              )}
             </div>
             ) : (
               <div className="CompetitionWorkspace__submitForm">

@@ -211,6 +211,19 @@
     margin-bottom: 12px;
 }
 
+.CompetitionWorkspace__taskQuizPostSubmit {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.CompetitionWorkspace__taskQuizPostSubmitHint {
+    margin: 0 0 14px;
+    font-size: .9rem;
+    line-height: 1.5;
+    color: rgba(197, 218, 233, .88);
+}
+
 .CompetitionWorkspace__taskQuizQuestion {
     padding: 32px 36px 36px;
     background: linear-gradient(145deg, rgba(13, 49, 89, .35), rgba(29, 79, 130, .18));
