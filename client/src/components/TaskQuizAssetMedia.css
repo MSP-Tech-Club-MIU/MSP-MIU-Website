@@ -55,6 +55,27 @@
   max-height: min(72vh, 720px);
 }
 
+.TaskQuizAssetMedia--hero .TaskQuizAssetMedia__img {
+  display: block;
+  width: 100%;
+  max-height: min(82vh, 920px);
+  object-fit: contain;
+}
+
+.TaskQuizAssetMedia--hero .TaskQuizAssetMedia__iframe {
+  width: 100%;
+  min-height: min(68vh, 720px);
+  height: min(78vh, 820px);
+  border: 0;
+  display: block;
+}
+
+.TaskQuizAssetMedia--hero .TaskQuizAssetMedia__video {
+  display: block;
+  width: 100%;
+  max-height: min(82vh, 920px);
+}
+
 .TaskQuizAssetMedia__fileLink {
   display: inline-flex;
   align-items: center;

@@ -4,14 +4,18 @@ import './TaskQuizAssetMedia.css';
 
 /**
  * Renders a task reference asset from an https URL (e.g. R2 public URL).
- * @param {'thumb'|'large'} variant
+ * @param {'thumb'|'large'|'hero'} variant — hero = full workspace focus (task quiz question step)
  */
 export default function TaskQuizAssetMedia({ url, variant = 'large', title = 'Task reference' }) {
   const safe = safeTaskAssetUrl(url);
   if (!safe) return null;
   const kind = taskQuizAssetKind(safe);
   const rootClass =
-    variant === 'thumb' ? 'TaskQuizAssetMedia TaskQuizAssetMedia--thumb' : 'TaskQuizAssetMedia TaskQuizAssetMedia--large';
+    variant === 'thumb'
+      ? 'TaskQuizAssetMedia TaskQuizAssetMedia--thumb'
+      : variant === 'hero'
+        ? 'TaskQuizAssetMedia TaskQuizAssetMedia--hero'
+        : 'TaskQuizAssetMedia TaskQuizAssetMedia--large';
 
   if (kind === 'image') {
     return (

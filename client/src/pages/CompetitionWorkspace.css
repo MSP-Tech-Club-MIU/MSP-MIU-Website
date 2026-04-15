@@ -87,6 +87,289 @@
     gap: 36px;
 }
 
+/* task_quiz: one step at a time — full-width question, then submission */
+.CompetitionWorkspace__grid--taskQuizSolo {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    align-items: stretch;
+}
+
+.CompetitionWorkspace__taskQuizBriefing {
+    padding: 32px 36px 36px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .35), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    min-height: min(72vh, 800px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingTitle {
+    margin: 0;
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 700;
+    color: #eaf2ff;
+}
+
+.CompetitionWorkspace__taskQuizBriefingIntro {
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1.55;
+    color: rgba(197, 218, 233, .9);
+    max-width: 52rem;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(52vh, 560px);
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-right: -4px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar-thumb {
+    background: rgba(3, 169, 244, .35);
+    border-radius: 999px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingBlock {
+    padding: 20px 22px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizBriefingBlockTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    font-size: 1.1rem;
+    font-weight: 650;
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__taskQuizActions--briefing {
+    margin-top: 8px;
+}
+
+.CompetitionWorkspace__taskQuizActions--wizard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.CompetitionWorkspace__taskQuizWizardSpacer {
+    flex: 1;
+    min-width: 8px;
+}
+
+.CompetitionWorkspace__taskQuizWizardBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizWizardProgress {
+    font-size: .84rem;
+    font-weight: 650;
+    color: rgba(142, 194, 240, .92);
+    letter-spacing: .02em;
+}
+
+.CompetitionWorkspace__taskQuizWizardStepLabel {
+    font-size: .9rem;
+    font-weight: 600;
+    color: rgba(197, 218, 233, .88);
+}
+
+.CompetitionWorkspace__taskQuizSubmitHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.CompetitionWorkspace__taskQuizQuestion {
+    padding: 32px 36px 36px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .35), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    min-height: min(78vh, 860px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.CompetitionWorkspace__taskQuizPager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: rgba(0, 0, 0, .22);
+    color: #c5dae9;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn:hover:not(:disabled) {
+    border-color: rgba(3, 169, 244, .45);
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.CompetitionWorkspace__taskQuizPagerMeta {
+    font-size: .88rem;
+    font-weight: 650;
+    color: rgba(142, 194, 240, .95);
+    letter-spacing: .02em;
+}
+
+.CompetitionWorkspace__taskQuizHeading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px 16px;
+}
+
+.CompetitionWorkspace__taskQuizTitle {
+    margin: 0;
+    flex: 1 1 240px;
+    font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+    font-weight: 700;
+    color: #eaf2ff;
+    line-height: 1.25;
+}
+
+.CompetitionWorkspace__taskQuizBody {
+    color: rgba(197, 218, 233, .95);
+    font-size: 1.02rem;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    max-width: 920px;
+}
+
+.CompetitionWorkspace__taskQuizAssetWrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+}
+
+.CompetitionWorkspace__taskQuizAssetCaption {
+    margin: 0 0 12px;
+    font-size: .82rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: rgba(142, 194, 240, .85);
+}
+
+.CompetitionWorkspace__taskQuizActions {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.CompetitionWorkspace__taskQuizNextBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0077cc, #03a9f4);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 650;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(3, 169, 244, .3);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizNextBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(3, 169, 244, .45);
+}
+
+.CompetitionWorkspace__taskQuizNextBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.CompetitionWorkspace__taskQuizBackBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .14);
+    color: #c5dae9;
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizBackBtn:hover {
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(3, 169, 244, .35);
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__submission--taskQuizFull {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+}
+
 /* Tasks Column */
 .CompetitionWorkspace__tasks {
     display: flex;
@@ -587,6 +870,24 @@
     .CompetitionWorkspace__currentSubmission,
     .CompetitionWorkspace__submitForm {
         padding: 24px 20px;
+    }
+
+    .CompetitionWorkspace__taskQuizBriefing,
+    .CompetitionWorkspace__taskQuizQuestion {
+        padding: 24px 20px 28px;
+        min-height: unset;
+    }
+
+    .CompetitionWorkspace__taskQuizBriefingScroll {
+        max-height: min(48vh, 420px);
+    }
+
+    .CompetitionWorkspace__taskQuizNextBtn {
+        width: 100%;
+    }
+
+    .CompetitionWorkspace__taskQuizActions {
+        justify-content: stretch;
     }
 
     .CompetitionWorkspace__submissionInfo strong {
