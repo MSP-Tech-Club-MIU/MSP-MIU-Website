@@ -16,6 +16,7 @@ const Announcement = require('./Announcement');
 
 // Competition-related models
 const Competition = require('./Competition');
+const CompetitionTask = require('./CompetitionTask');
 const Team = require('./Team');
 const TeamMember = require('./TeamMember');
 const TeamInvitation = require('./TeamInvitation');
@@ -46,6 +47,7 @@ const models = {
   Suggestion,
   Announcement,
   Competition,
+  CompetitionTask,
   Team,
   TeamMember,
   TeamInvitation,
@@ -208,6 +210,17 @@ Team.belongsTo(Competition, {
 Competition.hasMany(Team, {
   foreignKey: 'competition_id',
   as: 'teams'
+});
+
+Competition.hasMany(CompetitionTask, {
+  foreignKey: 'competition_id',
+  as: 'tasks',
+  onDelete: 'CASCADE'
+});
+CompetitionTask.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
 });
 
 Team.belongsTo(User, {

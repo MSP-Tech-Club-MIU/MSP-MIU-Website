@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { toCairoDateAndTimeStrings } from '../../utils/quizTimeEgypt';
 
 /**
  * Admin quiz builder: status, questions, MCQ/text options (with correct answer).
@@ -21,6 +22,11 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
   const [optionDrafts, setOptionDrafts] = useState({});
   const [newOptionText, setNewOptionText] = useState({});
   const [textExpectedByQuestion, setTextExpectedByQuestion] = useState({});
+  const [schedStartDate, setSchedStartDate] = useState('');
+  const [schedStartTime, setSchedStartTime] = useState('');
+  const [schedEndDate, setSchedEndDate] = useState('');
+  const [schedEndTime, setSchedEndTime] = useState('');
+  const [schedTimeLimit, setSchedTimeLimit] = useState('');
 
   const syncDraftsFromQuiz = useCallback((data) => {
     if (!data?.questions) return;
@@ -71,6 +77,21 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
     };
   }, [competitionId, setAlert, syncDraftsFromQuiz]);
 
+  useEffect(() => {
+    if (!quizData?.start_at) return;
+    const s = toCairoDateAndTimeStrings(quizData.start_at);
+    const e = toCairoDateAndTimeStrings(quizData.end_at);
+    setSchedStartDate(s.date);
+    setSchedStartTime(s.time);
+    setSchedEndDate(e.date);
+    setSchedEndTime(e.time);
+    setSchedTimeLimit(
+      quizData.time_limit_minutes != null && Number(quizData.time_limit_minutes) > 0
+        ? String(quizData.time_limit_minutes)
+        : ''
+    );
+  }, [quizData?.start_at, quizData?.end_at, quizData?.time_limit_minutes]);
+
   const run = async (action, successMessage) => {
     setBusy(true);
     try {
@@ -91,6 +112,25 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
       () => ApiService.patchAdminQuiz(competitionId, { status: statusDraft }),
       'Quiz status updated.'
     );
+
+  const saveSchedule = () => {
+    if (!schedStartDate || !schedStartTime || !schedEndDate || !schedEndTime) {
+      setAlert({ type: 'error', message: 'Set both start and end date and time (Cairo).' });
+      return;
+    }
+    const start_at_cairo = `${schedStartDate}T${schedStartTime}`;
+    const end_at_cairo = `${schedEndDate}T${schedEndTime}`;
+    const tl = String(schedTimeLimit || '').trim();
+    return run(
+      () =>
+        ApiService.patchAdminQuiz(competitionId, {
+          start_at_cairo,
+          end_at_cairo,
+          time_limit_minutes: tl === '' ? null : Number(tl)
+        }),
+      'Quiz schedule updated.'
+    );
+  };
 
   const addQuestion = () => {
     const text = (newQuestion.question_text || '').trim();
@@ -244,6 +284,73 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
                 onClick={saveStatus}
               >
                 Save status
+              </button>
+            </div>
+
+            <div className="AdminPanel__quizScheduleBlock">
+              <h4>Quiz window &amp; duration (Africa / Cairo)</h4>
+              <p className="AdminPanel__quizHint">
+                Times below are <strong>local Egypt (Cairo)</strong> wall clock, including daylight saving when
+                it applies. The quiz automatically submits each in-progress attempt at the earlier of: scheduled
+                end, or (optional) time limit from when the participant started.
+              </p>
+              <div className="AdminPanel__formRow">
+                <label className="AdminPanel__formGroup">
+                  Start date
+                  <input
+                    type="date"
+                    value={schedStartDate}
+                    disabled={busy}
+                    onChange={(e) => setSchedStartDate(e.target.value)}
+                  />
+                </label>
+                <label className="AdminPanel__formGroup">
+                  Start time
+                  <input
+                    type="time"
+                    value={schedStartTime}
+                    disabled={busy}
+                    onChange={(e) => setSchedStartTime(e.target.value)}
+                  />
+                </label>
+                <label className="AdminPanel__formGroup">
+                  End date
+                  <input
+                    type="date"
+                    value={schedEndDate}
+                    disabled={busy}
+                    onChange={(e) => setSchedEndDate(e.target.value)}
+                  />
+                </label>
+                <label className="AdminPanel__formGroup">
+                  End time
+                  <input
+                    type="time"
+                    value={schedEndTime}
+                    disabled={busy}
+                    onChange={(e) => setSchedEndTime(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="AdminPanel__formGroup">
+                Max minutes per attempt (optional)
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 45 — leave empty to use only the end time above"
+                  value={schedTimeLimit}
+                  disabled={busy}
+                  onChange={(e) => setSchedTimeLimit(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                disabled={busy}
+                onClick={saveSchedule}
+              >
+                Save schedule
               </button>
             </div>
 

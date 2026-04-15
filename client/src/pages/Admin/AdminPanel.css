@@ -1347,6 +1347,19 @@ body.admin-panel-active .SiteLayout__main {
     margin-bottom: 24px;
 }
 
+.AdminPanel__quizScheduleBlock {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.2);
+    margin-bottom: 24px;
+}
+
+.AdminPanel__quizScheduleBlock h4 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+}
+
 .AdminPanel__quizNewQuestion {
     padding: 16px;
     border-radius: 12px;

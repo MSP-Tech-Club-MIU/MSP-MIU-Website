@@ -165,6 +165,9 @@ const CompetitionDetails = () => {
     if (competition.type === 'quiz') {
       return 'Answer in the team workspace (no ZIP or repository upload).';
     }
+    if (competition.type === 'task_quiz') {
+      return 'Complete each task from the team workspace (ZIP and/or links per organizer settings).';
+    }
     const mode = competition.submission_mode;
     if (mode === 'upload') return 'ZIP file via workspace upload (stored securely).';
     if (mode === 'link') return 'Repository and/or live demo links.';
@@ -177,6 +180,14 @@ const CompetitionDetails = () => {
     if (!competition) return '';
     if (competition.type === 'quiz') {
       return 'Auto-graded from your quiz answers.';
+    }
+    if (competition.type === 'task_quiz') {
+      const ev = competition.evaluation_mode;
+      if (ev === 'manual') return 'Judges review each task submission manually.';
+      if (ev === 'auto') return 'Automated scoring on each ZIP upload (when provided).';
+      if (ev === 'hybrid') return 'Automated ZIP scoring plus manual judge input.';
+      if (ev === 'none') return 'No scoring pipeline configured.';
+      return ev || '—';
     }
     const ev = competition.evaluation_mode;
     if (ev === 'manual') return 'Judges review submissions manually.';
@@ -336,10 +347,12 @@ const CompetitionDetails = () => {
             <p>
               <strong>Type:</strong>{' '}
               {competition.type === 'quiz'
-                ? 'Quiz'
-                : competition.type === 'external'
-                  ? 'External'
-                  : 'Project'}
+                ? 'Quiz (MCQ / text)'
+                : competition.type === 'task_quiz'
+                  ? 'Task quiz'
+                  : competition.type === 'external'
+                    ? 'External'
+                    : 'Project'}
             </p>
             <p style={{ marginTop: 8 }}>
               <strong>Submissions:</strong> {formatSubmissionLabel()}
@@ -388,6 +401,31 @@ const CompetitionDetails = () => {
                     {competition.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
                   </button>
                 </div>
+              </div>
+            )}
+            {competition.type === 'task_quiz' && (
+              <div className="CompetitionDetailsPage__quizCta">
+                <p className="CompetitionDetailsPage__quizCtaHint">
+                  Tasks (instructions and optional reference images) live in your{' '}
+                  <strong>team workspace</strong>. Submit each task separately—ZIP and/or links follow this
+                  competition&apos;s submission mode. Evaluation follows the evaluation mode above.
+                </p>
+                {userTeam ? (
+                  <div className="CompetitionDetailsPage__quizCtaButtons">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/competitions/${id}/team/${userTeam.team_id}`)}
+                      className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary CompetitionDetailsPage__btn--quizStart"
+                    >
+                      <FiPlayCircle size={20} aria-hidden />
+                      Open team workspace
+                    </button>
+                  </div>
+                ) : (
+                  <p className="CompetitionDetailsPage__quizCtaHint" style={{ marginTop: 8 }}>
+                    Join or create a team below, then open the workspace to see the task list.
+                  </p>
+                )}
               </div>
             )}
           </div>

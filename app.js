@@ -59,9 +59,21 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "client/public/index.html"));
 });
 
+const { runAutoSubmitExpiredAttempts } = require("./server/services/quizAttemptLifecycle");
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  setInterval(() => {
+    runAutoSubmitExpiredAttempts().catch((err) =>
+      console.error("[quiz-auto-submit]", err)
+    );
+  }, 60_000);
+  setTimeout(() => {
+    runAutoSubmitExpiredAttempts().catch((err) =>
+      console.error("[quiz-auto-submit]", err)
+    );
+  }, 10_000);
 });
 
 module.exports = app;

@@ -82,6 +82,11 @@
     align-items: start;
 }
 
+.CompetitionWorkspace__grid--taskQuiz {
+    grid-template-columns: minmax(0, 1.4fr) minmax(440px, 520px);
+    gap: 36px;
+}
+
 /* Tasks Column */
 .CompetitionWorkspace__tasks {
     display: flex;
@@ -105,6 +110,15 @@
     font-size: 1.4rem;
     font-weight: 650;
     color: #8EC2F0;
+}
+
+.CompetitionWorkspace__section--taskQuiz {
+    min-height: min(70vh, 720px);
+    padding-bottom: 36px;
+}
+
+.CompetitionWorkspace__section--taskQuiz .CompetitionWorkspace__taskList {
+    gap: 16px;
 }
 
 .CompetitionWorkspace__description,
@@ -442,9 +456,107 @@
     font-size: 1.05rem;
 }
 
+.CompetitionWorkspace__taskList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.CompetitionWorkspace__taskList li {
+    margin: 0;
+}
+
+.CompetitionWorkspace__taskBtn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.2);
+    color: #eaf2ff;
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.CompetitionWorkspace__taskBtn:hover {
+    border-color: rgba(3, 169, 244, 0.45);
+}
+
+.CompetitionWorkspace__taskBtn--active {
+    border-color: rgba(3, 169, 244, 0.75);
+    background: rgba(3, 169, 244, 0.12);
+}
+
+.CompetitionWorkspace__taskBadge {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(46, 204, 113, 0.2);
+    color: #b8f5c8;
+}
+
+.CompetitionWorkspace__taskBadge--pending {
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffe7a3;
+}
+
+.CompetitionWorkspace__taskDesc {
+    margin-top: 8px;
+    padding-left: 2px;
+    font-size: 0.92rem;
+    color: rgba(234, 242, 255, 0.85);
+    white-space: pre-wrap;
+}
+
+.CompetitionWorkspace__taskRef {
+    margin-top: 10px;
+}
+
+.CompetitionWorkspace__taskRefBox {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(3, 169, 244, 0.25);
+    background: rgba(3, 169, 244, 0.06);
+}
+
+.CompetitionWorkspace__taskRefCaption {
+    margin: 0 0 12px;
+    font-size: 0.88rem;
+    color: rgba(197, 218, 233, 0.95);
+    line-height: 1.45;
+}
+
+.CompetitionWorkspace__taskRefBox--media {
+    padding: 18px 18px 20px;
+}
+
+.CompetitionWorkspace__taskRefNote {
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-size: 0.82rem;
+    color: rgba(197, 218, 233, 0.75);
+    line-height: 1.4;
+}
+
+.CompetitionWorkspace__taskRefNote code {
+    font-size: 0.9em;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
-    .CompetitionWorkspace__grid {
+    .CompetitionWorkspace__grid,
+    .CompetitionWorkspace__grid--taskQuiz {
         grid-template-columns: 1fr;
     }
 

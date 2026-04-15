@@ -5,6 +5,8 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
+import { safeTaskAssetUrl } from '../utils/taskQuizAssets';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
@@ -29,6 +31,9 @@ const CompetitionWorkspace = () => {
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
   const [submission, setSubmission] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
+  const [taskSubmissionMap, setTaskSubmissionMap] = useState({});
   const [error, setError] = useState(null);
 
   // Form state
@@ -46,18 +51,44 @@ const CompetitionWorkspace = () => {
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
       ]);
-      const submissionData = competitionData?.type === 'quiz'
-        ? null
-        : await ApiService.getTeamSubmission(competitionId, teamId).catch(() => null);
 
       setCompetition(competitionData);
       setTeam(teamData);
-      setSubmission(submissionData);
 
-      if (submissionData) {
-        setSubmitType(submissionData.submit_type);
-        setGithubUrl(submissionData.repo_url || '');
-        setLiveUrl(submissionData.live_url || '');
+      if (competitionData?.type === 'task_quiz') {
+        const taskList = await ApiService.getCompetitionTasks(competitionId).catch(() => []);
+        const list = Array.isArray(taskList) ? taskList : [];
+        const map = {};
+        await Promise.all(
+          list.map(async (t) => {
+            map[t.task_id] = await ApiService.getTeamSubmission(competitionId, teamId, t.task_id).catch(
+              () => null
+            );
+          })
+        );
+        setTasks(list);
+        setTaskSubmissionMap(map);
+        setSelectedTaskId((prev) =>
+          prev != null && list.some((x) => x.task_id === prev) ? prev : list[0]?.task_id ?? null
+        );
+      } else if (competitionData?.type === 'quiz') {
+        setTasks([]);
+        setSelectedTaskId(null);
+        setTaskSubmissionMap({});
+        setSubmission(null);
+      } else {
+        setTasks([]);
+        setSelectedTaskId(null);
+        setTaskSubmissionMap({});
+        const submissionData = await ApiService
+          .getTeamSubmission(competitionId, teamId)
+          .catch(() => null);
+        setSubmission(submissionData);
+        if (submissionData) {
+          setSubmitType(submissionData.submit_type);
+          setGithubUrl(submissionData.repo_url || '');
+          setLiveUrl(submissionData.live_url || '');
+        }
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -66,6 +97,22 @@ const CompetitionWorkspace = () => {
       setLoading(false);
     }
   }, [competitionId, teamId]);
+
+  useEffect(() => {
+    if (competition?.type !== 'task_quiz' || selectedTaskId == null) return;
+    const sub = taskSubmissionMap[selectedTaskId] || null;
+    setSubmission(sub);
+    if (sub) {
+      setSubmitType(sub.submit_type);
+      setGithubUrl(sub.repo_url || '');
+      setLiveUrl(sub.live_url || '');
+    } else {
+      setSubmitType('zip');
+      setGithubUrl('');
+      setLiveUrl('');
+    }
+    setSelectedFile(null);
+  }, [competition?.type, selectedTaskId, taskSubmissionMap]);
 
   useEffect(() => {
     if (!ApiService.isAuthenticated()) {
@@ -135,6 +182,15 @@ const CompetitionWorkspace = () => {
       formData.append('competition_id', competitionId);
       formData.append('submit_type', submitType);
 
+      if (competition?.type === 'task_quiz') {
+        if (selectedTaskId == null) {
+          setError('Select a task first.');
+          setSubmitting(false);
+          return;
+        }
+        formData.append('task_id', String(selectedTaskId));
+      }
+
       if (selectedFile) {
         formData.append('file', selectedFile);
       }
@@ -194,6 +250,7 @@ const CompetitionWorkspace = () => {
   const canSubmit = () => {
     if (!competition) return false;
     if (competition.type === 'quiz') return false;
+    if (competition.type === 'task_quiz' && (!tasks.length || selectedTaskId == null)) return false;
     if (competition.type === 'external' || competition.submission_mode === 'none') return false;
     if (competition.status !== 'open') return false;
 
@@ -202,8 +259,12 @@ const CompetitionWorkspace = () => {
     return now < end;
   };
   const allowedSubmitTypes = getAllowedSubmitTypes();
-  const isFrontendMultitask = competition?.config?.multiTask === true;
-  const isQuizCompetition = competition?.type === 'quiz';
+  const isFrontendMultitask = competition?.type === 'project' && competition?.config?.multiTask === true;
+  const isClassicQuiz = competition?.type === 'quiz';
+  const isTaskQuiz = competition?.type === 'task_quiz';
+  const selectedTask =
+    isTaskQuiz && selectedTaskId != null ? tasks.find((x) => x.task_id === selectedTaskId) : null;
+  const selectedTaskRefUrl = selectedTask ? safeTaskAssetUrl(selectedTask.assets_url) : null;
 
   if (loading) {
     return <PageLoader />;
@@ -258,7 +319,11 @@ const CompetitionWorkspace = () => {
           )}
         </motion.header>
 
-        <div className="CompetitionWorkspace__grid">
+        <div
+          className={`CompetitionWorkspace__grid${
+            isTaskQuiz ? ' CompetitionWorkspace__grid--taskQuiz' : ''
+          }`}
+        >
           {/* Left Column - Tasks & Description */}
           <motion.div
             className="CompetitionWorkspace__tasks"
@@ -299,6 +364,62 @@ const CompetitionWorkspace = () => {
                 </div>
               </div>
             )}
+
+            {isTaskQuiz && (
+              <div className="CompetitionWorkspace__section CompetitionWorkspace__section--taskQuiz">
+                <h2 className="CompetitionWorkspace__sectionTitle">
+                  <FiFileText size={24} />
+                  Tasks
+                </h2>
+                {tasks.length === 0 ? (
+                  <p className="CompetitionWorkspace__description">
+                    Tasks are not published yet. Check back after organizers add them in the admin panel.
+                  </p>
+                ) : (
+                  <ul className="CompetitionWorkspace__taskList">
+                    {tasks.map((t) => (
+                      <li key={t.task_id}>
+                        <button
+                          type="button"
+                          className={
+                            selectedTaskId === t.task_id
+                              ? 'CompetitionWorkspace__taskBtn CompetitionWorkspace__taskBtn--active'
+                              : 'CompetitionWorkspace__taskBtn'
+                          }
+                          onClick={() => setSelectedTaskId(t.task_id)}
+                        >
+                          <strong>{t.title}</strong>
+                          {taskSubmissionMap[t.task_id] ? (
+                            <span className="CompetitionWorkspace__taskBadge">Submitted</span>
+                          ) : (
+                            <span className="CompetitionWorkspace__taskBadge CompetitionWorkspace__taskBadge--pending">
+                              Not submitted
+                            </span>
+                          )}
+                        </button>
+                        {t.description ? (
+                          <div className="CompetitionWorkspace__taskDesc">{t.description}</div>
+                        ) : null}
+                        {safeTaskAssetUrl(t.assets_url) ? (
+                          <div className="CompetitionWorkspace__taskRef">
+                            <TaskQuizAssetMedia
+                              url={t.assets_url}
+                              variant="thumb"
+                              title={`Reference for ${t.title}`}
+                            />
+                          </div>
+                        ) : t.assets_url ? (
+                          <p className="CompetitionWorkspace__taskRefNote">
+                            A reference link is set for this task; only secure <code>http(s)</code> URLs are shown
+                            inline here.
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </motion.div>
 
           {/* Right Column - Submission */}
@@ -309,7 +430,7 @@ const CompetitionWorkspace = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             {/* Current Submission Status */}
-            {!isQuizCompetition && submission && (
+            {!isClassicQuiz && submission && (
               <div className="CompetitionWorkspace__currentSubmission">
                 <h3 className="CompetitionWorkspace__submissionTitle">
                   <FiCheckCircle size={20} />
@@ -359,12 +480,48 @@ const CompetitionWorkspace = () => {
             )}
 
             {/* Submission Form */}
-            {!isQuizCompetition ? (
+            {!isClassicQuiz ? (
             <div className="CompetitionWorkspace__submitForm">
               <h3 className="CompetitionWorkspace__submissionTitle">
                 <FiSend size={20} />
-                {submission ? 'Update Submission' : 'Submit Your Work'}
+                {isTaskQuiz && selectedTaskId
+                  ? `${submission ? 'Update' : 'Submit'} — ${
+                      tasks.find((x) => x.task_id === selectedTaskId)?.title || 'Task'
+                    }`
+                  : submission
+                    ? 'Update Submission'
+                    : 'Submit Your Work'}
               </h3>
+
+              {isTaskQuiz && selectedTaskRefUrl ? (
+                <div className="CompetitionWorkspace__taskRefBox CompetitionWorkspace__taskRefBox--media">
+                  <p className="CompetitionWorkspace__taskRefCaption">
+                    Organizer reference — use for inspiration; your submission does not need to match exactly.
+                  </p>
+                  <TaskQuizAssetMedia
+                    url={selectedTask.assets_url}
+                    variant="large"
+                    title={`Reference for ${selectedTask?.title || 'this task'}`}
+                  />
+                </div>
+              ) : isTaskQuiz && selectedTask?.assets_url && !selectedTaskRefUrl ? (
+                <div className="CompetitionWorkspace__taskRefBox">
+                  <p className="CompetitionWorkspace__taskRefCaption">
+                    This task includes a reference URL that cannot be embedded here (use a secure{' '}
+                    <code>http(s)</code> URL). See the task description for details.
+                  </p>
+                </div>
+              ) : null}
+
+              {isTaskQuiz && competition?.evaluation_mode && ['auto', 'hybrid'].includes(competition.evaluation_mode) && (
+                <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
+                  <FiAlertCircle size={18} />
+                  <span>
+                    Automated scoring runs when you upload a <strong>ZIP</strong> (same engine as project
+                    competitions). Link-only submissions are not auto-scored.
+                  </span>
+                </div>
+              )}
 
               {!canSubmit() && (
                 <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">

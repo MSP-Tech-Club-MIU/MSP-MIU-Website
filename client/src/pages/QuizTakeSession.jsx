@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FiArrowLeft, FiClock, FiAlertCircle } from 'react-icons/fi';
 import SEO from '../components/SEO';
@@ -63,8 +63,60 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
   const question = n ? questions[currentStep - 1] : null;
   const isSubmitted = attempt?.status === 'submitted';
 
-  const endAt = quiz?.end_at ? new Date(quiz.end_at).getTime() : null;
-  const remaining = endAt ? Math.max(0, endAt - Date.now()) : null;
+  const deadlineMs = useMemo(() => {
+    const quizEnd = quiz?.end_at ? new Date(quiz.end_at).getTime() : null;
+    const limitMin =
+      quiz?.time_limit_minutes != null && Number(quiz.time_limit_minutes) > 0
+        ? Number(quiz.time_limit_minutes)
+        : null;
+    const started = attempt?.started_at ? new Date(attempt.started_at).getTime() : null;
+    const personalEnd =
+      limitMin && started != null && !Number.isNaN(started)
+        ? started + limitMin * 60_000
+        : null;
+    if (personalEnd && quizEnd) return Math.min(personalEnd, quizEnd);
+    return personalEnd || quizEnd;
+  }, [quiz?.end_at, quiz?.time_limit_minutes, attempt?.started_at]);
+
+  const [nowMono, setNowMono] = useState(() => Date.now());
+  useEffect(() => {
+    if (isSubmitted || quiz?.status !== 'active') return undefined;
+    const id = setInterval(() => setNowMono(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isSubmitted, quiz?.status]);
+
+  const remaining = deadlineMs != null ? Math.max(0, deadlineMs - nowMono) : null;
+
+  const flowRef = useRef({});
+  flowRef.current = { question, attempt, answers, quizId, navigate };
+  const autoDoneRef = useRef(false);
+
+  useEffect(() => {
+    autoDoneRef.current = false;
+  }, [attempt?.attempt_id, deadlineMs]);
+
+  useEffect(() => {
+    if (loading || isSubmitted || quiz?.status !== 'active' || deadlineMs == null) return undefined;
+    const id = setInterval(async () => {
+      if (autoDoneRef.current || Date.now() < deadlineMs) return;
+      autoDoneRef.current = true;
+      const { question: q, attempt: att, answers: ans, quizId: qid, navigate: nav } = flowRef.current;
+      if (att?.attempt_id && q) {
+        try {
+          await flushSaveAnswer(att.attempt_id, q, ans);
+        } catch {
+          /* best-effort */
+        }
+        try {
+          await ApiService.submitQuizAttempt(att.attempt_id, {});
+        } catch {
+          /* server may have auto-submitted */
+        }
+      }
+      nav(`/quizpage/${qid}`);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [loading, isSubmitted, quiz?.status, deadlineMs, quizId]);
 
   const goBackSummary = () => navigate(`/quizpage/${quizId}`);
 
