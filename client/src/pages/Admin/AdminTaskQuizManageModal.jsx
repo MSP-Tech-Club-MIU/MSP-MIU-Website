@@ -6,8 +6,9 @@ import { safeTaskAssetUrl } from '../../utils/taskQuizAssets';
 
 /**
  * Admin: task_quiz tasks (R2 reference assets under competitions_tasks_assets/… plus manual URL).
+ * Use variant="embedded" on the full-page competition manager (no overlay).
  */
-const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
+const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal' }) => {
   const competitionId = competition?.competition_id;
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -159,26 +160,10 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
     }
   };
 
-  return (
-    <div className="AdminPanel__modalOverlay" onClick={onClose}>
-      <div
-        className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="AdminPanel__modalHeader">
-          <div>
-            <h3>Manage task quiz</h3>
-            <p className="AdminPanel__quizModalSub">{competition?.title}</p>
-          </div>
-          <button type="button" className="AdminPanel__modalClose" onClick={onClose} aria-label="Close">
-            <MdClose />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="AdminPanel__loading">Loading tasks…</div>
-        ) : (
-          <div className="AdminPanel__quizModalBody">
+  const body = loading ? (
+    <div className="AdminPanel__loading">Loading tasks…</div>
+  ) : (
+    <div className="AdminPanel__quizModalBody">
             <p className="AdminPanel__quizHint">
               Teams register the same way as other competitions. Each task has its own submission (ZIP and/or
               links per competition settings). <strong>Auto / hybrid</strong> evaluation runs when a ZIP is
@@ -389,7 +374,28 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
               )}
             </div>
           </div>
-        )}
+  );
+
+  if (variant === 'embedded') {
+    return <div className="AdminTaskQuizManage--embedded">{body}</div>;
+  }
+
+  return (
+    <div className="AdminPanel__modalOverlay" onClick={onClose}>
+      <div
+        className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="AdminPanel__modalHeader">
+          <div>
+            <h3>Manage task quiz</h3>
+            <p className="AdminPanel__quizModalSub">{competition?.title}</p>
+          </div>
+          <button type="button" className="AdminPanel__modalClose" onClick={onClose} aria-label="Close">
+            <MdClose />
+          </button>
+        </div>
+        {body}
       </div>
     </div>
   );

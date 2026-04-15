@@ -132,31 +132,128 @@
   backdrop-filter: blur(12px);
 }
 
-.CompetitionManagement__extras {
+.CompetitionManagement__summary {
   max-width: 1100px;
-  margin-top: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
 }
 
-.CompetitionManagement__linkBtn {
+.CompetitionManagement__summaryItem {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.CompetitionManagement__summaryLabel {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(197, 218, 233, 0.65);
+  margin-bottom: 6px;
+}
+
+.CompetitionManagement__summaryValue {
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__tabs {
+  max-width: 1100px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.CompetitionManagement__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 16px;
   border-radius: 10px;
-  border: 1px solid rgba(3, 169, 244, 0.35);
-  background: rgba(3, 169, 244, 0.08);
-  color: #8ec2f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  color: #b8d4ea;
   font-weight: 650;
+  font-size: 0.88rem;
   cursor: pointer;
 }
 
-.CompetitionManagement__linkBtn:hover:not(:disabled) {
-  background: rgba(3, 169, 244, 0.15);
+.CompetitionManagement__tab:hover {
+  border-color: rgba(3, 169, 244, 0.35);
+  color: #fff;
 }
 
-.CompetitionManagement__linkBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.CompetitionManagement__tab--active {
+  border-color: rgba(3, 169, 244, 0.55);
+  background: rgba(3, 169, 244, 0.12);
+  color: #fff;
+}
+
+.CompetitionManagement__tabIcon {
+  display: inline-flex;
+  opacity: 0.9;
+}
+
+.CompetitionManagement__panelCard {
+  max-width: 1100px;
+  padding: 24px 28px 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(13, 49, 89, 0.28), rgba(29, 79, 130, 0.1));
+  margin-bottom: 32px;
+}
+
+.CompetitionManagement__panelTitle {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__panelLead {
+  margin: 0 0 20px;
+  color: rgba(197, 218, 233, 0.88);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.CompetitionManagement__panelCard--teams .AdminPanel__teamsSection {
+  margin-top: 0;
+}
+
+.CompetitionManagement__teamsTableWrap {
+  overflow-x: auto;
+  margin-top: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.CompetitionManagement__btn--link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* Embedded quiz / task panels: scroll long content inside page */
+.AdminQuizManage--embedded .AdminPanel__quizModalBody,
+.AdminTaskQuizManage--embedded .AdminPanel__quizModalBody {
+  max-height: none;
+  padding-right: 4px;
+}
+
+.AdminQuizManage--embedded .AdminPanel__quizQuestionList,
+.AdminTaskQuizManage--embedded .AdminPanel__quizQuestionList {
+  max-height: min(70vh, 920px);
+  overflow-y: auto;
+  padding-right: 8px;
 }
 
 @media (max-width: 640px) {
