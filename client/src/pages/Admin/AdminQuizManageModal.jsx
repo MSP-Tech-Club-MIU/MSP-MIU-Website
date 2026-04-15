@@ -5,9 +5,9 @@ import { toCairoDateAndTimeStrings } from '../../utils/quizTimeEgypt';
 
 /**
  * Admin quiz builder: status, questions, MCQ/text options (with correct answer).
- * Loaded only from AdminPanel for quiz-type competitions.
+ * Use variant="embedded" on the full-page competition manager (no overlay).
  */
-const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
+const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal' }) => {
   const competitionId = competition?.competition_id;
   const [quizData, setQuizData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -235,28 +235,12 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
     );
   };
 
-  return (
-    <div className="AdminPanel__modalOverlay" onClick={onClose}>
-      <div
-        className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="AdminPanel__modalHeader">
-          <div>
-            <h3>Manage quiz</h3>
-            <p className="AdminPanel__quizModalSub">{competition?.title}</p>
-          </div>
-          <button type="button" className="AdminPanel__modalClose" onClick={onClose} aria-label="Close">
-            <MdClose />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="AdminPanel__loading">Loading quiz…</div>
-        ) : !quizData ? (
-          <div className="AdminPanel__emptyState">Could not load quiz.</div>
-        ) : (
-          <div className="AdminPanel__quizModalBody">
+  const body = loading ? (
+    <div className="AdminPanel__loading">Loading quiz…</div>
+  ) : !quizData ? (
+    <div className="AdminPanel__emptyState">Could not load quiz.</div>
+  ) : (
+    <div className="AdminPanel__quizModalBody">
             <p className="AdminPanel__quizHint">
               <strong>Quiz status</strong> is separate from the competition row. Setting status to{' '}
               <em>active</em> closes new team registrations for this quiz (per server rules). Participants can
@@ -606,7 +590,28 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert }) => {
               )}
             </div>
           </div>
-        )}
+  );
+
+  if (variant === 'embedded') {
+    return <div className="AdminQuizManage--embedded">{body}</div>;
+  }
+
+  return (
+    <div className="AdminPanel__modalOverlay" onClick={onClose}>
+      <div
+        className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="AdminPanel__modalHeader">
+          <div>
+            <h3>Manage quiz</h3>
+            <p className="AdminPanel__quizModalSub">{competition?.title}</p>
+          </div>
+          <button type="button" className="AdminPanel__modalClose" onClick={onClose} aria-label="Close">
+            <MdClose />
+          </button>
+        </div>
+        {body}
       </div>
     </div>
   );

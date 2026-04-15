@@ -6,13 +6,11 @@ import {
     MdSearch, MdNotifications, MdLogout, MdHome, MdAdd, MdMenu,
     MdClose, MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson,
-    MdQuiz
+    MdSettings
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import mspLogo from '../../assets/Images/msp-logo.png';
-import AdminQuizManageModal from './AdminQuizManageModal';
-import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import './AdminPanel.css';
 
 /* ═══════════════════════════════════════════════════════════
@@ -201,18 +199,6 @@ const AdminPanel = () => {
 
     // Competitions state
     const [competitions, setCompetitions] = useState([]);
-
-    // Competition Teams state
-    const [showTeamModal, setShowTeamModal] = useState(false);
-    const [viewingCompTeams, setViewingCompTeams] = useState(null); // The competition we are viewing teams for
-    const [showQuizModal, setShowQuizModal] = useState(false);
-    const [viewingQuizComp, setViewingQuizComp] = useState(null);
-    const [showTaskQuizModal, setShowTaskQuizModal] = useState(false);
-    const [viewingTaskQuizComp, setViewingTaskQuizComp] = useState(null);
-    const [teamsList, setTeamsList] = useState([]);
-    const [teamsLoading, setTeamsLoading] = useState(false);
-    const [editingTeam, setEditingTeam] = useState(null);
-    const [teamForm, setTeamForm] = useState({ team_name: '', is_locked: false });
 
     // Attendance state
     const [attendance, setAttendance] = useState([]);
@@ -442,105 +428,6 @@ const AdminPanel = () => {
         }
     }, [location.pathname, hasAccess, fetchCompetitions]);
 
-    const deleteCompetition = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this competition?')) return;
-        try {
-            await ApiService.deleteAdminCompetition(id);
-            setAlert({ type: 'success', message: 'Competition deleted successfully!' });
-            fetchCompetitions();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to delete competition' });
-        }
-    };
-
-    // ===================================
-    // Team Management (Competitions)
-    // ===================================
-    const fetchCompTeams = async (compId) => {
-        try {
-            setTeamsLoading(true);
-            const data = await ApiService.getAdminCompetitionTeams(compId);
-            setTeamsList(data || []);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to load teams' });
-        } finally {
-            setTeamsLoading(false);
-        }
-    };
-
-    const openTeamModal = async (comp) => {
-        setViewingCompTeams(comp);
-        setEditingTeam(null);
-        setTeamForm({ team_name: '', is_locked: false });
-        setShowTeamModal(true);
-        await fetchCompTeams(comp.competition_id);
-    };
-
-    const closeTeamModal = () => {
-        setShowTeamModal(false);
-        setViewingCompTeams(null);
-        setTeamsList([]);
-    };
-
-    const openQuizModal = (comp) => {
-        setViewingQuizComp(comp);
-        setShowQuizModal(true);
-    };
-
-    const closeQuizModal = () => {
-        setShowQuizModal(false);
-        setViewingQuizComp(null);
-    };
-
-    const openTaskQuizModal = (comp) => {
-        setViewingTaskQuizComp(comp);
-        setShowTaskQuizModal(true);
-    };
-
-    const closeTaskQuizModal = () => {
-        setShowTaskQuizModal(false);
-        setViewingTaskQuizComp(null);
-    };
-
-    const saveTeam = async () => {
-        if (!teamForm.team_name.trim()) {
-            setAlert({ type: 'error', message: 'Team name is required' });
-            return;
-        }
-
-        try {
-            if (editingTeam) {
-                await ApiService.updateAdminTeam(editingTeam.team_id, teamForm);
-                setAlert({ type: 'success', message: 'Team updated successfully!' });
-            } else {
-                await ApiService.createAdminTeam(viewingCompTeams.competition_id, teamForm);
-                setAlert({ type: 'success', message: 'Team created successfully!' });
-            }
-
-            setEditingTeam(null);
-            setTeamForm({ team_name: '', is_locked: false });
-            fetchCompTeams(viewingCompTeams.competition_id);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to save team' });
-        }
-    };
-
-    const editTeamSettings = (team) => {
-        setEditingTeam(team);
-        setTeamForm({ team_name: team.team_name, is_locked: team.is_locked || false });
-    };
-
-    const deleteTeam = async (teamId) => {
-        if (!window.confirm('Are you sure you want to delete this team?')) return;
-        try {
-            await ApiService.deleteAdminTeam(teamId);
-            setAlert({ type: 'success', message: 'Team deleted successfully!' });
-            fetchCompTeams(viewingCompTeams.competition_id);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to delete team' });
-        }
-    };
-
     // Attendance toggle
     const toggleAttendance = async (id, current) => {
         try {
@@ -619,8 +506,19 @@ const AdminPanel = () => {
         });
     };
 
-    const getLeaderMember = (team) => (team?.members || []).find((member) => member.role === 'leader');
-    const getTeammates = (team) => (team?.members || []).filter((member) => member.role !== 'leader');
+    const formatCompetitionType = (t) => {
+        switch (t) {
+            case 'task_quiz':
+                return 'Task quiz';
+            case 'quiz':
+                return 'Quiz';
+            case 'external':
+                return 'External';
+            case 'project':
+            default:
+                return 'Project';
+        }
+    };
 
     const handleTabChange = (key) => {
         const item = navItems.find(n => n.key === key);
@@ -967,7 +865,7 @@ const AdminPanel = () => {
                                                 {filtered.map(comp => (
                                                     <tr key={comp.competition_id}>
                                                         <td style={{ fontWeight: 600 }}>{comp.title}</td>
-                                                        <td>{comp.type || 'project'}</td>
+                                                        <td>{formatCompetitionType(comp.type)}</td>
                                                         <td>
                                                             <span className={`AdminPanel__badge AdminPanel__badge--${comp.status || 'draft'}`}>
                                                                 {comp.status}
@@ -980,45 +878,18 @@ const AdminPanel = () => {
                                                         </td>
                                                         <td>{comp.max_team_size || '-'}</td>
                                                         <td>
-                                                            {comp.type === 'quiz' && (
-                                                                <button
-                                                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
-                                                                    onClick={() => openQuizModal(comp)}
-                                                                    title="Questions, answers, quiz status"
-                                                                >
-                                                                    <MdQuiz style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
-                                                                    Manage quiz
-                                                                </button>
-                                                            )}
-                                                            {comp.type === 'task_quiz' && (
-                                                                <button
-                                                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
-                                                                    onClick={() => openTaskQuizModal(comp)}
-                                                                    title="Define tasks for this competition"
-                                                                >
-                                                                    <MdQuiz style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
-                                                                    Manage tasks
-                                                                </button>
-                                                            )}
                                                             <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
-                                                                onClick={() => openTeamModal(comp)}
-                                                            >
-                                                                View Teams
-                                                            </button>
-                                                            <button
+                                                                type="button"
                                                                 className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
                                                                 onClick={() =>
-                                                                    navigate(`/admin/competition-management/${comp.competition_id}`)
+                                                                    navigate(
+                                                                        `/admin/competition-management/${comp.competition_id}`
+                                                                    )
                                                                 }
+                                                                title="Edit competition, quiz, tasks, and teams"
                                                             >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                                                onClick={() => deleteCompetition(comp.competition_id)}
-                                                            >
-                                                                Delete
+                                                                <MdSettings style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                                Manage
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -1028,129 +899,6 @@ const AdminPanel = () => {
                                     );
                                 })()}
                             </div>
-
-                            {/* Teams Modal */}
-                            {showQuizModal && viewingQuizComp && (
-                                <AdminQuizManageModal
-                                    competition={viewingQuizComp}
-                                    onClose={closeQuizModal}
-                                    setAlert={setAlert}
-                                />
-                            )}
-
-                            {showTaskQuizModal && viewingTaskQuizComp && (
-                                <AdminTaskQuizManageModal
-                                    competition={viewingTaskQuizComp}
-                                    onClose={closeTaskQuizModal}
-                                    setAlert={setAlert}
-                                />
-                            )}
-
-                            {showTeamModal && viewingCompTeams && (
-                                <div className="AdminPanel__modalOverlay" onClick={closeTeamModal}>
-                                    <div className="AdminPanel__modalContent AdminPanel__modalContent--large" onClick={e => e.stopPropagation()}>
-                                        <div className="AdminPanel__modalHeader">
-                                            <h3>Teams: {viewingCompTeams.title}</h3>
-                                            <button className="AdminPanel__modalClose" onClick={closeTeamModal}>
-                                                <MdClose />
-                                            </button>
-                                        </div>
-
-                                        <div className="AdminPanel__teamsSection">
-                                            <div className="AdminPanel__teamForm">
-                                                <h4>{editingTeam ? 'Edit Team' : 'Add New Team'}</h4>
-                                                <div className="AdminPanel__formRow">
-                                                    <div className="AdminPanel__formGroup" style={{ flex: 2 }}>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Team Name"
-                                                            value={teamForm.team_name}
-                                                            onChange={e => setTeamForm({ ...teamForm, team_name: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="AdminPanel__formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                                                        <label htmlFor="isLocked">Locked?</label>
-                                                        <input
-                                                            id="isLocked"
-                                                            type="checkbox"
-                                                            checked={teamForm.is_locked}
-                                                            onChange={e => setTeamForm({ ...teamForm, is_locked: e.target.checked })}
-                                                            style={{ width: 'auto', marginBottom: 0 }}
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
-                                                        onClick={saveTeam}
-                                                        style={{ height: '42px' }}
-                                                    >
-                                                        {editingTeam ? 'Update Team' : 'Add Team'}
-                                                    </button>
-                                                    {editingTeam && (
-                                                        <button
-                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--secondary"
-                                                            onClick={() => {
-                                                                setEditingTeam(null);
-                                                                setTeamForm({ team_name: '', is_locked: false });
-                                                            }}
-                                                            style={{ height: '42px' }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {teamsLoading ? (
-                                                <div className="AdminPanel__loading">Loading teams...</div>
-                                            ) : teamsList.length === 0 ? (
-                                                <div className="AdminPanel__emptyState">No teams created for this competition yet.</div>
-                                            ) : (
-                                                <table className="AdminPanel__table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Team Name</th>
-                                                            <th>Members</th>
-                                                            <th>Pending invites</th>
-                                                            <th>Created By</th>
-                                                            <th>Status</th>
-                                                            <th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {teamsList.map(team => (
-                                                            <tr key={team.team_id}>
-                                                                <td style={{ fontWeight: 600 }}>{team.team_name}</td>
-                                                                <td>{team.member_count ?? 0}</td>
-                                                                <td>{team.pending_invitations_count ?? 0}</td>
-                                                                <td>{team.creator?.full_name || '—'}</td>
-                                                                <td>
-                                                                    <span className={`AdminPanel__badge AdminPanel__badge--${team.is_locked ? 'rejected' : 'approved'}`}>
-                                                                        {team.is_locked ? 'Locked' : 'Open'}
-                                                                    </span>
-                                                                </td>
-                                                                <td>
-                                                                    <button
-                                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                                                        onClick={() => editTeamSettings(team)}
-                                                                    >
-                                                                        Edit
-                                                                    </button>
-                                                                    <button
-                                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                                                        onClick={() => deleteTeam(team.team_id)}
-                                                                    >
-                                                                        Delete
-                                                                    </button>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </motion.div>
                     )}
 
