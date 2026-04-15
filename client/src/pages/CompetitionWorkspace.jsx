@@ -18,7 +18,10 @@ import {
   FiLink,
   FiFile,
   FiSend,
-  FiPlayCircle
+  FiPlayCircle,
+  FiArrowLeft,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 
 const CompetitionWorkspace = () => {
@@ -41,6 +44,8 @@ const CompetitionWorkspace = () => {
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
   const [submitType, setSubmitType] = useState('zip'); // 'zip' | 'links' | 'zip_and_links'
+  /** task_quiz: step 0 = rules/requirements (if any), then one step per task, then submit */
+  const [taskQuizWizardStep, setTaskQuizWizardStep] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -99,6 +104,10 @@ const CompetitionWorkspace = () => {
   }, [competitionId, teamId]);
 
   useEffect(() => {
+    setTaskQuizWizardStep(0);
+  }, [competitionId, teamId]);
+
+  useEffect(() => {
     if (competition?.type !== 'task_quiz' || selectedTaskId == null) return;
     const sub = taskSubmissionMap[selectedTaskId] || null;
     setSubmission(sub);
@@ -113,6 +122,36 @@ const CompetitionWorkspace = () => {
     }
     setSelectedFile(null);
   }, [competition?.type, selectedTaskId, taskSubmissionMap]);
+
+  useEffect(() => {
+    if (competition?.type !== 'task_quiz' || !tasks.length) return;
+    const hasRules = typeof competition.rules === 'string' && competition.rules.trim() !== '';
+    const hasReq =
+      typeof competition.requirements === 'string' && competition.requirements.trim() !== '';
+    const bc = (hasRules ? 1 : 0) + (hasReq ? 1 : 0);
+    const submitStep = bc + tasks.length;
+    if (taskQuizWizardStep >= bc && taskQuizWizardStep < submitStep) {
+      const idx = taskQuizWizardStep - bc;
+      const tid = tasks[idx]?.task_id;
+      if (tid != null) setSelectedTaskId(tid);
+    }
+  }, [
+    competition?.type,
+    competition?.requirements,
+    competition?.rules,
+    taskQuizWizardStep,
+    tasks,
+  ]);
+
+  useEffect(() => {
+    if (competition?.type !== 'task_quiz') return;
+    const hasRules = typeof competition.rules === 'string' && competition.rules.trim() !== '';
+    const hasReq =
+      typeof competition.requirements === 'string' && competition.requirements.trim() !== '';
+    const bc = (hasRules ? 1 : 0) + (hasReq ? 1 : 0);
+    const maxStep = tasks.length > 0 ? bc + tasks.length : bc;
+    setTaskQuizWizardStep((s) => Math.min(s, maxStep));
+  }, [competition?.type, competition?.requirements, competition?.rules, tasks.length]);
 
   useEffect(() => {
     if (!ApiService.isAuthenticated()) {
@@ -264,7 +303,61 @@ const CompetitionWorkspace = () => {
   const isTaskQuiz = competition?.type === 'task_quiz';
   const selectedTask =
     isTaskQuiz && selectedTaskId != null ? tasks.find((x) => x.task_id === selectedTaskId) : null;
-  const selectedTaskRefUrl = selectedTask ? safeTaskAssetUrl(selectedTask.assets_url) : null;
+
+  const taskQuizHasRulesContent =
+    isTaskQuiz &&
+    typeof competition?.rules === 'string' &&
+    competition.rules.trim() !== '';
+  const taskQuizHasRequirementsContent =
+    isTaskQuiz &&
+    typeof competition?.requirements === 'string' &&
+    competition.requirements.trim() !== '';
+
+  const taskQuizBriefingCount =
+    (taskQuizHasRulesContent ? 1 : 0) + (taskQuizHasRequirementsContent ? 1 : 0);
+  const taskQuizRulesStepIndex = taskQuizHasRulesContent ? 0 : -1;
+  const taskQuizRequirementsStepIndex = taskQuizHasRequirementsContent
+    ? taskQuizHasRulesContent
+      ? 1
+      : 0
+    : -1;
+  const taskQuizSubmitStepIndex =
+    tasks.length > 0 ? taskQuizBriefingCount + tasks.length : -1;
+  const taskQuizIsSubmitStep =
+    isTaskQuiz && tasks.length > 0 && taskQuizWizardStep === taskQuizSubmitStepIndex;
+  const taskQuizIsRulesStep =
+    isTaskQuiz && taskQuizHasRulesContent && taskQuizWizardStep === taskQuizRulesStepIndex;
+  const taskQuizIsRequirementsStep =
+    isTaskQuiz &&
+    taskQuizHasRequirementsContent &&
+    taskQuizWizardStep === taskQuizRequirementsStepIndex;
+  const taskQuizIsBriefingStep = taskQuizIsRulesStep || taskQuizIsRequirementsStep;
+  const taskQuizIsTaskStep =
+    isTaskQuiz &&
+    tasks.length > 0 &&
+    taskQuizWizardStep >= taskQuizBriefingCount &&
+    taskQuizWizardStep < taskQuizBriefingCount + tasks.length;
+  const taskQuizWizardTaskIndex = taskQuizIsTaskStep
+    ? taskQuizWizardStep - taskQuizBriefingCount
+    : -1;
+  const taskQuizPageTask =
+    taskQuizWizardTaskIndex >= 0 ? tasks[taskQuizWizardTaskIndex] : null;
+  const taskQuizPageRefUrl = taskQuizPageTask
+    ? safeTaskAssetUrl(taskQuizPageTask.assets_url)
+    : null;
+  const taskQuizTotalPages =
+    tasks.length > 0 ? taskQuizBriefingCount + tasks.length + 1 : taskQuizBriefingCount + 1;
+  const taskQuizCurrentPage = taskQuizWizardStep + 1;
+
+  const taskQuizGoBack = () => setTaskQuizWizardStep((s) => Math.max(0, s - 1));
+
+  const taskQuizGoNext = () => {
+    if (!isTaskQuiz) return;
+    const bc = taskQuizBriefingCount;
+    const T = tasks.length;
+    const maxStep = T > 0 ? bc + T : bc;
+    setTaskQuizWizardStep((s) => Math.min(s + 1, maxStep));
+  };
 
   if (loading) {
     return <PageLoader />;
@@ -321,114 +414,266 @@ const CompetitionWorkspace = () => {
 
         <div
           className={`CompetitionWorkspace__grid${
-            isTaskQuiz ? ' CompetitionWorkspace__grid--taskQuiz' : ''
+            isTaskQuiz ? ' CompetitionWorkspace__grid--taskQuizSolo' : ''
           }`}
         >
-          {/* Left Column - Tasks & Description */}
-          <motion.div
-            className="CompetitionWorkspace__tasks"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div className="CompetitionWorkspace__section">
-              <h2 className="CompetitionWorkspace__sectionTitle">
-                <FiFileText size={24} />
-                Competition Description
-              </h2>
-              <div className="CompetitionWorkspace__description">
-                {competition?.description || 'No description provided'}
-              </div>
-            </div>
-
-            {competition?.requirements && (
+          {!isTaskQuiz && (
+            <motion.div
+              className="CompetitionWorkspace__tasks"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
               <div className="CompetitionWorkspace__section">
-                <h2 className="CompetitionWorkspace__sectionTitle">
-                  <FiCheckCircle size={24} />
-                  Requirements
-                </h2>
-                <div className="CompetitionWorkspace__requirements">
-                  {competition.requirements}
-                </div>
-              </div>
-            )}
-
-            {competition?.rules && (
-              <div className="CompetitionWorkspace__section">
-                <h2 className="CompetitionWorkspace__sectionTitle">
-                  <FiAlertCircle size={24} />
-                  Rules
-                </h2>
-                <div className="CompetitionWorkspace__rules">
-                  {competition.rules}
-                </div>
-              </div>
-            )}
-
-            {isTaskQuiz && (
-              <div className="CompetitionWorkspace__section CompetitionWorkspace__section--taskQuiz">
                 <h2 className="CompetitionWorkspace__sectionTitle">
                   <FiFileText size={24} />
-                  Tasks
+                  Competition Description
                 </h2>
-                {tasks.length === 0 ? (
-                  <p className="CompetitionWorkspace__description">
-                    Tasks are not published yet. Check back after organizers add them in the admin panel.
-                  </p>
-                ) : (
-                  <ul className="CompetitionWorkspace__taskList">
-                    {tasks.map((t) => (
-                      <li key={t.task_id}>
-                        <button
-                          type="button"
-                          className={
-                            selectedTaskId === t.task_id
-                              ? 'CompetitionWorkspace__taskBtn CompetitionWorkspace__taskBtn--active'
-                              : 'CompetitionWorkspace__taskBtn'
-                          }
-                          onClick={() => setSelectedTaskId(t.task_id)}
-                        >
-                          <strong>{t.title}</strong>
-                          {taskSubmissionMap[t.task_id] ? (
-                            <span className="CompetitionWorkspace__taskBadge">Submitted</span>
-                          ) : (
-                            <span className="CompetitionWorkspace__taskBadge CompetitionWorkspace__taskBadge--pending">
-                              Not submitted
-                            </span>
-                          )}
-                        </button>
-                        {t.description ? (
-                          <div className="CompetitionWorkspace__taskDesc">{t.description}</div>
-                        ) : null}
-                        {safeTaskAssetUrl(t.assets_url) ? (
-                          <div className="CompetitionWorkspace__taskRef">
-                            <TaskQuizAssetMedia
-                              url={t.assets_url}
-                              variant="thumb"
-                              title={`Reference for ${t.title}`}
-                            />
-                          </div>
-                        ) : t.assets_url ? (
-                          <p className="CompetitionWorkspace__taskRefNote">
-                            A reference link is set for this task; only secure <code>http(s)</code> URLs are shown
-                            inline here.
-                          </p>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="CompetitionWorkspace__description">
+                  {competition?.description || 'No description provided'}
+                </div>
               </div>
-            )}
-          </motion.div>
 
-          {/* Right Column - Submission */}
+              {competition?.requirements && (
+                <div className="CompetitionWorkspace__section">
+                  <h2 className="CompetitionWorkspace__sectionTitle">
+                    <FiCheckCircle size={24} />
+                    Requirements
+                  </h2>
+                  <div className="CompetitionWorkspace__requirements">
+                    {competition.requirements}
+                  </div>
+                </div>
+              )}
+
+              {competition?.rules && (
+                <div className="CompetitionWorkspace__section">
+                  <h2 className="CompetitionWorkspace__sectionTitle">
+                    <FiAlertCircle size={24} />
+                    Rules
+                  </h2>
+                  <div className="CompetitionWorkspace__rules">{competition.rules}</div>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {isTaskQuiz && taskQuizIsRulesStep && (
+            <motion.div
+              className="CompetitionWorkspace__taskQuizBriefing"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+            >
+              <div className="CompetitionWorkspace__taskQuizWizardBar">
+                <span className="CompetitionWorkspace__taskQuizWizardProgress">
+                  Page {taskQuizCurrentPage} of {taskQuizTotalPages}
+                </span>
+                <span className="CompetitionWorkspace__taskQuizWizardStepLabel">Rules</span>
+              </div>
+              <h2 className="CompetitionWorkspace__taskQuizBriefingTitle">Competition rules</h2>
+              <p className="CompetitionWorkspace__taskQuizBriefingIntro">
+                Read the rules carefully. Confirm to continue
+                {taskQuizHasRequirementsContent ? ' to the requirements page' : ''}
+                {tasks.length > 0 ? ', then through each task.' : '.'}
+              </p>
+              <div className="CompetitionWorkspace__taskQuizBriefingScroll">
+                <div className="CompetitionWorkspace__taskQuizBriefingBlock">
+                  <div className="CompetitionWorkspace__rules">{competition.rules}</div>
+                </div>
+              </div>
+              <div className="CompetitionWorkspace__taskQuizActions CompetitionWorkspace__taskQuizActions--wizard">
+                <button
+                  type="button"
+                  className="CompetitionWorkspace__taskQuizPagerBtn"
+                  onClick={taskQuizGoBack}
+                  disabled={taskQuizWizardStep <= 0}
+                >
+                  <FiChevronLeft size={20} aria-hidden />
+                  Back
+                </button>
+                <button type="button" className="CompetitionWorkspace__taskQuizNextBtn" onClick={taskQuizGoNext}>
+                  <FiCheckCircle size={22} aria-hidden />
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {isTaskQuiz && taskQuizIsRequirementsStep && (
+            <motion.div
+              className="CompetitionWorkspace__taskQuizBriefing"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+            >
+              <div className="CompetitionWorkspace__taskQuizWizardBar">
+                <span className="CompetitionWorkspace__taskQuizWizardProgress">
+                  Page {taskQuizCurrentPage} of {taskQuizTotalPages}
+                </span>
+                <span className="CompetitionWorkspace__taskQuizWizardStepLabel">Requirements</span>
+              </div>
+              <h2 className="CompetitionWorkspace__taskQuizBriefingTitle">Requirements</h2>
+              <p className="CompetitionWorkspace__taskQuizBriefingIntro">
+                Confirm when you have read the requirements
+                {tasks.length > 0 ? ' to open the tasks.' : '.'}
+              </p>
+              <div className="CompetitionWorkspace__taskQuizBriefingScroll">
+                <div className="CompetitionWorkspace__taskQuizBriefingBlock">
+                  <div className="CompetitionWorkspace__requirements">{competition.requirements}</div>
+                </div>
+              </div>
+              <div className="CompetitionWorkspace__taskQuizActions CompetitionWorkspace__taskQuizActions--wizard">
+                <button type="button" className="CompetitionWorkspace__taskQuizPagerBtn" onClick={taskQuizGoBack}>
+                  <FiChevronLeft size={20} aria-hidden />
+                  Back
+                </button>
+                <button type="button" className="CompetitionWorkspace__taskQuizNextBtn" onClick={taskQuizGoNext}>
+                  <FiCheckCircle size={22} aria-hidden />
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {isTaskQuiz && taskQuizIsTaskStep && (
+            <motion.div
+              className="CompetitionWorkspace__taskQuizQuestion"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+            >
+              <div className="CompetitionWorkspace__taskQuizWizardBar">
+                <span className="CompetitionWorkspace__taskQuizWizardProgress">
+                  Page {taskQuizCurrentPage} of {taskQuizTotalPages}
+                </span>
+                <span className="CompetitionWorkspace__taskQuizWizardStepLabel">
+                  Task {taskQuizWizardTaskIndex + 1} of {tasks.length}
+                </span>
+              </div>
+              <div className="CompetitionWorkspace__taskQuizHeading">
+                <h2 className="CompetitionWorkspace__taskQuizTitle">{taskQuizPageTask?.title}</h2>
+                {taskQuizPageTask &&
+                  (taskSubmissionMap[taskQuizPageTask.task_id] ? (
+                    <span className="CompetitionWorkspace__taskBadge">Submitted</span>
+                  ) : (
+                    <span className="CompetitionWorkspace__taskBadge CompetitionWorkspace__taskBadge--pending">
+                      Not submitted
+                    </span>
+                  ))}
+              </div>
+              {taskQuizPageTask?.description ? (
+                <div className="CompetitionWorkspace__taskQuizBody">{taskQuizPageTask.description}</div>
+              ) : null}
+              {taskQuizPageRefUrl ? (
+                <div className="CompetitionWorkspace__taskQuizAssetWrap">
+                  <p className="CompetitionWorkspace__taskQuizAssetCaption">Reference material</p>
+                  <TaskQuizAssetMedia
+                    url={taskQuizPageTask.assets_url}
+                    variant="hero"
+                    title={`Reference for ${taskQuizPageTask?.title || 'this task'}`}
+                  />
+                </div>
+              ) : taskQuizPageTask?.assets_url ? (
+                <p className="CompetitionWorkspace__taskRefNote">
+                  A reference link is set for this task; only secure <code>http(s)</code> URLs are shown inline here.
+                </p>
+              ) : null}
+              <div className="CompetitionWorkspace__taskQuizActions CompetitionWorkspace__taskQuizActions--wizard">
+                <button
+                  type="button"
+                  className="CompetitionWorkspace__taskQuizPagerBtn"
+                  onClick={taskQuizGoBack}
+                  disabled={taskQuizWizardStep <= 0}
+                >
+                  <FiChevronLeft size={20} aria-hidden />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className="CompetitionWorkspace__taskQuizNextBtn"
+                  disabled={!taskQuizPageTask}
+                  onClick={taskQuizGoNext}
+                >
+                  {taskQuizWizardStep === taskQuizBriefingCount + tasks.length - 1 ? (
+                    <>
+                      Next — Submit
+                      <FiChevronRight size={22} aria-hidden />
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <FiChevronRight size={22} aria-hidden />
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {isTaskQuiz &&
+            tasks.length === 0 &&
+            taskQuizWizardStep === taskQuizBriefingCount && (
+              <motion.div
+                className="CompetitionWorkspace__taskQuizQuestion"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45 }}
+              >
+                <div className="CompetitionWorkspace__taskQuizWizardBar">
+                  <span className="CompetitionWorkspace__taskQuizWizardProgress">
+                    Page {taskQuizCurrentPage} of {taskQuizTotalPages}
+                  </span>
+                  <span className="CompetitionWorkspace__taskQuizWizardStepLabel">Tasks</span>
+                </div>
+                <p className="CompetitionWorkspace__description">
+                  Tasks are not published yet. Check back after organizers add them in the admin panel.
+                </p>
+                <div className="CompetitionWorkspace__taskQuizActions CompetitionWorkspace__taskQuizActions--wizard">
+                  <button
+                    type="button"
+                    className="CompetitionWorkspace__taskQuizPagerBtn"
+                    onClick={taskQuizGoBack}
+                    disabled={taskQuizBriefingCount === 0}
+                  >
+                    <FiChevronLeft size={20} aria-hidden />
+                    Back
+                  </button>
+                  <span className="CompetitionWorkspace__taskQuizWizardSpacer" aria-hidden />
+                </div>
+              </motion.div>
+            )}
+
+          {(!isTaskQuiz || taskQuizIsSubmitStep) && (
           <motion.div
-            className="CompetitionWorkspace__submission"
+            className={
+              isTaskQuiz
+                ? 'CompetitionWorkspace__submission CompetitionWorkspace__submission--taskQuizFull'
+                : 'CompetitionWorkspace__submission'
+            }
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.5, delay: isTaskQuiz ? 0 : 0.2 }}
           >
+            {isTaskQuiz && taskQuizIsSubmitStep && (
+              <div className="CompetitionWorkspace__taskQuizSubmitHeader">
+                <button
+                  type="button"
+                  className="CompetitionWorkspace__taskQuizBackBtn"
+                  onClick={() =>
+                    setTaskQuizWizardStep(
+                      taskQuizSubmitStepIndex > 0 ? taskQuizSubmitStepIndex - 1 : 0
+                    )
+                  }
+                >
+                  <FiArrowLeft size={20} aria-hidden />
+                  Back to tasks
+                </button>
+                <span className="CompetitionWorkspace__taskQuizWizardProgress">
+                  Page {taskQuizCurrentPage} of {taskQuizTotalPages} — submission
+                </span>
+              </div>
+            )}
             {/* Current Submission Status */}
             {!isClassicQuiz && submission && (
               <div className="CompetitionWorkspace__currentSubmission">
@@ -492,26 +737,6 @@ const CompetitionWorkspace = () => {
                     ? 'Update Submission'
                     : 'Submit Your Work'}
               </h3>
-
-              {isTaskQuiz && selectedTaskRefUrl ? (
-                <div className="CompetitionWorkspace__taskRefBox CompetitionWorkspace__taskRefBox--media">
-                  <p className="CompetitionWorkspace__taskRefCaption">
-                    Organizer reference — use for inspiration; your submission does not need to match exactly.
-                  </p>
-                  <TaskQuizAssetMedia
-                    url={selectedTask.assets_url}
-                    variant="large"
-                    title={`Reference for ${selectedTask?.title || 'this task'}`}
-                  />
-                </div>
-              ) : isTaskQuiz && selectedTask?.assets_url && !selectedTaskRefUrl ? (
-                <div className="CompetitionWorkspace__taskRefBox">
-                  <p className="CompetitionWorkspace__taskRefCaption">
-                    This task includes a reference URL that cannot be embedded here (use a secure{' '}
-                    <code>http(s)</code> URL). See the task description for details.
-                  </p>
-                </div>
-              ) : null}
 
               {isTaskQuiz && competition?.evaluation_mode && ['auto', 'hybrid'].includes(competition.evaluation_mode) && (
                 <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
@@ -717,6 +942,7 @@ const CompetitionWorkspace = () => {
               </div>
             )}
           </motion.div>
+          )}
         </div>
       </div>
     </section>
