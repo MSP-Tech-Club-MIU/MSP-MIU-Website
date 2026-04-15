@@ -7,7 +7,14 @@ import { toCairoDateAndTimeStrings } from '../../utils/quizTimeEgypt';
  * Admin quiz builder: status, questions, MCQ/text options (with correct answer).
  * Use variant="embedded" on the full-page competition manager (no overlay).
  */
-const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal' }) => {
+const AdminQuizManageModal = ({
+  competition,
+  onClose,
+  setAlert,
+  variant = 'modal',
+  /** 'all' = status, schedule, questions. 'timing' = status + schedule only (e.g. task_quiz). */
+  sections = 'all'
+}) => {
   const competitionId = competition?.competition_id;
   const [quizData, setQuizData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -235,17 +242,30 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal
     );
   };
 
+  const isTimingOnly = sections === 'timing';
+  const statusHint =
+    competition?.type === 'task_quiz' ? (
+      <p className="AdminPanel__quizHint">
+        <strong>Quiz status</strong> is separate from the competition <strong>status</strong> on the Details tab.
+        Use this to control quiz-style timing and registration rules linked to the shared quiz row. Task
+        submissions use the Tasks section; set the Cairo window below if you use quiz attempts for this
+        competition.
+      </p>
+    ) : (
+      <p className="AdminPanel__quizHint">
+        <strong>Quiz status</strong> is separate from the competition row. Setting status to <em>active</em>{' '}
+        closes new team registrations for this quiz (per server rules). Participants can take the quiz when
+        status is <em>published</em> or <em>active</em>.
+      </p>
+    );
+
   const body = loading ? (
     <div className="AdminPanel__loading">Loading quiz…</div>
   ) : !quizData ? (
     <div className="AdminPanel__emptyState">Could not load quiz.</div>
   ) : (
-    <div className="AdminPanel__quizModalBody">
-            <p className="AdminPanel__quizHint">
-              <strong>Quiz status</strong> is separate from the competition row. Setting status to{' '}
-              <em>active</em> closes new team registrations for this quiz (per server rules). Participants can
-              take the quiz when status is <em>published</em> or <em>active</em>.
-            </p>
+    <div className={`AdminPanel__quizModalBody ${isTimingOnly ? 'AdminPanel__quizModalBody--timingOnly' : ''}`}>
+            {statusHint}
 
             <div className="AdminPanel__quizStatusRow">
               <label className="AdminPanel__formGroup" style={{ flex: 1, marginBottom: 0 }}>
@@ -278,7 +298,7 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal
                 it applies. The quiz automatically submits each in-progress attempt at the earlier of: scheduled
                 end, or (optional) time limit from when the participant started.
               </p>
-              <div className="AdminPanel__formRow">
+              <div className="AdminPanel__formRow AdminPanel__formRow--quizScheduleQuad">
                 <label className="AdminPanel__formGroup">
                   Start date
                   <input
@@ -338,6 +358,7 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal
               </button>
             </div>
 
+            {isTimingOnly ? null : (
             <div className="AdminPanel__quizNewQuestion">
               <h4>Add question</h4>
               <div className="AdminPanel__formRow">
@@ -389,7 +410,9 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal
                 Add question
               </button>
             </div>
+            )}
 
+            {isTimingOnly ? null : (
             <div className="AdminPanel__quizQuestionList">
               <h4>Questions ({quizData.questions?.length || 0})</h4>
               {(quizData.questions || []).length === 0 ? (
@@ -589,6 +612,7 @@ const AdminQuizManageModal = ({ competition, onClose, setAlert, variant = 'modal
                 })
               )}
             </div>
+            )}
           </div>
   );
 
