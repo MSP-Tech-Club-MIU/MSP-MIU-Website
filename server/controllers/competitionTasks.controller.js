@@ -1,4 +1,10 @@
+const path = require('path');
+const multer = require('multer');
 const { Competition, CompetitionTask } = require('../models');
+const { uploadToR2 } = require('../config/cloud');
+
+const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
+const ASSETS_URL_MAX_LEN = 2048;
 
 function num(v, fallback = 0) {
   if (v == null) return fallback;
@@ -7,12 +13,60 @@ function num(v, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/** Optional reference image URL; null if empty. Max 500 chars (DB column). */
+/** Optional reference asset URL (R2 public URL, etc.); null if empty. */
 function normAssetsUrl(v) {
   if (v == null) return null;
   const s = String(v).trim();
   if (!s) return null;
-  return s.length > 500 ? s.slice(0, 500) : s;
+  return s.length > ASSETS_URL_MAX_LEN ? s.slice(0, ASSETS_URL_MAX_LEN) : s;
+}
+
+function publicUrlForR2Key(key) {
+  const base = String(process.env.R2_PUBLIC_DOMAIN || '').replace(/\/+$/, '');
+  if (!base) {
+    throw new Error('R2_PUBLIC_DOMAIN is not configured');
+  }
+  const cleanKey = String(key).replace(/^\/+/, '');
+  return `${base}/${cleanKey}`;
+}
+
+const uploadCompetitionTaskAssetFile = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 45 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).slice(1).toLowerCase();
+    const allowed = [
+      'pdf',
+      'jpg',
+      'jpeg',
+      'png',
+      'gif',
+      'webp',
+      'svg',
+      'pptx',
+      'ppt',
+      'docx',
+      'doc',
+      'xls',
+      'xlsx',
+      'mp4',
+      'webm'
+    ];
+    if (!ext || !allowed.includes(ext)) {
+      return cb(new Error(`Unsupported file type for task asset: .${ext || 'unknown'}`));
+    }
+    cb(null, true);
+  }
+}).single('file');
+
+function wrapMulterTaskAsset(req, res, next) {
+  uploadCompetitionTaskAssetFile(req, res, (err) => {
+    if (err) {
+      const msg = err.message || 'Upload failed';
+      return res.status(400).json({ success: false, error: msg });
+    }
+    next();
+  });
 }
 
 async function loadTaskQuizCompetitionForMutation(competitionId) {
@@ -166,6 +220,61 @@ async function putAdminCompetitionTask(req, res) {
   }
 }
 
+async function postAdminCompetitionTaskAsset(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+    const taskId = parseInt(req.params.taskId, 10);
+    if (Number.isNaN(taskId)) {
+      return res.status(400).json({ success: false, error: 'Invalid task id' });
+    }
+    const task = await CompetitionTask.findByPk(taskId);
+    if (!task) {
+      return res.status(404).json({ success: false, error: 'Task not found' });
+    }
+    const comp = await Competition.findByPk(task.competition_id);
+    if (!comp || comp.type !== 'task_quiz') {
+      return res.status(400).json({ success: false, error: 'Invalid competition for task' });
+    }
+    const ext = path.extname(req.file.originalname) || '';
+    const safeBase = path
+      .basename(req.file.originalname, ext)
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .slice(0, 80) || 'asset';
+    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const key = `${TASK_ASSET_R2_PREFIX}${comp.competition_id}/${taskId}/${unique}_${safeBase}${ext}`;
+    await uploadToR2(
+      req.file.buffer,
+      key,
+      req.file.mimetype || 'application/octet-stream'
+    );
+    const url = publicUrlForR2Key(key);
+    await task.update({ assets_url: normAssetsUrl(url) });
+    await task.reload();
+    return res.status(200).json({
+      success: true,
+      url: task.assets_url,
+      key,
+      data: {
+        task_id: num(task.task_id),
+        competition_id: num(task.competition_id),
+        title: task.title,
+        description: task.description,
+        position: num(task.position, 0),
+        assets_url: task.assets_url || null
+      }
+    });
+  } catch (err) {
+    console.error('postAdminCompetitionTaskAsset:', err);
+    const msg = err?.message ? String(err.message) : '';
+    return res.status(500).json({
+      success: false,
+      error: msg.includes('R2_PUBLIC_DOMAIN') ? 'Server storage URL is not configured' : 'Failed to upload task asset'
+    });
+  }
+}
+
 async function deleteAdminCompetitionTask(req, res) {
   try {
     const taskId = parseInt(req.params.taskId, 10);
@@ -192,5 +301,7 @@ module.exports = {
   getCompetitionTasksPublic,
   postAdminCompetitionTask,
   putAdminCompetitionTask,
-  deleteAdminCompetitionTask
+  deleteAdminCompetitionTask,
+  postAdminCompetitionTaskAsset,
+  wrapMulterTaskAsset
 };

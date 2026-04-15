@@ -32,7 +32,7 @@ const CompetitionTask = sequelize.define(
       defaultValue: 0
     },
     assets_url: {
-      type: DataTypes.STRING(500),
+      type: DataTypes.STRING(2048),
       allowNull: true
     }
   },

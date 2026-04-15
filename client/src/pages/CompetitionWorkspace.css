@@ -82,6 +82,11 @@
     align-items: start;
 }
 
+.CompetitionWorkspace__grid--taskQuiz {
+    grid-template-columns: minmax(0, 1.4fr) minmax(440px, 520px);
+    gap: 36px;
+}
+
 /* Tasks Column */
 .CompetitionWorkspace__tasks {
     display: flex;
@@ -105,6 +110,15 @@
     font-size: 1.4rem;
     font-weight: 650;
     color: #8EC2F0;
+}
+
+.CompetitionWorkspace__section--taskQuiz {
+    min-height: min(70vh, 720px);
+    padding-bottom: 36px;
+}
+
+.CompetitionWorkspace__section--taskQuiz .CompetitionWorkspace__taskList {
+    gap: 16px;
 }
 
 .CompetitionWorkspace__description,
@@ -508,18 +522,6 @@
     margin-top: 10px;
 }
 
-.CompetitionWorkspace__taskRefThumb {
-    display: block;
-    max-width: 100%;
-    max-height: 140px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(0, 0, 0, 0.25);
-}
-
 .CompetitionWorkspace__taskRefBox {
     margin-bottom: 20px;
     padding: 14px 16px;
@@ -535,19 +537,8 @@
     line-height: 1.45;
 }
 
-.CompetitionWorkspace__taskRefLink {
-    display: block;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.CompetitionWorkspace__taskRefFull {
-    display: block;
-    width: 100%;
-    max-height: 280px;
-    object-fit: contain;
-    background: rgba(0, 0, 0, 0.2);
+.CompetitionWorkspace__taskRefBox--media {
+    padding: 18px 18px 20px;
 }
 
 .CompetitionWorkspace__taskRefNote {
@@ -564,7 +555,8 @@
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .CompetitionWorkspace__grid {
+    .CompetitionWorkspace__grid,
+    .CompetitionWorkspace__grid--taskQuiz {
         grid-template-columns: 1fr;
     }
 

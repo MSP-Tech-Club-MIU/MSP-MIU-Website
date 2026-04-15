@@ -2117,6 +2117,27 @@ class ApiService {
     return result.data;
   }
 
+  /**
+   * Upload a task reference asset to R2 under competitions_tasks_assets/{competitionId}/{taskId}/...
+   * Updates the task's assets_url. Admin only.
+   */
+  static async uploadCompetitionTaskAsset(taskId, file) {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/admin/competition-tasks/${taskId}/asset`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to upload task asset');
+    return result;
+  }
+
   static async deleteAdminCompetitionTask(taskId) {
     const response = await fetch(`${API_BASE_URL}/admin/competition-tasks/${taskId}`, {
       method: 'DELETE',

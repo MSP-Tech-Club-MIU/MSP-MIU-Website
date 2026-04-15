@@ -1,0 +1,170 @@
+/* Full-page competition editor (admin) — complements AdminPanel form tokens */
+
+.CompetitionManagement {
+  min-height: 100vh;
+  padding: 28px 32px 64px;
+  background: linear-gradient(135deg, #060e1a 0%, #091a2c 40%, #0c2240 100%);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #eaf2ff;
+  box-sizing: border-box;
+}
+
+.CompetitionManagement__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  max-width: 1100px;
+}
+
+.CompetitionManagement__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  color: #c5dae9;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.CompetitionManagement__back:hover {
+  border-color: rgba(3, 169, 244, 0.45);
+  color: #fff;
+}
+
+.CompetitionManagement__titleBlock h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #8ec2f0, #03a9f4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.CompetitionManagement__titleBlock p {
+  margin: 0;
+  color: rgba(197, 218, 233, 0.85);
+  font-size: 0.95rem;
+}
+
+.CompetitionManagement__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.CompetitionManagement__btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+}
+
+.CompetitionManagement__btn--secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.CompetitionManagement__btn--primary {
+  background: linear-gradient(135deg, #1a6fc4, #03a9f4);
+  color: #fff;
+}
+
+.CompetitionManagement__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.CompetitionManagement__btn--danger {
+  background: rgba(244, 88, 31, 0.15);
+  border-color: rgba(244, 88, 31, 0.45);
+  color: #ffb4a0;
+}
+
+.CompetitionManagement__btn--danger:hover:not(:disabled) {
+  background: rgba(244, 88, 31, 0.25);
+}
+
+.CompetitionManagement__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.CompetitionManagement__alert {
+  max-width: 1100px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.CompetitionManagement__alert--success {
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  color: #b8f5c8;
+}
+
+.CompetitionManagement__alert--error {
+  background: rgba(244, 88, 31, 0.12);
+  border: 1px solid rgba(244, 88, 31, 0.35);
+  color: #ffb4a0;
+}
+
+.CompetitionManagement__formCard {
+  max-width: 1100px;
+  padding: 28px 32px 36px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(13, 49, 89, 0.35), rgba(29, 79, 130, 0.12));
+  backdrop-filter: blur(12px);
+}
+
+.CompetitionManagement__extras {
+  max-width: 1100px;
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.CompetitionManagement__linkBtn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(3, 169, 244, 0.35);
+  background: rgba(3, 169, 244, 0.08);
+  color: #8ec2f0;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.CompetitionManagement__linkBtn:hover:not(:disabled) {
+  background: rgba(3, 169, 244, 0.15);
+}
+
+.CompetitionManagement__linkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .CompetitionManagement {
+    padding: 20px 16px 48px;
+  }
+
+  .CompetitionManagement__formCard {
+    padding: 20px 16px 28px;
+  }
+}

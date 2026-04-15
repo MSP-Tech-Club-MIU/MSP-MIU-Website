@@ -33,6 +33,7 @@ const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
+const CompetitionManagement = lazy(() => import('./pages/Admin/CompetitionManagement'));
 
 // Helper to check if running in Capacitor (native app) environment
 // Checked synchronously outside render cycle to avoid race conditions
@@ -182,8 +183,10 @@ const AppRouter = () => {
           <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
           <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
           <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
-          <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
+          <Route path="/admin/competition-management" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
+          <Route path="/admin/competition-management/:competitionId" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
           <Route path="/admin/*" element={<SiteLayout><AdminPanel /></SiteLayout>} />
+          <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
         </Routes>
       </Suspense>
     </Router>

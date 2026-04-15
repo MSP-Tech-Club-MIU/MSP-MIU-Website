@@ -33,7 +33,9 @@ const {
 const {
     postAdminCompetitionTask,
     putAdminCompetitionTask,
-    deleteAdminCompetitionTask
+    deleteAdminCompetitionTask,
+    postAdminCompetitionTaskAsset,
+    wrapMulterTaskAsset
 } = require('../controllers/competitionTasks.controller');
 
 // All admin routes require authentication + admin authorization
@@ -62,6 +64,11 @@ router.delete('/quiz/options/:optionId', deleteAdminQuizOption);
 // Task-quiz tasks (admin panel)
 router.post('/competitions/:id/tasks', postAdminCompetitionTask);
 router.put('/competition-tasks/:taskId', putAdminCompetitionTask);
+router.post(
+    '/competition-tasks/:taskId/asset',
+    wrapMulterTaskAsset,
+    postAdminCompetitionTaskAsset
+);
 router.delete('/competition-tasks/:taskId', deleteAdminCompetitionTask);
 
 // Attendance

@@ -1,15 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
-
-function taskReferenceImageUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  const s = url.trim();
-  return /^https?:\/\//i.test(s) ? s : null;
-}
+import TaskQuizAssetMedia from '../../components/TaskQuizAssetMedia';
+import { safeTaskAssetUrl } from '../../utils/taskQuizAssets';
 
 /**
- * Admin: define ordered tasks for a task_quiz competition (title, description, optional reference image URL).
+ * Admin: task_quiz tasks (R2 reference assets under competitions_tasks_assets/… plus manual URL).
  */
 const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
   const competitionId = competition?.competition_id;
@@ -20,6 +16,7 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
   const [urlDrafts, setUrlDrafts] = useState({});
   /** Per-task drafts for PUT (title, description, position) — synced from server on reload. */
   const [taskEdits, setTaskEdits] = useState({});
+  const newTaskAssetInputRef = useRef(null);
 
   const reload = useCallback(async () => {
     if (!competitionId) return;
@@ -88,13 +85,33 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
     setBusy(true);
     try {
       await ApiService.updateAdminCompetitionTask(taskId, { assets_url: raw || null });
-      setAlert({ type: 'success', message: 'Reference image URL saved.' });
+      setAlert({ type: 'success', message: 'Reference URL saved.' });
       await reload();
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to save URL' });
     } finally {
       setBusy(false);
     }
+  };
+
+  const uploadTaskAssetToR2 = async (taskId, file) => {
+    if (!file || !taskId) return;
+    setBusy(true);
+    try {
+      await ApiService.uploadCompetitionTaskAsset(taskId, file);
+      setAlert({ type: 'success', message: 'Reference file uploaded to cloud storage.' });
+      await reload();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Upload failed' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onTaskAssetFileSelected = (taskId, event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (file) uploadTaskAssetToR2(taskId, file);
   };
 
   const addTask = async () => {
@@ -105,14 +122,21 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
     }
     setBusy(true);
     try {
-      await ApiService.createAdminCompetitionTask(competitionId, {
+      const created = await ApiService.createAdminCompetitionTask(competitionId, {
         title,
         description: (newTask.description || '').trim() || null,
         position: newTask.position === '' ? undefined : Number(newTask.position),
         assets_url: (newTask.assets_url || '').trim() || null
       });
+      const pendingFile = newTaskAssetInputRef.current?.files?.[0];
+      if (pendingFile && created?.task_id) {
+        await ApiService.uploadCompetitionTaskAsset(created.task_id, pendingFile);
+      }
+      if (newTaskAssetInputRef.current) {
+        newTaskAssetInputRef.current.value = '';
+      }
       setNewTask({ title: '', description: '', position: '', assets_url: '' });
-      setAlert({ type: 'success', message: 'Task added.' });
+      setAlert({ type: 'success', message: pendingFile && created?.task_id ? 'Task added and file uploaded.' : 'Task added.' });
       await reload();
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to add task' });
@@ -158,7 +182,8 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
             <p className="AdminPanel__quizHint">
               Teams register the same way as other competitions. Each task has its own submission (ZIP and/or
               links per competition settings). <strong>Auto / hybrid</strong> evaluation runs when a ZIP is
-              uploaded (same pipeline as project submissions).
+              uploaded (same pipeline as project submissions). Reference files upload to R2 under{' '}
+              <code>competitions_tasks_assets/</code> and the public URL is saved on the task.
             </p>
 
             <div className="AdminPanel__quizNewQuestion">
@@ -194,14 +219,26 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
                 />
               </label>
               <label className="AdminPanel__formGroup">
-                Reference image URL (optional)
+                Reference URL (optional)
                 <input
                   type="url"
                   value={newTask.assets_url}
                   disabled={busy}
                   onChange={(e) => setNewTask((n) => ({ ...n, assets_url: e.target.value }))}
-                  placeholder="https://… (illustration or design to aim for)"
+                  placeholder="https://… or upload a file below after the task exists"
                 />
+              </label>
+              <label className="AdminPanel__formGroup">
+                Reference file — upload with task (optional)
+                <input
+                  ref={newTaskAssetInputRef}
+                  type="file"
+                  disabled={busy}
+                  accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.mp4,.webm"
+                />
+                <span className="AdminPanel__quizHint" style={{ display: 'block', marginTop: 6 }}>
+                  Stored in R2 at <code>competitions_tasks_assets/…</code> when you click Add task.
+                </span>
               </label>
               <button type="button" className="AdminPanel__addBtn" disabled={busy} onClick={addTask}>
                 Add task
@@ -282,23 +319,36 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
                     >
                       Save task details
                     </button>
-                    {taskReferenceImageUrl(t.assets_url) ? (
-                      <div style={{ marginTop: 10 }}>
-                        <img
-                          src={taskReferenceImageUrl(t.assets_url)}
-                          alt={`Reference for ${t.title}`}
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: 160,
-                            objectFit: 'contain',
-                            borderRadius: 8,
-                            border: '1px solid rgba(255,255,255,0.12)'
-                          }}
+                    {safeTaskAssetUrl(t.assets_url) ? (
+                      <div style={{ marginTop: 12, maxHeight: 'min(50vh, 440px)', overflow: 'auto' }}>
+                        <TaskQuizAssetMedia
+                          url={t.assets_url}
+                          variant="thumb"
+                          title={`Reference for ${t.title}`}
                         />
                       </div>
                     ) : null}
+                    <div className="AdminPanel__formGroup" style={{ marginTop: 12 }}>
+                      <span style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Upload reference file</span>
+                      <input
+                        id={`task-asset-file-${t.task_id}`}
+                        type="file"
+                        disabled={busy}
+                        style={{ display: 'none' }}
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.mp4,.webm"
+                        onChange={(e) => onTaskAssetFileSelected(t.task_id, e)}
+                      />
+                      <button
+                        type="button"
+                        className="AdminPanel__addBtn"
+                        disabled={busy}
+                        onClick={() => document.getElementById(`task-asset-file-${t.task_id}`)?.click()}
+                      >
+                        Choose file → R2
+                      </button>
+                    </div>
                     <label className="AdminPanel__formGroup" style={{ marginTop: 12 }}>
-                      Reference image URL
+                      Reference URL (optional)
                       <input
                         type="url"
                         value={urlDrafts[t.task_id] ?? ''}
@@ -309,7 +359,7 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert }) => {
                         placeholder="https://…"
                       />
                     </label>
-                    {t.assets_url && !taskReferenceImageUrl(t.assets_url) ? (
+                    {t.assets_url && !safeTaskAssetUrl(t.assets_url) ? (
                       <p className="AdminPanel__quizHint" style={{ marginTop: 6 }}>
                         Preview requires a URL starting with <code>http://</code> or <code>https://</code>. The
                         value is still stored.

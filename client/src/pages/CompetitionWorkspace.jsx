@@ -5,6 +5,8 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
+import { safeTaskAssetUrl } from '../utils/taskQuizAssets';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
@@ -18,13 +20,6 @@ import {
   FiSend,
   FiPlayCircle
 } from 'react-icons/fi';
-
-/** Only allow http(s) image URLs in <img src> to avoid javascript: and other schemes. */
-function taskReferenceImageUrl(url) {
-  if (!url || typeof url !== 'string') return null;
-  const s = url.trim();
-  return /^https?:\/\//i.test(s) ? s : null;
-}
 
 const CompetitionWorkspace = () => {
   const { id: competitionId, teamId } = useParams();
@@ -269,7 +264,7 @@ const CompetitionWorkspace = () => {
   const isTaskQuiz = competition?.type === 'task_quiz';
   const selectedTask =
     isTaskQuiz && selectedTaskId != null ? tasks.find((x) => x.task_id === selectedTaskId) : null;
-  const selectedTaskRefImageUrl = selectedTask ? taskReferenceImageUrl(selectedTask.assets_url) : null;
+  const selectedTaskRefUrl = selectedTask ? safeTaskAssetUrl(selectedTask.assets_url) : null;
 
   if (loading) {
     return <PageLoader />;
@@ -324,7 +319,11 @@ const CompetitionWorkspace = () => {
           )}
         </motion.header>
 
-        <div className="CompetitionWorkspace__grid">
+        <div
+          className={`CompetitionWorkspace__grid${
+            isTaskQuiz ? ' CompetitionWorkspace__grid--taskQuiz' : ''
+          }`}
+        >
           {/* Left Column - Tasks & Description */}
           <motion.div
             className="CompetitionWorkspace__tasks"
@@ -367,7 +366,7 @@ const CompetitionWorkspace = () => {
             )}
 
             {isTaskQuiz && (
-              <div className="CompetitionWorkspace__section">
+              <div className="CompetitionWorkspace__section CompetitionWorkspace__section--taskQuiz">
                 <h2 className="CompetitionWorkspace__sectionTitle">
                   <FiFileText size={24} />
                   Tasks
@@ -401,18 +400,17 @@ const CompetitionWorkspace = () => {
                         {t.description ? (
                           <div className="CompetitionWorkspace__taskDesc">{t.description}</div>
                         ) : null}
-                        {taskReferenceImageUrl(t.assets_url) ? (
+                        {safeTaskAssetUrl(t.assets_url) ? (
                           <div className="CompetitionWorkspace__taskRef">
-                            <img
-                              src={taskReferenceImageUrl(t.assets_url)}
-                              alt={`Reference image for ${t.title}`}
-                              className="CompetitionWorkspace__taskRefThumb"
-                              loading="lazy"
+                            <TaskQuizAssetMedia
+                              url={t.assets_url}
+                              variant="thumb"
+                              title={`Reference for ${t.title}`}
                             />
                           </div>
                         ) : t.assets_url ? (
                           <p className="CompetitionWorkspace__taskRefNote">
-                            A reference link is set for this task; only <code>http(s)</code> image URLs are shown
+                            A reference link is set for this task; only secure <code>http(s)</code> URLs are shown
                             inline here.
                           </p>
                         ) : null}
@@ -495,32 +493,22 @@ const CompetitionWorkspace = () => {
                     : 'Submit Your Work'}
               </h3>
 
-              {isTaskQuiz && selectedTaskRefImageUrl ? (
-                <div className="CompetitionWorkspace__taskRefBox">
+              {isTaskQuiz && selectedTaskRefUrl ? (
+                <div className="CompetitionWorkspace__taskRefBox CompetitionWorkspace__taskRefBox--media">
                   <p className="CompetitionWorkspace__taskRefCaption">
-                    Organizer reference image — use for inspiration; your submission does not need to match
-                    exactly.
+                    Organizer reference — use for inspiration; your submission does not need to match exactly.
                   </p>
-                  <a
-                    href={selectedTaskRefImageUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="CompetitionWorkspace__taskRefLink"
-                  >
-                    <img
-                      src={selectedTaskRefImageUrl}
-                      alt={`Reference for ${selectedTask?.title || 'this task'}`}
-                      className="CompetitionWorkspace__taskRefFull"
-                      loading="lazy"
-                    />
-                  </a>
+                  <TaskQuizAssetMedia
+                    url={selectedTask.assets_url}
+                    variant="large"
+                    title={`Reference for ${selectedTask?.title || 'this task'}`}
+                  />
                 </div>
-              ) : isTaskQuiz && selectedTask?.assets_url && !selectedTaskRefImageUrl ? (
+              ) : isTaskQuiz && selectedTask?.assets_url && !selectedTaskRefUrl ? (
                 <div className="CompetitionWorkspace__taskRefBox">
                   <p className="CompetitionWorkspace__taskRefCaption">
-                    This task includes a reference URL from organizers that is not shown as an embedded image
-                    here (only <code>http(s)</code> image URLs are embedded). See the task description for
-                    details.
+                    This task includes a reference URL that cannot be embedded here (use a secure{' '}
+                    <code>http(s)</code> URL). See the task description for details.
                   </p>
                 </div>
               ) : null}
