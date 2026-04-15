@@ -12,6 +12,7 @@ import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import mspLogo from '../../assets/Images/msp-logo.png';
 import AdminQuizManageModal from './AdminQuizManageModal';
+import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import './AdminPanel.css';
 
 /* ═══════════════════════════════════════════════════════════
@@ -216,6 +217,8 @@ const AdminPanel = () => {
     const [viewingCompTeams, setViewingCompTeams] = useState(null); // The competition we are viewing teams for
     const [showQuizModal, setShowQuizModal] = useState(false);
     const [viewingQuizComp, setViewingQuizComp] = useState(null);
+    const [showTaskQuizModal, setShowTaskQuizModal] = useState(false);
+    const [viewingTaskQuizComp, setViewingTaskQuizComp] = useState(null);
     const [teamsList, setTeamsList] = useState([]);
     const [teamsLoading, setTeamsLoading] = useState(false);
     const [editingTeam, setEditingTeam] = useState(null);
@@ -561,6 +564,16 @@ const AdminPanel = () => {
     const closeQuizModal = () => {
         setShowQuizModal(false);
         setViewingQuizComp(null);
+    };
+
+    const openTaskQuizModal = (comp) => {
+        setViewingTaskQuizComp(comp);
+        setShowTaskQuizModal(true);
+    };
+
+    const closeTaskQuizModal = () => {
+        setShowTaskQuizModal(false);
+        setViewingTaskQuizComp(null);
     };
 
     const saveTeam = async () => {
@@ -1048,6 +1061,16 @@ const AdminPanel = () => {
                                                                     Manage quiz
                                                                 </button>
                                                             )}
+                                                            {comp.type === 'task_quiz' && (
+                                                                <button
+                                                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
+                                                                    onClick={() => openTaskQuizModal(comp)}
+                                                                    title="Define tasks for this competition"
+                                                                >
+                                                                    <MdQuiz style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                                    Manage tasks
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
                                                                 onClick={() => openTeamModal(comp)}
@@ -1128,7 +1151,8 @@ const AdminPanel = () => {
                                                     onChange={e => setCompForm({ ...compForm, type: e.target.value })}
                                                 >
                                                     <option value="project">Project</option>
-                                                    <option value="quiz">Quiz</option>
+                                                    <option value="quiz">Quiz (MCQ / text)</option>
+                                                    <option value="task_quiz">Task quiz (ZIP / links per task)</option>
                                                     <option value="external">External</option>
                                                 </select>
                                             </div>
@@ -1206,6 +1230,14 @@ const AdminPanel = () => {
                                                     {' '}Frontend multi-task mode (expects `task1` + `task2` folders)
                                                 </label>
                                             </div>
+                                        )}
+
+                                        {compForm.type === 'task_quiz' && (
+                                            <p className="AdminPanel__quizHint">
+                                                After saving, use <strong>Manage tasks</strong> on the competition row to add
+                                                tasks. Set submission mode to ZIP, links, or both; choose evaluation (auto /
+                                                hybrid triggers the ZIP evaluator when teams upload).
+                                            </p>
                                         )}
 
                                         <div className="AdminPanel__formGroup">
@@ -1313,6 +1345,14 @@ const AdminPanel = () => {
                                 <AdminQuizManageModal
                                     competition={viewingQuizComp}
                                     onClose={closeQuizModal}
+                                    setAlert={setAlert}
+                                />
+                            )}
+
+                            {showTaskQuizModal && viewingTaskQuizComp && (
+                                <AdminTaskQuizManageModal
+                                    competition={viewingTaskQuizComp}
+                                    onClose={closeTaskQuizModal}
                                     setAlert={setAlert}
                                 />
                             )}

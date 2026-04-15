@@ -30,6 +30,11 @@ const {
     putAdminQuizOption,
     deleteAdminQuizOption
 } = require('../controllers/adminQuiz.controller');
+const {
+    postAdminCompetitionTask,
+    putAdminCompetitionTask,
+    deleteAdminCompetitionTask
+} = require('../controllers/competitionTasks.controller');
 
 // All admin routes require authentication + admin authorization
 router.use(authenticateToken);
@@ -53,6 +58,11 @@ router.delete('/quiz/questions/:questionId', deleteAdminQuizQuestion);
 router.post('/quiz/questions/:questionId/options', postAdminQuizOption);
 router.put('/quiz/options/:optionId', putAdminQuizOption);
 router.delete('/quiz/options/:optionId', deleteAdminQuizOption);
+
+// Task-quiz tasks (admin panel)
+router.post('/competitions/:id/tasks', postAdminCompetitionTask);
+router.put('/competition-tasks/:taskId', putAdminCompetitionTask);
+router.delete('/competition-tasks/:taskId', deleteAdminCompetitionTask);
 
 // Attendance
 router.get('/attendance', getAttendanceRequests);

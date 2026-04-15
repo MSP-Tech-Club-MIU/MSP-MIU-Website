@@ -84,7 +84,7 @@ const Competition = sequelize.define('Competition', {
     allowNull: true
   },
   type: {
-    type: DataTypes.ENUM('project', 'quiz', 'external'),
+    type: DataTypes.ENUM('project', 'quiz', 'external', 'task_quiz'),
     allowNull: false,
     defaultValue: 'project'
   },
