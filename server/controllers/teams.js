@@ -30,6 +30,99 @@ async function ensureSendEmail() {
     return sendEmail;
 }
 
+function publicFrontendOrigin() {
+    return String(process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/+$/, '');
+}
+
+function getQuizRegistrationCloseReason(competition, quizStatus) {
+    if (!competition || !['quiz', 'task_quiz'].includes(competition.type)) {
+        return null;
+    }
+
+    if (quizStatus === 'active') {
+        return 'Quiz registration is closed because the quiz has been activated by an admin';
+    }
+
+    const now = new Date();
+    const startDate = new Date(competition.start_at);
+    const endDate = new Date(competition.end_at);
+
+    if (!Number.isNaN(startDate.getTime()) && now < startDate) {
+        return 'Quiz registration is not open yet';
+    }
+
+    if (!Number.isNaN(endDate.getTime()) && now >= endDate) {
+        return 'Quiz registration is closed because the registration deadline has been reached';
+    }
+
+    return null;
+}
+
+async function assertQuizRegistrationOpen(competitionId) {
+    const rows = await db.query(
+        `SELECT c.competition_id, c.type, c.start_at, c.end_at, q.status AS quiz_status
+         FROM competitions c
+         LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+         WHERE c.competition_id = ?
+         LIMIT 1`,
+        {
+            replacements: [competitionId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+
+    if (!rows || rows.length === 0) {
+        return { ok: false, status: 404, error: 'Competition not found' };
+    }
+
+    const row = rows[0];
+    const closeReason = getQuizRegistrationCloseReason(row, row.quiz_status);
+    if (closeReason) {
+        return { ok: false, status: 400, error: closeReason };
+    }
+
+    return { ok: true };
+}
+
+/**
+ * Guest-created teams insert the leader invitation before member invitations.
+ * Until a leader row exists in team_members, only that first pending invitation may be accepted.
+ */
+async function resolveInvitationRoleForAcceptance(invitation) {
+    const teamId = invitation.team_id;
+    const [leaderRow] = await db.query(
+        `SELECT COUNT(*) as c FROM team_members WHERE team_id = ? AND role = 'leader'`,
+        {
+            replacements: [teamId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+    if (Number(leaderRow.c) > 0) {
+        return { ok: true, role: 'member', updateTeamCreatedBy: false };
+    }
+
+    const [firstPending] = await db.query(
+        `SELECT invitation_id FROM team_invitations
+         WHERE team_id = ? AND status = 'pending'
+         ORDER BY invitation_id ASC
+         LIMIT 1`,
+        {
+            replacements: [teamId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+
+    if (!firstPending || firstPending.invitation_id !== invitation.invitation_id) {
+        return {
+            ok: false,
+            status: 400,
+            error: 'The team leader must accept their invitation first. Ask them to check their email, then try your link again.'
+        };
+    }
+
+    return { ok: true, role: 'leader', updateTeamCreatedBy: true };
+}
+
 /**
  * Create a new team for a competition
  * POST /api/teams
@@ -77,9 +170,11 @@ const createTeam = async (req, res) => {
 
         // Check if competition exists and is open
         const competitions = await db.query(
-            `SELECT competition_id, title, start_at, end_at, status, max_team_size, min_team_size 
-             FROM competitions 
-             WHERE competition_id = ?`,
+            `SELECT c.competition_id, c.title, c.start_at, c.end_at, c.status, c.max_team_size, c.min_team_size, c.type,
+                    q.status AS quiz_status
+             FROM competitions c
+             LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+             WHERE c.competition_id = ?`,
             {
                 replacements: [competition_id],
                 type: db.QueryTypes.SELECT
@@ -99,6 +194,13 @@ const createTeam = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Competition is not open for team registration'
+            });
+        }
+        const quizCloseReason = getQuizRegistrationCloseReason(competition, competition.quiz_status);
+        if (quizCloseReason) {
+            return res.status(400).json({
+                success: false,
+                error: quizCloseReason
             });
         }
 
@@ -247,7 +349,7 @@ const createTeam = async (req, res) => {
                 try {
                     const mail = await ensureSendEmail();
                     if (mail) {
-                        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                        const baseUrl = publicFrontendOrigin();
                         const competitionUrl = `${baseUrl}/competitions/${competition_id}`;
                         const workspaceUrl = `${baseUrl}/competitions/${competition_id}/team/${teamId}`;
                         const fmt = (d) => new Date(d).toLocaleDateString('en-US', {
@@ -293,7 +395,7 @@ const createTeam = async (req, res) => {
             );
 
             // Get competition details for email
-            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
+            const competitionUrl = `${publicFrontendOrigin()}/competitions/${competition_id}`;
             const emailData = {
                 teamName: team_name,
                 inviterName: leader_name,
@@ -309,7 +411,7 @@ const createTeam = async (req, res) => {
                     day: 'numeric'
                 }),
                 invitationToken: token,
-                acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                acceptUrl: publicFrontendOrigin(),
                 competitionUrl,
                 expiresAt: expiresAt.toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -350,7 +452,7 @@ const createTeam = async (req, res) => {
         if (normalizedMembers.length > 0) {
             const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
             const universityIdRegex = /^\d{4}\/\d{5}$/;
-            const competitionUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${competition_id}`;
+            const competitionUrl = `${publicFrontendOrigin()}/competitions/${competition_id}`;
 
             for (const member of normalizedMembers) {
                 const memberEmail = (member?.email || '').trim().toLowerCase();
@@ -405,16 +507,6 @@ const createTeam = async (req, res) => {
                         {
                             replacements: [teamId, memberUserId, 'member'],
                             type: db.QueryTypes.INSERT
-                        }
-                    );
-
-                    await db.query(
-                        `UPDATE users
-                         SET role = 'competitor'
-                         WHERE user_id = ? AND role = 'member'`,
-                        {
-                            replacements: [memberUserId],
-                            type: db.QueryTypes.UPDATE
                         }
                     );
 
@@ -482,7 +574,7 @@ const createTeam = async (req, res) => {
                                 day: 'numeric'
                             }),
                             invitationToken: token,
-                            acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+                            acceptUrl: publicFrontendOrigin(),
                             competitionUrl,
                             expiresAt: expiresAt.toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -534,7 +626,11 @@ const createTeam = async (req, res) => {
         console.error('Error creating team:', error);
 
         // Convert common DB constraint issues into user-friendly responses.
-        if (error?.name === 'SequelizeUniqueConstraintError' || error?.original?.code === 'ER_DUP_ENTRY') {
+        const sqlCode = error?.original?.code || error?.parent?.code;
+        if (
+            error?.name === 'SequelizeUniqueConstraintError' ||
+            sqlCode === 'ER_DUP_ENTRY'
+        ) {
             return res.status(400).json({
                 success: false,
                 error: 'One of the provided emails/university IDs is already assigned in a conflicting way. Please review team members and try again.'
@@ -551,7 +647,7 @@ const createTeam = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Failed to create team',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 };
@@ -646,7 +742,7 @@ const getCompetitionTeams = async (req, res) => {
                     COUNT(tm.team_member_id) as member_count,
                     u.full_name as creator_name
              FROM teams t
-             INNER JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE t.competition_id = ?
              GROUP BY t.team_id
@@ -729,6 +825,13 @@ const inviteToTeam = async (req, res) => {
         }
 
         const membership = teamMembers[0];
+        const registrationGate = await assertQuizRegistrationOpen(membership.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
         if (membership.role !== 'leader') {
             return res.status(403).json({
@@ -815,17 +918,6 @@ const inviteToTeam = async (req, res) => {
                     type: db.QueryTypes.INSERT
                 }
             );
-
-            // Ensure normal members invited to competitions can access competitor dashboard
-            await db.query(
-                `UPDATE users
-                 SET role = 'competitor'
-                 WHERE user_id = ? AND role = 'member'`,
-                {
-                    replacements: [invitedUserId],
-                    type: db.QueryTypes.UPDATE
-                }
-            );
         } else {
             // New account: create invitation token and email password-setup flow
             token = crypto.randomBytes(32).toString('hex');
@@ -844,10 +936,13 @@ const inviteToTeam = async (req, res) => {
 
         // Get team and competition details for email
         const teamDetails = await db.query(
-            `SELECT t.team_name, c.title, c.start_at, c.end_at, u.full_name as inviter_name
+            `SELECT t.team_name, c.title, c.start_at, c.end_at,
+                    COALESCE(u.full_name, ul.full_name, 'Team Leader') as inviter_name
              FROM teams t
              INNER JOIN competitions c ON t.competition_id = c.competition_id
-             INNER JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN users u ON t.created_by_user_id = u.user_id
+             LEFT JOIN team_members tml ON tml.team_id = t.team_id AND tml.role = 'leader'
+             LEFT JOIN users ul ON tml.user_id = ul.user_id
              WHERE t.team_id = ?`,
             {
                 replacements: [id],
@@ -878,8 +973,8 @@ const inviteToTeam = async (req, res) => {
             competitionStartDate: formatDate(details.start_at),
             competitionEndDate: formatDate(details.end_at),
             invitationToken: token,
-            acceptUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-            competitionUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/competitions/${membership.competition_id}`,
+            acceptUrl: publicFrontendOrigin(),
+            competitionUrl: `${publicFrontendOrigin()}/competitions/${membership.competition_id}`,
             expiresAt: expiresAt ? formatDate(expiresAt) : null,
             email: email
         };
@@ -978,8 +1073,15 @@ const acceptInvitation = async (req, res) => {
         }
 
         const invitation = invitations[0];
+        const registrationGate = await assertQuizRegistrationOpen(invitation.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
-        if (invitation.invited_email !== userEmail) {
+        if (String(invitation.invited_email).toLowerCase() !== String(userEmail).toLowerCase()) {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
@@ -1040,15 +1142,33 @@ const acceptInvitation = async (req, res) => {
             });
         }
 
+        const rolePlan = await resolveInvitationRoleForAcceptance(invitation);
+        if (!rolePlan.ok) {
+            return res.status(rolePlan.status).json({
+                success: false,
+                error: rolePlan.error
+            });
+        }
+
         // Add user to team
         await db.query(
             `INSERT INTO team_members (team_id, user_id, role)
              VALUES (?, ?, ?)`,
             {
-                replacements: [invitation.team_id, userId, 'member'],
+                replacements: [invitation.team_id, userId, rolePlan.role],
                 type: db.QueryTypes.INSERT
             }
         );
+
+        if (rolePlan.updateTeamCreatedBy) {
+            await db.query(
+                `UPDATE teams SET created_by_user_id = ? WHERE team_id = ?`,
+                {
+                    replacements: [userId, invitation.team_id],
+                    type: db.QueryTypes.UPDATE
+                }
+            );
+        }
 
         // Update invitation status
         await db.query(
@@ -1106,7 +1226,7 @@ const declineInvitation = async (req, res) => {
 
         const invitation = invitations[0];
 
-        if (invitation.invited_email !== userEmail) {
+        if (String(invitation.invited_email).toLowerCase() !== String(userEmail).toLowerCase()) {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
@@ -1162,7 +1282,12 @@ const verifyInvitation = async (req, res) => {
 
         // Get invitation details
         const invitations = await db.query(
-            `SELECT i.*, t.team_name, c.title as competition_title, u.full_name as inviter_name
+            `SELECT i.*, t.team_name, c.title as competition_title,
+                    COALESCE(
+                        u.full_name,
+                        (SELECT ti2.invited_name FROM team_invitations ti2
+                         WHERE ti2.team_id = t.team_id ORDER BY ti2.invitation_id ASC LIMIT 1)
+                    ) as inviter_name
              FROM team_invitations i
              INNER JOIN teams t ON i.team_id = t.team_id
              INNER JOIN competitions c ON t.competition_id = c.competition_id
@@ -1287,6 +1412,13 @@ const acceptInvitationNewUser = async (req, res) => {
         }
 
         const invitation = invitations[0];
+        const registrationGate = await assertQuizRegistrationOpen(invitation.competition_id);
+        if (!registrationGate.ok) {
+            return res.status(registrationGate.status).json({
+                success: false,
+                error: registrationGate.error
+            });
+        }
 
         if (invitation.status !== 'pending') {
             return res.status(400).json({
@@ -1340,8 +1472,32 @@ const acceptInvitationNewUser = async (req, res) => {
             });
         }
 
+        if (invitation.invited_university_id) {
+            const existingUniversityId = await db.query(
+                `SELECT user_id FROM users WHERE university_id = ?`,
+                {
+                    replacements: [invitation.invited_university_id],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (existingUniversityId && existingUniversityId.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'This university ID is already registered. Please log in or contact support.'
+                });
+            }
+        }
+
+        const rolePlan = await resolveInvitationRoleForAcceptance(invitation);
+        if (!rolePlan.ok) {
+            return res.status(rolePlan.status).json({
+                success: false,
+                error: rolePlan.error
+            });
+        }
+
         // Hash password
-        const bcrypt = require('bcryptjs');
+        const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // Create new user account with 'competitor' role
@@ -1361,34 +1517,22 @@ const acceptInvitationNewUser = async (req, res) => {
             }
         );
 
-        const newUserId = userResult;
-
-        // Check if this is a team leader invitation (team has no leader yet)
-        const teamMembers = await db.query(
-            `SELECT COUNT(*) as leader_count 
-             FROM team_members 
-             WHERE team_id = ? AND role = 'leader'`,
-            {
-                replacements: [invitation.team_id],
-                type: db.QueryTypes.SELECT
-            }
-        );
-
-        const isLeaderInvitation = teamMembers[0].leader_count === 0;
-        const memberRole = isLeaderInvitation ? 'leader' : 'member';
+        const newUserId = normalizeInsertId(userResult);
+        if (newUserId == null) {
+            throw new Error('Failed to resolve new user id after insert');
+        }
 
         // Add user to team
         await db.query(
             `INSERT INTO team_members (team_id, user_id, role)
              VALUES (?, ?, ?)`,
             {
-                replacements: [invitation.team_id, newUserId, memberRole],
+                replacements: [invitation.team_id, newUserId, rolePlan.role],
                 type: db.QueryTypes.INSERT
             }
         );
 
-        // If this was a leader invitation, update the team's created_by_user_id
-        if (isLeaderInvitation) {
+        if (rolePlan.updateTeamCreatedBy) {
             await db.query(
                 `UPDATE teams SET created_by_user_id = ? WHERE team_id = ?`,
                 {
@@ -1433,10 +1577,17 @@ const acceptInvitationNewUser = async (req, res) => {
 
     } catch (error) {
         console.error('Error accepting invitation (new user):', error);
+        const sqlCode = error?.original?.code || error?.parent?.code;
+        if (sqlCode === 'ER_DUP_ENTRY' || error?.name === 'SequelizeUniqueConstraintError') {
+            return res.status(400).json({
+                success: false,
+                error: 'This invitation email or university ID is already linked to an account. Please log in or reset your password.'
+            });
+        }
         res.status(500).json({
             success: false,
             error: 'Failed to accept invitation',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            details: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 };

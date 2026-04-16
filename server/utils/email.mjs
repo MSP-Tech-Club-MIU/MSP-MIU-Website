@@ -1,6 +1,20 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// App often runs with cwd = server/; dotenv default misses Back-End/.env. Load known locations first.
+const envPaths = [
+  path.join(__dirname, '../../.env'),
+  path.join(__dirname, '../.env'),
+];
+envPaths.forEach((p, i) => {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p, override: i > 0 });
+  }
+});
 dotenv.config();
 
 const transporter = nodemailer.createTransport({

@@ -2,6 +2,40 @@ const { Announcement, User } = require('../models');
 const { Op } = require('sequelize');
 
 /**
+ * Notify all users by email.
+ * Sends directly to each recipient so SMTP providers that mishandle
+ * BCC-only deliveries still deliver to everyone reliably.
+ */
+async function broadcastNewAnnouncementEmails(announcement) {
+  const users = await User.findAll({
+    attributes: ['email']
+  });
+  const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
+  if (emails.length === 0) {
+    console.log('Announcement email: no recipients (no users with email)');
+    return;
+  }
+
+  const { sendEmail } = await import('../utils/email.mjs');
+  const { buildAnnouncementEmail } = await import('../utils/announcementEmail.mjs');
+
+  const { subject, text, html } = buildAnnouncementEmail(announcement, {
+    frontendUrl: process.env.FRONTEND_URL
+  });
+
+  for (const to of emails) {
+    await sendEmail({
+      to,
+      subject,
+      text,
+      html,
+      fromName: 'MSP MIU Announcements'
+    });
+  }
+  console.log(`Announcement emails sent to ${emails.length} recipient(s)`);
+}
+
+/**
  * Get all active announcements
  * GET /api/announcements
  */
@@ -124,9 +158,11 @@ const addAnnouncement = async (req, res) => {
       }]
     });
 
+    await broadcastNewAnnouncementEmails(createdAnnouncement);
+
     return res.status(201).json({
       success: true,
-      message: 'Announcement created successfully',
+      message: 'Announcement created successfully and emails sent',
       data: createdAnnouncement
     });
   } catch (error) {
@@ -238,6 +274,7 @@ const deleteAnnouncement = async (req, res) => {
 };
 
 module.exports = {
+  broadcastNewAnnouncementEmails,
   getAllAnnouncements,
   getAnnouncementById,
   addAnnouncement,

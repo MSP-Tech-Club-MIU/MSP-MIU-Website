@@ -1281,6 +1281,17 @@ class ApiService {
     }
   }
 
+  /** Public task list for task_quiz competitions (empty array for other types). */
+  static async getCompetitionTasks(competitionId) {
+    const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/tasks`, {
+      method: 'GET',
+      headers: this.getHeaders(false),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch tasks');
+    return result.data || [];
+  }
+
   // =====================
   // QUIZZES
   // =====================
@@ -1602,7 +1613,7 @@ class ApiService {
    */
   static async verifyTeamInvitation(token) {
     try {
-      const response = await fetch(`${API_BASE_URL}/teams/verify-invitation?token=${token}`, {
+      const response = await fetch(`${API_BASE_URL}/teams/verify-invitation?token=${encodeURIComponent(token)}`, {
         method: 'GET',
         headers: this.getHeaders(false),
       });
@@ -1757,15 +1768,19 @@ class ApiService {
    * @param {number|string} teamId - Team ID
    * @returns {Promise<Object|null>}
    */
-  static async getTeamSubmission(competitionId, teamId) {
+  static async getTeamSubmission(competitionId, teamId, taskId = null) {
     try {
       const token = this.getAuthToken();
       if (!token) {
         throw new Error('Authentication required');
       }
 
+      const q =
+        taskId != null && taskId !== ''
+          ? `?task_id=${encodeURIComponent(String(taskId))}`
+          : '';
       const response = await fetch(
-        `${API_BASE_URL}/submissions/competitions/${competitionId}/teams/${teamId}`,
+        `${API_BASE_URL}/submissions/competitions/${competitionId}/teams/${teamId}${q}`,
         {
           method: 'GET',
           headers: this.getHeaders(true),
@@ -1992,6 +2007,145 @@ class ApiService {
       console.error('Error deleting competition:', error);
       throw error;
     }
+  }
+
+  /** Full quiz for admin (includes is_correct on options). competitionId = competition_id. */
+  static async getAdminQuiz(competitionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to load quiz');
+    return result.data;
+  }
+
+  static async patchAdminQuiz(competitionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update quiz');
+    return result.data;
+  }
+
+  static async createAdminQuizQuestion(competitionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/quiz/questions`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create question');
+    return result.data;
+  }
+
+  static async updateAdminQuizQuestion(questionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update question');
+    return result.data;
+  }
+
+  static async deleteAdminQuizQuestion(questionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete question');
+    return result.data;
+  }
+
+  static async createAdminQuizOption(questionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/questions/${questionId}/options`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create option');
+    return result.data;
+  }
+
+  static async updateAdminQuizOption(optionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/options/${optionId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update option');
+    return result.data;
+  }
+
+  static async deleteAdminQuizOption(optionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/quiz/options/${optionId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete option');
+    return result.data;
+  }
+
+  static async createAdminCompetitionTask(competitionId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/tasks`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create task');
+    return result.data;
+  }
+
+  static async updateAdminCompetitionTask(taskId, body) {
+    const response = await fetch(`${API_BASE_URL}/admin/competition-tasks/${taskId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update task');
+    return result.data;
+  }
+
+  /**
+   * Upload a task reference asset to R2 under competitions_tasks_assets/{competitionId}/{taskId}/...
+   * Updates the task's assets_url. Admin only.
+   */
+  static async uploadCompetitionTaskAsset(taskId, file) {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/admin/competition-tasks/${taskId}/asset`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to upload task asset');
+    return result;
+  }
+
+  static async deleteAdminCompetitionTask(taskId) {
+    const response = await fetch(`${API_BASE_URL}/admin/competition-tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete task');
+    return result.data;
   }
 
   /**

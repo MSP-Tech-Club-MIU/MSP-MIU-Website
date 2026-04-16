@@ -48,16 +48,32 @@ app.get("*", (req, res) => {
   if (req.path.startsWith('/api/')) {
     return res.status(404).json({ error: 'API endpoint not found' });
   }
-  // Don't serve index.html for asset requests
+  // Missing static files must NOT return text/html (breaks script tags with "wrong MIME type")
   if (req.path.startsWith('/assets/') || req.path.startsWith('/uploads/')) {
-    return res.status(404).send('Not found');
+    return res.status(404).type('text/plain').send('Not found');
+  }
+  // Avoid SPA fallback for typical asset URLs (wrong path, stale chunk name, etc.)
+  if (/\.(js|mjs|cjs|css|map|json|woff2?|ttf|ico|png|jpe?g|gif|svg|webp|webmanifest)$/i.test(req.path)) {
+    return res.status(404).type('text/plain').send('Not found');
   }
   res.sendFile(path.join(__dirname, "client/public/index.html"));
 });
 
+const { runAutoSubmitExpiredAttempts } = require("./server/services/quizAttemptLifecycle");
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
+  setInterval(() => {
+    runAutoSubmitExpiredAttempts().catch((err) =>
+      console.error("[quiz-auto-submit]", err)
+    );
+  }, 60_000);
+  setTimeout(() => {
+    runAutoSubmitExpiredAttempts().catch((err) =>
+      console.error("[quiz-auto-submit]", err)
+    );
+  }, 10_000);
 });
 
 module.exports = app;

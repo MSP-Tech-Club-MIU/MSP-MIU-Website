@@ -4,7 +4,7 @@ const { Submission, Team, Evaluation, JudgeScore } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 
-const VALID_COMP_TYPES = ['project', 'quiz', 'external'];
+const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
 const VALID_EVALUATION_MODES = ['none', 'manual', 'auto', 'hybrid'];
 
@@ -142,26 +142,30 @@ const getCompetitionById = async (req, res) => {
 
         const competitions = await db.query(
             `SELECT 
-                competition_id,
-                title,
-                description,
-                rules,
-                start_at,
-                end_at,
-                max_team_size,
-                min_team_size,
-                is_team_based,
-                status,
-                location_type,
-                location_details,
-                type,
-                submission_mode,
-                evaluation_mode,
-                config,
-                created_by,
-                created_at
-            FROM competitions
-            WHERE competition_id = ?`,
+                c.competition_id,
+                c.title,
+                c.description,
+                c.rules,
+                c.start_at,
+                c.end_at,
+                c.max_team_size,
+                c.min_team_size,
+                c.is_team_based,
+                c.status,
+                c.location_type,
+                c.location_details,
+                c.type,
+                c.submission_mode,
+                c.evaluation_mode,
+                c.config,
+                c.created_by,
+                c.created_at,
+                q.status AS quiz_status,
+                q.start_at AS quiz_start_at,
+                q.end_at AS quiz_end_at
+            FROM competitions c
+            LEFT JOIN quizzes q ON q.competition_id = c.competition_id
+            WHERE c.competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
@@ -311,6 +315,13 @@ const createCompetition = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: `evaluation_mode must be one of: ${VALID_EVALUATION_MODES.join(', ')}`
+            });
+        }
+
+        if (resolvedType === 'task_quiz' && !['upload', 'link', 'both'].includes(resolvedSubmissionMode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'task_quiz competitions must use submission_mode upload, link, or both'
             });
         }
 
@@ -506,6 +517,12 @@ const updateCompetition = async (req, res) => {
 
         // Enforce invariants for restrictive competition types (current or requested)
         const effectiveType = type || existing[0].type;
+        if (effectiveType === 'task_quiz' && submission_mode && !['upload', 'link', 'both'].includes(submission_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'task_quiz competitions must use submission_mode upload, link, or both'
+            });
+        }
         if (effectiveType === 'external' || effectiveType === 'quiz') {
             if (submission_mode !== undefined && submission_mode !== 'none') {
                 return res.status(400).json({
@@ -747,7 +764,7 @@ const getCompetitionLeaderboard = async (req, res) => {
         }
 
         const existing = await db.query(
-            `SELECT competition_id FROM competitions WHERE competition_id = ?`,
+            `SELECT competition_id, type, evaluation_mode FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [competitionId],
                 type: db.QueryTypes.SELECT
@@ -788,6 +805,33 @@ const getCompetitionLeaderboard = async (req, res) => {
             return res.status(200).json({ success: true, data });
         }
 
+        if (competition.type === 'task_quiz') {
+            const taskRows = await db.query(
+                `SELECT
+                    t.team_id,
+                    t.team_name,
+                    SUM(COALESCE(s.score, e.total_auto_score, 0)) AS final_score
+                FROM teams t
+                LEFT JOIN submissions s
+                    ON s.team_id = t.team_id AND s.competition_id = ? AND s.task_id IS NOT NULL
+                LEFT JOIN evaluations e ON e.submission_id = s.submission_id
+                WHERE t.competition_id = ?
+                GROUP BY t.team_id, t.team_name
+                ORDER BY final_score DESC, t.team_name ASC`,
+                {
+                    replacements: [competitionId, competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            const data = taskRows.map((row, idx) => ({
+                rank: idx + 1,
+                team_id: row.team_id,
+                team_name: row.team_name,
+                final_score: row.final_score != null ? parseFloat(row.final_score, 10) : 0
+            }));
+            return res.status(200).json({ success: true, data });
+        }
+
         const rows = await db.query(
             `SELECT
                 t.team_id,
@@ -802,10 +846,11 @@ const getCompetitionLeaderboard = async (req, res) => {
             INNER JOIN submissions s
                 ON s.team_id = t.team_id
                 AND s.competition_id = ?
+                AND s.task_id IS NULL
                 AND s.submission_id = (
                     SELECT MAX(s2.submission_id)
                     FROM submissions s2
-                    WHERE s2.team_id = t.team_id AND s2.competition_id = ?
+                    WHERE s2.team_id = t.team_id AND s2.competition_id = ? AND s2.task_id IS NULL
                 )
             LEFT JOIN evaluations e ON e.submission_id = s.submission_id
             LEFT JOIN judge_scores js ON js.submission_id = s.submission_id

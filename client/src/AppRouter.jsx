@@ -18,6 +18,8 @@ const Competitions = lazy(() => import('./pages/Competitions'));
 const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
 const CreateTeam = lazy(() => import('./pages/CreateTeam'));
 const CompetitionWorkspace = lazy(() => import('./pages/CompetitionWorkspace'));
+const QuizPage = lazy(() => import('./pages/QuizPage'));
+const QuizTakeSession = lazy(() => import('./pages/QuizTakeSession'));
 const AcceptTeamInvitation = lazy(() => import('./pages/AcceptTeamInvitation'));
 const Suggestions = lazy(() => import('./pages/Suggestions'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
@@ -31,6 +33,7 @@ const AttendanceReview = lazy(() => import('./pages/AttendanceReview'));
 const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
+const CompetitionManagement = lazy(() => import('./pages/Admin/CompetitionManagement'));
 
 // Helper to check if running in Capacitor (native app) environment
 // Checked synchronously outside render cycle to avoid race conditions
@@ -166,6 +169,9 @@ const AppRouter = () => {
           <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
           <Route path="/competitions/:id/create-team" element={<SiteLayout><CreateTeam /></SiteLayout>} />
           <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
+          <Route path="/quizpage" element={<SiteLayout><QuizPage /></SiteLayout>} />
+          <Route path="/quizpage/:quizId" element={<SiteLayout><QuizPage /></SiteLayout>} />
+          <Route path="/quizpage/:quizId/take/:step" element={<SiteLayout><QuizTakeSession /></SiteLayout>} />
           <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
           <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
           <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
@@ -177,8 +183,10 @@ const AppRouter = () => {
           <Route path="/attendance-request" element={<SiteLayout><AttendanceRequest /></SiteLayout>} />
           <Route path="/attendance-review" element={<SiteLayout><AttendanceReview /></SiteLayout>} />
           <Route path="/download-android" element={<SiteLayout><DownloadAndroidAppWrapper /></SiteLayout>} />
-          <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
+          <Route path="/admin/competition-management" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
+          <Route path="/admin/competition-management/:competitionId" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
           <Route path="/admin/*" element={<SiteLayout><AdminPanel /></SiteLayout>} />
+          <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
         </Routes>
       </Suspense>
     </Router>

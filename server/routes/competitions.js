@@ -9,6 +9,7 @@ const {
   getUserTeamForCompetition,
   getCompetitionLeaderboard
 } = require('../controllers/competitions');
+const { getCompetitionTasksPublic } = require('../controllers/competitionTasks.controller');
 const { getCompetitionTeams } = require('../controllers/teams');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
@@ -17,6 +18,9 @@ router.get('/', getAllCompetitions);
 
 // Leaderboard (public)
 router.get('/:id/leaderboard', getCompetitionLeaderboard);
+
+// Task-quiz task list (public; only returns data for type task_quiz)
+router.get('/:id/tasks', getCompetitionTasksPublic);
 
 // Get competition by ID (public)
 router.get('/:id', getCompetitionById);

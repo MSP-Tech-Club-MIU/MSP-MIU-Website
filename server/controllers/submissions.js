@@ -10,8 +10,12 @@ const { normalizeInsertId } = require('../utils/normalizeInsertId');
  */
 const createSubmission = async (req, res) => {
     try {
-        const { competition_id, team_id, submit_type, repo_url, live_url, notes } = req.body;
+        const { competition_id, team_id, submit_type, repo_url, live_url, notes, task_id: taskIdBody } = req.body;
         const userId = req.user.user_id;
+        const taskIdParsed =
+            taskIdBody != null && taskIdBody !== ''
+                ? parseInt(String(taskIdBody), 10)
+                : null;
 
         // Validation
         if (!competition_id || !team_id || !submit_type) {
@@ -73,6 +77,71 @@ const createSubmission = async (req, res) => {
             });
         }
 
+        if (competition.type === 'task_quiz') {
+            if (taskIdParsed == null || Number.isNaN(taskIdParsed)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'task_id is required for task quiz competitions'
+                });
+            }
+            const validTask = await db.query(
+                `SELECT task_id FROM competition_tasks WHERE task_id = ? AND competition_id = ? LIMIT 1`,
+                {
+                    replacements: [taskIdParsed, competition_id],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+            if (!validTask || validTask.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid task_id for this competition'
+                });
+            }
+        } else if (taskIdParsed != null && !Number.isNaN(taskIdParsed)) {
+            return res.status(400).json({
+                success: false,
+                error: 'task_id is only allowed for task quiz competitions'
+            });
+        }
+
+        // Task quiz access rule for submissions:
+        // allow only when quiz status is `active` OR quiz.start_at has been reached,
+        // and still before quiz.end_at.
+        if (competition.type === 'task_quiz') {
+            const quizRows = await db.query(
+                `SELECT status, start_at, end_at
+                 FROM quizzes
+                 WHERE competition_id = ?
+                 LIMIT 1`,
+                {
+                    replacements: [competition_id],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+
+            const quiz = quizRows && quizRows.length ? quizRows[0] : null;
+            if (!quiz) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
+                });
+            }
+
+            const now = new Date();
+            const quizStart = new Date(quiz.start_at);
+            const quizEnd = new Date(quiz.end_at);
+            const startOk =
+                quiz.status === 'active' || (!Number.isNaN(quizStart.getTime()) && now >= quizStart);
+            const endOk = !Number.isNaN(quizEnd.getTime()) && now < quizEnd;
+
+            if (!startOk || !endOk) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz submissions are locked until the quiz starts (and they end at the scheduled end time).'
+                });
+            }
+        }
+
         if (competition.type === 'external' || competition.submission_mode === 'none') {
             return res.status(400).json({
                 success: false,
@@ -95,7 +164,7 @@ const createSubmission = async (req, res) => {
         }
 
         // Check if submission deadline passed
-        if (new Date() > new Date(competition.end_at)) {
+        if (competition.type !== 'task_quiz' && new Date() > new Date(competition.end_at)) {
             return res.status(400).json({
                 success: false,
                 error: 'Submission deadline has passed'
@@ -123,15 +192,21 @@ const createSubmission = async (req, res) => {
             });
         }
 
-        // Check if submission already exists
-        const existingSubmissions = await db.query(
+        // Check if submission already exists (per team; per task for task_quiz)
+        let existingSql =
             `SELECT submission_id, r2_key FROM submissions 
-             WHERE competition_id = ? AND team_id = ?`,
-            {
-                replacements: [competition_id, team_id],
-                type: db.QueryTypes.SELECT
-            }
-        );
+             WHERE competition_id = ? AND team_id = ?`;
+        const existingRepl = [competition_id, team_id];
+        if (competition.type === 'task_quiz') {
+            existingSql += ` AND task_id = ?`;
+            existingRepl.push(taskIdParsed);
+        } else {
+            existingSql += ` AND task_id IS NULL`;
+        }
+        const existingSubmissions = await db.query(existingSql, {
+            replacements: existingRepl,
+            type: db.QueryTypes.SELECT
+        });
 
         if (existingSubmissions && existingSubmissions.length > 0) {
             if ((submit_type === 'zip' || submit_type === 'zip_and_links') && !req.file && !existingSubmissions[0].r2_key) {
@@ -183,7 +258,11 @@ const createSubmission = async (req, res) => {
                 }
             );
 
-            if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+            const updatedRow = updatedSubmissions[0];
+            if (
+                (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') &&
+                updatedRow.r2_key
+            ) {
                 runEvaluationForSubmission(existingSubmissions[0].submission_id).catch((err) => {
                     console.error('Auto evaluation failed:', err.message);
                 });
@@ -204,14 +283,16 @@ const createSubmission = async (req, res) => {
         }
 
         // Create new submission
+        const insertTaskId = competition.type === 'task_quiz' ? taskIdParsed : null;
         const result = await db.query(
             `INSERT INTO submissions 
-             (competition_id, team_id, submit_type, r2_key, repo_url, live_url, notes, status)
-             VALUES (?, ?, ?, NULL, ?, ?, ?, 'submitted')`,
+             (competition_id, team_id, task_id, submit_type, r2_key, repo_url, live_url, notes, status)
+             VALUES (?, ?, ?, ?, NULL, ?, ?, ?, 'submitted')`,
             {
                 replacements: [
                     competition_id,
                     team_id,
+                    insertTaskId,
                     submit_type,
                     repo_url || null,
                     live_url || null,
@@ -258,7 +339,11 @@ const createSubmission = async (req, res) => {
             }
         );
 
-        if (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') {
+        const createdRow = newSubmissions[0];
+        if (
+            (competition.evaluation_mode === 'auto' || competition.evaluation_mode === 'hybrid') &&
+            createdRow.r2_key
+        ) {
             runEvaluationForSubmission(submissionId).catch((err) => {
                 console.error('Auto evaluation failed:', err.message);
             });
@@ -310,16 +395,78 @@ const getTeamSubmission = async (req, res) => {
             }
         }
 
-        const submissions = await db.query(
-            `SELECT s.*, t.team_name
-             FROM submissions s
-             INNER JOIN teams t ON s.team_id = t.team_id
-             WHERE s.competition_id = ? AND s.team_id = ?`,
+        const compRows = await db.query(
+            `SELECT type FROM competitions WHERE competition_id = ? LIMIT 1`,
             {
-                replacements: [competitionId, teamId],
+                replacements: [competitionId],
                 type: db.QueryTypes.SELECT
             }
         );
+        const compType = compRows?.[0]?.type;
+        const taskIdQ =
+            req.query.task_id != null && req.query.task_id !== ''
+                ? parseInt(String(req.query.task_id), 10)
+                : null;
+        if (compType === 'task_quiz') {
+            if (taskIdQ == null || Number.isNaN(taskIdQ)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Query parameter task_id is required for task quiz competitions'
+                });
+            }
+        }
+
+        // Task quiz access rule for viewing submissions:
+        // allow only after quiz unlocks (quiz.status === 'active' OR quiz.start_at reached).
+        if (compType === 'task_quiz' && !isPrivileged) {
+            const quizRows = await db.query(
+                `SELECT status, start_at
+                 FROM quizzes
+                 WHERE competition_id = ?
+                 LIMIT 1`,
+                {
+                    replacements: [competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+
+            const quiz = quizRows && quizRows.length ? quizRows[0] : null;
+            if (!quiz) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
+                });
+            }
+
+            const now = new Date();
+            const quizStart = new Date(quiz.start_at);
+            const unlocked =
+                quiz.status === 'active' || (!Number.isNaN(quizStart.getTime()) && now >= quizStart);
+
+            if (!unlocked) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
+                });
+            }
+        }
+
+        let subSql = `SELECT s.*, t.team_name
+             FROM submissions s
+             INNER JOIN teams t ON s.team_id = t.team_id
+             WHERE s.competition_id = ? AND s.team_id = ?`;
+        const subRepl = [competitionId, teamId];
+        if (compType === 'task_quiz') {
+            subSql += ` AND s.task_id = ?`;
+            subRepl.push(taskIdQ);
+        } else {
+            subSql += ` AND s.task_id IS NULL`;
+        }
+
+        const submissions = await db.query(subSql, {
+            replacements: subRepl,
+            type: db.QueryTypes.SELECT
+        });
 
         if (!submissions || submissions.length === 0) {
             return res.status(404).json({

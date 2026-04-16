@@ -14,11 +14,14 @@
     "send-activation-emails": "node scripts/sendActivationEmails.mjs",
     "send-board-activation-emails": "node scripts/sendBoardActivationEmails.mjs",
     "send-certificate-emails": "node scripts/sendCertificateEmails.mjs",
-    "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs"
+    "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs",
+    "test-announcement-email": "node scripts/sendLatestAnnouncementTestEmail.mjs",
+    "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
     "adm-zip": "^0.5.16",
+    "bcrypt": "^6.0.0",
     "chrome-launcher": "^1.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",

@@ -28,9 +28,16 @@ function normalizeAttempt(rawAttempt) {
     attempt_id: rawAttempt.attempt_id ?? rawAttempt.id,
     score: rawAttempt.score ?? null,
     status: rawAttempt.status || 'in_progress',
+    started_at: rawAttempt.started_at || null,
     submitted_at: rawAttempt.submitted_at || null,
     answers: rawAttempt.answers || rawAttempt.quiz_answers || []
   };
+}
+
+/** True when an MCQ row has a chosen option (including numeric id 0, if ever used). */
+function hasMcqSelection(answer) {
+  const v = answer?.selected_option_id;
+  return v !== null && v !== undefined && v !== '';
 }
 
 function normalizeAnswerMap(answers) {
@@ -59,7 +66,10 @@ export function useQuizAttempt({ quizId, userId }) {
   const saveTimersRef = useRef({});
 
   const load = useCallback(async () => {
-    if (!quizId || !userId) return;
+    if (!quizId || !userId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     setWarning(null);
@@ -139,7 +149,7 @@ export function useQuizAttempt({ quizId, userId }) {
       if (!q.is_required) return;
       const a = answers[q.question_id];
       const valid = q.question_type === 'mcq'
-        ? Boolean(a?.selected_option_id)
+        ? hasMcqSelection(a)
         : Boolean(String(a?.answer_text || '').trim());
       if (!valid) out[q.question_id] = 'This question is required.';
     });
@@ -175,7 +185,7 @@ export function useQuizAttempt({ quizId, userId }) {
     const answered = (quiz?.questions || []).filter((q) => {
       const a = answers[q.question_id];
       return q.question_type === 'mcq'
-        ? Boolean(a?.selected_option_id)
+        ? hasMcqSelection(a)
         : Boolean(String(a?.answer_text || '').trim());
     }).length;
     return { total, answered };

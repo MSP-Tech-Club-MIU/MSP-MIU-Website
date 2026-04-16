@@ -5,7 +5,8 @@ import {
     MdDashboard, MdEmojiEvents, MdFactCheck, MdAppRegistration,
     MdSearch, MdNotifications, MdLogout, MdHome, MdAdd, MdMenu,
     MdClose, MdPeople, MdEvent, MdPendingActions, MdDescription,
-    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson
+    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson,
+    MdSettings
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
@@ -198,24 +199,6 @@ const AdminPanel = () => {
 
     // Competitions state
     const [competitions, setCompetitions] = useState([]);
-    const [showCompModal, setShowCompModal] = useState(false);
-    const [editingComp, setEditingComp] = useState(null);
-    const [compForm, setCompForm] = useState({
-        name: '', description: '', start_date: '', end_date: '',
-        registration_deadline: '', max_team_size: 4, min_team_size: 1,
-        max_teams: '', status: 'draft', location: '', rules: '',
-        type: 'project', submission_mode: 'upload', evaluation_mode: 'manual',
-        is_multitask: false,
-        is_team_based: true
-    });
-
-    // Competition Teams state
-    const [showTeamModal, setShowTeamModal] = useState(false);
-    const [viewingCompTeams, setViewingCompTeams] = useState(null); // The competition we are viewing teams for
-    const [teamsList, setTeamsList] = useState([]);
-    const [teamsLoading, setTeamsLoading] = useState(false);
-    const [editingTeam, setEditingTeam] = useState(null);
-    const [teamForm, setTeamForm] = useState({ team_name: '', is_locked: false });
 
     // Attendance state
     const [attendance, setAttendance] = useState([]);
@@ -437,156 +420,13 @@ const AdminPanel = () => {
         fetchAnnouncementsAdmin
     ]);
 
-    // Competition CRUD
-    const openCompModal = (comp = null) => {
-        if (comp) {
-            setEditingComp(comp);
-            setCompForm({
-                name: comp.title || '',
-                description: comp.description || '',
-                start_date: comp.start_at ? comp.start_at.split('T')[0] : '',
-                end_date: comp.end_at ? comp.end_at.split('T')[0] : '',
-                registration_deadline: '',
-                max_team_size: comp.max_team_size || 4,
-                min_team_size: comp.min_team_size || 1,
-                max_teams: '',
-                status: comp.status || 'draft',
-                location_type: comp.location_type || 'on-campus',
-                location: comp.location_details || '',
-                rules: comp.rules != null ? String(comp.rules) : '',
-                type: comp.type || 'project',
-                submission_mode: comp.submission_mode || 'upload',
-                evaluation_mode: comp.evaluation_mode || 'manual',
-                is_multitask: comp?.config?.multiTask === true,
-                is_team_based: !(comp.is_team_based === false || comp.is_team_based === 0)
-            });
-        } else {
-            setEditingComp(null);
-            setCompForm({
-                name: '', description: '', start_date: '', end_date: '',
-                registration_deadline: '', max_team_size: 4, min_team_size: 1,
-                max_teams: '', status: 'draft', location: '', rules: '',
-                type: 'project', submission_mode: 'upload', evaluation_mode: 'manual',
-                is_multitask: false,
-                is_team_based: true
-            });
-        }
-        setShowCompModal(true);
-    };
-
-    const saveCompetition = async () => {
-        try {
-            const data = {
-                title: compForm.name,
-                description: compForm.description,
-                start_at: compForm.start_date,
-                end_at: compForm.end_date,
-                max_team_size: compForm.max_team_size,
-                min_team_size: compForm.min_team_size,
-                status: compForm.status,
-                location_type: compForm.location_type || 'on-campus',
-                location_details: compForm.location || null,
-                rules: compForm.rules != null && String(compForm.rules).trim() !== '' ? String(compForm.rules).trim() : '',
-                type: compForm.type,
-                submission_mode: compForm.type === 'external' ? 'none' : compForm.submission_mode,
-                evaluation_mode: compForm.type === 'external' ? 'none' : compForm.evaluation_mode,
-                config: compForm.type === 'project' ? { multiTask: !!compForm.is_multitask } : null,
-                is_team_based: !!compForm.is_team_based
-            };
-
-            if (editingComp) {
-                await ApiService.updateAdminCompetition(editingComp.competition_id, data);
-                setAlert({ type: 'success', message: 'Competition updated successfully!' });
-            } else {
-                await ApiService.createAdminCompetition(data);
-                setAlert({ type: 'success', message: 'Competition created successfully!' });
-            }
-
-            setShowCompModal(false);
+    // Refresh list when returning from full-page competition editor
+    useEffect(() => {
+        if (!hasAccess) return;
+        if (location.pathname === '/admin/competitions') {
             fetchCompetitions();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to save competition' });
         }
-    };
-
-    const deleteCompetition = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this competition?')) return;
-        try {
-            await ApiService.deleteAdminCompetition(id);
-            setAlert({ type: 'success', message: 'Competition deleted successfully!' });
-            fetchCompetitions();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to delete competition' });
-        }
-    };
-
-    // ===================================
-    // Team Management (Competitions)
-    // ===================================
-    const fetchCompTeams = async (compId) => {
-        try {
-            setTeamsLoading(true);
-            const data = await ApiService.getAdminCompetitionTeams(compId);
-            setTeamsList(data || []);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to load teams' });
-        } finally {
-            setTeamsLoading(false);
-        }
-    };
-
-    const openTeamModal = async (comp) => {
-        setViewingCompTeams(comp);
-        setEditingTeam(null);
-        setTeamForm({ team_name: '', is_locked: false });
-        setShowTeamModal(true);
-        await fetchCompTeams(comp.competition_id);
-    };
-
-    const closeTeamModal = () => {
-        setShowTeamModal(false);
-        setViewingCompTeams(null);
-        setTeamsList([]);
-    };
-
-    const saveTeam = async () => {
-        if (!teamForm.team_name.trim()) {
-            setAlert({ type: 'error', message: 'Team name is required' });
-            return;
-        }
-
-        try {
-            if (editingTeam) {
-                await ApiService.updateAdminTeam(editingTeam.team_id, teamForm);
-                setAlert({ type: 'success', message: 'Team updated successfully!' });
-            } else {
-                await ApiService.createAdminTeam(viewingCompTeams.competition_id, teamForm);
-                setAlert({ type: 'success', message: 'Team created successfully!' });
-            }
-
-            setEditingTeam(null);
-            setTeamForm({ team_name: '', is_locked: false });
-            fetchCompTeams(viewingCompTeams.competition_id);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to save team' });
-        }
-    };
-
-    const editTeamSettings = (team) => {
-        setEditingTeam(team);
-        setTeamForm({ team_name: team.team_name, is_locked: team.is_locked || false });
-    };
-
-    const deleteTeam = async (teamId) => {
-        if (!window.confirm('Are you sure you want to delete this team?')) return;
-        try {
-            await ApiService.deleteAdminTeam(teamId);
-            setAlert({ type: 'success', message: 'Team deleted successfully!' });
-            fetchCompTeams(viewingCompTeams.competition_id);
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to delete team' });
-        }
-    };
+    }, [location.pathname, hasAccess, fetchCompetitions]);
 
     // Attendance toggle
     const toggleAttendance = async (id, current) => {
@@ -666,8 +506,19 @@ const AdminPanel = () => {
         });
     };
 
-    const getLeaderMember = (team) => (team?.members || []).find((member) => member.role === 'leader');
-    const getTeammates = (team) => (team?.members || []).filter((member) => member.role !== 'leader');
+    const formatCompetitionType = (t) => {
+        switch (t) {
+            case 'task_quiz':
+                return 'Task quiz';
+            case 'quiz':
+                return 'Quiz';
+            case 'external':
+                return 'External';
+            case 'project':
+            default:
+                return 'Project';
+        }
+    };
 
     const handleTabChange = (key) => {
         const item = navItems.find(n => n.key === key);
@@ -972,8 +823,11 @@ const AdminPanel = () => {
                                     <h2 className="AdminPanel__sectionTitle">
                                         <MdEmojiEvents /> Manage Competitions
                                     </h2>
-                                    <button className="AdminPanel__addBtn" onClick={() => openCompModal()}>
-                                        <MdAdd /> Add Competition
+                                    <button
+                                        className="AdminPanel__addBtn"
+                                        onClick={() => navigate('/admin/competition-management')}
+                                    >
+                                        <MdAdd /> New competition
                                     </button>
                                 </div>
 
@@ -1011,7 +865,7 @@ const AdminPanel = () => {
                                                 {filtered.map(comp => (
                                                     <tr key={comp.competition_id}>
                                                         <td style={{ fontWeight: 600 }}>{comp.title}</td>
-                                                        <td>{comp.type || 'project'}</td>
+                                                        <td>{formatCompetitionType(comp.type)}</td>
                                                         <td>
                                                             <span className={`AdminPanel__badge AdminPanel__badge--${comp.status || 'draft'}`}>
                                                                 {comp.status}
@@ -1025,22 +879,17 @@ const AdminPanel = () => {
                                                         <td>{comp.max_team_size || '-'}</td>
                                                         <td>
                                                             <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
-                                                                onClick={() => openTeamModal(comp)}
-                                                            >
-                                                                View Teams
-                                                            </button>
-                                                            <button
+                                                                type="button"
                                                                 className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                                                onClick={() => openCompModal(comp)}
+                                                                onClick={() =>
+                                                                    navigate(
+                                                                        `/admin/competition-management/${comp.competition_id}`
+                                                                    )
+                                                                }
+                                                                title="Edit competition, quiz, tasks, and teams"
                                                             >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                                                onClick={() => deleteCompetition(comp.competition_id)}
-                                                            >
-                                                                Delete
+                                                                <MdSettings style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+                                                                Manage
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -1050,379 +899,6 @@ const AdminPanel = () => {
                                     );
                                 })()}
                             </div>
-
-                            {/* Competition Modal */}
-                            {showCompModal && (
-                                <div className="AdminPanel__modal" onClick={() => setShowCompModal(false)}>
-                                    <div className="AdminPanel__modalContent" onClick={e => e.stopPropagation()}>
-                                        <h3 className="AdminPanel__modalTitle">
-                                            {editingComp ? 'Edit Competition' : 'Create Competition'}
-                                        </h3>
-
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Name *</label>
-                                            <input
-                                                value={compForm.name}
-                                                onChange={e => setCompForm({ ...compForm, name: e.target.value })}
-                                                placeholder="Competition name"
-                                            />
-                                        </div>
-
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Description *</label>
-                                            <textarea
-                                                value={compForm.description}
-                                                onChange={e => setCompForm({ ...compForm, description: e.target.value })}
-                                                placeholder="Competition description"
-                                            />
-                                        </div>
-
-                                        <div className="AdminPanel__formRow">
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Start Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={compForm.start_date}
-                                                    onChange={e => setCompForm({ ...compForm, start_date: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>End Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={compForm.end_date}
-                                                    onChange={e => setCompForm({ ...compForm, end_date: e.target.value })}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="AdminPanel__formRow">
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Competition Type</label>
-                                                <select
-                                                    value={compForm.type}
-                                                    onChange={e => setCompForm({ ...compForm, type: e.target.value })}
-                                                >
-                                                    <option value="project">Project</option>
-                                                    <option value="quiz">Quiz</option>
-                                                    <option value="external">External</option>
-                                                </select>
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Registration Deadline</label>
-                                                <input
-                                                    type="date"
-                                                    value={compForm.registration_deadline}
-                                                    onChange={e => setCompForm({ ...compForm, registration_deadline: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Status</label>
-                                                <select
-                                                    value={compForm.status}
-                                                    onChange={e => setCompForm({ ...compForm, status: e.target.value })}
-                                                >
-                                                    <option value="draft">Draft</option>
-                                                    <option value="open">Open</option>
-                                                    <option value="locked">Locked</option>
-                                                    <option value="judging">Judging</option>
-                                                    <option value="finished">Finished</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="AdminPanel__formRow">
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Submission Mode</label>
-                                                <select
-                                                    value={compForm.type === 'external' ? 'none' : compForm.submission_mode}
-                                                    disabled={compForm.type === 'external'}
-                                                    onChange={e => setCompForm({ ...compForm, submission_mode: e.target.value })}
-                                                >
-                                                    {compForm.type === 'external' ? (
-                                                        <option value="none">None</option>
-                                                    ) : (
-                                                        <>
-                                                            <option value="upload">Upload (ZIP)</option>
-                                                            <option value="link">Link</option>
-                                                            <option value="both">Both</option>
-                                                        </>
-                                                    )}
-                                                </select>
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Evaluation Mode</label>
-                                                <select
-                                                    value={compForm.type === 'external' ? 'none' : compForm.evaluation_mode}
-                                                    disabled={compForm.type === 'external'}
-                                                    onChange={e => setCompForm({ ...compForm, evaluation_mode: e.target.value })}
-                                                >
-                                                    {compForm.type === 'external' ? (
-                                                        <option value="none">None</option>
-                                                    ) : (
-                                                        <>
-                                                            <option value="manual">Manual</option>
-                                                            <option value="auto">Auto</option>
-                                                            <option value="hybrid">Hybrid</option>
-                                                            <option value="none">None</option>
-                                                        </>
-                                                    )}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {compForm.type === 'project' && (
-                                            <div className="AdminPanel__formGroup">
-                                                <label>
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={compForm.is_multitask}
-                                                        onChange={e => setCompForm({ ...compForm, is_multitask: e.target.checked })}
-                                                    />
-                                                    {' '}Frontend multi-task mode (expects `task1` + `task2` folders)
-                                                </label>
-                                            </div>
-                                        )}
-
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Rules (optional)</label>
-                                            <textarea
-                                                value={compForm.rules}
-                                                onChange={e => setCompForm({ ...compForm, rules: e.target.value })}
-                                                placeholder="Competition rules"
-                                                rows={3}
-                                            />
-                                        </div>
-
-                                        <div className="AdminPanel__formGroup">
-                                            <label>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!compForm.is_team_based}
-                                                    onChange={(e) => {
-                                                        const individual = e.target.checked;
-                                                        setCompForm((f) => ({
-                                                            ...f,
-                                                            is_team_based: !individual,
-                                                            ...(individual ? { min_team_size: 1, max_team_size: 1 } : {})
-                                                        }));
-                                                    }}
-                                                />
-                                                {' '}Individual competition (single participant; one “team” slot only)
-                                            </label>
-                                        </div>
-
-                                        <div className="AdminPanel__formRow">
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Min Team Size</label>
-                                                <input
-                                                    type="number"
-                                                    value={compForm.min_team_size}
-                                                    onChange={e => setCompForm({ ...compForm, min_team_size: parseInt(e.target.value) || 1 })}
-                                                    min="1"
-                                                    disabled={!compForm.is_team_based}
-                                                />
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Max Team Size</label>
-                                                <input
-                                                    type="number"
-                                                    value={compForm.max_team_size}
-                                                    onChange={e => setCompForm({ ...compForm, max_team_size: parseInt(e.target.value) || 4 })}
-                                                    min="1"
-                                                    disabled={!compForm.is_team_based}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="AdminPanel__formRow">
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Max Teams (leave empty for unlimited)</label>
-                                                <input
-                                                    type="number"
-                                                    value={compForm.max_teams}
-                                                    onChange={e => setCompForm({ ...compForm, max_teams: e.target.value })}
-                                                    placeholder="Unlimited"
-                                                    min="1"
-                                                />
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Location Type</label>
-                                                <select
-                                                    value={compForm.location_type}
-                                                    onChange={e => setCompForm({ ...compForm, location_type: e.target.value })}
-                                                >
-                                                    <option value="on-campus">On Campus</option>
-                                                    <option value="online">Online</option>
-                                                </select>
-                                            </div>
-                                            <div className="AdminPanel__formGroup">
-                                                <label>Location Details</label>
-                                                <input
-                                                    value={compForm.location}
-                                                    onChange={e => setCompForm({ ...compForm, location: e.target.value })}
-                                                    placeholder={compForm.location_type === 'online' ? 'e.g. Zoom / Google Meet link' : 'e.g. MIU Campus'}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="AdminPanel__modalActions">
-                                            <button
-                                                className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                                                onClick={() => setShowCompModal(false)}
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button
-                                                className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
-                                                onClick={saveCompetition}
-                                            >
-                                                {editingComp ? 'Save Changes' : 'Create'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Teams Modal */}
-                            {showTeamModal && viewingCompTeams && (
-                                <div className="AdminPanel__modalOverlay" onClick={closeTeamModal}>
-                                    <div className="AdminPanel__modalContent AdminPanel__modalContent--large" onClick={e => e.stopPropagation()}>
-                                        <div className="AdminPanel__modalHeader">
-                                            <h3>Teams: {viewingCompTeams.title}</h3>
-                                            <button className="AdminPanel__modalClose" onClick={closeTeamModal}>
-                                                <MdClose />
-                                            </button>
-                                        </div>
-
-                                        <div className="AdminPanel__teamsSection">
-                                            <div className="AdminPanel__teamForm">
-                                                <h4>{editingTeam ? 'Edit Team' : 'Add New Team'}</h4>
-                                                <div className="AdminPanel__formRow">
-                                                    <div className="AdminPanel__formGroup" style={{ flex: 2 }}>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="Team Name"
-                                                            value={teamForm.team_name}
-                                                            onChange={e => setTeamForm({ ...teamForm, team_name: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="AdminPanel__formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
-                                                        <label htmlFor="isLocked">Locked?</label>
-                                                        <input
-                                                            id="isLocked"
-                                                            type="checkbox"
-                                                            checked={teamForm.is_locked}
-                                                            onChange={e => setTeamForm({ ...teamForm, is_locked: e.target.checked })}
-                                                            style={{ width: 'auto', marginBottom: 0 }}
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
-                                                        onClick={saveTeam}
-                                                        style={{ height: '42px' }}
-                                                    >
-                                                        {editingTeam ? 'Update Team' : 'Add Team'}
-                                                    </button>
-                                                    {editingTeam && (
-                                                        <button
-                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--secondary"
-                                                            onClick={() => {
-                                                                setEditingTeam(null);
-                                                                setTeamForm({ team_name: '', is_locked: false });
-                                                            }}
-                                                            style={{ height: '42px' }}
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {teamsLoading ? (
-                                                <div className="AdminPanel__loading">Loading teams...</div>
-                                            ) : teamsList.length === 0 ? (
-                                                <div className="AdminPanel__emptyState">No teams created for this competition yet.</div>
-                                            ) : (
-                                                <table className="AdminPanel__table">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Team Name</th>
-                                                            <th>Participants</th>
-                                                            <th>Created By</th>
-                                                            <th>Status</th>
-                                                            <th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {teamsList.map(team => {
-                                                            const leader = getLeaderMember(team);
-                                                            const teammates = getTeammates(team);
-
-                                                            return (
-                                                                <tr key={team.team_id}>
-                                                                    <td style={{ fontWeight: 600 }}>{team.team_name}</td>
-                                                                    <td>
-                                                                        {(team.members || []).length === 0 ? (
-                                                                            <span>No participants yet</span>
-                                                                        ) : (
-                                                                            <div style={{ display: 'grid', gap: '8px' }}>
-                                                                                <div>
-                                                                                    <strong>Leader:</strong>{' '}
-                                                                                    {leader?.user?.full_name || team.creator?.full_name || 'Unknown'}
-                                                                                    {leader?.user?.university_id ? ` (${leader.user.university_id})` : ''}
-                                                                                    {leader?.user?.email ? ` - ${leader.user.email}` : ''}
-                                                                                </div>
-
-                                                                                {teammates.length > 0 ? (
-                                                                                    <div>
-                                                                                        <strong>Teammates:</strong>
-                                                                                        <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
-                                                                                            {teammates.map((member) => (
-                                                                                                <li key={member.team_member_id}>
-                                                                                                    {member?.user?.full_name || 'Unknown'}
-                                                                                                    {member?.user?.university_id ? ` (${member.user.university_id})` : ''}
-                                                                                                    {member?.user?.email ? ` - ${member.user.email}` : ''}
-                                                                                                </li>
-                                                                                            ))}
-                                                                                        </ul>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div><strong>Teammates:</strong> No teammates yet</div>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                    </td>
-                                                                    <td>{team.creator?.full_name || 'Admin'}</td>
-                                                                    <td>
-                                                                        <span className={`AdminPanel__badge AdminPanel__badge--${team.is_locked ? 'rejected' : 'approved'}`}>
-                                                                            {team.is_locked ? 'Locked' : 'Open'}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <button
-                                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                                                            onClick={() => editTeamSettings(team)}
-                                                                        >
-                                                                            Edit
-                                                                        </button>
-                                                                        <button
-                                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                                                            onClick={() => deleteTeam(team.team_id)}
-                                                                        >
-                                                                            Delete
-                                                                        </button>
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </motion.div>
                     )}
 

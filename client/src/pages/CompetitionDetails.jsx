@@ -17,7 +17,8 @@ import {
   FiEye,
   FiAlertCircle,
   FiFileText,
-  FiUserPlus
+  FiUserPlus,
+  FiPlayCircle
 } from 'react-icons/fi';
 
 const CompetitionDetails = () => {
@@ -127,27 +128,95 @@ const CompetitionDetails = () => {
 
   const canRegister = () => {
     if (!competition) return false;
+    if (['quiz', 'task_quiz'].includes(competition.type) && !isQuizRegistrationOpen()) return false;
     // Can register if competition is open and user doesn't have a team (or is a guest)
     return competition.status === 'open' && !userTeam;
   };
 
   const canCreateTeam = () => {
     if (!competition) return false;
+    if (['quiz', 'task_quiz'].includes(competition.type) && !isQuizRegistrationOpen()) return false;
     // Guests can create teams, authenticated users can if they don't have a team
     return competition.status === 'open' && (!userId || !userTeam);
+  };
+
+  const isQuizRegistrationOpen = () => {
+    if (!competition || !['quiz', 'task_quiz'].includes(competition.type)) return true;
+    const now = new Date();
+    if (competition.quiz_status === 'active') return false; // quiz activation closes registrations early
+    const startDate = new Date(competition.start_at);
+    const endDate = new Date(competition.end_at);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return true;
+    return now >= startDate && now < endDate;
   };
 
   const isCompetitionActive = () => {
     if (!competition) return false;
     const now = new Date();
+    // For quiz-based competitions, "active" means the quiz is live for taking/submitting.
+    if (competition.type === 'quiz' || competition.type === 'task_quiz') {
+      const quizStart = new Date(competition.quiz_start_at);
+      const quizEnd = new Date(competition.quiz_end_at);
+      if (Number.isNaN(quizStart.getTime()) || Number.isNaN(quizEnd.getTime())) return false;
+      const unlocked = competition.quiz_status === 'active' || now >= quizStart;
+      return unlocked && now < quizEnd;
+    }
+
+    // For non-quiz competitions, keep the original meaning.
     const startDate = new Date(competition.start_at);
     const endDate = new Date(competition.end_at);
-    // Competition is active if current time is between start and end dates
     return now >= startDate && now < endDate;
+  };
+
+  const isQuizUnlockedForView = () => {
+    if (!competition) return false;
+    if (competition.type !== 'quiz' && competition.type !== 'task_quiz') return true;
+    const now = new Date();
+    if (competition.quiz_status === 'active') return true;
+    const quizStart = new Date(competition.quiz_start_at);
+    if (Number.isNaN(quizStart.getTime())) return false;
+    return now >= quizStart;
   };
 
   const isSoloCompetition = () =>
     competition && (competition.is_team_based === false || competition.is_team_based === 0);
+
+  const formatSubmissionLabel = () => {
+    if (!competition) return '';
+    if (competition.type === 'quiz') {
+      return 'Answer in the team workspace (no ZIP or repository upload).';
+    }
+    if (competition.type === 'task_quiz') {
+      return 'Complete each task from the team workspace (ZIP and/or links per organizer settings).';
+    }
+    const mode = competition.submission_mode;
+    if (mode === 'upload') return 'ZIP file via workspace upload (stored securely).';
+    if (mode === 'link') return 'Repository and/or live demo links.';
+    if (mode === 'both') return 'ZIP upload and/or links.';
+    if (mode === 'none' || competition.type === 'external') return 'No submission through this site.';
+    return mode || '—';
+  };
+
+  const formatEvaluationLabel = () => {
+    if (!competition) return '';
+    if (competition.type === 'quiz') {
+      return 'Auto-graded from your quiz answers.';
+    }
+    if (competition.type === 'task_quiz') {
+      const ev = competition.evaluation_mode;
+      if (ev === 'manual') return 'Judges review each task submission manually.';
+      if (ev === 'auto') return 'Automated scoring on each ZIP upload (when provided).';
+      if (ev === 'hybrid') return 'Automated ZIP scoring plus manual judge input.';
+      if (ev === 'none') return 'No scoring pipeline configured.';
+      return ev || '—';
+    }
+    const ev = competition.evaluation_mode;
+    if (ev === 'manual') return 'Judges review submissions manually.';
+    if (ev === 'auto') return 'Automated scoring runs on your uploaded ZIP (when a ZIP is on file).';
+    if (ev === 'hybrid') return 'Automated scoring on ZIP plus manual judge input.';
+    if (ev === 'none') return 'No automated scoring pipeline for this competition.';
+    return ev || '—';
+  };
 
   const handleJoinSoloCompetition = async () => {
     try {
@@ -292,6 +361,109 @@ const CompetitionDetails = () => {
                 : `${competition.min_team_size}-${competition.max_team_size} members`}
             </p>
           </div>
+
+          <div className="CompetitionDetailsPage__infoCard CompetitionDetailsPage__infoCard--wide">
+            <FiFileText size={24} className="CompetitionDetailsPage__infoIcon" />
+            <h3>How this competition works</h3>
+            <p>
+              <strong>Type:</strong>{' '}
+              {competition.type === 'quiz'
+                ? 'Quiz (MCQ / text)'
+                : competition.type === 'task_quiz'
+                  ? 'Task quiz'
+                  : competition.type === 'external'
+                    ? 'External'
+                    : 'Project'}
+            </p>
+            <p style={{ marginTop: 8 }}>
+              <strong>Submissions:</strong> {formatSubmissionLabel()}
+            </p>
+            <p style={{ marginTop: 8 }}>
+              <strong>Evaluation:</strong> {formatEvaluationLabel()}
+            </p>
+            {competition.type === 'quiz' && (
+              <div className="CompetitionDetailsPage__quizCta">
+                <p className="CompetitionDetailsPage__quizCtaHint">
+                  {competition.quiz_status && (
+                    <>
+                      Quiz status: <strong>{competition.quiz_status}</strong>
+                      {competition.quiz_status === 'active'
+                        ? ' — the quiz is live; you can open the quiz page to begin.'
+                        : competition.quiz_status === 'published'
+                          ? ' — question wording unlocks at the scheduled start time (or when activated).'
+                          : ' — check back when organizers publish or activate the quiz.'}
+                    </>
+                  )}
+                  {!competition.quiz_status && (
+                    <>Quiz details will appear once the quiz is set up for this competition.</>
+                  )}
+                </p>
+                <div className="CompetitionDetailsPage__quizCtaButtons">
+                  {isCompetitionActive() && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/quizpage/${id}/take/1`)}
+                      className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary CompetitionDetailsPage__btn--quizStart"
+                    >
+                      <FiPlayCircle size={20} aria-hidden />
+                      Start Quiz
+                    </button>
+                  )}
+                  {isQuizUnlockedForView() ? (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/quizpage/${id}`)}
+                      className={
+                        competition.quiz_status === 'active'
+                          ? 'CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary'
+                          : 'CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary'
+                      }
+                    >
+                      <FiFileText size={18} aria-hidden style={{ marginRight: 8 }} />
+                      {competition.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
+                    </button>
+                  ) : (
+                    <div className="CompetitionDetailsPage__lockedNotice" style={{ marginTop: 10 }}>
+                      <FiLock size={24} />
+                      <p style={{ margin: 0 }}>Quiz will unlock at its scheduled start time or when activated.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            {competition.type === 'task_quiz' && (
+              <div className="CompetitionDetailsPage__quizCta">
+                <p className="CompetitionDetailsPage__quizCtaHint">
+                  Tasks (instructions and optional reference images) live in your{' '}
+                  <strong>team workspace</strong>. Submit each task separately—ZIP and/or links follow this
+                  competition&apos;s submission mode. Evaluation follows the evaluation mode above.
+                </p>
+                {userTeam ? (
+                  isQuizUnlockedForView() ? (
+                    <div className="CompetitionDetailsPage__quizCtaButtons">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/competitions/${id}/team/${userTeam.team_id}`)}
+                        className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary CompetitionDetailsPage__btn--quizStart"
+                      >
+                        <FiPlayCircle size={20} aria-hidden />
+                        Open team workspace
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="CompetitionDetailsPage__lockedNotice" style={{ marginTop: 10 }}>
+                      <FiLock size={24} />
+                      <p style={{ margin: 0 }}>Task quiz will unlock at its scheduled start time or when activated.</p>
+                    </div>
+                  )
+                ) : (
+                  <p className="CompetitionDetailsPage__quizCtaHint" style={{ marginTop: 8 }}>
+                    Join or create a team below, then open the workspace to see the task list.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </motion.div>
 
         {/* Rules Section */}
@@ -319,15 +491,38 @@ const CompetitionDetails = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          {userTeam && isCompetitionActive() ? (
-            <div className="CompetitionDetailsPage__activeCompetition">
-              <FiAward size={32} className="CompetitionDetailsPage__activeIcon" />
-              <h3>Competition is Live!</h3>
-              <p>Team: <strong>{userTeam.team_name}</strong></p>
-              <button onClick={handleStartCompetition} className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary">
-                Access Team Workspace
-              </button>
-            </div>
+          {userTeam && (competition?.type === 'quiz' || competition?.type === 'task_quiz') ? (
+            isCompetitionActive() ? (
+              <div className="CompetitionDetailsPage__activeCompetition">
+                <FiAward size={32} className="CompetitionDetailsPage__activeIcon" />
+                <h3>Competition is Live!</h3>
+                <p>Team: <strong>{userTeam.team_name}</strong></p>
+                <button
+                  onClick={handleStartCompetition}
+                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                >
+                  Access Team Workspace
+                </button>
+              </div>
+            ) : isQuizUnlockedForView() ? (
+              <div className="CompetitionDetailsPage__teamStatus">
+                <FiCheckCircle size={32} className="CompetitionDetailsPage__teamStatusIcon" />
+                <h3>You're Part of a Team</h3>
+                <p>Team: <strong>{userTeam.team_name}</strong></p>
+                <button
+                  onClick={handleViewTeam}
+                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                >
+                  Access Team Workspace
+                </button>
+              </div>
+            ) : (
+              <div className="CompetitionDetailsPage__lockedNotice">
+                <FiLock size={32} />
+                <h3>Quiz Locked</h3>
+                <p>Access opens when the quiz is activated or when its scheduled start time is reached.</p>
+              </div>
+            )
           ) : userTeam ? (
             <div className="CompetitionDetailsPage__teamStatus">
               <FiCheckCircle size={32} className="CompetitionDetailsPage__teamStatusIcon" />
@@ -366,6 +561,12 @@ const CompetitionDetails = () => {
                   {isSoloCompetition() ? 'Join Competition' : 'Create Team'}
                 </button>
               </div>
+            </div>
+          ) : ['quiz', 'task_quiz'].includes(competition?.type) && competition?.status === 'open' && !isQuizRegistrationOpen() ? (
+            <div className="CompetitionDetailsPage__lockedNotice">
+              <FiLock size={32} />
+              <h3>Quiz Registration Closed</h3>
+              <p>Registrations for this competition are no longer accepted after the registration deadline.</p>
             </div>
           ) : competition?.status === 'locked' ? (
             <div className="CompetitionDetailsPage__lockedNotice">

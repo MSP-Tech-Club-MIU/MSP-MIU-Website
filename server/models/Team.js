@@ -23,9 +23,10 @@ const Team = sequelize.define('Team', {
       notEmpty: true
     }
   },
+  // Null while the leader is still a guest (pending activation); set when they join or accept invite
   created_by_user_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'users',
       key: 'user_id'
