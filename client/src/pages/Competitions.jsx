@@ -21,7 +21,7 @@ const Competitions = () => {
   const [competitions, setCompetitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all'); // all, open, draft, locked, judging, finished
+  const [filter, setFilter] = useState('all'); // all, open, locked, judging, finished (+ draft for board/admin)
   const [sort, setSort] = useState('desc'); // desc, asc
   const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
@@ -77,6 +77,9 @@ const Competitions = () => {
   }, []);
 
   const canAccessAdminFeatures = userRole === 'board' || userRole === 'admin';
+  const availableStatuses = canAccessAdminFeatures
+    ? ['all', 'open', 'draft', 'locked', 'judging', 'finished']
+    : ['all', 'open', 'locked', 'judging', 'finished'];
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '';
@@ -112,10 +115,12 @@ const Competitions = () => {
   };
 
   const filteredCompetitions = useMemo(() => {
-    let filtered = competitions;
+    let filtered = canAccessAdminFeatures
+      ? competitions
+      : competitions.filter((comp) => comp.status !== 'draft');
     
     if (filter !== 'all') {
-      filtered = competitions.filter(comp => comp.status === filter);
+      filtered = filtered.filter((comp) => comp.status === filter);
     }
     
     return filtered.sort((a, b) => {
@@ -123,7 +128,13 @@ const Competitions = () => {
       const dateB = new Date(b.start_at);
       return sort === 'desc' ? dateB - dateA : dateA - dateB;
     });
-  }, [competitions, filter, sort]);
+  }, [competitions, filter, sort, canAccessAdminFeatures]);
+
+  useEffect(() => {
+    if (!availableStatuses.includes(filter)) {
+      setFilter('all');
+    }
+  }, [availableStatuses, filter]);
 
   const handleCompetitionClick = (competitionId) => {
     navigate(`/competitions/${competitionId}`);
@@ -165,7 +176,7 @@ const Competitions = () => {
           <>
             <div className="CompetitionsPage__controls">
               <div className="CompetitionsPage__filters">
-                {['all', 'open', 'draft', 'locked', 'judging', 'finished'].map((status) => (
+                {availableStatuses.map((status) => (
                   <button
                     key={status}
                     className={`CompetitionsPage__filterBtn ${filter === status ? 'active' : ''}`}

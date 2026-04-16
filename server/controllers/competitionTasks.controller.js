@@ -1,6 +1,6 @@
 const path = require('path');
 const multer = require('multer');
-const { Competition, CompetitionTask } = require('../models');
+const { Competition, CompetitionTask, Quiz } = require('../models');
 const { uploadToR2 } = require('../config/cloud');
 
 const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
@@ -97,6 +97,20 @@ async function getCompetitionTasksPublic(req, res) {
     if (competition.type !== 'task_quiz') {
       return res.status(200).json({ success: true, data: [] });
     }
+
+    // Task quiz access rule: allow only after quiz unlocks
+    // (quiz.status === 'active' OR quiz.start_at reached).
+    const quiz = await Quiz.findOne({ where: { competition_id: competition.competition_id } });
+    if (!quiz) {
+      return res.status(404).json({ success: false, error: 'Quiz not found for this task quiz competition' });
+    }
+    const now = new Date();
+    const start = new Date(quiz.start_at);
+    const unlocked = quiz.status === 'active' || (!Number.isNaN(start.getTime()) && now >= start);
+    if (!unlocked) {
+      return res.status(403).json({ success: false, error: 'Task quiz is not open yet.' });
+    }
+
     const tasks = await CompetitionTask.findAll({
       where: { competition_id: competition.competition_id },
       order: [['position', 'ASC'], ['task_id', 'ASC']]

@@ -1,23 +1,22 @@
 /**
- * Send the latest DB announcement using the same template as the live broadcast.
+ * Send the latest DB announcement using the exact same broadcast logic as the live app.
  *
- * Default: sends to all active users with role "member" (BCC batches, same as API broadcast pattern).
+ * Default: sends the latest inserted announcement to all users using the same
+ * `broadcastNewAnnouncementEmails()` helper used when announcements are created.
  *
  * Usage:
  *   node scripts/sendLatestAnnouncementTestEmail.mjs [--no-verify] [--test] [--dry-run]
  *   node scripts/sendLatestAnnouncementTestEmail.mjs --to you@example.com [--no-verify] [--test]
  *
  *   --test     [TEST] subject + yellow banner
- *   --dry-run  Only print how many members would receive mail (no SMTP)
- *   --to       Send to one address only instead of all members
+ *   --dry-run  Only print how many users would receive mail (no SMTP)
+ *   --to       Send to one address only instead of all users
  */
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-
-const BCC_CHUNK_SIZE = 80;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPaths = [
@@ -33,7 +32,8 @@ envPaths.forEach((p, i) => {
 dotenv.config();
 
 const require = createRequire(import.meta.url);
-const { Announcement, User, sequelize } = require('../models');
+const { Announcement, sequelize } = require('../models');
+const { broadcastNewAnnouncementEmails } = require('../controllers/announcements');
 
 const argv = process.argv.slice(2);
 const skipVerify = argv.includes('--no-verify');
@@ -74,15 +74,13 @@ async function main() {
     process.exit(1);
   }
 
-  const { subject, text, html } = buildAnnouncementEmail(announcement, {
-    testMode,
-    announcementId: announcement.announcement_id,
-    frontendUrl: process.env.FRONTEND_URL
-  });
-
-  const fromName = testMode ? 'MSP MIU Announcements (test)' : 'MSP MIU Announcements';
-
   if (singleTo) {
+    const { subject, text, html } = buildAnnouncementEmail(announcement, {
+      testMode,
+      announcementId: announcement.announcement_id,
+      frontendUrl: process.env.FRONTEND_URL
+    });
+    const fromName = testMode ? 'MSP MIU Announcements (test)' : 'MSP MIU Announcements';
     if (dryRun) {
       console.log(`[dry-run] Would send to single address: ${singleTo}`);
       await sequelize.close();
@@ -102,45 +100,18 @@ async function main() {
     return;
   }
 
-  const members = await User.findAll({
-    attributes: ['email'],
-    where: {
-      role: 'member',
-      is_active: true
-    }
-  });
-  const emails = [...new Set(members.map((u) => (u.email || '').trim()).filter(Boolean))];
-
-  if (emails.length === 0) {
-    console.error('No active users with role "member" and a valid email.');
-    process.exit(1);
-  }
-
   if (dryRun) {
-    console.log(
-      `[dry-run] Latest announcement_id=${announcement.announcement_id} — would email ${emails.length} member(s).`
-    );
+    const users = await require('../models').User.findAll({ attributes: ['email'] });
+    const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
+    console.log(`[dry-run] Latest announcement_id=${announcement.announcement_id} — would email ${emails.length} user(s).`);
     await sequelize.close();
     return;
   }
-
-  const fromEmail =
-    process.env.MAIL_FROM_ADDRESS || process.env.MAIL_USERNAME || 'noreply@msp-miu.tech';
-
-  for (let i = 0; i < emails.length; i += BCC_CHUNK_SIZE) {
-    const bcc = emails.slice(i, i + BCC_CHUNK_SIZE);
-    await sendEmail({
-      to: fromEmail,
-      bcc,
-      subject,
-      text,
-      html,
-      fromName
-    });
-  }
+ 
+  await broadcastNewAnnouncementEmails(announcement);
 
   console.log(
-    `Sent ${testMode ? 'TEST' : 'production-style'} announcement email to ${emails.length} member(s) in ${Math.ceil(emails.length / BCC_CHUNK_SIZE)} batch(es) (announcement_id=${announcement.announcement_id})`
+    `Sent latest announcement using live broadcast logic (announcement_id=${announcement.announcement_id})`
   );
   await sequelize.close();
 }

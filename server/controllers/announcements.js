@@ -1,44 +1,38 @@
 const { Announcement, User } = require('../models');
 const { Op } = require('sequelize');
 
-const BCC_CHUNK_SIZE = 80;
-
 /**
- * Notify all active users by email (non-blocking caller should .catch).
- * Uses BCC batches so recipients are not exposed to each other.
+ * Notify all users by email.
+ * Sends directly to each recipient so SMTP providers that mishandle
+ * BCC-only deliveries still deliver to everyone reliably.
  */
 async function broadcastNewAnnouncementEmails(announcement) {
   const users = await User.findAll({
-    attributes: ['email'],
-    where: { is_active: true }
+    attributes: ['email']
   });
   const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
   if (emails.length === 0) {
-    console.log('Announcement email: no recipients (no active users with email)');
+    console.log('Announcement email: no recipients (no users with email)');
     return;
   }
 
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildAnnouncementEmail } = await import('../utils/announcementEmail.mjs');
-  const fromEmail =
-    process.env.MAIL_FROM_ADDRESS || process.env.MAIL_USERNAME || 'noreply@msp-miu.tech';
 
   const { subject, text, html } = buildAnnouncementEmail(announcement, {
     frontendUrl: process.env.FRONTEND_URL
   });
 
-  for (let i = 0; i < emails.length; i += BCC_CHUNK_SIZE) {
-    const bcc = emails.slice(i, i + BCC_CHUNK_SIZE);
+  for (const to of emails) {
     await sendEmail({
-      to: fromEmail,
-      bcc,
+      to,
       subject,
       text,
       html,
       fromName: 'MSP MIU Announcements'
     });
   }
-  console.log(`Announcement emails sent to ${emails.length} recipient(s) in ${Math.ceil(emails.length / BCC_CHUNK_SIZE)} batch(es)`);
+  console.log(`Announcement emails sent to ${emails.length} recipient(s)`);
 }
 
 /**
@@ -164,13 +158,11 @@ const addAnnouncement = async (req, res) => {
       }]
     });
 
-    void broadcastNewAnnouncementEmails(createdAnnouncement).catch((err) => {
-      console.error('Announcement created but email broadcast failed:', err);
-    });
+    await broadcastNewAnnouncementEmails(createdAnnouncement);
 
     return res.status(201).json({
       success: true,
-      message: 'Announcement created successfully',
+      message: 'Announcement created successfully and emails sent',
       data: createdAnnouncement
     });
   } catch (error) {
@@ -282,6 +274,7 @@ const deleteAnnouncement = async (req, res) => {
 };
 
 module.exports = {
+  broadcastNewAnnouncementEmails,
   getAllAnnouncements,
   getAnnouncementById,
   addAnnouncement,

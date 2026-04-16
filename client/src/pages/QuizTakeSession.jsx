@@ -79,11 +79,20 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
   }, [quiz?.end_at, quiz?.time_limit_minutes, attempt?.started_at]);
 
   const [nowMono, setNowMono] = useState(() => Date.now());
+  const nowTs = Date.now();
+  const quizStartTs = quiz?.start_at ? new Date(quiz.start_at).getTime() : null;
+  const quizEndTs = quiz?.end_at ? new Date(quiz.end_at).getTime() : null;
+  const isQuizUnlockedForTaking =
+    !!quiz &&
+    quizEndTs != null &&
+    !Number.isNaN(quizEndTs) &&
+    nowTs < quizEndTs &&
+    (quiz.status === 'active' || (quizStartTs != null && !Number.isNaN(quizStartTs) && nowTs >= quizStartTs));
   useEffect(() => {
-    if (isSubmitted || quiz?.status !== 'active') return undefined;
+    if (isSubmitted || !isQuizUnlockedForTaking) return undefined;
     const id = setInterval(() => setNowMono(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [isSubmitted, quiz?.status]);
+  }, [isSubmitted, isQuizUnlockedForTaking]);
 
   const remaining = deadlineMs != null ? Math.max(0, deadlineMs - nowMono) : null;
 
@@ -96,7 +105,7 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
   }, [attempt?.attempt_id, deadlineMs]);
 
   useEffect(() => {
-    if (loading || isSubmitted || quiz?.status !== 'active' || deadlineMs == null) return undefined;
+    if (loading || isSubmitted || !isQuizUnlockedForTaking || deadlineMs == null) return undefined;
     const id = setInterval(async () => {
       if (autoDoneRef.current || Date.now() < deadlineMs) return;
       autoDoneRef.current = true;
@@ -116,7 +125,7 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
       nav(`/quizpage/${qid}`);
     }, 1000);
     return () => clearInterval(id);
-  }, [loading, isSubmitted, quiz?.status, deadlineMs, quizId]);
+  }, [loading, isSubmitted, isQuizUnlockedForTaking, deadlineMs, quizId]);
 
   const goBackSummary = () => navigate(`/quizpage/${quizId}`);
 
@@ -165,13 +174,13 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
     );
   }
 
-  if (quiz?.status !== 'active') {
+  if (!isQuizUnlockedForTaking) {
     return (
       <section className="QuizTake">
         <div className="QuizTake__container QuizTake__errorBox">
           <h2>Quiz not open for taking</h2>
           <p>
-            Questions are available only while the quiz status is <strong>active</strong>. Current status:{' '}
+            Questions are available only while the quiz is live for taking. Current status:{' '}
             <strong>{quiz?.status || 'unknown'}</strong>.
           </p>
           <button type="button" className="QuizTake__btn QuizTake__btn--primary" onClick={goBackSummary}>
