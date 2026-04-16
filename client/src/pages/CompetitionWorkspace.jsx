@@ -25,6 +25,13 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 
+function defaultSubmitTypeForMode(competition) {
+  if (!competition) return 'zip';
+  if (competition.submission_mode === 'link') return 'links';
+  if (competition.submission_mode === 'both') return 'zip_and_links';
+  return 'zip';
+}
+
 const CompetitionWorkspace = () => {
   const { id: competitionId, teamId } = useParams();
   const navigate = useNavigate();
@@ -44,7 +51,7 @@ const CompetitionWorkspace = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [githubUrl, setGithubUrl] = useState('');
   const [liveUrl, setLiveUrl] = useState('');
-  const [submitType, setSubmitType] = useState('zip'); // 'zip' | 'links' | 'zip_and_links'
+  const [submitType, setSubmitType] = useState('zip'); // synced from backend submission_mode when data loads
   /** task_quiz: step 0 = rules/requirements (if any), then one step per task, then submit */
   const [taskQuizWizardStep, setTaskQuizWizardStep] = useState(0);
 
@@ -107,6 +114,10 @@ const CompetitionWorkspace = () => {
           setSubmitType(submissionData.submit_type);
           setGithubUrl(submissionData.repo_url || '');
           setLiveUrl(submissionData.live_url || '');
+        } else {
+          setSubmitType(defaultSubmitTypeForMode(competitionData));
+          setGithubUrl('');
+          setLiveUrl('');
         }
       }
     } catch (err) {
@@ -130,7 +141,7 @@ const CompetitionWorkspace = () => {
       setGithubUrl(sub.repo_url || '');
       setLiveUrl(sub.live_url || '');
     } else {
-      setSubmitType('zip');
+      setSubmitType(defaultSubmitTypeForMode(competition));
       setGithubUrl('');
       setLiveUrl('');
     }
