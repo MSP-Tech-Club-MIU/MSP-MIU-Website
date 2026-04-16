@@ -104,6 +104,44 @@ const createSubmission = async (req, res) => {
             });
         }
 
+        // Task quiz access rule for submissions:
+        // allow only when quiz status is `active` OR quiz.start_at has been reached,
+        // and still before quiz.end_at.
+        if (competition.type === 'task_quiz') {
+            const quizRows = await db.query(
+                `SELECT status, start_at, end_at
+                 FROM quizzes
+                 WHERE competition_id = ?
+                 LIMIT 1`,
+                {
+                    replacements: [competition_id],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+
+            const quiz = quizRows && quizRows.length ? quizRows[0] : null;
+            if (!quiz) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
+                });
+            }
+
+            const now = new Date();
+            const quizStart = new Date(quiz.start_at);
+            const quizEnd = new Date(quiz.end_at);
+            const startOk =
+                quiz.status === 'active' || (!Number.isNaN(quizStart.getTime()) && now >= quizStart);
+            const endOk = !Number.isNaN(quizEnd.getTime()) && now < quizEnd;
+
+            if (!startOk || !endOk) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz submissions are locked until the quiz starts (and they end at the scheduled end time).'
+                });
+            }
+        }
+
         if (competition.type === 'external' || competition.submission_mode === 'none') {
             return res.status(400).json({
                 success: false,
@@ -126,7 +164,7 @@ const createSubmission = async (req, res) => {
         }
 
         // Check if submission deadline passed
-        if (new Date() > new Date(competition.end_at)) {
+        if (competition.type !== 'task_quiz' && new Date() > new Date(competition.end_at)) {
             return res.status(400).json({
                 success: false,
                 error: 'Submission deadline has passed'
@@ -374,6 +412,41 @@ const getTeamSubmission = async (req, res) => {
                 return res.status(400).json({
                     success: false,
                     error: 'Query parameter task_id is required for task quiz competitions'
+                });
+            }
+        }
+
+        // Task quiz access rule for viewing submissions:
+        // allow only after quiz unlocks (quiz.status === 'active' OR quiz.start_at reached).
+        if (compType === 'task_quiz' && !isPrivileged) {
+            const quizRows = await db.query(
+                `SELECT status, start_at
+                 FROM quizzes
+                 WHERE competition_id = ?
+                 LIMIT 1`,
+                {
+                    replacements: [competitionId],
+                    type: db.QueryTypes.SELECT
+                }
+            );
+
+            const quiz = quizRows && quizRows.length ? quizRows[0] : null;
+            if (!quiz) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
+                });
+            }
+
+            const now = new Date();
+            const quizStart = new Date(quiz.start_at);
+            const unlocked =
+                quiz.status === 'active' || (!Number.isNaN(quizStart.getTime()) && now >= quizStart);
+
+            if (!unlocked) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Task quiz is not available yet'
                 });
             }
         }

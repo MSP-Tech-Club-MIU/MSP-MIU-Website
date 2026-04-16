@@ -160,7 +160,9 @@ const getCompetitionById = async (req, res) => {
                 c.config,
                 c.created_by,
                 c.created_at,
-                q.status AS quiz_status
+                q.status AS quiz_status,
+                q.start_at AS quiz_start_at,
+                q.end_at AS quiz_end_at
             FROM competitions c
             LEFT JOIN quizzes q ON q.competition_id = c.competition_id
             WHERE c.competition_id = ?`,

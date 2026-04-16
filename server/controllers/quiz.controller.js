@@ -5,7 +5,7 @@ const {
   computeAttemptScore,
   finalizeQuizAttempt,
   getEffectiveDeadlineDate,
-  isWithinQuizLiveWindow
+  // kept for quizAttemptLifecycle utilities (unused here after unlock gating change)
 } = require('../services/quizAttemptLifecycle');
 
 /** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
@@ -32,9 +32,28 @@ async function resolveQuiz(idOrCompetition) {
   return quiz;
 }
 
-/** Participant attempts allowed only when quiz is published or active (not draft/closed). */
-function quizAllowsParticipantAttempts(status) {
-  return status === 'published' || status === 'active';
+/**
+ * Access rule for participants:
+ * - They may access quiz content when either:
+ *   - quiz.status === 'active', OR
+ *   - the scheduled start time (quiz.start_at) has been reached.
+ */
+function quizUnlockedForViewing(quiz, now = new Date()) {
+  if (!quiz) return false;
+  const start = new Date(quiz.start_at);
+  if (Number.isNaN(start.getTime())) return false;
+  return quiz.status === 'active' || now >= start;
+}
+
+/**
+ * Access rule for attempts:
+ * - Must be unlocked for viewing, and still before quiz end.
+ */
+function quizUnlockedForAttempts(quiz, now = new Date()) {
+  if (!quizUnlockedForViewing(quiz, now)) return false;
+  const end = new Date(quiz.end_at);
+  if (Number.isNaN(end.getTime())) return false;
+  return now < end;
 }
 
 async function getQuizById(req, res) {
@@ -42,8 +61,18 @@ async function getQuizById(req, res) {
     const id = parseInt(req.params.id, 10);
     if (Number.isNaN(id)) return res.status(400).json({ success: false, error: 'Invalid quiz id' });
 
+    const viewerRole = req.user?.role;
+    const isStaff = ['admin', 'board'].includes(viewerRole);
+
     const quiz = await resolveQuiz(id);
     if (!quiz) return res.status(404).json({ success: false, error: 'Quiz not found' });
+    const now = new Date();
+    if (!isStaff && !quizUnlockedForViewing(quiz, now)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Quiz is not available yet. It will unlock when activated or at its scheduled start time.'
+      });
+    }
 
     const questions = await QuizQuestion.findAll({
       where: { quiz_id: quiz.quiz_id },
@@ -68,8 +97,8 @@ async function getQuizById(req, res) {
       });
     });
 
-    // Summary-only for draft/published: hide stems and choices until quiz is active (or closed for review).
-    const includeQuestionBodies = quiz.status === 'active' || quiz.status === 'closed';
+    // Once unlocked for viewing we include question wording.
+    const includeQuestionBodies = true;
 
     const questionsPayload = questions.map((q) => {
       const qid = num(q.question_id, 0);
@@ -186,6 +215,10 @@ async function getQuizAttemptByUser(req, res) {
 
     const quiz = await resolveQuiz(quizIdParam);
     if (!quiz) return res.status(404).json({ success: false, error: 'Quiz not found' });
+    const now = new Date();
+    if (!isStaff && !quizUnlockedForViewing(quiz, now)) {
+      return res.status(403).json({ success: false, error: 'Quiz is not available yet' });
+    }
 
     const attempt = await QuizAttempt.findOne({
       where: { quiz_id: quiz.quiz_id, user_id: userId },
@@ -245,10 +278,13 @@ async function createQuizAttempt(req, res) {
 
     const quiz = await resolveQuiz(quizIdInput);
     if (!quiz) return res.status(404).json({ success: false, error: 'Quiz not found' });
-    if (!quizAllowsParticipantAttempts(quiz.status)) {
+    const viewerRole = req.user?.role;
+    const isStaff = ['admin', 'board'].includes(viewerRole);
+    const now = new Date();
+    if (!isStaff && !quizUnlockedForViewing(quiz, now)) {
       return res.status(403).json({
         success: false,
-        error: 'This quiz is not open for attempts yet'
+        error: 'Quiz is not available yet. It will unlock when activated or at its scheduled start time.'
       });
     }
 
@@ -299,12 +335,11 @@ async function createQuizAttempt(req, res) {
     }
 
     if (!attempt) {
-      const now = new Date();
-      if (!isWithinQuizLiveWindow(quiz, now)) {
+      if (!quizUnlockedForAttempts(quiz, now)) {
         return res.status(403).json({
           success: false,
           error:
-            'The quiz is only available between its scheduled start and end (Egypt / Africa-Cairo times on the quiz page).'
+            'The quiz is only available for attempts while it is live (activated or after its scheduled start, before its end time).'
         });
       }
       attempt = await QuizAttempt.create({
@@ -323,6 +358,7 @@ async function createQuizAttempt(req, res) {
 
 async function saveQuizAnswer(req, res) {
   try {
+    const now = new Date();
     const attemptId = parseInt(req.params.attemptId, 10);
     const { question_id, selected_option_id, answer_text, text_answer } = req.body;
     if (Number.isNaN(attemptId) || !question_id) {
@@ -339,7 +375,7 @@ async function saveQuizAnswer(req, res) {
     }
 
     const quizForAttempt = await Quiz.findByPk(attempt.quiz_id);
-    if (!quizForAttempt || !quizAllowsParticipantAttempts(quizForAttempt.status)) {
+    if (!quizForAttempt || !quizUnlockedForAttempts(quizForAttempt, now)) {
       return res.status(403).json({
         success: false,
         error: 'This quiz is not open for attempts'
@@ -430,6 +466,7 @@ async function saveQuizAnswer(req, res) {
 
 async function submitQuizAttempt(req, res) {
   try {
+    const now = new Date();
     const attemptId = parseInt(req.params.attemptId, 10);
     if (Number.isNaN(attemptId)) return res.status(400).json({ success: false, error: 'Invalid attempt id' });
 
@@ -440,7 +477,7 @@ async function submitQuizAttempt(req, res) {
     }
 
     const quizForAttempt = await Quiz.findByPk(attempt.quiz_id);
-    if (!quizForAttempt || !quizAllowsParticipantAttempts(quizForAttempt.status)) {
+    if (!quizForAttempt || !quizUnlockedForAttempts(quizForAttempt, now)) {
       return res.status(403).json({
         success: false,
         error: 'This quiz is not open for attempts'

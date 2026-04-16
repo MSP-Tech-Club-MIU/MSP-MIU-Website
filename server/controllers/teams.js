@@ -35,7 +35,7 @@ function publicFrontendOrigin() {
 }
 
 function getQuizRegistrationCloseReason(competition, quizStatus) {
-    if (!competition || competition.type !== 'quiz') {
+    if (!competition || !['quiz', 'task_quiz'].includes(competition.type)) {
         return null;
     }
 
@@ -45,8 +45,14 @@ function getQuizRegistrationCloseReason(competition, quizStatus) {
 
     const now = new Date();
     const startDate = new Date(competition.start_at);
-    if (!Number.isNaN(startDate.getTime()) && now >= startDate) {
-        return 'Quiz registration is closed because the start time has been reached';
+    const endDate = new Date(competition.end_at);
+
+    if (!Number.isNaN(startDate.getTime()) && now < startDate) {
+        return 'Quiz registration is not open yet';
+    }
+
+    if (!Number.isNaN(endDate.getTime()) && now >= endDate) {
+        return 'Quiz registration is closed because the registration deadline has been reached';
     }
 
     return null;
@@ -54,7 +60,7 @@ function getQuizRegistrationCloseReason(competition, quizStatus) {
 
 async function assertQuizRegistrationOpen(competitionId) {
     const rows = await db.query(
-        `SELECT c.competition_id, c.type, c.start_at, q.status AS quiz_status
+        `SELECT c.competition_id, c.type, c.start_at, c.end_at, q.status AS quiz_status
          FROM competitions c
          LEFT JOIN quizzes q ON q.competition_id = c.competition_id
          WHERE c.competition_id = ?

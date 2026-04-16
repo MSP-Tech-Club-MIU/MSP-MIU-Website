@@ -13,6 +13,7 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiClock,
+  FiLock,
   FiUsers,
   FiFileText,
   FiLink,
@@ -61,21 +62,34 @@ const CompetitionWorkspace = () => {
       setTeam(teamData);
 
       if (competitionData?.type === 'task_quiz') {
-        const taskList = await ApiService.getCompetitionTasks(competitionId).catch(() => []);
-        const list = Array.isArray(taskList) ? taskList : [];
-        const map = {};
-        await Promise.all(
-          list.map(async (t) => {
-            map[t.task_id] = await ApiService.getTeamSubmission(competitionId, teamId, t.task_id).catch(
-              () => null
-            );
-          })
-        );
-        setTasks(list);
-        setTaskSubmissionMap(map);
-        setSelectedTaskId((prev) =>
-          prev != null && list.some((x) => x.task_id === prev) ? prev : list[0]?.task_id ?? null
-        );
+        const now = new Date();
+        const quizStart = competitionData.quiz_start_at ? new Date(competitionData.quiz_start_at) : null;
+        const unlockedForView =
+          competitionData.quiz_status === 'active' ||
+          (!!quizStart && !Number.isNaN(quizStart.getTime()) && now >= quizStart);
+
+        if (!unlockedForView) {
+          setTasks([]);
+          setTaskSubmissionMap({});
+          setSelectedTaskId(null);
+          setSubmission(null);
+        } else {
+          const taskList = await ApiService.getCompetitionTasks(competitionId).catch(() => []);
+          const list = Array.isArray(taskList) ? taskList : [];
+          const map = {};
+          await Promise.all(
+            list.map(async (t) => {
+              map[t.task_id] = await ApiService.getTeamSubmission(competitionId, teamId, t.task_id).catch(
+                () => null
+              );
+            })
+          );
+          setTasks(list);
+          setTaskSubmissionMap(map);
+          setSelectedTaskId((prev) =>
+            prev != null && list.some((x) => x.task_id === prev) ? prev : list[0]?.task_id ?? null
+          );
+        }
       } else if (competitionData?.type === 'quiz') {
         setTasks([]);
         setSelectedTaskId(null);
@@ -289,7 +303,25 @@ const CompetitionWorkspace = () => {
   const canSubmit = () => {
     if (!competition) return false;
     if (competition.type === 'quiz') return false;
-    if (competition.type === 'task_quiz' && (!tasks.length || selectedTaskId == null)) return false;
+    if (competition.type === 'task_quiz') {
+      if (!tasks.length || selectedTaskId == null) return false;
+      const now = new Date();
+      const quizStart = competition.quiz_start_at ? new Date(competition.quiz_start_at) : null;
+      const quizEnd = competition.quiz_end_at ? new Date(competition.quiz_end_at) : null;
+      if (!quizEnd || Number.isNaN(quizEnd.getTime())) return false;
+
+      const unlockedForView =
+        competition.quiz_status === 'active' ||
+        (!!quizStart && !Number.isNaN(quizStart.getTime()) && now >= quizStart);
+
+      // Submissions are allowed only after unlock and before quiz end.
+      const withinQuizWindow = unlockedForView && now < quizEnd;
+
+      if (!withinQuizWindow) return false;
+      if (competition.status === 'draft' || competition.status === 'finished') return false;
+      return true;
+    }
+
     if (competition.type === 'external' || competition.submission_mode === 'none') return false;
     if (competition.status !== 'open') return false;
 
@@ -301,6 +333,16 @@ const CompetitionWorkspace = () => {
   const isFrontendMultitask = competition?.type === 'project' && competition?.config?.multiTask === true;
   const isClassicQuiz = competition?.type === 'quiz';
   const isTaskQuiz = competition?.type === 'task_quiz';
+
+  const nowTs = Date.now();
+  const quizStart = competition?.quiz_start_at ? new Date(competition.quiz_start_at) : null;
+  const quizEnd = competition?.quiz_end_at ? new Date(competition.quiz_end_at) : null;
+  const quizStartValid = !!quizStart && !Number.isNaN(quizStart.getTime());
+  const quizEndValid = !!quizEnd && !Number.isNaN(quizEnd.getTime());
+  const quizUnlockedForView =
+    isClassicQuiz && (competition?.quiz_status === 'active' || (quizStartValid && nowTs >= quizStart.getTime()));
+  const quizUnlockedForTake = quizUnlockedForView && quizEndValid && nowTs < quizEnd.getTime();
+
   const selectedTask =
     isTaskQuiz && selectedTaskId != null ? tasks.find((x) => x.task_id === selectedTaskId) : null;
 
@@ -382,6 +424,31 @@ const CompetitionWorkspace = () => {
         </div>
       </section>
     );
+  }
+
+  // Quiz-based competitions: block workspace access entirely until the quiz unlocks.
+  if (isClassicQuiz || isTaskQuiz) {
+    const now = new Date();
+    const quizStart = competition?.quiz_start_at ? new Date(competition.quiz_start_at) : null;
+    const unlockedForView =
+      competition?.quiz_status === 'active' ||
+      (!!quizStart && !Number.isNaN(quizStart.getTime()) && now >= quizStart);
+
+    if (!unlockedForView) {
+      return (
+        <section className="CompetitionWorkspace">
+          <BackButton to={`/competitions/${competitionId}`} label="Back to Competition" />
+          <div className="CompetitionWorkspace__error">
+            <FiLock size={60} />
+            <h2>{isTaskQuiz ? 'Task quiz is locked' : 'Quiz workspace is locked'}</h2>
+            <p>
+              This workspace unlocks when the quiz is activated or when its scheduled start time is reached
+              {competition?.quiz_start_at ? ` (${formatDateTime(competition.quiz_start_at)}).` : '.'}
+            </p>
+          </div>
+        </section>
+      );
+    }
   }
 
   return (
@@ -925,7 +992,7 @@ const CompetitionWorkspace = () => {
                 <p className="CompetitionWorkspace__quizIntro">
                   There is no file or link submission here. Open the quiz page to answer questions; scoring is
                   automatic when you submit. The quiz must be <strong>published</strong> or{' '}
-                  <strong>active</strong> for attempts.
+                  <strong>active</strong> (or its scheduled start time must be reached) for attempts.
                   {competition?.quiz_status ? (
                     <>
                       {' '}
@@ -934,7 +1001,7 @@ const CompetitionWorkspace = () => {
                   ) : null}
                 </p>
                 <div className="CompetitionWorkspace__quizActions">
-                  {competition?.quiz_status === 'active' && (
+                  {quizUnlockedForTake && (
                     <button
                       type="button"
                       className="CompetitionWorkspace__submitBtn CompetitionWorkspace__submitBtn--quizStart"
@@ -944,18 +1011,25 @@ const CompetitionWorkspace = () => {
                       Start Quiz
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className={
-                      competition?.quiz_status === 'active'
-                        ? 'CompetitionWorkspace__quizBtnSecondary'
-                        : 'CompetitionWorkspace__submitBtn'
-                    }
-                    onClick={() => navigate(`/quizpage/${competitionId}`)}
-                  >
-                    <FiFileText size={18} aria-hidden />
-                    {competition?.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
-                  </button>
+                  {quizUnlockedForView ? (
+                    <button
+                      type="button"
+                      className={
+                        competition?.quiz_status === 'active'
+                          ? 'CompetitionWorkspace__quizBtnSecondary'
+                          : 'CompetitionWorkspace__submitBtn'
+                      }
+                      onClick={() => navigate(`/quizpage/${competitionId}`)}
+                    >
+                      <FiFileText size={18} aria-hidden />
+                      {competition?.quiz_status === 'active' ? 'Quiz overview' : 'Open quiz page'}
+                    </button>
+                  ) : (
+                    <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
+                      <FiLock size={18} />
+                      <span style={{ marginLeft: 8 }}>Quiz is locked until it activates or its start time is reached.</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

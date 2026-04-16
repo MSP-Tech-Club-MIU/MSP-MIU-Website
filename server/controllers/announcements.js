@@ -4,17 +4,16 @@ const { Op } = require('sequelize');
 const BCC_CHUNK_SIZE = 80;
 
 /**
- * Notify all active users by email (non-blocking caller should .catch).
+ * Notify all users by email.
  * Uses BCC batches so recipients are not exposed to each other.
  */
 async function broadcastNewAnnouncementEmails(announcement) {
   const users = await User.findAll({
-    attributes: ['email'],
-    where: { is_active: true }
+    attributes: ['email']
   });
   const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
   if (emails.length === 0) {
-    console.log('Announcement email: no recipients (no active users with email)');
+    console.log('Announcement email: no recipients (no users with email)');
     return;
   }
 
@@ -164,13 +163,11 @@ const addAnnouncement = async (req, res) => {
       }]
     });
 
-    void broadcastNewAnnouncementEmails(createdAnnouncement).catch((err) => {
-      console.error('Announcement created but email broadcast failed:', err);
-    });
+    await broadcastNewAnnouncementEmails(createdAnnouncement);
 
     return res.status(201).json({
       success: true,
-      message: 'Announcement created successfully',
+      message: 'Announcement created successfully and emails sent',
       data: createdAnnouncement
     });
   } catch (error) {

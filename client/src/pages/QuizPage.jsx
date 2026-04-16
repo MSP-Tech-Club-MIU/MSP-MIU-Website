@@ -88,9 +88,14 @@ const QuizPage = () => {
   }, [attempt?.review?.questions, normalizedQuestions]);
 
   const quizStatus = quiz?.status;
-  const isActive = quizStatus === 'active';
+  const nowTs = Date.now();
+  const quizStartTs = quiz?.start_at ? new Date(quiz.start_at).getTime() : null;
+  const quizEndTs = quiz?.end_at ? new Date(quiz.end_at).getTime() : null;
+  const unlockedForView = quizStatus === 'active' || (quizStartTs != null && !Number.isNaN(quizStartTs) && nowTs >= quizStartTs);
+  const unlockedForTake = unlockedForView && quizEndTs != null && !Number.isNaN(quizEndTs) && nowTs < quizEndTs;
   const isClosed = quizStatus === 'closed';
-  const showQuestionReview = isClosed || (isActive && attempt?.status === 'submitted');
+  const showQuestionReview =
+    isClosed || attempt?.status === 'submitted' || attempt?.status === 'graded';
 
   if (loading) {
     return <PageLoader />;
@@ -134,7 +139,7 @@ const QuizPage = () => {
           </p>
         )}
 
-        {isActive && currentUser?.user_id && attempt?.status !== 'submitted' && (
+        {unlockedForTake && currentUser?.user_id && attempt?.status !== 'submitted' && (
           <div className="QuizPage__takeCta">
             <p className="QuizPage__takeCtaText">
               This quiz uses one page per question. When you are ready, continue below.
