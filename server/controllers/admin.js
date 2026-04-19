@@ -756,10 +756,10 @@ const getAdminTeamDetails = async (req, res) => {
                     ti.invited_university_id,
                     ti.status,
                     ti.expires_at,
-                    ti.created_at
+                    ti.invited_at AS created_at
              FROM team_invitations ti
              WHERE ti.team_id = ? AND ti.status = 'pending'
-             ORDER BY ti.created_at ASC`,
+             ORDER BY ti.invited_at ASC`,
             {
                 replacements: [id],
                 type: QueryTypes.SELECT
