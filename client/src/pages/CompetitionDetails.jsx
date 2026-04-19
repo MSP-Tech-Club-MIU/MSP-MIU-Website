@@ -30,6 +30,7 @@ const CompetitionDetails = () => {
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
   const [userTeam, setUserTeam] = useState(null);
+  const [taskQuizMarksGate, setTaskQuizMarksGate] = useState(null);
 
   // Check user role and fetch competition
   useEffect(() => {
@@ -63,11 +64,21 @@ const CompetitionDetails = () => {
           try {
             const team = await ApiService.getUserTeamForCompetition(id);
             setUserTeam(team);
+            if (compData?.type === 'task_quiz' && team?.team_id) {
+              const marksData = await ApiService
+                .getMyTaskQuizEvaluation(id, team.team_id)
+                .catch(() => null);
+              setTaskQuizMarksGate(marksData?.readiness || null);
+            } else {
+              setTaskQuizMarksGate(null);
+            }
           } catch (err) {
             setUserTeam(null);
+            setTaskQuizMarksGate(null);
           }
         } else {
           setUserTeam(null);
+          setTaskQuizMarksGate(null);
         }
 
       } catch (err) {
@@ -269,6 +280,12 @@ const CompetitionDetails = () => {
     }
   };
 
+  const handleViewMarks = () => {
+    if (userTeam) {
+      navigate(`/competitions/${id}/team/${userTeam.team_id}/marks`);
+    }
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -449,6 +466,14 @@ const CompetitionDetails = () => {
                         <FiPlayCircle size={20} aria-hidden />
                         Open team workspace
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleViewMarks}
+                        className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                        style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                      >
+                        View my marks
+                      </button>
                     </div>
                   ) : (
                     <div className="CompetitionDetailsPage__lockedNotice" style={{ marginTop: 10 }}>
@@ -497,24 +522,42 @@ const CompetitionDetails = () => {
                 <FiAward size={32} className="CompetitionDetailsPage__activeIcon" />
                 <h3>Competition is Live!</h3>
                 <p>Team: <strong>{userTeam.team_name}</strong></p>
-                <button
-                  onClick={handleStartCompetition}
-                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
-                >
-                  Access Team Workspace
-                </button>
+                <div className="CompetitionDetailsPage__regButtons">
+                  <button
+                    onClick={handleStartCompetition}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                  >
+                    Access Team Workspace
+                  </button>
+                  <button
+                    onClick={handleViewMarks}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                    style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                  >
+                    View my marks
+                  </button>
+                </div>
               </div>
             ) : isQuizUnlockedForView() ? (
               <div className="CompetitionDetailsPage__teamStatus">
                 <FiCheckCircle size={32} className="CompetitionDetailsPage__teamStatusIcon" />
                 <h3>You're Part of a Team</h3>
                 <p>Team: <strong>{userTeam.team_name}</strong></p>
-                <button
-                  onClick={handleViewTeam}
-                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
-                >
-                  Access Team Workspace
-                </button>
+                <div className="CompetitionDetailsPage__regButtons">
+                  <button
+                    onClick={handleViewTeam}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                  >
+                    Access Team Workspace
+                  </button>
+                  <button
+                    onClick={handleViewMarks}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                    style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                  >
+                    View my marks
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="CompetitionDetailsPage__lockedNotice">

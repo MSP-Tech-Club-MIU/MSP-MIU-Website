@@ -1,4 +1,12 @@
-const { Submission, Evaluation, JudgeScore, User, Team, Competition } = require('../models');
+const {
+  Submission,
+  Evaluation,
+  JudgeScore,
+  User,
+  Team,
+  Competition,
+  CompetitionTask
+} = require('../models');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const {
   meanJudgeScore,
@@ -230,8 +238,320 @@ const getEvaluation = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/evaluation/task-quiz/:competitionId/team/:teamId
+ * Returns per-task marks and average for task_quiz + hybrid/auto/manual judging.
+ */
+const getTaskQuizTeamEvaluation = async (req, res) => {
+  const competitionId = parseInt(req.params.competitionId, 10);
+  const teamId = parseInt(req.params.teamId, 10);
+  if (Number.isNaN(competitionId) || Number.isNaN(teamId)) {
+    return res.status(400).json({ success: false, error: 'Invalid competition or team id' });
+  }
+
+  try {
+    const competition = await Competition.findByPk(competitionId, {
+      attributes: ['competition_id', 'title', 'type', 'evaluation_mode']
+    });
+    if (!competition) {
+      return res.status(404).json({ success: false, error: 'Competition not found' });
+    }
+    if (competition.type !== 'task_quiz') {
+      return res.status(400).json({
+        success: false,
+        error: 'This endpoint is only available for task_quiz competitions'
+      });
+    }
+
+    const team = await Team.findOne({
+      where: { team_id: teamId, competition_id: competitionId },
+      attributes: ['team_id', 'team_name']
+    });
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        error: 'Team not found in this competition'
+      });
+    }
+
+    const tasks = await CompetitionTask.findAll({
+      where: { competition_id: competitionId },
+      attributes: ['task_id', 'title', 'position'],
+      order: [['position', 'ASC'], ['task_id', 'ASC']]
+    });
+
+    const submissions = await Submission.findAll({
+      where: {
+        competition_id: competitionId,
+        team_id: teamId
+      },
+      include: [
+        { model: Evaluation, as: 'evaluation' },
+        { model: JudgeScore, as: 'judgeScores' }
+      ],
+      order: [['task_id', 'ASC']]
+    });
+
+    const submissionsByTask = new Map();
+    for (const submission of submissions) {
+      if (submission.task_id != null) {
+        submissionsByTask.set(submission.task_id, submission);
+      }
+    }
+
+    const taskMarks = tasks.map((task) => {
+      const submission = submissionsByTask.get(task.task_id) || null;
+      if (!submission) {
+        return {
+          task_id: task.task_id,
+          task_title: task.title,
+          position: task.position,
+          submission_id: null,
+          status: 'missing',
+          auto_score: null,
+          judge_average: null,
+          final_score: null
+        };
+      }
+
+      const judgeRows = (submission.judgeScores || []).map((j) => j.toJSON());
+      const judgeAvg = meanJudgeScore(judgeRows);
+      const autoRaw = submission.evaluation
+        ? parseFloat(submission.evaluation.total_auto_score)
+        : null;
+      const autoScore = Number.isNaN(autoRaw) ? null : autoRaw;
+      const finalScore = computeFinalScore(autoScore, judgeAvg);
+
+      return {
+        task_id: task.task_id,
+        task_title: task.title,
+        position: task.position,
+        submission_id: submission.submission_id,
+        status: submission.status,
+        auto_score: autoScore,
+        judge_average: judgeAvg,
+        final_score: finalScore
+      };
+    });
+
+    const scoredTasks = taskMarks.filter((x) => x.final_score != null);
+    const averageFinalScore = scoredTasks.length
+      ? Math.round(
+          (scoredTasks.reduce((acc, row) => acc + row.final_score, 0) / scoredTasks.length) * 100
+        ) / 100
+      : null;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        competition: {
+          competition_id: competition.competition_id,
+          title: competition.title,
+          type: competition.type,
+          evaluation_mode: competition.evaluation_mode
+        },
+        team: {
+          team_id: team.team_id,
+          team_name: team.team_name
+        },
+        task_marks: taskMarks,
+        average_final_score: averageFinalScore
+      }
+    });
+  } catch (error) {
+    logError('evaluation.taskQuizTeam', error, { competitionId, teamId }, req);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to load task quiz team evaluation'
+    });
+  }
+};
+
+/**
+ * GET /api/evaluation/my-task-quiz/:competitionId/team/:teamId
+ * Competitor-safe view: per-task static analysis mark and average.
+ */
+const getMyTaskQuizEvaluation = async (req, res) => {
+  const competitionId = parseInt(req.params.competitionId, 10);
+  const teamId = parseInt(req.params.teamId, 10);
+  if (Number.isNaN(competitionId) || Number.isNaN(teamId)) {
+    return res.status(400).json({ success: false, error: 'Invalid competition or team id' });
+  }
+
+  try {
+    const isPrivileged = ['admin', 'board'].includes(req.user.role);
+    if (!isPrivileged) {
+      const membership = await Submission.sequelize.query(
+        `SELECT tm.team_member_id
+         FROM team_members tm
+         INNER JOIN teams t ON tm.team_id = t.team_id
+         WHERE tm.team_id = ? AND tm.user_id = ? AND t.competition_id = ?
+         LIMIT 1`,
+        {
+          replacements: [teamId, req.user.user_id, competitionId],
+          type: Submission.sequelize.QueryTypes.SELECT
+        }
+      );
+      if (!membership || membership.length === 0) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+    }
+
+    const competition = await Competition.findByPk(competitionId, {
+      attributes: ['competition_id', 'title', 'type', 'evaluation_mode']
+    });
+    if (!competition) {
+      return res.status(404).json({ success: false, error: 'Competition not found' });
+    }
+    if (competition.type !== 'task_quiz') {
+      return res.status(400).json({
+        success: false,
+        error: 'This endpoint is only available for task_quiz competitions'
+      });
+    }
+
+    const team = await Team.findOne({
+      where: { team_id: teamId, competition_id: competitionId },
+      attributes: ['team_id', 'team_name']
+    });
+    if (!team) {
+      return res.status(404).json({
+        success: false,
+        error: 'Team not found in this competition'
+      });
+    }
+
+    const tasks = await CompetitionTask.findAll({
+      where: { competition_id: competitionId },
+      attributes: ['task_id', 'title', 'position'],
+      order: [['position', 'ASC'], ['task_id', 'ASC']]
+    });
+
+    const submissions = await Submission.findAll({
+      where: {
+        competition_id: competitionId,
+        team_id: teamId
+      },
+      include: [
+        { model: Evaluation, as: 'evaluation' },
+        { model: JudgeScore, as: 'judgeScores' }
+      ],
+      order: [['task_id', 'ASC']]
+    });
+
+    const submissionsByTask = new Map();
+    for (const submission of submissions) {
+      if (submission.task_id != null) {
+        submissionsByTask.set(submission.task_id, submission);
+      }
+    }
+
+    const taskMarks = tasks.map((task) => {
+      const submission = submissionsByTask.get(task.task_id) || null;
+      if (!submission) {
+        return {
+          task_id: task.task_id,
+          task_title: task.title,
+          position: task.position,
+          submission_id: null,
+          status: 'missing',
+          static_analysis_score: null,
+          judge_average: null,
+          final_score: null
+        };
+      }
+
+      const judgeRows = (submission.judgeScores || []).map((j) => j.toJSON());
+      const judgeAverage = meanJudgeScore(judgeRows);
+      const autoRaw = submission.evaluation
+        ? parseFloat(submission.evaluation.total_auto_score)
+        : null;
+      const autoScore = Number.isNaN(autoRaw) ? null : autoRaw;
+      const finalScore = computeFinalScore(autoScore, judgeAverage);
+      return {
+        task_id: task.task_id,
+        task_title: task.title,
+        position: task.position,
+        submission_id: submission.submission_id,
+        status: submission.status,
+        static_analysis_score: autoScore,
+        judge_average: judgeAverage,
+        final_score: finalScore
+      };
+    });
+
+    const tasksTotal = taskMarks.length;
+    const submittedTasksCount = taskMarks.filter((x) => x.submission_id != null).length;
+    const autoEvaluatedTasksCount = taskMarks.filter((x) => x.static_analysis_score != null).length;
+    const judgeEvaluatedTasksCount = taskMarks.filter((x) => x.judge_average != null).length;
+    const allTasksSubmitted = tasksTotal > 0 && submittedTasksCount === tasksTotal;
+    const autoEvaluationCompleted = allTasksSubmitted && autoEvaluatedTasksCount === tasksTotal;
+    const judgesEvaluationCompleted = autoEvaluationCompleted && judgeEvaluatedTasksCount === tasksTotal;
+
+    const scoredTasks = taskMarks.filter((x) => x.static_analysis_score != null);
+    const averageStaticAnalysisScore = scoredTasks.length
+      ? Math.round(
+          (scoredTasks.reduce((acc, row) => acc + row.static_analysis_score, 0) / scoredTasks.length) *
+            100
+        ) / 100
+      : null;
+    const finalScoredTasks = taskMarks.filter((x) => x.final_score != null);
+    const averageFinalScore = judgesEvaluationCompleted && finalScoredTasks.length > 0
+      ? Math.round(
+          (finalScoredTasks.reduce((acc, row) => acc + row.final_score, 0) / finalScoredTasks.length) *
+            100
+        ) / 100
+      : null;
+    const phase = !allTasksSubmitted
+      ? 'awaiting_submissions'
+      : !autoEvaluationCompleted
+        ? 'awaiting_auto_evaluation'
+        : !judgesEvaluationCompleted
+          ? 'awaiting_judges'
+          : 'complete';
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        competition: {
+          competition_id: competition.competition_id,
+          title: competition.title,
+          type: competition.type,
+          evaluation_mode: competition.evaluation_mode
+        },
+        team: {
+          team_id: team.team_id,
+          team_name: team.team_name
+        },
+        readiness: {
+          tasks_total: tasksTotal,
+          submitted_tasks_count: submittedTasksCount,
+          auto_evaluated_tasks_count: autoEvaluatedTasksCount,
+          judge_evaluated_tasks_count: judgeEvaluatedTasksCount,
+          all_tasks_submitted: allTasksSubmitted,
+          auto_evaluation_completed: autoEvaluationCompleted,
+          judges_evaluation_completed: judgesEvaluationCompleted,
+          can_view_marks: autoEvaluationCompleted,
+          phase
+        },
+        task_marks: taskMarks,
+        average_static_analysis_score: averageStaticAnalysisScore,
+        average_final_score: averageFinalScore
+      }
+    });
+  } catch (error) {
+    logError('evaluation.myTaskQuiz', error, { competitionId, teamId }, req);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to load your task quiz marks'
+    });
+  }
+};
+
 module.exports = {
   runEvaluation,
   submitJudgeScore,
-  getEvaluation
+  getEvaluation,
+  getTaskQuizTeamEvaluation,
+  getMyTaskQuizEvaluation
 };

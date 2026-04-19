@@ -45,6 +45,7 @@ const CompetitionWorkspace = () => {
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [taskSubmissionMap, setTaskSubmissionMap] = useState({});
+  const [taskQuizMarksGate, setTaskQuizMarksGate] = useState(null);
   const [error, setError] = useState(null);
 
   // Form state
@@ -78,6 +79,7 @@ const CompetitionWorkspace = () => {
         if (!unlockedForView) {
           setTasks([]);
           setTaskSubmissionMap({});
+          setTaskQuizMarksGate(null);
           setSelectedTaskId(null);
           setSubmission(null);
         } else {
@@ -93,6 +95,10 @@ const CompetitionWorkspace = () => {
           );
           setTasks(list);
           setTaskSubmissionMap(map);
+          const marksData = await ApiService
+            .getMyTaskQuizEvaluation(competitionId, teamId)
+            .catch(() => null);
+          setTaskQuizMarksGate(marksData?.readiness || null);
           setSelectedTaskId((prev) =>
             prev != null && list.some((x) => x.task_id === prev) ? prev : list[0]?.task_id ?? null
           );
@@ -101,11 +107,13 @@ const CompetitionWorkspace = () => {
         setTasks([]);
         setSelectedTaskId(null);
         setTaskSubmissionMap({});
+        setTaskQuizMarksGate(null);
         setSubmission(null);
       } else {
         setTasks([]);
         setSelectedTaskId(null);
         setTaskSubmissionMap({});
+        setTaskQuizMarksGate(null);
         const submissionData = await ApiService
           .getTeamSubmission(competitionId, teamId)
           .catch(() => null);
@@ -494,6 +502,17 @@ const CompetitionWorkspace = () => {
           {competition?.end_at && (
             <div className="CompetitionWorkspace__deadlineBox">
               <span>Deadline: {formatDateTime(competition.end_at)}</span>
+            </div>
+          )}
+          {isTaskQuiz && taskQuizMarksGate?.can_view_marks === true && (
+            <div className="CompetitionWorkspace__deadlineBox" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="CompetitionWorkspace__quizBtnSecondary"
+                onClick={() => navigate(`/competitions/${competitionId}/team/${teamId}/marks`)}
+              >
+                View my marks
+              </button>
             </div>
           )}
         </motion.header>

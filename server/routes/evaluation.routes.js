@@ -4,7 +4,9 @@ const { authenticateToken, verifyRole } = require('../middlewares/auth');
 const {
   runEvaluation,
   submitJudgeScore,
-  getEvaluation
+  getEvaluation,
+  getTaskQuizTeamEvaluation,
+  getMyTaskQuizEvaluation
 } = require('../controllers/evaluation.controller');
 
 router.post(
@@ -19,6 +21,19 @@ router.post(
   authenticateToken,
   verifyRole('admin', 'board'),
   submitJudgeScore
+);
+
+router.get(
+  '/task-quiz/:competitionId/team/:teamId',
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  getTaskQuizTeamEvaluation
+);
+
+router.get(
+  '/my-task-quiz/:competitionId/team/:teamId',
+  authenticateToken,
+  getMyTaskQuizEvaluation
 );
 
 router.get(
