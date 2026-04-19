@@ -537,6 +537,43 @@ const getCompetitionTeams = async (req, res) => {
             }
         );
 
+        const teamIds = rows.map((row) => row.team_id).filter(Boolean);
+        let teamMembersRows = [];
+        if (teamIds.length > 0) {
+            teamMembersRows = await sequelize.query(
+                `SELECT tm.team_id,
+                        tm.team_member_id,
+                        tm.role,
+                        tm.joined_at,
+                        u.user_id,
+                        u.full_name,
+                        u.email,
+                        u.university_id
+                 FROM team_members tm
+                 INNER JOIN users u ON tm.user_id = u.user_id
+                 WHERE tm.team_id IN (?)
+                 ORDER BY tm.team_id ASC, tm.role DESC, tm.joined_at ASC`,
+                {
+                    replacements: [teamIds],
+                    type: QueryTypes.SELECT
+                }
+            );
+        }
+
+        const teamMembersByTeamId = teamMembersRows.reduce((acc, memberRow) => {
+            if (!acc[memberRow.team_id]) acc[memberRow.team_id] = [];
+            acc[memberRow.team_id].push({
+                team_member_id: memberRow.team_member_id,
+                role: memberRow.role,
+                joined_at: memberRow.joined_at,
+                user_id: memberRow.user_id,
+                full_name: memberRow.full_name,
+                email: memberRow.email,
+                university_id: memberRow.university_id
+            });
+            return acc;
+        }, {});
+
         const teams = rows.map((row) => ({
             team_id: row.team_id,
             competition_id: row.competition_id,
@@ -553,7 +590,8 @@ const getCompetitionTeams = async (req, res) => {
                         full_name: `${row.guest_contact_name} (pending signup)`,
                         email: null
                     }
-                    : null
+                    : null,
+            members: teamMembersByTeamId[row.team_id] || []
         }));
 
         res.json({ success: true, data: teams });

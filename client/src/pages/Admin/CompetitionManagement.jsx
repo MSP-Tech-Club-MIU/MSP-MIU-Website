@@ -808,7 +808,31 @@ const CompetitionManagement = () => {
                     {teamsList.map((team) => (
                       <tr key={team.team_id}>
                         <td style={{ fontWeight: 600 }}>{team.team_name}</td>
-                        <td>{team.member_count ?? 0}</td>
+                        <td>
+                          <div>{team.member_count ?? 0}</div>
+                          {Array.isArray(team.members) && team.members.length > 0 ? (
+                            <div style={{ marginTop: 6, display: 'grid', gap: 4 }}>
+                              {team.members.map((member) => (
+                                <div
+                                  key={member.team_member_id || member.user_id}
+                                  style={{
+                                    fontSize: '0.8rem',
+                                    background: 'rgba(255, 255, 255, 0.06)',
+                                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                                    borderRadius: 8,
+                                    padding: '6px 8px'
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 600 }}>{member.full_name || 'Unnamed member'}</div>
+                                  <div style={{ opacity: 0.85 }}>ID: {member.university_id || '—'}</div>
+                                  <div style={{ opacity: 0.85 }}>Email: {member.email || '—'}</div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ marginTop: 4, fontSize: '0.8rem', opacity: 0.75 }}>No joined members yet</div>
+                          )}
+                        </td>
                         <td>{team.pending_invitations_count ?? 0}</td>
                         <td>{team.creator?.full_name || '—'}</td>
                         <td>
