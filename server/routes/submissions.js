@@ -6,8 +6,9 @@ const {
     getCompetitionSubmissions,
     gradeSubmission
 } = require('../controllers/submissions');
-const { authenticateToken, verifyRole } = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 const { upload } = require('../middlewares/multer');
+const { authorizeJudgingAccess } = require('../middlewares/judgingAuth');
 
 // Create/update submission (authenticated, team members)
 router.post('/', authenticateToken, upload.single('file'), createSubmission);
@@ -16,9 +17,9 @@ router.post('/', authenticateToken, upload.single('file'), createSubmission);
 router.get('/competitions/:competitionId/teams/:teamId', authenticateToken, getTeamSubmission);
 
 // Get all submissions for competition (admin/board)
-router.get('/competitions/:competitionId', authenticateToken, verifyRole('admin', 'board'), getCompetitionSubmissions);
+router.get('/competitions/:competitionId', authenticateToken, authorizeJudgingAccess, getCompetitionSubmissions);
 
 // Grade submission (admin/board)
-router.put('/:id/grade', authenticateToken, verifyRole('admin', 'board'), gradeSubmission);
+router.put('/:id/grade', authenticateToken, authorizeJudgingAccess, gradeSubmission);
 
 module.exports = router;

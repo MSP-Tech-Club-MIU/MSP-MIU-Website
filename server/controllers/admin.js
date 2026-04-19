@@ -24,6 +24,21 @@ const logAdminAction = async (actionType, message, req, entityType = null, entit
     }
 };
 
+function parseCompetitionConfig(configValue) {
+    if (!configValue) return null;
+    if (typeof configValue === 'object') return configValue;
+    try {
+        return JSON.parse(configValue);
+    } catch (_) {
+        return null;
+    }
+}
+
+function writeCompetitionConfig(configObj) {
+    if (configObj == null) return null;
+    return JSON.stringify(configObj);
+}
+
 /**
  * Get dashboard statistics + current admin info
  */
@@ -291,6 +306,139 @@ const deleteCompetition = async (req, res) => {
             success: false,
             error: 'Failed to delete competition'
         });
+    }
+};
+
+/**
+ * Get judge assignment candidates and selected board judges for a competition.
+ */
+const getCompetitionJudges = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const competition = await Competition.findByPk(id, {
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+        });
+        if (!competition) {
+            return res.status(404).json({ success: false, error: 'Competition not found' });
+        }
+
+        const boardRows = await Board.findAll({
+            where: { user_id: { [Op.ne]: null } },
+            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email'],
+            order: [['position', 'ASC'], ['full_name', 'ASC']]
+        });
+
+        const config = parseCompetitionConfig(competition.config) || {};
+        const assigned = Array.isArray(config?.judging?.assigned_board_user_ids)
+            ? config.judging.assigned_board_user_ids.map((x) => Number(x)).filter((x) => Number.isFinite(x))
+            : [];
+
+        return res.json({
+            success: true,
+            data: {
+                competition: {
+                    competition_id: competition.competition_id,
+                    title: competition.title,
+                    type: competition.type,
+                    evaluation_mode: competition.evaluation_mode
+                },
+                assigned_board_user_ids: assigned,
+                board_candidates: boardRows.map((row) => ({
+                    board_id: row.board_id,
+                    user_id: row.user_id,
+                    full_name: row.full_name,
+                    position: row.position,
+                    department_id: row.department_id,
+                    email: row.email
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching competition judges:', error);
+        return res.status(500).json({ success: false, error: 'Failed to fetch competition judges' });
+    }
+};
+
+/**
+ * Assign board members who can judge this competition.
+ */
+const updateCompetitionJudges = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { assigned_board_user_ids } = req.body || {};
+
+        const competition = await Competition.findByPk(id, {
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+        });
+        if (!competition) {
+            return res.status(404).json({ success: false, error: 'Competition not found' });
+        }
+
+        if (!['project', 'task_quiz'].includes(competition.type)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judge assignment is only available for project and task_quiz competitions'
+            });
+        }
+        if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judge assignment is available only for manual and hybrid evaluation modes'
+            });
+        }
+
+        if (!Array.isArray(assigned_board_user_ids)) {
+            return res.status(400).json({
+                success: false,
+                error: 'assigned_board_user_ids must be an array of user ids'
+            });
+        }
+
+        const normalizedIds = [...new Set(
+            assigned_board_user_ids.map((x) => Number(x)).filter((x) => Number.isFinite(x))
+        )];
+
+        if (normalizedIds.length > 0) {
+            const boardMatches = await Board.findAll({
+                where: {
+                    user_id: { [Op.in]: normalizedIds }
+                },
+                attributes: ['user_id']
+            });
+            const validBoardUserIds = new Set(boardMatches.map((x) => Number(x.user_id)));
+            const invalid = normalizedIds.filter((x) => !validBoardUserIds.has(x));
+            if (invalid.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Some users are not board members: ${invalid.join(', ')}`
+                });
+            }
+        }
+
+        const config = parseCompetitionConfig(competition.config) || {};
+        config.judging = config.judging || {};
+        config.judging.assigned_board_user_ids = normalizedIds;
+        await competition.update({ config: writeCompetitionConfig(config) });
+        await competition.reload();
+
+        await logAdminAction(
+            'competition_judges_updated',
+            `Updated judge assignments for "${competition.title}"`,
+            req,
+            'competition',
+            competition.competition_id
+        );
+
+        return res.json({
+            success: true,
+            data: {
+                competition_id: competition.competition_id,
+                assigned_board_user_ids: normalizedIds
+            }
+        });
+    } catch (error) {
+        console.error('Error updating competition judges:', error);
+        return res.status(500).json({ success: false, error: 'Failed to update competition judges' });
     }
 };
 
@@ -969,11 +1117,13 @@ module.exports = {
     getSuggestions,
     getEventFeedbackAll,
     getCompetitionTeams,
+    getCompetitionJudges,
     createAdminTeam,
     updateAdminTeam,
     deleteAdminTeam,
     getAdminTeamDetails,
     updateAdminTeamMember,
     removeAdminTeamMember,
-    cancelAdminTeamInvitation
+    cancelAdminTeamInvitation,
+    updateCompetitionJudges
 };

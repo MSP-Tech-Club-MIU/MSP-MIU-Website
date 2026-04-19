@@ -1846,7 +1846,7 @@ class ApiService {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${API_BASE_URL}/submissions/competition/${competitionId}`, {
+      const response = await fetch(`${API_BASE_URL}/submissions/competitions/${competitionId}`, {
         method: 'GET',
         headers: this.getHeaders(true),
       });
@@ -1893,6 +1893,41 @@ class ApiService {
       return result.data || result;
     } catch (error) {
       console.error(`Error grading submission ${submissionId}:`, error);
+      throw error;
+    }
+  }
+
+  static async getSubmissionEvaluation(submissionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/evaluation/${submissionId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load submission evaluation');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error loading evaluation for submission ${submissionId}:`, error);
+      throw error;
+    }
+  }
+
+  static async submitJudgeScore(submissionId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/evaluation/judge/${submissionId}`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit judge score');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error submitting judge score for ${submissionId}:`, error);
       throw error;
     }
   }
@@ -2400,6 +2435,45 @@ class ApiService {
       return result.data;
     } catch (error) {
       console.error('Error fetching admin competition teams:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get board judge assignment candidates for a competition (admin panel access).
+   */
+  static async getAdminCompetitionJudges(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/judges`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch judge assignments');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin competition judges:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update board judge assignments for a competition.
+   */
+  static async updateAdminCompetitionJudges(competitionId, assignedBoardUserIds) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/judges`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({
+          assigned_board_user_ids: Array.isArray(assignedBoardUserIds) ? assignedBoardUserIds : [],
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update judge assignments');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin competition judges:', error);
       throw error;
     }
   }
