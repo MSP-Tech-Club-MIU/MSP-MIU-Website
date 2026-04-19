@@ -10,14 +10,12 @@ const DepartmentMenu = memo(({ selectedDepartment, onSelectDepartment }) => {
 
     // Combine President (8) and VP (7) into one button
     const presidentAndVp = { id: 'president-vp', name: 'President & VP' };
-    const ambasador = { id: 'ambasador', name: 'Ambasador' };
 
     // Filter out these three from the main list and add them at the beginning
     const otherDepartments = departments.filter(d => ![7, 8, 9].includes(d.id));
 
     // Build the menu: Founder, President & VP first, then others
     const menuItems = [];
-    if (ambasador) menuItems.push(ambasador);
     if (founder) menuItems.push(founder);
     menuItems.push(presidentAndVp);
     menuItems.push(...otherDepartments);
