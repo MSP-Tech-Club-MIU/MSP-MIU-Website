@@ -1897,6 +1897,34 @@ class ApiService {
     }
   }
 
+  /**
+   * Competitor task_quiz marks page data (team member scoped).
+   */
+  static async getMyTaskQuizEvaluation(competitionId, teamId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/evaluation/my-task-quiz/${competitionId}/team/${teamId}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch marks');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching task quiz marks:', error);
+      throw error;
+    }
+  }
+
 
   // Admin Panel Part
 
@@ -2464,6 +2492,25 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error removing admin team member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a member info inside a team (admin)
+   */
+  static async updateAdminTeamMember(teamId, teamMemberId, memberData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/members/${teamMemberId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(memberData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update team member');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin team member:', error);
       throw error;
     }
   }

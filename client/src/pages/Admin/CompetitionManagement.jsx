@@ -117,6 +117,8 @@ const CompetitionManagement = () => {
   const [showTeamEditorModal, setShowTeamEditorModal] = useState(false);
   const [teamDetailsLoading, setTeamDetailsLoading] = useState(false);
   const [teamDetails, setTeamDetails] = useState(null);
+  const [editingMemberId, setEditingMemberId] = useState(null);
+  const [memberEditForm, setMemberEditForm] = useState({ full_name: '', email: '', university_id: '' });
 
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
@@ -303,6 +305,8 @@ const CompetitionManagement = () => {
     setShowTeamEditorModal(false);
     setEditingTeam(null);
     setTeamDetails(null);
+    setEditingMemberId(null);
+    setMemberEditForm({ full_name: '', email: '', university_id: '' });
     setTeamForm({ team_name: '', is_locked: false });
   };
 
@@ -339,6 +343,36 @@ const CompetitionManagement = () => {
       await Promise.all([fetchCompTeams(), fetchTeamDetails(editingTeam.team_id)]);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to cancel invitation' });
+    }
+  };
+
+  const startEditMember = (member) => {
+    setEditingMemberId(member.team_member_id);
+    setMemberEditForm({
+      full_name: member.full_name || '',
+      email: member.email || '',
+      university_id: member.university_id || ''
+    });
+  };
+
+  const cancelEditMember = () => {
+    setEditingMemberId(null);
+    setMemberEditForm({ full_name: '', email: '', university_id: '' });
+  };
+
+  const saveEditMember = async (teamMemberId) => {
+    if (!editingTeam?.team_id) return;
+    if (!memberEditForm.full_name.trim() || !memberEditForm.email.trim()) {
+      setAlert({ type: 'error', message: 'Member name and email are required.' });
+      return;
+    }
+    try {
+      await ApiService.updateAdminTeamMember(editingTeam.team_id, teamMemberId, memberEditForm);
+      setAlert({ type: 'success', message: 'Member info updated.' });
+      cancelEditMember();
+      await fetchTeamDetails(editingTeam.team_id);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to update member info' });
     }
   };
 
@@ -980,18 +1014,83 @@ const CompetitionManagement = () => {
                           <tbody>
                             {teamDetails.members.map((member) => (
                               <tr key={member.team_member_id || member.user_id}>
-                                <td>{member.full_name || '—'}</td>
-                                <td>{member.university_id || '—'}</td>
-                                <td>{member.email || '—'}</td>
+                                <td>
+                                  {editingMemberId === member.team_member_id ? (
+                                    <input
+                                      value={memberEditForm.full_name}
+                                      onChange={(e) =>
+                                        setMemberEditForm((f) => ({ ...f, full_name: e.target.value }))
+                                      }
+                                      placeholder="Full name"
+                                    />
+                                  ) : (
+                                    member.full_name || '—'
+                                  )}
+                                </td>
+                                <td>
+                                  {editingMemberId === member.team_member_id ? (
+                                    <input
+                                      value={memberEditForm.university_id}
+                                      onChange={(e) =>
+                                        setMemberEditForm((f) => ({ ...f, university_id: e.target.value }))
+                                      }
+                                      placeholder="University ID"
+                                    />
+                                  ) : (
+                                    member.university_id || '—'
+                                  )}
+                                </td>
+                                <td>
+                                  {editingMemberId === member.team_member_id ? (
+                                    <input
+                                      type="email"
+                                      value={memberEditForm.email}
+                                      onChange={(e) =>
+                                        setMemberEditForm((f) => ({ ...f, email: e.target.value }))
+                                      }
+                                      placeholder="Email"
+                                    />
+                                  ) : (
+                                    member.email || '—'
+                                  )}
+                                </td>
                                 <td>{member.role || 'member'}</td>
                                 <td>
-                                  <button
-                                    type="button"
-                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                                    onClick={() => removeTeamMember(member.team_member_id)}
-                                  >
-                                    Remove
-                                  </button>
+                                  {editingMemberId === member.team_member_id ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                                        onClick={() => saveEditMember(member.team_member_id)}
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--secondary"
+                                        onClick={cancelEditMember}
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                                        onClick={() => startEditMember(member)}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                        onClick={() => removeTeamMember(member.team_member_id)}
+                                      >
+                                        Remove
+                                      </button>
+                                    </>
+                                  )}
                                 </td>
                               </tr>
                             ))}
