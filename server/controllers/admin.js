@@ -708,6 +708,170 @@ const deleteAdminTeam = async (req, res) => {
     }
 };
 
+/**
+ * Admin get full team details (accepted + pending)
+ */
+const getAdminTeamDetails = async (req, res) => {
+    try {
+        const { id } = req.params; // team_id
+        const teamRows = await sequelize.query(
+            `SELECT t.team_id, t.competition_id, t.team_name, t.is_locked, t.created_at
+             FROM teams t
+             WHERE t.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!teamRows || teamRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team not found' });
+        }
+
+        const members = await sequelize.query(
+            `SELECT tm.team_member_id,
+                    tm.team_id,
+                    tm.user_id,
+                    tm.role,
+                    tm.joined_at,
+                    u.full_name,
+                    u.email,
+                    u.university_id
+             FROM team_members tm
+             INNER JOIN users u ON tm.user_id = u.user_id
+             WHERE tm.team_id = ?
+             ORDER BY tm.role DESC, tm.joined_at ASC`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        const pendingInvitations = await sequelize.query(
+            `SELECT ti.invitation_id,
+                    ti.team_id,
+                    ti.invited_email,
+                    ti.invited_name,
+                    ti.invited_university_id,
+                    ti.status,
+                    ti.expires_at,
+                    ti.created_at
+             FROM team_invitations ti
+             WHERE ti.team_id = ? AND ti.status = 'pending'
+             ORDER BY ti.created_at ASC`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        res.json({
+            success: true,
+            data: {
+                ...teamRows[0],
+                members,
+                pending_invitations: pendingInvitations
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching admin team details:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch team details' });
+    }
+};
+
+/**
+ * Admin remove a member from team
+ */
+const removeAdminTeamMember = async (req, res) => {
+    try {
+        const { teamId, teamMemberId } = req.params;
+        const rows = await sequelize.query(
+            `SELECT tm.team_member_id, tm.team_id, tm.user_id, tm.role, t.team_name, u.full_name
+             FROM team_members tm
+             INNER JOIN teams t ON t.team_id = tm.team_id
+             LEFT JOIN users u ON u.user_id = tm.user_id
+             WHERE tm.team_member_id = ? AND tm.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [teamMemberId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team member not found' });
+        }
+
+        const member = rows[0];
+        await sequelize.query(
+            `DELETE FROM team_members WHERE team_member_id = ?`,
+            {
+                replacements: [teamMemberId],
+                type: QueryTypes.DELETE
+            }
+        );
+
+        await logAdminAction(
+            'team_member_removed',
+            `Removed ${member.full_name || `user ${member.user_id}`} from team "${member.team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({ success: true, message: 'Team member removed' });
+    } catch (error) {
+        console.error('Error removing team member (admin):', error);
+        res.status(500).json({ success: false, error: 'Failed to remove team member' });
+    }
+};
+
+/**
+ * Admin cancel a pending invitation
+ */
+const cancelAdminTeamInvitation = async (req, res) => {
+    try {
+        const { teamId, invitationId } = req.params;
+        const rows = await sequelize.query(
+            `SELECT ti.invitation_id, ti.team_id, ti.invited_email, t.team_name
+             FROM team_invitations ti
+             INNER JOIN teams t ON t.team_id = ti.team_id
+             WHERE ti.invitation_id = ? AND ti.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [invitationId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Invitation not found' });
+        }
+
+        await sequelize.query(
+            `DELETE FROM team_invitations WHERE invitation_id = ? AND status = 'pending'`,
+            {
+                replacements: [invitationId],
+                type: QueryTypes.DELETE
+            }
+        );
+
+        await logAdminAction(
+            'team_invitation_cancelled',
+            `Cancelled pending invitation (${rows[0].invited_email}) for team "${rows[0].team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({ success: true, message: 'Invitation cancelled' });
+    } catch (error) {
+        console.error('Error cancelling invitation (admin):', error);
+        res.status(500).json({ success: false, error: 'Failed to cancel invitation' });
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getCompetitions,
@@ -724,5 +888,8 @@ module.exports = {
     getCompetitionTeams,
     createAdminTeam,
     updateAdminTeam,
-    deleteAdminTeam
+    deleteAdminTeam,
+    getAdminTeamDetails,
+    removeAdminTeamMember,
+    cancelAdminTeamInvitation
 };

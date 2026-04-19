@@ -114,6 +114,9 @@ const CompetitionManagement = () => {
   const [teamsLoading, setTeamsLoading] = useState(false);
   const [editingTeam, setEditingTeam] = useState(null);
   const [teamForm, setTeamForm] = useState({ team_name: '', is_locked: false });
+  const [showTeamEditorModal, setShowTeamEditorModal] = useState(false);
+  const [teamDetailsLoading, setTeamDetailsLoading] = useState(false);
+  const [teamDetails, setTeamDetails] = useState(null);
 
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
@@ -276,12 +279,12 @@ const CompetitionManagement = () => {
       if (editingTeam) {
         await ApiService.updateAdminTeam(editingTeam.team_id, teamForm);
         setAlert({ type: 'success', message: 'Team updated.' });
+        closeTeamEditor();
       } else {
         await ApiService.createAdminTeam(loadedComp.competition_id, teamForm);
         setAlert({ type: 'success', message: 'Team created.' });
+        setTeamForm({ team_name: '', is_locked: false });
       }
-      setEditingTeam(null);
-      setTeamForm({ team_name: '', is_locked: false });
       fetchCompTeams();
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to save team' });
@@ -291,6 +294,52 @@ const CompetitionManagement = () => {
   const editTeamSettings = (team) => {
     setEditingTeam(team);
     setTeamForm({ team_name: team.team_name, is_locked: team.is_locked || false });
+    setShowTeamEditorModal(true);
+    setTeamDetails(null);
+    fetchTeamDetails(team.team_id);
+  };
+
+  const closeTeamEditor = () => {
+    setShowTeamEditorModal(false);
+    setEditingTeam(null);
+    setTeamDetails(null);
+    setTeamForm({ team_name: '', is_locked: false });
+  };
+
+  const fetchTeamDetails = async (teamId) => {
+    try {
+      setTeamDetailsLoading(true);
+      const data = await ApiService.getAdminTeamDetails(teamId);
+      setTeamDetails(data || null);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to load team details' });
+    } finally {
+      setTeamDetailsLoading(false);
+    }
+  };
+
+  const removeTeamMember = async (teamMemberId) => {
+    if (!editingTeam?.team_id) return;
+    if (!window.confirm('Remove this member from the team?')) return;
+    try {
+      await ApiService.removeAdminTeamMember(editingTeam.team_id, teamMemberId);
+      setAlert({ type: 'success', message: 'Team member removed.' });
+      await Promise.all([fetchCompTeams(), fetchTeamDetails(editingTeam.team_id)]);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to remove member' });
+    }
+  };
+
+  const cancelTeamInvitation = async (invitationId) => {
+    if (!editingTeam?.team_id) return;
+    if (!window.confirm('Cancel this pending invitation?')) return;
+    try {
+      await ApiService.cancelAdminTeamInvitation(editingTeam.team_id, invitationId);
+      setAlert({ type: 'success', message: 'Invitation cancelled.' });
+      await Promise.all([fetchCompTeams(), fetchTeamDetails(editingTeam.team_id)]);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to cancel invitation' });
+    }
   };
 
   const deleteTeam = async (teamId) => {
@@ -775,10 +824,7 @@ const CompetitionManagement = () => {
                   <button
                     type="button"
                     className="AdminPanel__actionBtn AdminPanel__actionBtn--secondary"
-                    onClick={() => {
-                      setEditingTeam(null);
-                      setTeamForm({ team_name: '', is_locked: false });
-                    }}
+                    onClick={closeTeamEditor}
                     style={{ height: '42px' }}
                   >
                     Cancel
@@ -850,7 +896,7 @@ const CompetitionManagement = () => {
                             className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
                             onClick={() => editTeamSettings(team)}
                           >
-                            Edit
+                            Edit / Manage
                           </button>
                           <button
                             type="button"
@@ -867,6 +913,137 @@ const CompetitionManagement = () => {
               </div>
             )}
           </div>
+
+          {showTeamEditorModal && editingTeam ? (
+            <div className="AdminPanel__modal" onClick={closeTeamEditor}>
+              <div className="AdminPanel__modalContent" onClick={(e) => e.stopPropagation()}>
+                <h3 className="AdminPanel__modalTitle">Edit team and members</h3>
+                <div className="AdminPanel__formRow">
+                  <div className="AdminPanel__formGroup" style={{ flex: 2 }}>
+                    <label>Team name</label>
+                    <input
+                      type="text"
+                      value={teamForm.team_name}
+                      onChange={(e) => setTeamForm({ ...teamForm, team_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="AdminPanel__formGroup" style={{ maxWidth: 160 }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={teamForm.is_locked}
+                        onChange={(e) => setTeamForm({ ...teamForm, is_locked: e.target.checked })}
+                      />{' '}
+                      Locked team
+                    </label>
+                  </div>
+                </div>
+
+                <div className="AdminPanel__modalActions">
+                  <button
+                    type="button"
+                    className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                    onClick={closeTeamEditor}
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+                    onClick={saveTeam}
+                  >
+                    Save team
+                  </button>
+                </div>
+
+                {teamDetailsLoading ? (
+                  <div className="AdminPanel__loading" style={{ marginTop: 12 }}>
+                    Loading team details...
+                  </div>
+                ) : (
+                  <>
+                    <h4 style={{ marginTop: 18 }}>Accepted members ({teamDetails?.members?.length || 0})</h4>
+                    {!teamDetails?.members?.length ? (
+                      <div className="AdminPanel__emptyState">No accepted members yet.</div>
+                    ) : (
+                      <div className="CompetitionManagement__teamsTableWrap">
+                        <table className="AdminPanel__table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>ID</th>
+                              <th>Email</th>
+                              <th>Role</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teamDetails.members.map((member) => (
+                              <tr key={member.team_member_id || member.user_id}>
+                                <td>{member.full_name || '—'}</td>
+                                <td>{member.university_id || '—'}</td>
+                                <td>{member.email || '—'}</td>
+                                <td>{member.role || 'member'}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                    onClick={() => removeTeamMember(member.team_member_id)}
+                                  >
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    <h4 style={{ marginTop: 18 }}>
+                      Pending invitations ({teamDetails?.pending_invitations?.length || 0})
+                    </h4>
+                    {!teamDetails?.pending_invitations?.length ? (
+                      <div className="AdminPanel__emptyState">No pending invitations.</div>
+                    ) : (
+                      <div className="CompetitionManagement__teamsTableWrap">
+                        <table className="AdminPanel__table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>ID</th>
+                              <th>Email</th>
+                              <th>Status</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teamDetails.pending_invitations.map((inv) => (
+                              <tr key={inv.invitation_id}>
+                                <td>{inv.invited_name || '—'}</td>
+                                <td>{inv.invited_university_id || '—'}</td>
+                                <td>{inv.invited_email || '—'}</td>
+                                <td>{inv.status || 'pending'}</td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                    onClick={() => cancelTeamInvitation(inv.invitation_id)}
+                                  >
+                                    Cancel invite
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
