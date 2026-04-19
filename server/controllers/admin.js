@@ -828,6 +828,89 @@ const removeAdminTeamMember = async (req, res) => {
 };
 
 /**
+ * Admin update team member profile info
+ */
+const updateAdminTeamMember = async (req, res) => {
+    try {
+        const { teamId, teamMemberId } = req.params;
+        const { full_name, email, university_id } = req.body || {};
+
+        const rows = await sequelize.query(
+            `SELECT tm.team_member_id, tm.team_id, tm.user_id, t.team_name
+             FROM team_members tm
+             INNER JOIN teams t ON t.team_id = tm.team_id
+             WHERE tm.team_member_id = ? AND tm.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [teamMemberId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team member not found' });
+        }
+
+        const member = rows[0];
+        const updatePayload = {};
+
+        if (typeof full_name === 'string' && full_name.trim()) {
+            updatePayload.full_name = full_name.trim();
+        }
+
+        if (typeof email === 'string' && email.trim()) {
+            updatePayload.email = email.trim().toLowerCase();
+        }
+
+        if (typeof university_id === 'string') {
+            updatePayload.university_id = university_id.trim() || null;
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+            return res.status(400).json({ success: false, error: 'No valid member fields to update' });
+        }
+
+        const [affectedCount] = await User.update(updatePayload, {
+            where: { user_id: member.user_id }
+        });
+
+        if (!affectedCount) {
+            return res.status(404).json({ success: false, error: 'User record not found' });
+        }
+
+        const user = await User.findByPk(member.user_id, {
+            attributes: ['user_id', 'full_name', 'email', 'university_id']
+        });
+
+        await logAdminAction(
+            'team_member_updated',
+            `Updated member info in team "${member.team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({
+            success: true,
+            data: {
+                team_member_id: Number(teamMemberId),
+                team_id: Number(teamId),
+                ...user?.toJSON?.()
+            }
+        });
+    } catch (error) {
+        console.error('Error updating team member (admin):', error);
+        if (error?.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).json({
+                success: false,
+                error: 'Email or university ID already exists for another account'
+            });
+        }
+        res.status(500).json({ success: false, error: 'Failed to update team member' });
+    }
+};
+
+/**
  * Admin cancel a pending invitation
  */
 const cancelAdminTeamInvitation = async (req, res) => {
@@ -890,6 +973,7 @@ module.exports = {
     updateAdminTeam,
     deleteAdminTeam,
     getAdminTeamDetails,
+    updateAdminTeamMember,
     removeAdminTeamMember,
     cancelAdminTeamInvitation
 };

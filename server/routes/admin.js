@@ -20,6 +20,7 @@ const {
     updateAdminTeam,
     deleteAdminTeam,
     getAdminTeamDetails,
+    updateAdminTeamMember,
     removeAdminTeamMember,
     cancelAdminTeamInvitation
 } = require('../controllers/admin');
@@ -95,6 +96,7 @@ router.post('/competitions/:id/teams', createAdminTeam);
 router.put('/teams/:id', updateAdminTeam);
 router.delete('/teams/:id', deleteAdminTeam);
 router.get('/teams/:id/details', getAdminTeamDetails);
+router.put('/teams/:teamId/members/:teamMemberId', updateAdminTeamMember);
 router.delete('/teams/:teamId/members/:teamMemberId', removeAdminTeamMember);
 router.delete('/teams/:teamId/invitations/:invitationId', cancelAdminTeamInvitation);
 
