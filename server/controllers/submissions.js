@@ -35,7 +35,7 @@ const createSubmission = async (req, res) => {
 
         // Check if user is team member
         const teamMembers = await db.query(
-            `SELECT tm.team_member_id, t.is_locked
+            `SELECT tm.team_member_id, tm.role, t.is_locked
              FROM team_members tm
              INNER JOIN teams t ON tm.team_id = t.team_id
              WHERE tm.team_id = ? AND tm.user_id = ?`,
@@ -51,6 +51,7 @@ const createSubmission = async (req, res) => {
                 error: 'You are not a member of this team'
             });
         }
+        const membership = teamMembers[0];
 
         // Check competition status
         const competitions = await db.query(
@@ -69,6 +70,13 @@ const createSubmission = async (req, res) => {
         }
 
         const competition = competitions[0];
+
+        if (['project', 'task_quiz'].includes(competition.type) && membership.role !== 'leader') {
+            return res.status(403).json({
+                success: false,
+                error: 'Only the team leader can submit for this competition type'
+            });
+        }
 
         if (competition.type === 'quiz') {
             return res.status(400).json({

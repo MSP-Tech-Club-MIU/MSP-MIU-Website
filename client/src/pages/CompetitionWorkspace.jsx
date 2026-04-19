@@ -41,6 +41,7 @@ const CompetitionWorkspace = () => {
   const [submitting, setSubmitting] = useState(false);
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
@@ -61,13 +62,15 @@ const CompetitionWorkspace = () => {
       setLoading(true);
       setError(null);
 
-      const [competitionData, teamData] = await Promise.all([
+      const [competitionData, teamData, userProfile] = await Promise.all([
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
+        ApiService.getProfile(),
       ]);
 
       setCompetition(competitionData);
       setTeam(teamData);
+      setCurrentUserId(userProfile?.user_id || null);
 
       if (competitionData?.type === 'task_quiz') {
         const now = new Date();
@@ -322,6 +325,12 @@ const CompetitionWorkspace = () => {
   const canSubmit = () => {
     if (!competition) return false;
     if (competition.type === 'quiz') return false;
+
+    const isLeader = !!team?.members?.some(
+      (m) => m?.user_id === currentUserId && String(m?.role).toLowerCase() === 'leader'
+    );
+    if (['project', 'task_quiz'].includes(competition.type) && !isLeader) return false;
+
     if (competition.type === 'task_quiz') {
       if (!tasks.length || selectedTaskId == null) return false;
       const now = new Date();
@@ -349,6 +358,9 @@ const CompetitionWorkspace = () => {
     return now < end;
   };
   const allowedSubmitTypes = getAllowedSubmitTypes();
+  const isCurrentUserLeader = !!team?.members?.some(
+    (m) => m?.user_id === currentUserId && String(m?.role).toLowerCase() === 'leader'
+  );
   const isFrontendMultitask = competition?.type === 'project' && competition?.config?.multiTask === true;
   const isClassicQuiz = competition?.type === 'quiz';
   const isTaskQuiz = competition?.type === 'task_quiz';
@@ -852,7 +864,9 @@ const CompetitionWorkspace = () => {
                 <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
                   <FiAlertCircle size={18} />
                   <span>
-                    {competition?.type === 'external' || competition?.submission_mode === 'none'
+                    {!isCurrentUserLeader && ['project', 'task_quiz'].includes(competition?.type)
+                      ? 'Only the team leader can submit. You can still view team progress and marks.'
+                      : competition?.type === 'external' || competition?.submission_mode === 'none'
                       ? 'This is an external competition. Submissions are disabled.'
                       : competition?.status !== 'open'
                       ? 'Competition is not open for submissions'
