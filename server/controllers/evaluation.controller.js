@@ -15,6 +15,9 @@ const {
 } = require('../utils/scoreCalculator');
 const { logAuditEvent, logError } = require('../utils/logger');
 
+/** Local DBs may omit `score` / `feedback` on `submissions`; exclude so Sequelize does not SELECT them. */
+const submissionAttributesNoScore = { exclude: ['score', 'feedback'] };
+
 function evalLog(message, data) {
   console.log(
     '[EVALUATION]',
@@ -33,6 +36,7 @@ const runEvaluation = async (req, res) => {
 
   try {
     const submission = await Submission.findByPk(submissionId, {
+      attributes: submissionAttributesNoScore,
       include: [{ model: Competition, as: 'competition' }]
     });
     if (!submission) {
@@ -121,6 +125,7 @@ const submitJudgeScore = async (req, res) => {
 
   try {
     const submission = await Submission.findByPk(submissionId, {
+      attributes: submissionAttributesNoScore,
       include: [{ model: Competition, as: 'competition', attributes: ['type', 'evaluation_mode'] }]
     });
     if (!submission) {
@@ -197,6 +202,7 @@ const getEvaluation = async (req, res) => {
 
   try {
     const submission = await Submission.findByPk(submissionId, {
+      attributes: submissionAttributesNoScore,
       include: [
         { model: Evaluation, as: 'evaluation' },
         {
@@ -314,6 +320,7 @@ const getTaskQuizTeamEvaluation = async (req, res) => {
         competition_id: competitionId,
         team_id: teamId
       },
+      attributes: submissionAttributesNoScore,
       include: [
         { model: Evaluation, as: 'evaluation' },
         { model: JudgeScore, as: 'judgeScores' }
@@ -461,6 +468,7 @@ const getMyTaskQuizEvaluation = async (req, res) => {
         competition_id: competitionId,
         team_id: teamId
       },
+      attributes: submissionAttributesNoScore,
       include: [
         { model: Evaluation, as: 'evaluation' },
         { model: JudgeScore, as: 'judgeScores' }

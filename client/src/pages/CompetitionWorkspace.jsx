@@ -6,7 +6,8 @@ import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
-import { safeTaskAssetUrl } from '../utils/taskQuizAssets';
+import LiveDemoEmbed from '../components/LiveDemoEmbed';
+import { safeTaskAssetUrl, normalizeLiveDemoOpenUrl } from '../utils/taskQuizAssets';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
@@ -808,14 +809,25 @@ const CompetitionWorkspace = () => {
                       </a>
                     </p>
                   )}
-                  {submission.live_url && (
-                    <p>
-                      <strong>Live URL:</strong>{' '}
-                      <a href={submission.live_url} target="_blank" rel="noopener noreferrer">
-                        {submission.live_url}
-                      </a>
-                    </p>
-                  )}
+                  {submission.live_url &&
+                    (() => {
+                      const liveOpen = normalizeLiveDemoOpenUrl(submission.live_url);
+                      return (
+                        <>
+                          <p>
+                            <strong>Live URL:</strong>{' '}
+                            {liveOpen ? (
+                              <a href={liveOpen} target="_blank" rel="noopener noreferrer">
+                                {submission.live_url}
+                              </a>
+                            ) : (
+                              <span>{submission.live_url}</span>
+                            )}
+                          </p>
+                          <LiveDemoEmbed liveUrl={submission.live_url} embedTitle="Your submission — live preview" />
+                        </>
+                      );
+                    })()}
                   {submission.r2_key && (
                     <p>
                       <strong>File:</strong> Uploaded ✓

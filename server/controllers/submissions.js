@@ -544,10 +544,16 @@ const getCompetitionSubmissions = async (req, res) => {
         }
 
         const submissions = await db.query(
-            `SELECT s.*, t.team_name, 
+            `SELECT s.*, t.team_name,
+                    ANY_VALUE(ct.title) AS task_title,
+                    ANY_VALUE(ct.description) AS task_description,
+                    ANY_VALUE(ct.assets_url) AS task_assets_url,
+                    ANY_VALUE(ct.position) AS task_position,
                     COUNT(tm.team_member_id) as team_size
              FROM submissions s
              INNER JOIN teams t ON s.team_id = t.team_id
+             LEFT JOIN competition_tasks ct
+                ON ct.task_id = s.task_id AND ct.competition_id = s.competition_id
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE s.competition_id = ?
              GROUP BY s.submission_id

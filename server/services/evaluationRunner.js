@@ -26,6 +26,7 @@ async function runEvaluationForSubmission(submissionId, options = {}) {
 
   try {
     const submission = await Submission.findByPk(submissionId, {
+      attributes: { exclude: ['score', 'feedback'] },
       include: [{ model: Competition, as: 'competition' }]
     });
     if (!submission) {
