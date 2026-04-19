@@ -18,6 +18,8 @@ const Competitions = lazy(() => import('./pages/Competitions'));
 const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
 const CreateTeam = lazy(() => import('./pages/CreateTeam'));
 const CompetitionWorkspace = lazy(() => import('./pages/CompetitionWorkspace'));
+const TaskQuizMarks = lazy(() => import('./pages/TaskQuizMarks'));
+const JudgeSubmissions = lazy(() => import('./pages/JudgeSubmissions'));
 const QuizPage = lazy(() => import('./pages/QuizPage'));
 const QuizTakeSession = lazy(() => import('./pages/QuizTakeSession'));
 const AcceptTeamInvitation = lazy(() => import('./pages/AcceptTeamInvitation'));
@@ -169,6 +171,8 @@ const AppRouter = () => {
           <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
           <Route path="/competitions/:id/create-team" element={<SiteLayout><CreateTeam /></SiteLayout>} />
           <Route path="/competitions/:id/team/:teamId" element={<SiteLayout><CompetitionWorkspace /></SiteLayout>} />
+          <Route path="/competitions/:id/team/:teamId/marks" element={<SiteLayout><TaskQuizMarks /></SiteLayout>} />
+          <Route path="/competitions/:id/judging" element={<SiteLayout><JudgeSubmissions /></SiteLayout>} />
           <Route path="/quizpage" element={<SiteLayout><QuizPage /></SiteLayout>} />
           <Route path="/quizpage/:quizId" element={<SiteLayout><QuizPage /></SiteLayout>} />
           <Route path="/quizpage/:quizId/take/:step" element={<SiteLayout><QuizTakeSession /></SiteLayout>} />

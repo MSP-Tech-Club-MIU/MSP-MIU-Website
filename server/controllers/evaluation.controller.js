@@ -120,9 +120,23 @@ const submitJudgeScore = async (req, res) => {
   }
 
   try {
-    const submission = await Submission.findByPk(submissionId);
+    const submission = await Submission.findByPk(submissionId, {
+      include: [{ model: Competition, as: 'competition', attributes: ['type', 'evaluation_mode'] }]
+    });
     if (!submission) {
       return res.status(404).json({ success: false, error: 'Submission not found' });
+    }
+    if (!['project', 'task_quiz'].includes(submission.competition?.type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Judging is available only for project and task_quiz competitions'
+      });
+    }
+    if (!['manual', 'hybrid'].includes(submission.competition?.evaluation_mode)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Judging is available only when evaluation_mode is manual or hybrid'
+      });
     }
 
     const judgeId = req.user.user_id;
@@ -198,6 +212,21 @@ const getEvaluation = async (req, res) => {
 
     if (!submission) {
       return res.status(404).json({ success: false, error: 'Submission not found' });
+    }
+    const competition = await Competition.findByPk(submission.competition_id, {
+      attributes: ['type', 'evaluation_mode']
+    });
+    if (!['project', 'task_quiz'].includes(competition?.type)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Judging is available only for project and task_quiz competitions'
+      });
+    }
+    if (!['manual', 'hybrid'].includes(competition?.evaluation_mode)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Judging is available only when evaluation_mode is manual or hybrid'
+      });
     }
 
     const judgeRows = (submission.judgeScores || []).map((j) => j.toJSON());

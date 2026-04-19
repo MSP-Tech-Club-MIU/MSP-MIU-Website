@@ -286,6 +286,13 @@ const CompetitionDetails = () => {
     }
   };
 
+  const canOpenJudgingWorkspace = () => {
+    if (!competition) return false;
+    if (!['project', 'task_quiz'].includes(competition.type)) return false;
+    if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) return false;
+    return ['admin', 'board', 'judge'].includes(userRole);
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -398,6 +405,17 @@ const CompetitionDetails = () => {
             <p style={{ marginTop: 8 }}>
               <strong>Evaluation:</strong> {formatEvaluationLabel()}
             </p>
+            {canOpenJudgingWorkspace() ? (
+              <div className="CompetitionDetailsPage__quizCtaButtons" style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/competitions/${id}/judging`)}
+                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                >
+                  Open judging workspace
+                </button>
+              </div>
+            ) : null}
             {competition.type === 'quiz' && (
               <div className="CompetitionDetailsPage__quizCta">
                 <p className="CompetitionDetailsPage__quizCtaHint">

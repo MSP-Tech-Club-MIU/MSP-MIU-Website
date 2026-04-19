@@ -16,13 +16,15 @@ const {
     getSuggestions,
     getEventFeedbackAll,
     getCompetitionTeams,
+    getCompetitionJudges,
     createAdminTeam,
     updateAdminTeam,
     deleteAdminTeam,
     getAdminTeamDetails,
     updateAdminTeamMember,
     removeAdminTeamMember,
-    cancelAdminTeamInvitation
+    cancelAdminTeamInvitation,
+    updateCompetitionJudges
 } = require('../controllers/admin');
 const {
     getAdminQuiz,
@@ -92,6 +94,8 @@ router.get('/feedback', getEventFeedbackAll);
 
 // Teams (Admin Management)
 router.get('/competitions/:id/teams', getCompetitionTeams);
+router.get('/competitions/:id/judges', getCompetitionJudges);
+router.put('/competitions/:id/judges', updateCompetitionJudges);
 router.post('/competitions/:id/teams', createAdminTeam);
 router.put('/teams/:id', updateAdminTeam);
 router.delete('/teams/:id', deleteAdminTeam);

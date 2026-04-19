@@ -119,6 +119,10 @@ const CompetitionManagement = () => {
   const [teamDetails, setTeamDetails] = useState(null);
   const [editingMemberId, setEditingMemberId] = useState(null);
   const [memberEditForm, setMemberEditForm] = useState({ full_name: '', email: '', university_id: '' });
+  const [judgeCandidates, setJudgeCandidates] = useState([]);
+  const [assignedJudgeIds, setAssignedJudgeIds] = useState([]);
+  const [judgesLoading, setJudgesLoading] = useState(false);
+  const [judgesSaving, setJudgesSaving] = useState(false);
 
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
@@ -223,6 +227,60 @@ const CompetitionManagement = () => {
       fetchCompTeams();
     }
   }, [activeTab, loadedComp?.competition_id, fetchCompTeams]);
+
+  const canAssignJudges = useMemo(() => {
+    if (!loadedComp) return false;
+    return ['project', 'task_quiz'].includes(loadedComp.type) &&
+      ['manual', 'hybrid'].includes(loadedComp.evaluation_mode);
+  }, [loadedComp]);
+
+  const fetchJudgeAssignments = useCallback(async () => {
+    if (!loadedComp?.competition_id || !canAssignJudges) {
+      setJudgeCandidates([]);
+      setAssignedJudgeIds([]);
+      return;
+    }
+    try {
+      setJudgesLoading(true);
+      const data = await ApiService.getAdminCompetitionJudges(loadedComp.competition_id);
+      setJudgeCandidates(Array.isArray(data?.board_candidates) ? data.board_candidates : []);
+      setAssignedJudgeIds(Array.isArray(data?.assigned_board_user_ids) ? data.assigned_board_user_ids : []);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to load judge assignments' });
+      setJudgeCandidates([]);
+      setAssignedJudgeIds([]);
+    } finally {
+      setJudgesLoading(false);
+    }
+  }, [loadedComp?.competition_id, canAssignJudges]);
+
+  useEffect(() => {
+    if (activeTab === 'details' && isEditMode && loadedComp) {
+      fetchJudgeAssignments();
+    }
+  }, [activeTab, isEditMode, loadedComp, fetchJudgeAssignments]);
+
+  const toggleAssignedJudge = (userId) => {
+    const numericId = Number(userId);
+    if (!Number.isFinite(numericId)) return;
+    setAssignedJudgeIds((prev) =>
+      prev.includes(numericId) ? prev.filter((x) => x !== numericId) : [...prev, numericId]
+    );
+  };
+
+  const saveJudgeAssignments = async () => {
+    if (!loadedComp?.competition_id || !canAssignJudges) return;
+    try {
+      setJudgesSaving(true);
+      await ApiService.updateAdminCompetitionJudges(loadedComp.competition_id, assignedJudgeIds);
+      setAlert({ type: 'success', message: 'Judge assignments updated.' });
+      await fetchJudgeAssignments();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to save judge assignments' });
+    } finally {
+      setJudgesSaving(false);
+    }
+  };
 
   const saveCompetition = async () => {
     if (!compForm.name.trim() || !compForm.description.trim()) {
@@ -778,6 +836,66 @@ const CompetitionManagement = () => {
               />
             </div>
           </div>
+
+          {isEditMode && loadedComp && (
+            <div className="CompetitionManagement__judgeAssignment">
+              <div className="CompetitionManagement__judgeAssignmentHead">
+                <h3>Assigned board judges</h3>
+                <p>
+                  Select board members who can judge this competition. When assigned, only these board users can access judging.
+                </p>
+              </div>
+              {!canAssignJudges ? (
+                <div className="CompetitionManagement__judgeHint">
+                  Judge assignment is available only for <strong>project/task_quiz</strong> with
+                  <strong> manual/hybrid</strong> evaluation mode.
+                </div>
+              ) : judgesLoading ? (
+                <div className="CompetitionManagement__judgeHint">Loading board members...</div>
+              ) : judgeCandidates.length === 0 ? (
+                <div className="CompetitionManagement__judgeHint">No board members with linked users found.</div>
+              ) : (
+                <>
+                  <div className="CompetitionManagement__judgeList">
+                    {judgeCandidates.map((member) => {
+                      const checked = assignedJudgeIds.includes(Number(member.user_id));
+                      return (
+                        <label key={member.board_id} className="CompetitionManagement__judgeItem">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleAssignedJudge(member.user_id)}
+                          />
+                          <span>
+                            <strong>{member.full_name || 'Board member'}</strong>
+                            <em>{member.position}{member.department_id != null ? ` - Dept ${member.department_id}` : ''}</em>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="CompetitionManagement__judgeActions">
+                    <button
+                      type="button"
+                      className="CompetitionManagement__btn CompetitionManagement__btn--secondary"
+                      onClick={fetchJudgeAssignments}
+                      disabled={judgesSaving}
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      className="CompetitionManagement__btn CompetitionManagement__btn--primary"
+                      onClick={saveJudgeAssignments}
+                      disabled={judgesSaving}
+                    >
+                      {judgesSaving ? 'Saving...' : 'Save judge assignments'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ) : null}
 

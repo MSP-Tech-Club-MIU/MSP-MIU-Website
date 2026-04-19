@@ -373,6 +373,21 @@ const createSubmission = async (req, res) => {
     }
 };
 
+async function getCompetitionJudgingEligibility(competitionId) {
+    const rows = await db.query(
+        `SELECT competition_id, type, evaluation_mode
+         FROM competitions
+         WHERE competition_id = ?
+         LIMIT 1`,
+        {
+            replacements: [competitionId],
+            type: db.QueryTypes.SELECT
+        }
+    );
+    if (!rows || rows.length === 0) return null;
+    return rows[0];
+}
+
 /**
  * Get team's submission for a competition
  * GET /api/submissions/competitions/:competitionId/teams/:teamId
@@ -505,6 +520,28 @@ const getTeamSubmission = async (req, res) => {
 const getCompetitionSubmissions = async (req, res) => {
     try {
         const { competitionId } = req.params;
+        const competition = await getCompetitionJudgingEligibility(competitionId);
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                error: 'Competition not found'
+            });
+        }
+
+        if (!['project', 'task_quiz'].includes(competition.type)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judging is available only for project and task_quiz competitions'
+            });
+        }
+
+        if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judging is available only when evaluation_mode is manual or hybrid'
+            });
+        }
 
         const submissions = await db.query(
             `SELECT s.*, t.team_name, 
@@ -544,6 +581,7 @@ const gradeSubmission = async (req, res) => {
     try {
         const { id } = req.params;
         const { score, feedback } = req.body;
+        const numericScore = Number(score);
 
         if (score === undefined) {
             return res.status(400).json({
@@ -552,10 +590,44 @@ const gradeSubmission = async (req, res) => {
             });
         }
 
-        if (score < 0 || score > 100) {
+        if (!Number.isFinite(numericScore) || numericScore < 0 || numericScore > 100) {
             return res.status(400).json({
                 success: false,
                 error: 'Score must be between 0 and 100'
+            });
+        }
+
+        const subRows = await db.query(
+            `SELECT submission_id, competition_id FROM submissions WHERE submission_id = ? LIMIT 1`,
+            {
+                replacements: [id],
+                type: db.QueryTypes.SELECT
+            }
+        );
+        if (!subRows || subRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Submission not found'
+            });
+        }
+
+        const competition = await getCompetitionJudgingEligibility(subRows[0].competition_id);
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                error: 'Competition not found'
+            });
+        }
+        if (!['project', 'task_quiz'].includes(competition.type)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judging is available only for project and task_quiz competitions'
+            });
+        }
+        if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judging is available only when evaluation_mode is manual or hybrid'
             });
         }
 
@@ -564,7 +636,7 @@ const gradeSubmission = async (req, res) => {
              SET score = ?, feedback = ?, status = 'judged'
              WHERE submission_id = ?`,
             {
-                replacements: [score, feedback || null, id],
+                replacements: [numericScore, feedback || null, id],
                 type: db.QueryTypes.UPDATE
             }
         );
