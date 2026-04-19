@@ -65,8 +65,56 @@
 
 .JudgeSubmissions__links {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+}
+
+.JudgeSubmissions__task,
+.JudgeSubmissions__preview {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.JudgeSubmissions__task h4,
+.JudgeSubmissions__preview h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.JudgeSubmissions__taskMeta {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #c5dae9;
+}
+
+.JudgeSubmissions__taskTitle {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.JudgeSubmissions__taskDesc {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: #e8f4ff;
+}
+
+.JudgeSubmissions__zipHint {
+  font-size: 0.85rem;
+  color: #c5dae9;
+  max-width: 100%;
+}
+
+.JudgeSubmissions__zipHint code {
+  font-size: 0.8em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .JudgeSubmissions__form {

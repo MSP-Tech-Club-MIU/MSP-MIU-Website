@@ -4,6 +4,9 @@ import SEO from '../components/SEO';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import ApiService from '../services/api';
+import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
+import LiveDemoEmbed from '../components/LiveDemoEmbed';
+import { buildR2PublicObjectUrl, sanitizeDownloadBasename, normalizeLiveDemoOpenUrl } from '../utils/taskQuizAssets';
 import './JudgeSubmissions.css';
 
 const emptyJudgeForm = {
@@ -33,6 +36,24 @@ const JudgeSubmissions = () => {
   const selectedSubmission = useMemo(
     () => submissions.find((s) => Number(s.submission_id) === Number(selectedSubmissionId)) || null,
     [submissions, selectedSubmissionId]
+  );
+
+  const submissionZipUrl = useMemo(
+    () => (selectedSubmission ? buildR2PublicObjectUrl(selectedSubmission.r2_key) : null),
+    [selectedSubmission?.r2_key]
+  );
+
+  const submissionZipDownloadName = useMemo(() => {
+    if (!selectedSubmission) return 'submission.zip';
+    const base = sanitizeDownloadBasename(selectedSubmission.team_name, {
+      fallback: `team-${selectedSubmission.submission_id}-${selectedSubmission.task_id}`
+    });
+    return `${base}.zip`;
+  }, [selectedSubmission?.team_name, selectedSubmission?.submission_id, selectedSubmission?.task_id]);
+
+  const liveOpenUrl = useMemo(
+    () => normalizeLiveDemoOpenUrl(selectedSubmission?.live_url),
+    [selectedSubmission?.live_url]
   );
 
   const loadPage = async () => {
@@ -184,7 +205,9 @@ const JudgeSubmissions = () => {
                 >
                   <strong>{row.team_name}</strong>
                   <span>
-                    {competition?.type === 'task_quiz' ? `Task #${row.task_id}` : 'Project'} - {row.status}
+                    {competition?.type === 'task_quiz'
+                      ? `${row.task_title || `Task #${row.task_id}`} — ${row.status}`
+                      : `Project — ${row.status}`}
                   </span>
                 </button>
               ))
@@ -197,11 +220,71 @@ const JudgeSubmissions = () => {
             ) : (
               <>
                 <h3>Submission #{selectedSubmission.submission_id}</h3>
-                <p className="JudgeSubmissions__links">
-                  {selectedSubmission.repo_url ? <a href={selectedSubmission.repo_url} target="_blank" rel="noreferrer">Repository</a> : null}
-                  {selectedSubmission.live_url ? <a href={selectedSubmission.live_url} target="_blank" rel="noreferrer">Live demo</a> : null}
-                  {selectedSubmission.r2_key ? <span>ZIP uploaded</span> : null}
-                </p>
+
+                {competition?.type === 'task_quiz' ? (
+                  <div className="JudgeSubmissions__task">
+                    <h4>Task</h4>
+                    {(() => {
+                      const bits = [];
+                      if (
+                        selectedSubmission.task_position != null &&
+                        String(selectedSubmission.task_position).trim() !== ''
+                      ) {
+                        bits.push(`Position ${selectedSubmission.task_position}`);
+                      }
+                      if (selectedSubmission.task_id) {
+                        bits.push(`Task id ${selectedSubmission.task_id}`);
+                      }
+                      return bits.length ? (
+                        <p className="JudgeSubmissions__taskMeta">{bits.join(' · ')}</p>
+                      ) : null;
+                    })()}
+                    {selectedSubmission.task_title ? (
+                      <p className="JudgeSubmissions__taskTitle">{selectedSubmission.task_title}</p>
+                    ) : null}
+                    {selectedSubmission.task_description ? (
+                      <div className="JudgeSubmissions__taskDesc">{selectedSubmission.task_description}</div>
+                    ) : null}
+                    <TaskQuizAssetMedia
+                      url={selectedSubmission.task_assets_url}
+                      variant="large"
+                      title="Task reference"
+                    />
+                  </div>
+                ) : null}
+
+                <div className="JudgeSubmissions__preview">
+                  <h4>Review submission</h4>
+                  <div className="JudgeSubmissions__links">
+                    {selectedSubmission.repo_url ? (
+                      <a href={selectedSubmission.repo_url} target="_blank" rel="noreferrer">
+                        Repository
+                      </a>
+                    ) : null}
+                    {liveOpenUrl ? (
+                      <a href={liveOpenUrl} target="_blank" rel="noreferrer">
+                        Open live demo
+                      </a>
+                    ) : null}
+                    {submissionZipUrl ? (
+                      <a
+                        href={submissionZipUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={submissionZipDownloadName}
+                      >
+                        Download submission (.zip)
+                      </a>
+                    ) : null}
+                    {selectedSubmission.r2_key && !submissionZipUrl ? (
+                      <span className="JudgeSubmissions__zipHint">
+                        ZIP is on file; set <code>VITE_R2_PUBLIC_DOMAIN</code> in the client env to build a public
+                        download link.
+                      </span>
+                    ) : null}
+                  </div>
+                  <LiveDemoEmbed liveUrl={selectedSubmission.live_url} embedTitle="Live submission preview" />
+                </div>
 
                 <form className="JudgeSubmissions__form" onSubmit={submitJudge}>
                   <h4>Judge score (criteria)</h4>
