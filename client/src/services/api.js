@@ -592,6 +592,36 @@ class ApiService {
     }
   }
 
+  static async getSponsors() {
+    try {
+      const url = `${API_BASE_URL}/sponsors`;
+      const cacheKey = getCacheKey(url);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch sponsors');
+      }
+
+      const data = result.data || result;
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching sponsors:', error);
+      throw error;
+    }
+  }
+
   // Get event by ID
   static async getEventById(id) {
     try {
@@ -2398,6 +2428,60 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error deleting admin team:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get full team details for admin edit view
+   */
+  static async getAdminTeamDetails(teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/details`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch team details');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin team details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a team (admin)
+   */
+  static async removeAdminTeamMember(teamId, teamMemberId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/members/${teamMemberId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to remove team member');
+      return result;
+    } catch (error) {
+      console.error('Error removing admin team member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a pending team invitation (admin)
+   */
+  static async cancelAdminTeamInvitation(teamId, invitationId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to cancel invitation');
+      return result;
+    } catch (error) {
+      console.error('Error cancelling admin team invitation:', error);
       throw error;
     }
   }

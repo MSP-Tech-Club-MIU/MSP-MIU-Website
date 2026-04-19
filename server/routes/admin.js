@@ -18,7 +18,10 @@ const {
     getCompetitionTeams,
     createAdminTeam,
     updateAdminTeam,
-    deleteAdminTeam
+    deleteAdminTeam,
+    getAdminTeamDetails,
+    removeAdminTeamMember,
+    cancelAdminTeamInvitation
 } = require('../controllers/admin');
 const {
     getAdminQuiz,
@@ -91,5 +94,8 @@ router.get('/competitions/:id/teams', getCompetitionTeams);
 router.post('/competitions/:id/teams', createAdminTeam);
 router.put('/teams/:id', updateAdminTeam);
 router.delete('/teams/:id', deleteAdminTeam);
+router.get('/teams/:id/details', getAdminTeamDetails);
+router.delete('/teams/:teamId/members/:teamMemberId', removeAdminTeamMember);
+router.delete('/teams/:teamId/invitations/:invitationId', cancelAdminTeamInvitation);
 
 module.exports = router;
