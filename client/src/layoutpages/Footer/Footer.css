@@ -133,6 +133,32 @@
     letter-spacing: .4px;
 }
 
+.Footer__developer {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: #fff;
+    transition: opacity .2s ease;
+}
+
+.Footer__developer:hover {
+    opacity: .85;
+}
+
+.Footer__developerLogo {
+    border-radius: 10px;
+    object-fit: cover;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.Footer__developerText {
+    font-size: .85rem;
+    color: var(--blue-300, #8EC2F0);
+    letter-spacing: .2px;
+}
+
 @media (max-width: 960px) {
     .Footer__grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
