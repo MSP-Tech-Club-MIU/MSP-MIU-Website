@@ -343,7 +343,11 @@ const CompetitionDetails = () => {
 
           <div className="CompetitionDetailsPage__timer">
             <FiClock size={20} />
-            <span>{getTimeRemaining(competition.start_at, competition.end_at)}</span>
+            <span>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_start_at && competition.quiz_end_at
+                ? getTimeRemaining(competition.quiz_start_at, competition.quiz_end_at)
+                : getTimeRemaining(competition.start_at, competition.end_at)}
+            </span>
           </div>
         </motion.header>
 
@@ -357,13 +361,21 @@ const CompetitionDetails = () => {
           <div className="CompetitionDetailsPage__infoCard">
             <FiCalendar size={24} className="CompetitionDetailsPage__infoIcon" />
             <h3>Start Date</h3>
-            <p>{formatDateTime(competition.start_at)}</p>
+            <p>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_start_at
+                ? formatDateTime(competition.quiz_start_at)
+                : formatDateTime(competition.start_at)}
+            </p>
           </div>
 
           <div className="CompetitionDetailsPage__infoCard">
             <FiClock size={24} className="CompetitionDetailsPage__infoIcon" />
             <h3>End Date</h3>
-            <p>{formatDateTime(competition.end_at)}</p>
+            <p>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_end_at
+                ? formatDateTime(competition.quiz_end_at)
+                : formatDateTime(competition.end_at)}
+            </p>
           </div>
 
           <div className="CompetitionDetailsPage__infoCard">
