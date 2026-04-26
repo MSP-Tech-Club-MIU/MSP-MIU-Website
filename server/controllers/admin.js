@@ -232,15 +232,68 @@ const updateCompetition = async (req, res) => {
             });
         }
 
-        const updates = { ...req.body };
-        if ('rules' in updates && (updates.rules === null || updates.rules === undefined || (typeof updates.rules === 'string' && updates.rules.trim() === ''))) {
-            updates.rules = '';
+        const {
+            title,
+            description,
+            start_at,
+            end_at,
+            max_team_size,
+            min_team_size,
+            status,
+            location_type,
+            location_details,
+            rules,
+            type,
+            submission_mode,
+            evaluation_mode,
+            is_team_based,
+            config
+        } = req.body;
+
+        const updates = {};
+
+        if (title !== undefined) updates.title = title;
+        if (description !== undefined) updates.description = description;
+        if (start_at !== undefined) updates.start_at = start_at;
+        if (end_at !== undefined) updates.end_at = end_at;
+        if (status !== undefined) updates.status = status;
+        if (location_type !== undefined) updates.location_type = location_type;
+        if (location_details !== undefined) updates.location_details = location_details;
+        if (rules !== undefined) {
+            updates.rules =
+                rules != null && String(rules).trim() !== '' ? String(rules).trim() : '';
         }
+        if (type !== undefined) updates.type = type;
+        if (config !== undefined) updates.config = config ?? null;
 
         const nextType = updates.type !== undefined ? updates.type : competition.type;
         if (nextType === 'quiz' || nextType === 'external') {
             updates.submission_mode = 'none';
             updates.evaluation_mode = 'none';
+        } else {
+            if (submission_mode !== undefined) updates.submission_mode = submission_mode;
+            if (evaluation_mode !== undefined) updates.evaluation_mode = evaluation_mode;
+        }
+
+        const effectiveIsTeamBased =
+            is_team_based !== undefined ? Boolean(is_team_based) : Boolean(competition.is_team_based);
+        if (is_team_based !== undefined) {
+            updates.is_team_based = effectiveIsTeamBased;
+        }
+
+        if (!effectiveIsTeamBased) {
+            updates.min_team_size = 1;
+            updates.max_team_size = 1;
+        } else {
+            if (min_team_size !== undefined) updates.min_team_size = min_team_size;
+            if (max_team_size !== undefined) updates.max_team_size = max_team_size;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No fields to update'
+            });
         }
 
         await competition.update(updates);
@@ -262,6 +315,12 @@ const updateCompetition = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating competition:', error);
+        if (error?.name === 'SequelizeValidationError' || error?.name === 'SequelizeDatabaseError') {
+            return res.status(400).json({
+                success: false,
+                error: error.message || 'Invalid competition update payload'
+            });
+        }
         res.status(500).json({
             success: false,
             error: 'Failed to update competition'
