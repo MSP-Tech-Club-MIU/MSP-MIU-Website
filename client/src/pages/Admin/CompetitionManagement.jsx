@@ -631,24 +631,26 @@ const CompetitionManagement = () => {
             />
           </div>
 
-          <div className="AdminPanel__formRow">
-            <div className="AdminPanel__formGroup">
-              <label>Start date *</label>
-              <input
-                type="date"
-                value={compForm.start_date}
-                onChange={(e) => setCompForm({ ...compForm, start_date: e.target.value })}
-              />
+          {!['quiz', 'task_quiz'].includes(compForm.type) && (
+            <div className="AdminPanel__formRow">
+              <div className="AdminPanel__formGroup">
+                <label>Start date *</label>
+                <input
+                  type="date"
+                  value={compForm.start_date}
+                  onChange={(e) => setCompForm({ ...compForm, start_date: e.target.value })}
+                />
+              </div>
+              <div className="AdminPanel__formGroup">
+                <label>End date *</label>
+                <input
+                  type="date"
+                  value={compForm.end_date}
+                  onChange={(e) => setCompForm({ ...compForm, end_date: e.target.value })}
+                />
+              </div>
             </div>
-            <div className="AdminPanel__formGroup">
-              <label>End date *</label>
-              <input
-                type="date"
-                value={compForm.end_date}
-                onChange={(e) => setCompForm({ ...compForm, end_date: e.target.value })}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="AdminPanel__formRow">
             <div className="AdminPanel__formGroup">
