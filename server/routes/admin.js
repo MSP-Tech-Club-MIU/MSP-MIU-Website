@@ -37,7 +37,7 @@ const {
     deleteAdminQuizOption
 } = require('../controllers/adminQuiz.controller');
 const {
-    postAdminCompetitionTask,
+  getAdminCompetitionTasks,
     putAdminCompetitionTask,
     deleteAdminCompetitionTask,
     postAdminCompetitionTaskAsset,
@@ -68,6 +68,7 @@ router.put('/quiz/options/:optionId', putAdminQuizOption);
 router.delete('/quiz/options/:optionId', deleteAdminQuizOption);
 
 // Task-quiz tasks (admin panel)
+router.get('/competitions/:id/tasks', getAdminCompetitionTasks);
 router.post('/competitions/:id/tasks', postAdminCompetitionTask);
 router.put('/competition-tasks/:taskId', putAdminCompetitionTask);
 router.post(
