@@ -38,10 +38,11 @@ const {
 } = require('../controllers/adminQuiz.controller');
 const {
   getAdminCompetitionTasks,
-    putAdminCompetitionTask,
-    deleteAdminCompetitionTask,
-    postAdminCompetitionTaskAsset,
-    wrapMulterTaskAsset
+  postAdminCompetitionTask,
+  putAdminCompetitionTask,
+  deleteAdminCompetitionTask,
+  postAdminCompetitionTaskAsset,
+  wrapMulterTaskAsset
 } = require('../controllers/competitionTasks.controller');
 
 // All admin routes require authentication + admin authorization
