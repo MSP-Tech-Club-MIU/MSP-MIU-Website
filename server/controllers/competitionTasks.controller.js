@@ -132,6 +132,42 @@ async function getCompetitionTasksPublic(req, res) {
   }
 }
 
+async function getAdminCompetitionTasks(req, res) {
+  try {
+    const cid = parseInt(req.params.id, 10);
+    if (Number.isNaN(cid)) {
+      return res.status(400).json({ success: false, error: 'Invalid competition id' });
+    }
+    const competition = await Competition.findByPk(cid);
+    if (!competition) {
+      return res.status(404).json({ success: false, error: 'Competition not found' });
+    }
+    if (competition.type !== 'task_quiz') {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    // Admin endpoint: no unlock gate, return all tasks
+    const tasks = await CompetitionTask.findAll({
+      where: { competition_id: competition.competition_id },
+      order: [['position', 'ASC'], ['task_id', 'ASC']]
+    });
+    return res.status(200).json({
+      success: true,
+      data: tasks.map((t) => ({
+        task_id: num(t.task_id),
+        competition_id: num(t.competition_id),
+        title: t.title,
+        description: t.description,
+        position: num(t.position, 0),
+        assets_url: t.assets_url || null
+      }))
+    });
+  } catch (err) {
+    console.error('getAdminCompetitionTasks:', err);
+    return res.status(500).json({ success: false, error: 'Failed to load tasks' });
+  }
+}
+
 async function postAdminCompetitionTask(req, res) {
   try {
     const loaded = await loadTaskQuizCompetitionForMutation(req.params.id);
@@ -313,6 +349,7 @@ async function deleteAdminCompetitionTask(req, res) {
 
 module.exports = {
   getCompetitionTasksPublic,
+  getAdminCompetitionTasks,
   postAdminCompetitionTask,
   putAdminCompetitionTask,
   deleteAdminCompetitionTask,

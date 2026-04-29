@@ -24,7 +24,7 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
     if (!competitionId) return;
     setLoading(true);
     try {
-      const list = await ApiService.getCompetitionTasks(competitionId);
+      const list = await ApiService.getAdminCompetitionTasks(competitionId);
       setTasks(Array.isArray(list) ? list : []);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to load tasks' });

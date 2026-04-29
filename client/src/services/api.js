@@ -1322,6 +1322,17 @@ class ApiService {
     return result.data || [];
   }
 
+  /** Admin task list for task_quiz competitions (no unlock gate, requires auth). */
+  static async getAdminCompetitionTasks(competitionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/tasks`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch tasks');
+    return result.data || [];
+  }
+
   // =====================
   // QUIZZES
   // =====================
