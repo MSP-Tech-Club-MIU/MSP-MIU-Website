@@ -2617,6 +2617,98 @@ class ApiService {
       throw error;
     }
   }
+  /**
+   * Get all announcements for a specific competition
+   */
+  static async getCompetitionAnnouncements(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch competition announcements');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching competition announcements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create an announcement for a specific competition
+   */
+  static async createCompetitionAnnouncement(competitionId, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create competition announcement');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an announcement for a specific competition
+   */
+  static async updateCompetitionAnnouncement(competitionId, announcementId, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update competition announcement');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error updating competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an announcement from a specific competition
+   */
+  static async deleteCompetitionAnnouncement(competitionId, announcementId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete competition announcement');
+      return result;
+    } catch (error) {
+      console.error('Error deleting competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resend emails for a specific competition announcement
+   */
+  static async resendCompetitionAnnouncementEmails(competitionId, announcementId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}/resend-emails`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to resend competition announcement emails');
+      return result;
+    } catch (error) {
+      console.error('Error resending competition announcement emails:', error);
+      throw error;
+    }
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];

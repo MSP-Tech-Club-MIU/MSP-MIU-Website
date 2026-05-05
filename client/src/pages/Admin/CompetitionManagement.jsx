@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard } from 'react-icons/fi';
-import { MdQuiz } from 'react-icons/md';
+import { MdQuiz, MdCampaign } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import PageLoader from '../../components/PageLoader';
@@ -10,7 +10,7 @@ import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import './AdminPanel.css';
 import './CompetitionManagement.css';
 
-const TAB_KEYS = ['details', 'quiz', 'tasks', 'teams'];
+const TAB_KEYS = ['details', 'quiz', 'tasks', 'teams', 'announcements'];
 
 const emptyCompForm = () => ({
   name: '',
@@ -124,6 +124,13 @@ const CompetitionManagement = () => {
   const [judgesLoading, setJudgesLoading] = useState(false);
   const [judgesSaving, setJudgesSaving] = useState(false);
 
+  // Announcements state
+  const [announcementsList, setAnnouncementsList] = useState([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', send_email: true, target_type: 'all', target_team_id: '', target_user_id: '' });
+  const [resendingEmails, setResendingEmails] = useState(null);
+
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
     () => normalizeTab(urlTab, isEditMode, loadedComp),
@@ -223,16 +230,51 @@ const CompetitionManagement = () => {
   }, [loadedComp?.competition_id]);
 
   useEffect(() => {
-    if (activeTab === 'teams' && loadedComp?.competition_id) {
+    if ((activeTab === 'teams' || activeTab === 'announcements') && loadedComp?.competition_id) {
       fetchCompTeams();
     }
   }, [activeTab, loadedComp?.competition_id, fetchCompTeams]);
+
+  const fetchCompAnnouncements = useCallback(async () => {
+    if (!loadedComp?.competition_id) return;
+    try {
+      setAnnouncementsLoading(true);
+      const data = await ApiService.getCompetitionAnnouncements(loadedComp.competition_id);
+      setAnnouncementsList(data || []);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to load announcements' });
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  }, [loadedComp?.competition_id]);
+
+  useEffect(() => {
+    if (activeTab === 'announcements' && loadedComp?.competition_id) {
+      fetchCompAnnouncements();
+    }
+  }, [activeTab, loadedComp?.competition_id, fetchCompAnnouncements]);
 
   const canAssignJudges = useMemo(() => {
     if (!loadedComp) return false;
     return ['project', 'task_quiz'].includes(loadedComp.type) &&
       ['manual', 'hybrid'].includes(loadedComp.evaluation_mode);
   }, [loadedComp]);
+
+  const allCompetitors = useMemo(() => {
+    const competitors = [];
+    const seen = new Set();
+    teamsList.forEach(team => {
+      if (Array.isArray(team.members)) {
+        team.members.forEach(member => {
+          if (member.user_id && !seen.has(member.user_id)) {
+            seen.add(member.user_id);
+            competitors.push(member);
+          }
+        });
+      }
+    });
+    return competitors.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [teamsList]);
 
   const fetchJudgeAssignments = useCallback(async () => {
     if (!loadedComp?.competition_id || !canAssignJudges) {
@@ -469,6 +511,95 @@ const CompetitionManagement = () => {
   }
 
   const tabs = [];
+  const saveAnnouncement = async () => {
+    if (!announcementForm.title.trim() || !announcementForm.message.trim()) {
+      setAlert({ type: 'error', message: 'Title and message are required' });
+      return;
+    }
+
+    if (announcementForm.target_type === 'team' && !announcementForm.target_team_id) {
+      setAlert({ type: 'error', message: 'Please select a team' });
+      return;
+    }
+    if (announcementForm.target_type === 'competitor' && !announcementForm.target_user_id) {
+      setAlert({ type: 'error', message: 'Please select a competitor' });
+      return;
+    }
+
+    try {
+      const payload = {
+        title: announcementForm.title,
+        message: announcementForm.message,
+        send_email: announcementForm.send_email,
+        target_type: announcementForm.target_type,
+        target_team_id: announcementForm.target_team_id || null,
+        target_user_id: announcementForm.target_user_id || null,
+        is_active: true
+      };
+
+      if (editingAnnouncement) {
+        await ApiService.updateCompetitionAnnouncement(
+          loadedComp.competition_id,
+          editingAnnouncement.announcement_id,
+          payload
+        );
+        setAlert({ type: 'success', message: 'Announcement updated.' });
+      } else {
+        await ApiService.createCompetitionAnnouncement(
+          loadedComp.competition_id,
+          payload
+        );
+        setAlert({ type: 'success', message: 'Announcement created and sent to ' + (payload.target_type === 'all' ? 'all competitors!' : 'targeted audience!') });
+      }
+      setEditingAnnouncement(null);
+      setAnnouncementForm({ title: '', message: '', send_email: true, target_type: 'all', target_team_id: '', target_user_id: '' });
+      fetchCompAnnouncements();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to save announcement' });
+    }
+  };
+
+  const editAnnouncementItem = (announcement) => {
+    setEditingAnnouncement(announcement);
+    setAnnouncementForm({
+      title: announcement.title,
+      message: announcement.message,
+      send_email: announcement.send_email !== false,
+      target_type: announcement.target_type || 'all',
+      target_team_id: announcement.target_team_id || '',
+      target_user_id: announcement.target_user_id || ''
+    });
+  };
+
+  const deleteAnnouncement = async (announcementId) => {
+    if (!window.confirm('Delete this announcement?')) return;
+    try {
+      await ApiService.deleteCompetitionAnnouncement(
+        loadedComp.competition_id,
+        announcementId
+      );
+      setAlert({ type: 'success', message: 'Announcement deleted.' });
+      fetchCompAnnouncements();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to delete announcement' });
+    }
+  };
+
+  const resendAnnouncementEmails = async (announcementId) => {
+    setResendingEmails(announcementId);
+    try {
+      await ApiService.resendCompetitionAnnouncementEmails(
+        loadedComp.competition_id,
+        announcementId
+      );
+      setAlert({ type: 'success', message: 'Emails resent to all competitors!' });
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to resend emails' });
+    } finally {
+      setResendingEmails(null);
+    }
+  };
+
   tabs.push({ id: 'details', label: 'Details', icon: <FiFileText size={18} /> });
   if (isEditMode && loadedComp?.type === 'quiz') {
     tabs.push({ id: 'quiz', label: 'Quiz builder', icon: <MdQuiz size={18} /> });
@@ -478,6 +609,10 @@ const CompetitionManagement = () => {
   }
   if (isEditMode && loadedComp) {
     tabs.push({ id: 'teams', label: 'Teams', icon: <FiUsers size={18} /> });
+    if (isEditMode && loadedComp) {
+      tabs.push({ id: 'announcements', label: 'Announcements', icon: <MdCampaign size={18} /> });
+    }
+
   }
 
   return (
@@ -520,6 +655,9 @@ const CompetitionManagement = () => {
               <FiClipboard size={16} aria-hidden /> Public page
             </a>
           ) : null}
+
+
+
           <button
             type="button"
             className="CompetitionManagement__btn CompetitionManagement__btn--secondary"
@@ -1265,8 +1403,179 @@ const CompetitionManagement = () => {
           ) : null}
         </div>
       ) : null}
+      {activeTab === 'announcements' && isEditMode && loadedComp ? (
+        <div className="CompetitionManagement__panelCard">
+          <h2 className="CompetitionManagement__panelTitle">Announcements</h2>
+          <p className="CompetitionManagement__panelLead">
+            Broadcast messages to all competitors in <strong>{loadedComp.title}</strong>. Competitors will receive email notifications if enabled.
+          </p>
+
+          <div className="AdminPanel__announcementsSection">
+            <div className="AdminPanel__announcementForm">
+              <h4>{editingAnnouncement ? 'Edit announcement' : 'Create announcement'}</h4>
+              <div className="AdminPanel__formGroup">
+                <label htmlFor="comp-mgmt-ann-title">Announcement title</label>
+                <input
+                  id="comp-mgmt-ann-title"
+                  type="text"
+                  placeholder="e.g., Important Update"
+                  value={announcementForm.title}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
+                />
+              </div>
+
+              <div className="AdminPanel__formRow">
+                <div className="AdminPanel__formGroup">
+                  <label htmlFor="comp-mgmt-ann-target">Target Audience</label>
+                  <select
+                    id="comp-mgmt-ann-target"
+                    value={announcementForm.target_type}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, target_type: e.target.value, target_team_id: '', target_user_id: '' })}
+                  >
+                    <option value="all">All Competitors</option>
+                    <option value="team">Specific Team</option>
+                    <option value="competitor">Specific Competitor</option>
+                  </select>
+                </div>
+                
+                {announcementForm.target_type === 'team' && (
+                  <div className="AdminPanel__formGroup">
+                    <label htmlFor="comp-mgmt-ann-team">Select Team</label>
+                    <select
+                      id="comp-mgmt-ann-team"
+                      value={announcementForm.target_team_id}
+                      onChange={(e) => setAnnouncementForm({ ...announcementForm, target_team_id: e.target.value })}
+                    >
+                      <option value="">-- Select a Team --</option>
+                      {teamsList.map(team => (
+                        <option key={team.team_id} value={team.team_id}>{team.team_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {announcementForm.target_type === 'competitor' && (
+                  <div className="AdminPanel__formGroup">
+                    <label htmlFor="comp-mgmt-ann-user">Select Competitor</label>
+                    <select
+                      id="comp-mgmt-ann-user"
+                      value={announcementForm.target_user_id}
+                      onChange={(e) => setAnnouncementForm({ ...announcementForm, target_user_id: e.target.value })}
+                    >
+                      <option value="">-- Select a Competitor --</option>
+                      {allCompetitors.map(member => (
+                        <option key={member.user_id} value={member.user_id}>{member.full_name} ({member.email})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="AdminPanel__formGroup">
+                <label htmlFor="comp-mgmt-ann-message">Message</label>
+                <textarea
+                  id="comp-mgmt-ann-message"
+                  placeholder="Write your announcement here..."
+                  rows={5}
+                  value={announcementForm.message}
+                  onChange={(e) => setAnnouncementForm({ ...announcementForm, message: e.target.value })}
+                />
+              </div>
+
+              <div className="AdminPanel__formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginBottom: 0 }}>
+                <label htmlFor="comp-mgmt-ann-email">
+                  <input
+                    id="comp-mgmt-ann-email"
+                    type="checkbox"
+                    checked={announcementForm.send_email}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, send_email: e.target.checked })}
+                    style={{ marginRight: '6px', marginBottom: 0 }}
+                  />
+                  Send email notification to all competitors
+                </label>
+              </div>
+
+              <div className="AdminPanel__formRow" style={{ marginTop: '12px', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="AdminPanel__actionBtn AdminPanel__actionBtn--primary"
+                  onClick={saveAnnouncement}
+                >
+                  {editingAnnouncement ? 'Update' : 'Create'} Announcement
+                </button>
+                {editingAnnouncement && (
+                  <button
+                    type="button"
+                    className="AdminPanel__actionBtn AdminPanel__actionBtn--secondary"
+                    onClick={() => {
+                      setEditingAnnouncement(null);
+                      setAnnouncementForm({ title: '', message: '', send_email: true });
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
+              Announcements ({announcementsList?.length || 0})
+            </h4>
+            {announcementsLoading ? (
+              <div className="AdminPanel__emptyState">Loading announcements...</div>
+            ) : !announcementsList?.length ? (
+              <div className="AdminPanel__emptyState">No announcements yet. Create one to get started!</div>
+            ) : (
+              <div className="AdminPanel__announcementsGrid">
+                {announcementsList.map((ann) => (
+                  <div key={ann.announcement_id} className="AdminPanel__announcementCard">
+                    <h5>{ann.title}</h5>
+                    <p>{ann.message}</p>
+                    <div style={{ marginTop: '10px', marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {ann.send_email && (
+                        <span className="AdminPanel__announcementEmailBadge">
+                          <span style={{ marginRight: '4px' }}>✓</span>Email sent
+                        </span>
+                      )}
+                      <span className="AdminPanel__badge AdminPanel__badge--info">
+                        Target: {ann.target_type === 'team' ? 'Team' : ann.target_type === 'competitor' ? 'Competitor' : 'All'}
+                      </span>
+                      <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>
+                        {formatDate(ann.created_at)}
+                      </span>
+                    </div>
+                    <div className="AdminPanel__formRow" style={{ gap: '6px', marginBottom: 0 }}>
+                      <button
+                        type="button"
+                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                        onClick={() => editAnnouncementItem(ann)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="AdminPanel__actionBtn AdminPanel__actionBtn--info"
+                        onClick={() => resendAnnouncementEmails(ann.announcement_id)}
+                        disabled={resendingEmails === ann.announcement_id}
+                      >
+                        {resendingEmails === ann.announcement_id ? 'Resending...' : 'Resend emails'}
+                      </button>
+                      <button
+                        type="button"
+                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                        onClick={() => deleteAnnouncement(ann.announcement_id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };
-
 export default CompetitionManagement;

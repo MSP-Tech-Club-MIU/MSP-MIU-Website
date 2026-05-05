@@ -43,7 +43,7 @@ const adminAuth = async (req, res, next) => {
 
         // Head of SW Development Dept now have full access as Admin when (department_id = 1)
 
-        if (position === 'Head' && boardMember.department_id === 1) {
+        if (position === 'Head' && boardMember.department_id === 1 || position === 'Head' && boardMember.department_id === 2) {
             req.boardMember = boardMember;
             return next();
         }
