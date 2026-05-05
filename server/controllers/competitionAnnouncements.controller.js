@@ -32,11 +32,10 @@ const getCompetitionAnnouncements = async (req, res) => {
       include: [{
         model: User,
         as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
+        attributes: ['user_id', 'full_name', 'email'],
+        required: false
       }],
-      order: [
-        ['created_at', 'DESC']
-      ]
+      order: [['created_at', 'DESC']]
     });
 
     return res.json({
@@ -45,6 +44,7 @@ const getCompetitionAnnouncements = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching competition announcements:', error);
+    console.error('Error message:', error.message);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch competition announcements'
@@ -68,7 +68,8 @@ const getCompetitionAnnouncementById = async (req, res) => {
       include: [{
         model: User,
         as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
+        attributes: ['user_id', 'full_name', 'email'],
+        required: false
       }]
     });
 
@@ -139,7 +140,8 @@ const createCompetitionAnnouncement = async (req, res) => {
       include: [{
         model: User,
         as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
+        attributes: ['user_id', 'full_name', 'email'],
+        required: false
       }]
     });
 
@@ -207,7 +209,8 @@ const updateCompetitionAnnouncement = async (req, res) => {
       include: [{
         model: User,
         as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
+        attributes: ['user_id', 'full_name', 'email'],
+        required: false
       }]
     });
 
@@ -287,7 +290,13 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
       where: {
         announcement_id: announcementId,
         competition_id: competitionId
-      }
+      },
+      include: [{
+        model: User,
+        as: 'creator',
+        attributes: ['user_id', 'full_name', 'email'],
+        required: false
+      }]
     });
 
     if (!announcement) {
