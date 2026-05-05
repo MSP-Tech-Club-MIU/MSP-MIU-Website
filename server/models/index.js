@@ -17,6 +17,7 @@ const Announcement = require('./Announcement');
 // Competition-related models
 const Competition = require('./Competition');
 const CompetitionTask = require('./CompetitionTask');
+const CompetitionAnnouncement = require('./CompetitionAnnouncement');
 const Team = require('./Team');
 const TeamMember = require('./TeamMember');
 const TeamInvitation = require('./TeamInvitation');
@@ -48,6 +49,7 @@ const models = {
   Announcement,
   Competition,
   CompetitionTask,
+  CompetitionAnnouncement,
   Team,
   TeamMember,
   TeamInvitation,
@@ -221,6 +223,27 @@ CompetitionTask.belongsTo(Competition, {
   foreignKey: 'competition_id',
   as: 'competition',
   onDelete: 'CASCADE'
+});
+
+// CompetitionAnnouncement associations
+Competition.hasMany(CompetitionAnnouncement, {
+  foreignKey: 'competition_id',
+  as: 'announcements',
+  onDelete: 'CASCADE'
+});
+CompetitionAnnouncement.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+
+CompetitionAnnouncement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+User.hasMany(CompetitionAnnouncement, {
+  foreignKey: 'created_by',
+  as: 'competitionAnnouncements'
 });
 
 Team.belongsTo(User, {
@@ -433,7 +456,7 @@ User.hasMany(AdminNotification, {
 // Sync models with database
 const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('Models synchronized with database successfully');
   } catch (error) {
     console.error('Error synchronizing models:', error);

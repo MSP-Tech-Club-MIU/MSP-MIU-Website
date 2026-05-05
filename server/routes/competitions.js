@@ -11,6 +11,7 @@ const {
 } = require('../controllers/competitions');
 const { getCompetitionTasksPublic } = require('../controllers/competitionTasks.controller');
 const { getCompetitionTeams } = require('../controllers/teams');
+const competitionAnnouncementsRouter = require('./competitionAnnouncements');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
 // Get all competitions (public - shows only open/finished; admin/board sees all)
@@ -39,5 +40,8 @@ router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateCompet
 
 // Delete competition (admin only)
 router.delete('/:id', authenticateToken, verifyRole('admin'), deleteCompetition);
+
+// Mount competition announcements routes
+router.use('/:competitionId/announcements', competitionAnnouncementsRouter);
 
 module.exports = router;
