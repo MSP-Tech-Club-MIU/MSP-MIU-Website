@@ -46,7 +46,6 @@ const CompetitionAnnouncement = sequelize.define('CompetitionAnnouncement', {
   send_email: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
-    allowValue: false,
     allowNull: false
   },
   target_type: {
