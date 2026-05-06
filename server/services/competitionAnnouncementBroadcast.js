@@ -62,6 +62,34 @@ async function getCompetitorEmails(announcement) {
 }
 
 /**
+ * Get unique team member emails for a single team
+ * @param {number} teamId
+ * @returns {Promise<string[]>}
+ */
+async function getTeamMemberEmails(teamId) {
+  if (!teamId) return [];
+
+  const teamMembers = await TeamMember.findAll({
+    where: { team_id: teamId },
+    attributes: ['user_id'],
+    include: [{
+      model: User,
+      as: 'user',
+      attributes: ['email'],
+      required: true
+    }]
+  });
+
+  return [
+    ...new Set(
+      teamMembers
+        .map(tm => (tm.user?.email || '').trim())
+        .filter(Boolean)
+    )
+  ];
+}
+
+/**
  * Broadcast competition announcement emails to targeted competitors
  * @param {Object} announcement - CompetitionAnnouncement object
  * @param {Object} competition - Competition object
@@ -102,5 +130,6 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
 
 module.exports = {
   getCompetitorEmails,
+  getTeamMemberEmails,
   broadcastCompetitionAnnouncementEmails
 };
