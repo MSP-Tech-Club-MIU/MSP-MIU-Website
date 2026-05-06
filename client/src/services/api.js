@@ -2709,6 +2709,175 @@ class ApiService {
     }
   }
 
+  /**
+   * Get competition timeslots for admin management.
+   */
+  static async getAdminCompetitionTimeslots(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch competition timeslots');
+      return result;
+    } catch (error) {
+      console.error('Error fetching admin competition timeslots:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create one timeslot under a competition.
+   */
+  static async createAdminCompetitionTimeslot(competitionId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error creating admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update one timeslot under a competition.
+   */
+  static async updateAdminCompetitionTimeslot(competitionId, timeslotId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error updating admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete one unassigned timeslot.
+   */
+  static async deleteAdminCompetitionTimeslot(competitionId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error deleting admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Publish tokenized selection links to teams by email.
+   */
+  static async publishAdminCompetitionTimeslotSelectionLinks(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/publish-selection-links`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to publish selection links');
+      return result;
+    } catch (error) {
+      console.error('Error publishing timeslot selection links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assign a timeslot to a team as admin.
+   */
+  static async assignAdminCompetitionTimeslot(competitionId, timeslotId, teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}/assign`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ team_id: teamId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to assign timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error assigning admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear assignment from a timeslot as admin.
+   */
+  static async unassignAdminCompetitionTimeslot(competitionId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}/unassign`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to unassign timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error unassigning admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Public token-based view of available competition timeslots.
+   */
+  static async getCompetitionTimeslotSelectionView(competitionId, token) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/competitions/${competitionId}/timeslots/selection?token=${encodeURIComponent(token)}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(false),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to load timeslot selection view');
+      return result;
+    } catch (error) {
+      console.error('Error fetching competition timeslot selection view:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Public token-based selection submit.
+   */
+  static async submitCompetitionTimeslotSelection(competitionId, token, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/timeslots/selection`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify({ token, timeslot_id: timeslotId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to select timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error submitting competition timeslot selection:', error);
+      throw error;
+    }
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
-import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard } from 'react-icons/fi';
+import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard, FiClock } from 'react-icons/fi';
 import { MdQuiz, MdCampaign } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
@@ -10,7 +10,7 @@ import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import './AdminPanel.css';
 import './CompetitionManagement.css';
 
-const TAB_KEYS = ['details', 'quiz', 'tasks', 'teams', 'announcements'];
+const TAB_KEYS = ['details', 'quiz', 'tasks', 'timeslots', 'teams', 'announcements'];
 
 const emptyCompForm = () => ({
   name: '',
@@ -94,6 +94,7 @@ function normalizeTab(tabParam, isEdit, comp) {
   if (!isEdit || !comp) return 'details';
   if (raw === 'quiz' && comp.type !== 'quiz') return 'details';
   if (raw === 'tasks' && comp.type !== 'task_quiz') return 'details';
+  if (raw === 'timeslots' && comp.type !== 'project') return 'details';
   return raw;
 }
 
@@ -130,6 +131,19 @@ const CompetitionManagement = () => {
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', send_email: true, target_type: 'all', target_team_id: '', target_user_id: '' });
   const [resendingEmails, setResendingEmails] = useState(null);
+
+  // Timeslots state
+  const [timeslotsList, setTimeslotsList] = useState([]);
+  const [timeslotsLoading, setTimeslotsLoading] = useState(false);
+  const [timeslotsActionLoading, setTimeslotsActionLoading] = useState(false);
+  const [timeslotForm, setTimeslotForm] = useState({
+    start_at: '',
+    end_at: '',
+    location_details: '',
+    window_start_at: '',
+    window_end_at: '',
+    slot_length_minutes: 15
+  });
 
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
@@ -248,11 +262,158 @@ const CompetitionManagement = () => {
     }
   }, [loadedComp?.competition_id]);
 
+  const fetchCompTimeslots = useCallback(async () => {
+    if (!loadedComp?.competition_id) return;
+    try {
+      setTimeslotsLoading(true);
+      const result = await ApiService.getAdminCompetitionTimeslots(loadedComp.competition_id);
+      setTimeslotsList(Array.isArray(result?.data) ? result.data : []);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to load timeslots' });
+    } finally {
+      setTimeslotsLoading(false);
+    }
+  }, [loadedComp?.competition_id]);
+
   useEffect(() => {
     if (activeTab === 'announcements' && loadedComp?.competition_id) {
       fetchCompAnnouncements();
     }
   }, [activeTab, loadedComp?.competition_id, fetchCompAnnouncements]);
+
+  useEffect(() => {
+    if (activeTab === 'timeslots' && loadedComp?.competition_id) {
+      fetchCompTimeslots();
+      fetchCompTeams();
+    }
+  }, [activeTab, loadedComp?.competition_id, fetchCompTimeslots, fetchCompTeams]);
+
+  const createTimeslotSingle = async () => {
+    if (!loadedComp?.competition_id) return;
+    if (!timeslotForm.start_at || !timeslotForm.end_at) {
+      setAlert({ type: 'error', message: 'From and To datetime are required.' });
+      return;
+    }
+    try {
+      setTimeslotsActionLoading(true);
+      await ApiService.createAdminCompetitionTimeslot(loadedComp.competition_id, {
+        start_at: timeslotForm.start_at,
+        end_at: timeslotForm.end_at,
+        location_details: timeslotForm.location_details || null
+      });
+      setAlert({ type: 'success', message: 'Timeslot created.' });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to create timeslot' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
+
+  const createGeneratedTimeslots = async () => {
+    if (!loadedComp?.competition_id) return;
+    const slotMinutes = Number(timeslotForm.slot_length_minutes || 0);
+    if (!timeslotForm.window_start_at || !timeslotForm.window_end_at || !slotMinutes) {
+      setAlert({ type: 'error', message: 'Window start, window end, and slot length are required.' });
+      return;
+    }
+
+    const start = new Date(timeslotForm.window_start_at);
+    const end = new Date(timeslotForm.window_end_at);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+      setAlert({ type: 'error', message: 'Invalid timeslot generation window.' });
+      return;
+    }
+
+    const generated = [];
+    let cursor = new Date(start.getTime());
+    while (cursor < end) {
+      const next = new Date(cursor.getTime() + slotMinutes * 60 * 1000);
+      if (next > end) break;
+      generated.push({ start_at: new Date(cursor), end_at: new Date(next) });
+      cursor = next;
+    }
+
+    if (!generated.length) {
+      setAlert({ type: 'error', message: 'No slots generated. Increase the window or reduce slot length.' });
+      return;
+    }
+
+    try {
+      setTimeslotsActionLoading(true);
+      for (const slot of generated) {
+        await ApiService.createAdminCompetitionTimeslot(loadedComp.competition_id, {
+          start_at: slot.start_at.toISOString(),
+          end_at: slot.end_at.toISOString(),
+          location_details: timeslotForm.location_details || null
+        });
+      }
+      setAlert({ type: 'success', message: `${generated.length} timeslots created.` });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to generate timeslots' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
+
+  const assignTimeslotToTeam = async (timeslotId, teamId) => {
+    if (!loadedComp?.competition_id || !teamId) return;
+    try {
+      setTimeslotsActionLoading(true);
+      await ApiService.assignAdminCompetitionTimeslot(loadedComp.competition_id, timeslotId, Number(teamId));
+      setAlert({ type: 'success', message: 'Timeslot assigned.' });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to assign timeslot' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
+
+  const unassignTimeslot = async (timeslotId) => {
+    if (!loadedComp?.competition_id) return;
+    try {
+      setTimeslotsActionLoading(true);
+      await ApiService.unassignAdminCompetitionTimeslot(loadedComp.competition_id, timeslotId);
+      setAlert({ type: 'success', message: 'Timeslot unassigned.' });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to unassign timeslot' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
+
+  const deleteTimeslot = async (timeslotId) => {
+    if (!loadedComp?.competition_id) return;
+    if (!window.confirm('Delete this timeslot?')) return;
+    try {
+      setTimeslotsActionLoading(true);
+      await ApiService.deleteAdminCompetitionTimeslot(loadedComp.competition_id, timeslotId);
+      setAlert({ type: 'success', message: 'Timeslot deleted.' });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to delete timeslot' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
+
+  const publishTimeslotLinks = async () => {
+    if (!loadedComp?.competition_id) return;
+    try {
+      setTimeslotsActionLoading(true);
+      const result = await ApiService.publishAdminCompetitionTimeslotSelectionLinks(loadedComp.competition_id);
+      const sent = Number(result?.data?.sent_links || 0);
+      setAlert({ type: 'success', message: `Selection links published and emailed to ${sent} team(s).` });
+      await fetchCompTimeslots();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to publish selection links' });
+    } finally {
+      setTimeslotsActionLoading(false);
+    }
+  };
 
   const canAssignJudges = useMemo(() => {
     if (!loadedComp) return false;
@@ -496,6 +657,19 @@ const CompetitionManagement = () => {
     });
   };
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return '—';
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return String(dateString);
+    return d.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -608,6 +782,9 @@ const CompetitionManagement = () => {
     tabs.push({ id: 'tasks', label: 'Tasks', icon: <FiLayers size={18} /> });
   }
   if (isEditMode && loadedComp) {
+    if (loadedComp.type === 'project') {
+      tabs.push({ id: 'timeslots', label: 'Timeslots', icon: <FiClock size={18} /> });
+    }
     tabs.push({ id: 'teams', label: 'Teams', icon: <FiUsers size={18} /> });
     if (isEditMode && loadedComp) {
       tabs.push({ id: 'announcements', label: 'Announcements', icon: <MdCampaign size={18} /> });
@@ -1068,6 +1245,189 @@ const CompetitionManagement = () => {
             setAlert={setAlert}
             variant="embedded"
           />
+        </div>
+      ) : null}
+
+      {activeTab === 'timeslots' && isEditMode && loadedComp?.type === 'project' ? (
+        <div className="CompetitionManagement__panelCard">
+          <h2 className="CompetitionManagement__panelTitle">Competition timeslots</h2>
+          <p className="CompetitionManagement__panelLead">
+            Define exact <strong>from</strong> and <strong>to</strong> timings, generate slots by length, publish selection links,
+            and assign/unassign teams.
+          </p>
+
+          <div className="AdminPanel__formRow">
+            <div className="AdminPanel__formGroup">
+              <label>From (exact datetime)</label>
+              <input
+                type="datetime-local"
+                value={timeslotForm.start_at}
+                onChange={(e) => setTimeslotForm((s) => ({ ...s, start_at: e.target.value }))}
+              />
+            </div>
+            <div className="AdminPanel__formGroup">
+              <label>To (exact datetime)</label>
+              <input
+                type="datetime-local"
+                value={timeslotForm.end_at}
+                onChange={(e) => setTimeslotForm((s) => ({ ...s, end_at: e.target.value }))}
+              />
+            </div>
+            <div className="AdminPanel__formGroup">
+              <label>Slot location / meeting link</label>
+              <input
+                value={timeslotForm.location_details}
+                onChange={(e) => setTimeslotForm((s) => ({ ...s, location_details: e.target.value }))}
+                placeholder={loadedComp.location_type === 'online' ? 'Zoom / Meet link' : 'Campus room'}
+              />
+            </div>
+          </div>
+
+          <div className="CompetitionManagement__judgeActions" style={{ marginBottom: 18 }}>
+            <button
+              type="button"
+              className="CompetitionManagement__btn CompetitionManagement__btn--primary"
+              onClick={createTimeslotSingle}
+              disabled={timeslotsActionLoading}
+            >
+              {timeslotsActionLoading ? 'Saving...' : 'Add exact timeslot'}
+            </button>
+          </div>
+
+          <div className="AdminPanel__formRow">
+            <div className="AdminPanel__formGroup">
+              <label>Window start</label>
+              <input
+                type="datetime-local"
+                value={timeslotForm.window_start_at}
+                onChange={(e) => setTimeslotForm((s) => ({ ...s, window_start_at: e.target.value }))}
+              />
+            </div>
+            <div className="AdminPanel__formGroup">
+              <label>Window end</label>
+              <input
+                type="datetime-local"
+                value={timeslotForm.window_end_at}
+                onChange={(e) => setTimeslotForm((s) => ({ ...s, window_end_at: e.target.value }))}
+              />
+            </div>
+            <div className="AdminPanel__formGroup">
+              <label>Slot length (minutes)</label>
+              <input
+                type="number"
+                min={5}
+                value={timeslotForm.slot_length_minutes}
+                onChange={(e) =>
+                  setTimeslotForm((s) => ({ ...s, slot_length_minutes: Number(e.target.value) || 15 }))
+                }
+              />
+            </div>
+          </div>
+
+          <div className="CompetitionManagement__judgeActions">
+            <button
+              type="button"
+              className="CompetitionManagement__btn CompetitionManagement__btn--secondary"
+              onClick={createGeneratedTimeslots}
+              disabled={timeslotsActionLoading}
+            >
+              {timeslotsActionLoading ? 'Generating...' : 'Generate slots by length'}
+            </button>
+            <button
+              type="button"
+              className="CompetitionManagement__btn CompetitionManagement__btn--primary"
+              onClick={publishTimeslotLinks}
+              disabled={timeslotsActionLoading || timeslotsList.length === 0}
+            >
+              Publish selection links (email)
+            </button>
+            <button
+              type="button"
+              className="CompetitionManagement__btn CompetitionManagement__btn--secondary"
+              onClick={fetchCompTimeslots}
+              disabled={timeslotsActionLoading}
+            >
+              Refresh
+            </button>
+          </div>
+
+          {timeslotsLoading ? (
+            <div className="AdminPanel__loading" style={{ marginTop: 16 }}>Loading timeslots...</div>
+          ) : timeslotsList.length === 0 ? (
+            <div className="AdminPanel__emptyState" style={{ marginTop: 16 }}>No timeslots yet.</div>
+          ) : (
+            <div className="CompetitionManagement__teamsTableWrap" style={{ marginTop: 16 }}>
+              <table className="AdminPanel__table">
+                <thead>
+                  <tr>
+                    <th>Slot</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Location</th>
+                    <th>Assigned team</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeslotsList.map((slot) => {
+                    const isAssigned = Boolean(slot.assigned_team_id);
+                    return (
+                      <tr key={slot.timeslot_id}>
+                        <td>#{slot.timeslot_id}</td>
+                        <td>{formatDateTime(slot.start_at)}</td>
+                        <td>{formatDateTime(slot.end_at)}</td>
+                        <td>{slot.location_details || '—'}</td>
+                        <td>{slot.assigned_team_name || '—'}</td>
+                        <td>
+                          <span className={`AdminPanel__badge AdminPanel__badge--${isAssigned ? 'approved' : 'draft'}`}>
+                            {isAssigned ? 'Assigned' : 'Available'}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <select
+                              defaultValue=""
+                              onChange={(e) => {
+                                const teamId = e.target.value;
+                                if (!teamId) return;
+                                assignTimeslotToTeam(slot.timeslot_id, teamId);
+                                e.target.value = '';
+                              }}
+                            >
+                              <option value="">Assign team...</option>
+                              {teamsList.map((team) => (
+                                <option key={team.team_id} value={team.team_id}>{team.team_name}</option>
+                              ))}
+                            </select>
+                            {isAssigned ? (
+                              <button
+                                type="button"
+                                className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                                onClick={() => unassignTimeslot(slot.timeslot_id)}
+                                disabled={timeslotsActionLoading}
+                              >
+                                Unassign
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                onClick={() => deleteTimeslot(slot.timeslot_id)}
+                                disabled={timeslotsActionLoading}
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : null}
 

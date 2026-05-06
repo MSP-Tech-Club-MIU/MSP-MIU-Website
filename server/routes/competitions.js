@@ -9,6 +9,10 @@ const {
   getUserTeamForCompetition,
   getCompetitionLeaderboard
 } = require('../controllers/competitions');
+const {
+  getCompetitionTimeslotSelectionView,
+  submitCompetitionTimeslotSelection
+} = require('../controllers/competitionTimeslots.controller');
 const { getCompetitionTasksPublic } = require('../controllers/competitionTasks.controller');
 const { getCompetitionTeams } = require('../controllers/teams');
 const competitionAnnouncementsRouter = require('./competitionAnnouncements');
@@ -22,6 +26,10 @@ router.get('/:id/leaderboard', getCompetitionLeaderboard);
 
 // Task-quiz task list (public; only returns data for type task_quiz)
 router.get('/:id/tasks', getCompetitionTasksPublic);
+
+// Token-based timeslot selection (project competitions only)
+router.get('/:id/timeslots/selection', getCompetitionTimeslotSelectionView);
+router.post('/:id/timeslots/selection', submitCompetitionTimeslotSelection);
 
 // Get competition by ID (public)
 router.get('/:id', getCompetitionById);

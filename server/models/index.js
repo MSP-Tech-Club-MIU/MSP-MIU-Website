@@ -18,6 +18,7 @@ const Announcement = require('./Announcement');
 const Competition = require('./Competition');
 const CompetitionTask = require('./CompetitionTask');
 const CompetitionAnnouncement = require('./CompetitionAnnouncement');
+const CompetitionTimeslot = require('./CompetitionTimeslot');
 const Team = require('./Team');
 const TeamMember = require('./TeamMember');
 const TeamInvitation = require('./TeamInvitation');
@@ -50,6 +51,7 @@ const models = {
   Competition,
   CompetitionTask,
   CompetitionAnnouncement,
+  CompetitionTimeslot,
   Team,
   TeamMember,
   TeamInvitation,
@@ -212,6 +214,37 @@ Team.belongsTo(Competition, {
 Competition.hasMany(Team, {
   foreignKey: 'competition_id',
   as: 'teams'
+});
+
+// CompetitionTimeslot associations
+CompetitionTimeslot.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+Competition.hasMany(CompetitionTimeslot, {
+  foreignKey: 'competition_id',
+  as: 'timeslots'
+});
+
+CompetitionTimeslot.belongsTo(Team, {
+  foreignKey: 'assigned_team_id',
+  as: 'assignedTeam',
+  onDelete: 'SET NULL'
+});
+Team.hasMany(CompetitionTimeslot, {
+  foreignKey: 'assigned_team_id',
+  as: 'assignedTimeslots'
+});
+
+CompetitionTimeslot.belongsTo(User, {
+  foreignKey: 'assigned_by_admin_user_id',
+  as: 'assignedByAdmin',
+  onDelete: 'SET NULL'
+});
+User.hasMany(CompetitionTimeslot, {
+  foreignKey: 'assigned_by_admin_user_id',
+  as: 'adminAssignedTimeslots'
 });
 
 Competition.hasMany(CompetitionTask, {
