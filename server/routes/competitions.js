@@ -11,7 +11,9 @@ const {
 } = require('../controllers/competitions');
 const {
   getCompetitionTimeslotSelectionView,
-  submitCompetitionTimeslotSelection
+  submitCompetitionTimeslotSelection,
+  getCompetitionWorkspaceTimeslotView,
+  submitCompetitionWorkspaceTimeslotSelection
 } = require('../controllers/competitionTimeslots.controller');
 const { getCompetitionTasksPublic } = require('../controllers/competitionTasks.controller');
 const { getCompetitionTeams } = require('../controllers/teams');
@@ -30,6 +32,10 @@ router.get('/:id/tasks', getCompetitionTasksPublic);
 // Token-based timeslot selection (project competitions only)
 router.get('/:id/timeslots/selection', getCompetitionTimeslotSelectionView);
 router.post('/:id/timeslots/selection', submitCompetitionTimeslotSelection);
+
+// Authenticated workspace timeslot selection (project competitions only)
+router.get('/:id/team/:teamId/timeslots', authenticateToken, getCompetitionWorkspaceTimeslotView);
+router.post('/:id/team/:teamId/timeslots', authenticateToken, submitCompetitionWorkspaceTimeslotSelection);
 
 // Get competition by ID (public)
 router.get('/:id', getCompetitionById);

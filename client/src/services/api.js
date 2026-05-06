@@ -2878,6 +2878,43 @@ class ApiService {
     }
   }
 
+  /**
+   * Authenticated workspace view of competition timeslots for a specific team.
+   */
+  static async getCompetitionWorkspaceTimeslotView(competitionId, teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/team/${teamId}/timeslots`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to load workspace timeslots');
+      return result;
+    } catch (error) {
+      console.error('Error fetching workspace competition timeslots:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Authenticated workspace selection submit.
+   */
+  static async submitCompetitionWorkspaceTimeslotSelection(competitionId, teamId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/team/${teamId}/timeslots`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ timeslot_id: timeslotId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to select workspace timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error submitting workspace competition timeslot selection:', error);
+      throw error;
+    }
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];
