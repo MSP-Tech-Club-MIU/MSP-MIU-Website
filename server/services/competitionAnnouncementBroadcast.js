@@ -38,6 +38,7 @@ async function getCompetitorEmails(announcement) {
       attributes: ['user_id'],
       include: [{
         model: User,
+        as: 'user',
         attributes: ['email'],
         required: true
       }]
@@ -47,7 +48,7 @@ async function getCompetitorEmails(announcement) {
     const emails = [
       ...new Set(
         teamMembers
-          .map(tm => (tm.User?.email || '').trim())
+          .map(tm => (tm.user?.email || '').trim())
           .filter(Boolean)
       )
     ];
