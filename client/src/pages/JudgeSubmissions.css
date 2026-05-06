@@ -1,0 +1,144 @@
+.JudgeSubmissions {
+  min-height: 80vh;
+  padding: 120px 0 80px;
+}
+
+.JudgeSubmissions__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.JudgeSubmissions__muted {
+  color: #c5dae9;
+  opacity: 0.9;
+}
+
+.JudgeSubmissions__alert {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.JudgeSubmissions__alert--error {
+  background: rgba(244, 88, 31, 0.12);
+  border: 1px solid rgba(244, 88, 31, 0.4);
+}
+
+.JudgeSubmissions__alert--ok {
+  background: rgba(131, 189, 0, 0.12);
+  border: 1px solid rgba(131, 189, 0, 0.45);
+}
+
+.JudgeSubmissions__layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.JudgeSubmissions__list,
+.JudgeSubmissions__panel {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(10, 25, 44, 0.45);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.JudgeSubmissions__item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #fff;
+  cursor: pointer;
+}
+
+.JudgeSubmissions__item.is-active {
+  border-color: #03a9f4;
+}
+
+.JudgeSubmissions__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.JudgeSubmissions__task,
+.JudgeSubmissions__preview {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.JudgeSubmissions__task h4,
+.JudgeSubmissions__preview h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.JudgeSubmissions__taskMeta {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #c5dae9;
+}
+
+.JudgeSubmissions__taskTitle {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.JudgeSubmissions__taskDesc {
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: #e8f4ff;
+}
+
+.JudgeSubmissions__zipHint {
+  font-size: 0.85rem;
+  color: #c5dae9;
+  max-width: 100%;
+}
+
+.JudgeSubmissions__zipHint code {
+  font-size: 0.8em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.JudgeSubmissions__form {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 10px;
+}
+
+.JudgeSubmissions__form input,
+.JudgeSubmissions__form textarea,
+.JudgeSubmissions__form button {
+  width: 100%;
+}
+
+.JudgeSubmissions__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .JudgeSubmissions__layout {
+    grid-template-columns: 1fr;
+  }
+}

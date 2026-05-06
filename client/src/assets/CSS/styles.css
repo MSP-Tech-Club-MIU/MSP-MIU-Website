@@ -80,7 +80,18 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,A
 label{display:flex;flex-direction:column;gap:8px;color:#cde3ff;position:relative;isolation:isolate}
 /* increase form control font-size to >=18px to avoid iOS input auto-zoom on focus */
 .grid input,.grid select,.grid textarea{font-size:18px}
-input,select,textarea{color:#eaf2ff;caret-color:#eaf2ff}
+input, select, textarea {
+    color: #000000;
+    caret-color: #000000;
+}
+option {
+    background-color: #091a2c;
+    color: #eaf2ff;
+}
+input.pill, select.pill, textarea.pill {
+    color: #eaf2ff;
+    caret-color: #eaf2ff;
+}
 .pill{padding:16px 16px;min-height:48px;font-size:18px}
 .grid input,.grid select,.grid textarea{width:100%}
 

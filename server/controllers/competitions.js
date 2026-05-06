@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const { Submission, Team, Evaluation, JudgeScore } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
+const { normalizeInsertId } = require('../utils/normalizeInsertId');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
@@ -403,14 +404,29 @@ const createCompetition = async (req, res) => {
             }
         );
 
+        const newCompetitionId = normalizeInsertId(result);
+        if (newCompetitionId == null) {
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to resolve new competition id after insert'
+            });
+        }
+
         // Fetch the created competition
         const newCompetitions = await db.query(
             `SELECT * FROM competitions WHERE competition_id = ?`,
             {
-                replacements: [result],
+                replacements: [newCompetitionId],
                 type: db.QueryTypes.SELECT
             }
         );
+
+        if (!newCompetitions || newCompetitions.length === 0) {
+            return res.status(500).json({
+                success: false,
+                error: 'Competition was inserted but could not be reloaded'
+            });
+        }
 
         const normalizedCompetition = parseCompetitionConfig(newCompetitions[0]);
         await ensureQuizForCompetition(normalizedCompetition, created_by);
@@ -806,11 +822,12 @@ const getCompetitionLeaderboard = async (req, res) => {
         }
 
         if (competition.type === 'task_quiz') {
+            // Sum auto scores per task (evaluations). Avoid `submissions.score`: some DBs omit that column.
             const taskRows = await db.query(
                 `SELECT
                     t.team_id,
                     t.team_name,
-                    SUM(COALESCE(s.score, e.total_auto_score, 0)) AS final_score
+                    SUM(COALESCE(e.total_auto_score, 0)) AS final_score
                 FROM teams t
                 LEFT JOIN submissions s
                     ON s.team_id = t.team_id AND s.competition_id = ? AND s.task_id IS NOT NULL
@@ -827,7 +844,7 @@ const getCompetitionLeaderboard = async (req, res) => {
                 rank: idx + 1,
                 team_id: row.team_id,
                 team_name: row.team_name,
-                final_score: row.final_score != null ? parseFloat(row.final_score, 10) : 0
+                final_score: row.final_score != null ? parseFloat(row.final_score) : 0
             }));
             return res.status(200).json({ success: true, data });
         }

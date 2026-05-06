@@ -17,6 +17,8 @@ const Announcement = require('./Announcement');
 // Competition-related models
 const Competition = require('./Competition');
 const CompetitionTask = require('./CompetitionTask');
+const CompetitionAnnouncement = require('./CompetitionAnnouncement');
+const CompetitionTimeslot = require('./CompetitionTimeslot');
 const Team = require('./Team');
 const TeamMember = require('./TeamMember');
 const TeamInvitation = require('./TeamInvitation');
@@ -48,6 +50,8 @@ const models = {
   Announcement,
   Competition,
   CompetitionTask,
+  CompetitionAnnouncement,
+  CompetitionTimeslot,
   Team,
   TeamMember,
   TeamInvitation,
@@ -212,6 +216,37 @@ Competition.hasMany(Team, {
   as: 'teams'
 });
 
+// CompetitionTimeslot associations
+CompetitionTimeslot.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+Competition.hasMany(CompetitionTimeslot, {
+  foreignKey: 'competition_id',
+  as: 'timeslots'
+});
+
+CompetitionTimeslot.belongsTo(Team, {
+  foreignKey: 'assigned_team_id',
+  as: 'assignedTeam',
+  onDelete: 'SET NULL'
+});
+Team.hasMany(CompetitionTimeslot, {
+  foreignKey: 'assigned_team_id',
+  as: 'assignedTimeslots'
+});
+
+CompetitionTimeslot.belongsTo(User, {
+  foreignKey: 'assigned_by_admin_user_id',
+  as: 'assignedByAdmin',
+  onDelete: 'SET NULL'
+});
+User.hasMany(CompetitionTimeslot, {
+  foreignKey: 'assigned_by_admin_user_id',
+  as: 'adminAssignedTimeslots'
+});
+
 Competition.hasMany(CompetitionTask, {
   foreignKey: 'competition_id',
   as: 'tasks',
@@ -221,6 +256,27 @@ CompetitionTask.belongsTo(Competition, {
   foreignKey: 'competition_id',
   as: 'competition',
   onDelete: 'CASCADE'
+});
+
+// CompetitionAnnouncement associations
+Competition.hasMany(CompetitionAnnouncement, {
+  foreignKey: 'competition_id',
+  as: 'announcements',
+  onDelete: 'CASCADE'
+});
+CompetitionAnnouncement.belongsTo(Competition, {
+  foreignKey: 'competition_id',
+  as: 'competition',
+  onDelete: 'CASCADE'
+});
+
+CompetitionAnnouncement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+User.hasMany(CompetitionAnnouncement, {
+  foreignKey: 'created_by',
+  as: 'competitionAnnouncements'
 });
 
 Team.belongsTo(User, {
@@ -433,7 +489,7 @@ User.hasMany(AdminNotification, {
 // Sync models with database
 const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: false });
+    await sequelize.sync({ alter: true });
     console.log('Models synchronized with database successfully');
   } catch (error) {
     console.error('Error synchronizing models:', error);

@@ -16,6 +16,7 @@ router.use("/users", require("./routes/user"));
 router.use("/applications", require("./routes/applications"));
 router.use("/announcements", require("./routes/announcements"));
 router.use("/board", require("./routes/board"));
+router.use("/sponsors", require("./routes/sponsors"));
 router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));
 router.use("/events", require("./routes/events"));

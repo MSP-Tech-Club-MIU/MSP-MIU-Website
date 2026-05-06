@@ -4,12 +4,12 @@ const {r2, PutObjectCommand} = require("../config/cloud");
 
 // Only allow PDFs or images (pizza filtering)
 const fileFilter = (req, file, cb) => {
-  const allowedExt = ['pdf','jpg','jpeg','png','gif','pptx','ppt','docx','doc','xls','xlsx'];
+  const allowedExt = ['pdf','jpg','jpeg','png','gif','pptx','ppt','docx','doc','xls','xlsx', 'zip'];
   const ext = file.originalname.split('.').pop().toLowerCase();
 
   if (!allowedExt.includes(ext)) {
     console.log('Rejected file extension:', ext);
-    return cb(new Error('Only PDF, PowerPoint, Word, Excel or image files allowed'), false);
+    return cb(new Error('Only PDF, PowerPoint, Word, Excel, image, or ZIP files allowed'), false);
   }
   cb(null, true);
 };

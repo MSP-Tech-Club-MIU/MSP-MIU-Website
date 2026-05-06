@@ -24,6 +24,21 @@ const logAdminAction = async (actionType, message, req, entityType = null, entit
     }
 };
 
+function parseCompetitionConfig(configValue) {
+    if (!configValue) return null;
+    if (typeof configValue === 'object') return configValue;
+    try {
+        return JSON.parse(configValue);
+    } catch (_) {
+        return null;
+    }
+}
+
+function writeCompetitionConfig(configObj) {
+    if (configObj == null) return null;
+    return JSON.stringify(configObj);
+}
+
 /**
  * Get dashboard statistics + current admin info
  */
@@ -217,15 +232,68 @@ const updateCompetition = async (req, res) => {
             });
         }
 
-        const updates = { ...req.body };
-        if ('rules' in updates && (updates.rules === null || updates.rules === undefined || (typeof updates.rules === 'string' && updates.rules.trim() === ''))) {
-            updates.rules = '';
+        const {
+            title,
+            description,
+            start_at,
+            end_at,
+            max_team_size,
+            min_team_size,
+            status,
+            location_type,
+            location_details,
+            rules,
+            type,
+            submission_mode,
+            evaluation_mode,
+            is_team_based,
+            config
+        } = req.body;
+
+        const updates = {};
+
+        if (title !== undefined) updates.title = title;
+        if (description !== undefined) updates.description = description;
+        if (start_at !== undefined) updates.start_at = start_at;
+        if (end_at !== undefined) updates.end_at = end_at;
+        if (status !== undefined) updates.status = status;
+        if (location_type !== undefined) updates.location_type = location_type;
+        if (location_details !== undefined) updates.location_details = location_details;
+        if (rules !== undefined) {
+            updates.rules =
+                rules != null && String(rules).trim() !== '' ? String(rules).trim() : '';
         }
+        if (type !== undefined) updates.type = type;
+        if (config !== undefined) updates.config = config ?? null;
 
         const nextType = updates.type !== undefined ? updates.type : competition.type;
         if (nextType === 'quiz' || nextType === 'external') {
             updates.submission_mode = 'none';
             updates.evaluation_mode = 'none';
+        } else {
+            if (submission_mode !== undefined) updates.submission_mode = submission_mode;
+            if (evaluation_mode !== undefined) updates.evaluation_mode = evaluation_mode;
+        }
+
+        const effectiveIsTeamBased =
+            is_team_based !== undefined ? Boolean(is_team_based) : Boolean(competition.is_team_based);
+        if (is_team_based !== undefined) {
+            updates.is_team_based = effectiveIsTeamBased;
+        }
+
+        if (!effectiveIsTeamBased) {
+            updates.min_team_size = 1;
+            updates.max_team_size = 1;
+        } else {
+            if (min_team_size !== undefined) updates.min_team_size = min_team_size;
+            if (max_team_size !== undefined) updates.max_team_size = max_team_size;
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'No fields to update'
+            });
         }
 
         await competition.update(updates);
@@ -247,6 +315,12 @@ const updateCompetition = async (req, res) => {
         });
     } catch (error) {
         console.error('Error updating competition:', error);
+        if (error?.name === 'SequelizeValidationError' || error?.name === 'SequelizeDatabaseError') {
+            return res.status(400).json({
+                success: false,
+                error: error.message || 'Invalid competition update payload'
+            });
+        }
         res.status(500).json({
             success: false,
             error: 'Failed to update competition'
@@ -291,6 +365,139 @@ const deleteCompetition = async (req, res) => {
             success: false,
             error: 'Failed to delete competition'
         });
+    }
+};
+
+/**
+ * Get judge assignment candidates and selected board judges for a competition.
+ */
+const getCompetitionJudges = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const competition = await Competition.findByPk(id, {
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+        });
+        if (!competition) {
+            return res.status(404).json({ success: false, error: 'Competition not found' });
+        }
+
+        const boardRows = await Board.findAll({
+            where: { user_id: { [Op.ne]: null } },
+            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email'],
+            order: [['position', 'ASC'], ['full_name', 'ASC']]
+        });
+
+        const config = parseCompetitionConfig(competition.config) || {};
+        const assigned = Array.isArray(config?.judging?.assigned_board_user_ids)
+            ? config.judging.assigned_board_user_ids.map((x) => Number(x)).filter((x) => Number.isFinite(x))
+            : [];
+
+        return res.json({
+            success: true,
+            data: {
+                competition: {
+                    competition_id: competition.competition_id,
+                    title: competition.title,
+                    type: competition.type,
+                    evaluation_mode: competition.evaluation_mode
+                },
+                assigned_board_user_ids: assigned,
+                board_candidates: boardRows.map((row) => ({
+                    board_id: row.board_id,
+                    user_id: row.user_id,
+                    full_name: row.full_name,
+                    position: row.position,
+                    department_id: row.department_id,
+                    email: row.email
+                }))
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching competition judges:', error);
+        return res.status(500).json({ success: false, error: 'Failed to fetch competition judges' });
+    }
+};
+
+/**
+ * Assign board members who can judge this competition.
+ */
+const updateCompetitionJudges = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { assigned_board_user_ids } = req.body || {};
+
+        const competition = await Competition.findByPk(id, {
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+        });
+        if (!competition) {
+            return res.status(404).json({ success: false, error: 'Competition not found' });
+        }
+
+        if (!['project', 'task_quiz'].includes(competition.type)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judge assignment is only available for project and task_quiz competitions'
+            });
+        }
+        if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Judge assignment is available only for manual and hybrid evaluation modes'
+            });
+        }
+
+        if (!Array.isArray(assigned_board_user_ids)) {
+            return res.status(400).json({
+                success: false,
+                error: 'assigned_board_user_ids must be an array of user ids'
+            });
+        }
+
+        const normalizedIds = [...new Set(
+            assigned_board_user_ids.map((x) => Number(x)).filter((x) => Number.isFinite(x))
+        )];
+
+        if (normalizedIds.length > 0) {
+            const boardMatches = await Board.findAll({
+                where: {
+                    user_id: { [Op.in]: normalizedIds }
+                },
+                attributes: ['user_id']
+            });
+            const validBoardUserIds = new Set(boardMatches.map((x) => Number(x.user_id)));
+            const invalid = normalizedIds.filter((x) => !validBoardUserIds.has(x));
+            if (invalid.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Some users are not board members: ${invalid.join(', ')}`
+                });
+            }
+        }
+
+        const config = parseCompetitionConfig(competition.config) || {};
+        config.judging = config.judging || {};
+        config.judging.assigned_board_user_ids = normalizedIds;
+        await competition.update({ config: writeCompetitionConfig(config) });
+        await competition.reload();
+
+        await logAdminAction(
+            'competition_judges_updated',
+            `Updated judge assignments for "${competition.title}"`,
+            req,
+            'competition',
+            competition.competition_id
+        );
+
+        return res.json({
+            success: true,
+            data: {
+                competition_id: competition.competition_id,
+                assigned_board_user_ids: normalizedIds
+            }
+        });
+    } catch (error) {
+        console.error('Error updating competition judges:', error);
+        return res.status(500).json({ success: false, error: 'Failed to update competition judges' });
     }
 };
 
@@ -537,6 +744,43 @@ const getCompetitionTeams = async (req, res) => {
             }
         );
 
+        const teamIds = rows.map((row) => row.team_id).filter(Boolean);
+        let teamMembersRows = [];
+        if (teamIds.length > 0) {
+            teamMembersRows = await sequelize.query(
+                `SELECT tm.team_id,
+                        tm.team_member_id,
+                        tm.role,
+                        tm.joined_at,
+                        u.user_id,
+                        u.full_name,
+                        u.email,
+                        u.university_id
+                 FROM team_members tm
+                 INNER JOIN users u ON tm.user_id = u.user_id
+                 WHERE tm.team_id IN (?)
+                 ORDER BY tm.team_id ASC, tm.role DESC, tm.joined_at ASC`,
+                {
+                    replacements: [teamIds],
+                    type: QueryTypes.SELECT
+                }
+            );
+        }
+
+        const teamMembersByTeamId = teamMembersRows.reduce((acc, memberRow) => {
+            if (!acc[memberRow.team_id]) acc[memberRow.team_id] = [];
+            acc[memberRow.team_id].push({
+                team_member_id: memberRow.team_member_id,
+                role: memberRow.role,
+                joined_at: memberRow.joined_at,
+                user_id: memberRow.user_id,
+                full_name: memberRow.full_name,
+                email: memberRow.email,
+                university_id: memberRow.university_id
+            });
+            return acc;
+        }, {});
+
         const teams = rows.map((row) => ({
             team_id: row.team_id,
             competition_id: row.competition_id,
@@ -553,7 +797,8 @@ const getCompetitionTeams = async (req, res) => {
                         full_name: `${row.guest_contact_name} (pending signup)`,
                         email: null
                     }
-                    : null
+                    : null,
+            members: teamMembersByTeamId[row.team_id] || []
         }));
 
         res.json({ success: true, data: teams });
@@ -670,6 +915,253 @@ const deleteAdminTeam = async (req, res) => {
     }
 };
 
+/**
+ * Admin get full team details (accepted + pending)
+ */
+const getAdminTeamDetails = async (req, res) => {
+    try {
+        const { id } = req.params; // team_id
+        const teamRows = await sequelize.query(
+            `SELECT t.team_id, t.competition_id, t.team_name, t.is_locked, t.created_at
+             FROM teams t
+             WHERE t.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!teamRows || teamRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team not found' });
+        }
+
+        const members = await sequelize.query(
+            `SELECT tm.team_member_id,
+                    tm.team_id,
+                    tm.user_id,
+                    tm.role,
+                    tm.joined_at,
+                    u.full_name,
+                    u.email,
+                    u.university_id
+             FROM team_members tm
+             INNER JOIN users u ON tm.user_id = u.user_id
+             WHERE tm.team_id = ?
+             ORDER BY tm.role DESC, tm.joined_at ASC`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        const pendingInvitations = await sequelize.query(
+            `SELECT ti.invitation_id,
+                    ti.team_id,
+                    ti.invited_email,
+                    ti.invited_name,
+                    ti.invited_university_id,
+                    ti.status,
+                    ti.expires_at,
+                    ti.invited_at AS created_at
+             FROM team_invitations ti
+             WHERE ti.team_id = ? AND ti.status = 'pending'
+             ORDER BY ti.invited_at ASC`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        res.json({
+            success: true,
+            data: {
+                ...teamRows[0],
+                members,
+                pending_invitations: pendingInvitations
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching admin team details:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch team details' });
+    }
+};
+
+/**
+ * Admin remove a member from team
+ */
+const removeAdminTeamMember = async (req, res) => {
+    try {
+        const { teamId, teamMemberId } = req.params;
+        const rows = await sequelize.query(
+            `SELECT tm.team_member_id, tm.team_id, tm.user_id, tm.role, t.team_name, u.full_name
+             FROM team_members tm
+             INNER JOIN teams t ON t.team_id = tm.team_id
+             LEFT JOIN users u ON u.user_id = tm.user_id
+             WHERE tm.team_member_id = ? AND tm.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [teamMemberId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team member not found' });
+        }
+
+        const member = rows[0];
+        await sequelize.query(
+            `DELETE FROM team_members WHERE team_member_id = ?`,
+            {
+                replacements: [teamMemberId],
+                type: QueryTypes.DELETE
+            }
+        );
+
+        await logAdminAction(
+            'team_member_removed',
+            `Removed ${member.full_name || `user ${member.user_id}`} from team "${member.team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({ success: true, message: 'Team member removed' });
+    } catch (error) {
+        console.error('Error removing team member (admin):', error);
+        res.status(500).json({ success: false, error: 'Failed to remove team member' });
+    }
+};
+
+/**
+ * Admin update team member profile info
+ */
+const updateAdminTeamMember = async (req, res) => {
+    try {
+        const { teamId, teamMemberId } = req.params;
+        const { full_name, email, university_id } = req.body || {};
+
+        const rows = await sequelize.query(
+            `SELECT tm.team_member_id, tm.team_id, tm.user_id, t.team_name
+             FROM team_members tm
+             INNER JOIN teams t ON t.team_id = tm.team_id
+             WHERE tm.team_member_id = ? AND tm.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [teamMemberId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Team member not found' });
+        }
+
+        const member = rows[0];
+        const updatePayload = {};
+
+        if (typeof full_name === 'string' && full_name.trim()) {
+            updatePayload.full_name = full_name.trim();
+        }
+
+        if (typeof email === 'string' && email.trim()) {
+            updatePayload.email = email.trim().toLowerCase();
+        }
+
+        if (typeof university_id === 'string') {
+            updatePayload.university_id = university_id.trim() || null;
+        }
+
+        if (Object.keys(updatePayload).length === 0) {
+            return res.status(400).json({ success: false, error: 'No valid member fields to update' });
+        }
+
+        const [affectedCount] = await User.update(updatePayload, {
+            where: { user_id: member.user_id }
+        });
+
+        if (!affectedCount) {
+            return res.status(404).json({ success: false, error: 'User record not found' });
+        }
+
+        const user = await User.findByPk(member.user_id, {
+            attributes: ['user_id', 'full_name', 'email', 'university_id']
+        });
+
+        await logAdminAction(
+            'team_member_updated',
+            `Updated member info in team "${member.team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({
+            success: true,
+            data: {
+                team_member_id: Number(teamMemberId),
+                team_id: Number(teamId),
+                ...user?.toJSON?.()
+            }
+        });
+    } catch (error) {
+        console.error('Error updating team member (admin):', error);
+        if (error?.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).json({
+                success: false,
+                error: 'Email or university ID already exists for another account'
+            });
+        }
+        res.status(500).json({ success: false, error: 'Failed to update team member' });
+    }
+};
+
+/**
+ * Admin cancel a pending invitation
+ */
+const cancelAdminTeamInvitation = async (req, res) => {
+    try {
+        const { teamId, invitationId } = req.params;
+        const rows = await sequelize.query(
+            `SELECT ti.invitation_id, ti.team_id, ti.invited_email, t.team_name
+             FROM team_invitations ti
+             INNER JOIN teams t ON t.team_id = ti.team_id
+             WHERE ti.invitation_id = ? AND ti.team_id = ?
+             LIMIT 1`,
+            {
+                replacements: [invitationId, teamId],
+                type: QueryTypes.SELECT
+            }
+        );
+
+        if (!rows || rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Invitation not found' });
+        }
+
+        await sequelize.query(
+            `DELETE FROM team_invitations WHERE invitation_id = ? AND status = 'pending'`,
+            {
+                replacements: [invitationId],
+                type: QueryTypes.DELETE
+            }
+        );
+
+        await logAdminAction(
+            'team_invitation_cancelled',
+            `Cancelled pending invitation (${rows[0].invited_email}) for team "${rows[0].team_name}"`,
+            req,
+            'team',
+            teamId
+        );
+
+        res.json({ success: true, message: 'Invitation cancelled' });
+    } catch (error) {
+        console.error('Error cancelling invitation (admin):', error);
+        res.status(500).json({ success: false, error: 'Failed to cancel invitation' });
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getCompetitions,
@@ -684,7 +1176,13 @@ module.exports = {
     getSuggestions,
     getEventFeedbackAll,
     getCompetitionTeams,
+    getCompetitionJudges,
     createAdminTeam,
     updateAdminTeam,
-    deleteAdminTeam
+    deleteAdminTeam,
+    getAdminTeamDetails,
+    updateAdminTeamMember,
+    removeAdminTeamMember,
+    cancelAdminTeamInvitation,
+    updateCompetitionJudges
 };

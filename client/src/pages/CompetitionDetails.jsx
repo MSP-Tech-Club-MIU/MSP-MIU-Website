@@ -30,6 +30,7 @@ const CompetitionDetails = () => {
   const [userRole, setUserRole] = useState(null);
   const [userId, setUserId] = useState(null);
   const [userTeam, setUserTeam] = useState(null);
+  const [taskQuizMarksGate, setTaskQuizMarksGate] = useState(null);
 
   // Check user role and fetch competition
   useEffect(() => {
@@ -63,11 +64,21 @@ const CompetitionDetails = () => {
           try {
             const team = await ApiService.getUserTeamForCompetition(id);
             setUserTeam(team);
+            if (compData?.type === 'task_quiz' && team?.team_id) {
+              const marksData = await ApiService
+                .getMyTaskQuizEvaluation(id, team.team_id)
+                .catch(() => null);
+              setTaskQuizMarksGate(marksData?.readiness || null);
+            } else {
+              setTaskQuizMarksGate(null);
+            }
           } catch (err) {
             setUserTeam(null);
+            setTaskQuizMarksGate(null);
           }
         } else {
           setUserTeam(null);
+          setTaskQuizMarksGate(null);
         }
 
       } catch (err) {
@@ -269,6 +280,19 @@ const CompetitionDetails = () => {
     }
   };
 
+  const handleViewMarks = () => {
+    if (userTeam) {
+      navigate(`/competitions/${id}/team/${userTeam.team_id}/marks`);
+    }
+  };
+
+  const canOpenJudgingWorkspace = () => {
+    if (!competition) return false;
+    if (!['project', 'task_quiz'].includes(competition.type)) return false;
+    if (!['manual', 'hybrid'].includes(competition.evaluation_mode)) return false;
+    return ['admin', 'board', 'judge'].includes(userRole);
+  };
+
   if (loading) {
     return <PageLoader />;
   }
@@ -319,7 +343,11 @@ const CompetitionDetails = () => {
 
           <div className="CompetitionDetailsPage__timer">
             <FiClock size={20} />
-            <span>{getTimeRemaining(competition.start_at, competition.end_at)}</span>
+            <span>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_start_at && competition.quiz_end_at
+                ? getTimeRemaining(competition.quiz_start_at, competition.quiz_end_at)
+                : getTimeRemaining(competition.start_at, competition.end_at)}
+            </span>
           </div>
         </motion.header>
 
@@ -333,13 +361,21 @@ const CompetitionDetails = () => {
           <div className="CompetitionDetailsPage__infoCard">
             <FiCalendar size={24} className="CompetitionDetailsPage__infoIcon" />
             <h3>Start Date</h3>
-            <p>{formatDateTime(competition.start_at)}</p>
+            <p>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_start_at
+                ? formatDateTime(competition.quiz_start_at)
+                : formatDateTime(competition.start_at)}
+            </p>
           </div>
 
           <div className="CompetitionDetailsPage__infoCard">
             <FiClock size={24} className="CompetitionDetailsPage__infoIcon" />
             <h3>End Date</h3>
-            <p>{formatDateTime(competition.end_at)}</p>
+            <p>
+              {['quiz', 'task_quiz'].includes(competition.type) && competition.quiz_end_at
+                ? formatDateTime(competition.quiz_end_at)
+                : formatDateTime(competition.end_at)}
+            </p>
           </div>
 
           <div className="CompetitionDetailsPage__infoCard">
@@ -381,6 +417,17 @@ const CompetitionDetails = () => {
             <p style={{ marginTop: 8 }}>
               <strong>Evaluation:</strong> {formatEvaluationLabel()}
             </p>
+            {canOpenJudgingWorkspace() ? (
+              <div className="CompetitionDetailsPage__quizCtaButtons" style={{ marginTop: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/competitions/${id}/judging`)}
+                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                >
+                  Open judging workspace
+                </button>
+              </div>
+            ) : null}
             {competition.type === 'quiz' && (
               <div className="CompetitionDetailsPage__quizCta">
                 <p className="CompetitionDetailsPage__quizCtaHint">
@@ -449,6 +496,14 @@ const CompetitionDetails = () => {
                         <FiPlayCircle size={20} aria-hidden />
                         Open team workspace
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleViewMarks}
+                        className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                        style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                      >
+                        View my marks
+                      </button>
                     </div>
                   ) : (
                     <div className="CompetitionDetailsPage__lockedNotice" style={{ marginTop: 10 }}>
@@ -497,24 +552,42 @@ const CompetitionDetails = () => {
                 <FiAward size={32} className="CompetitionDetailsPage__activeIcon" />
                 <h3>Competition is Live!</h3>
                 <p>Team: <strong>{userTeam.team_name}</strong></p>
-                <button
-                  onClick={handleStartCompetition}
-                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
-                >
-                  Access Team Workspace
-                </button>
+                <div className="CompetitionDetailsPage__regButtons">
+                  <button
+                    onClick={handleStartCompetition}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                  >
+                    Access Team Workspace
+                  </button>
+                  <button
+                    onClick={handleViewMarks}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                    style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                  >
+                    View my marks
+                  </button>
+                </div>
               </div>
             ) : isQuizUnlockedForView() ? (
               <div className="CompetitionDetailsPage__teamStatus">
                 <FiCheckCircle size={32} className="CompetitionDetailsPage__teamStatusIcon" />
                 <h3>You're Part of a Team</h3>
                 <p>Team: <strong>{userTeam.team_name}</strong></p>
-                <button
-                  onClick={handleViewTeam}
-                  className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
-                >
-                  Access Team Workspace
-                </button>
+                <div className="CompetitionDetailsPage__regButtons">
+                  <button
+                    onClick={handleViewTeam}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--primary"
+                  >
+                    Access Team Workspace
+                  </button>
+                  <button
+                    onClick={handleViewMarks}
+                    className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+                    style={{ display: taskQuizMarksGate?.can_view_marks ? 'inline-flex' : 'none' }}
+                  >
+                    View my marks
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="CompetitionDetailsPage__lockedNotice">

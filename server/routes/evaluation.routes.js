@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
+const { authorizeJudgingAccess } = require('../middlewares/judgingAuth');
 const {
   runEvaluation,
   submitJudgeScore,
-  getEvaluation
+  getEvaluation,
+  getTaskQuizTeamEvaluation,
+  getMyTaskQuizEvaluation
 } = require('../controllers/evaluation.controller');
 
 router.post(
@@ -17,14 +20,27 @@ router.post(
 router.post(
   '/judge/:submissionId',
   authenticateToken,
-  verifyRole('admin', 'board'),
+  authorizeJudgingAccess,
   submitJudgeScore
+);
+
+router.get(
+  '/task-quiz/:competitionId/team/:teamId',
+  authenticateToken,
+  authorizeJudgingAccess,
+  getTaskQuizTeamEvaluation
+);
+
+router.get(
+  '/my-task-quiz/:competitionId/team/:teamId',
+  authenticateToken,
+  getMyTaskQuizEvaluation
 );
 
 router.get(
   '/:submissionId',
   authenticateToken,
-  verifyRole('admin', 'board'),
+  authorizeJudgingAccess,
   getEvaluation
 );
 

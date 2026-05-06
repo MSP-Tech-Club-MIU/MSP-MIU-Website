@@ -830,6 +830,12 @@ body.admin-panel-active .SiteLayout__main {
     box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.1);
 }
 
+.AdminPanel__formGroup select option,
+.AdminPanel__filterSelect option {
+    background-color: #091a2c;
+    color: #eaf2ff;
+}
+
 /* ══ OVERLAY ══ */
 .AdminPanel__modalOverlay {
     position: fixed;

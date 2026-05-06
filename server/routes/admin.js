@@ -16,9 +16,15 @@ const {
     getSuggestions,
     getEventFeedbackAll,
     getCompetitionTeams,
+    getCompetitionJudges,
     createAdminTeam,
     updateAdminTeam,
-    deleteAdminTeam
+    deleteAdminTeam,
+    getAdminTeamDetails,
+    updateAdminTeamMember,
+    removeAdminTeamMember,
+    cancelAdminTeamInvitation,
+    updateCompetitionJudges
 } = require('../controllers/admin');
 const {
     getAdminQuiz,
@@ -31,12 +37,22 @@ const {
     deleteAdminQuizOption
 } = require('../controllers/adminQuiz.controller');
 const {
-    postAdminCompetitionTask,
-    putAdminCompetitionTask,
-    deleteAdminCompetitionTask,
-    postAdminCompetitionTaskAsset,
-    wrapMulterTaskAsset
+  getAdminCompetitionTasks,
+  postAdminCompetitionTask,
+  putAdminCompetitionTask,
+  deleteAdminCompetitionTask,
+  postAdminCompetitionTaskAsset,
+  wrapMulterTaskAsset
 } = require('../controllers/competitionTasks.controller');
+const {
+    getAdminCompetitionTimeslots,
+    createAdminCompetitionTimeslot,
+    updateAdminCompetitionTimeslot,
+    deleteAdminCompetitionTimeslot,
+    publishCompetitionTimeslotSelectionLinks,
+    assignCompetitionTimeslotByAdmin,
+    unassignCompetitionTimeslotByAdmin
+} = require('../controllers/competitionTimeslots.controller');
 
 // All admin routes require authentication + admin authorization
 router.use(authenticateToken);
@@ -62,6 +78,7 @@ router.put('/quiz/options/:optionId', putAdminQuizOption);
 router.delete('/quiz/options/:optionId', deleteAdminQuizOption);
 
 // Task-quiz tasks (admin panel)
+router.get('/competitions/:id/tasks', getAdminCompetitionTasks);
 router.post('/competitions/:id/tasks', postAdminCompetitionTask);
 router.put('/competition-tasks/:taskId', putAdminCompetitionTask);
 router.post(
@@ -88,8 +105,23 @@ router.get('/feedback', getEventFeedbackAll);
 
 // Teams (Admin Management)
 router.get('/competitions/:id/teams', getCompetitionTeams);
+router.get('/competitions/:id/judges', getCompetitionJudges);
+router.put('/competitions/:id/judges', updateCompetitionJudges);
 router.post('/competitions/:id/teams', createAdminTeam);
 router.put('/teams/:id', updateAdminTeam);
 router.delete('/teams/:id', deleteAdminTeam);
+router.get('/teams/:id/details', getAdminTeamDetails);
+router.put('/teams/:teamId/members/:teamMemberId', updateAdminTeamMember);
+router.delete('/teams/:teamId/members/:teamMemberId', removeAdminTeamMember);
+router.delete('/teams/:teamId/invitations/:invitationId', cancelAdminTeamInvitation);
+
+// Competition timeslots (project competitions only)
+router.get('/competitions/:id/timeslots', getAdminCompetitionTimeslots);
+router.post('/competitions/:id/timeslots', createAdminCompetitionTimeslot);
+router.put('/competitions/:id/timeslots/:timeslotId', updateAdminCompetitionTimeslot);
+router.delete('/competitions/:id/timeslots/:timeslotId', deleteAdminCompetitionTimeslot);
+router.post('/competitions/:id/timeslots/publish-selection-links', publishCompetitionTimeslotSelectionLinks);
+router.post('/competitions/:id/timeslots/:timeslotId/assign', assignCompetitionTimeslotByAdmin);
+router.post('/competitions/:id/timeslots/:timeslotId/unassign', unassignCompetitionTimeslotByAdmin);
 
 module.exports = router;

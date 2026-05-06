@@ -1502,8 +1502,8 @@ const acceptInvitationNewUser = async (req, res) => {
 
         // Create new user account with 'competitor' role
         const userResult = await db.query(
-            `INSERT INTO users (full_name, university_id, email, password_hash, role, is_active)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO users (full_name, university_id, email, password_hash, role, is_active, department_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
                     invitation.invited_name || 'Competitor',
@@ -1511,7 +1511,8 @@ const acceptInvitationNewUser = async (req, res) => {
                     invitation.invited_email,
                     hashedPassword,
                     'competitor',
-                    true
+                    true,
+                    10
                 ],
                 type: db.QueryTypes.INSERT
             }

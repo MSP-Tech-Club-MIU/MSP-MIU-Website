@@ -6,13 +6,15 @@ import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
-import { safeTaskAssetUrl } from '../utils/taskQuizAssets';
+import LiveDemoEmbed from '../components/LiveDemoEmbed';
+import { safeTaskAssetUrl, normalizeLiveDemoOpenUrl } from '../utils/taskQuizAssets';
 import './CompetitionWorkspace.css';
 import {
   FiUpload,
   FiAlertCircle,
   FiCheckCircle,
   FiClock,
+  FiMapPin,
   FiLock,
   FiUsers,
   FiFileText,
@@ -41,10 +43,17 @@ const CompetitionWorkspace = () => {
   const [submitting, setSubmitting] = useState(false);
   const [competition, setCompetition] = useState(null);
   const [team, setTeam] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [submission, setSubmission] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [taskSubmissionMap, setTaskSubmissionMap] = useState({});
+  const [taskQuizMarksGate, setTaskQuizMarksGate] = useState(null);
+  const [timeslotWorkspace, setTimeslotWorkspace] = useState(null);
+  const [timeslotLoading, setTimeslotLoading] = useState(false);
+  const [timeslotSavingId, setTimeslotSavingId] = useState(null);
+  const [timeslotError, setTimeslotError] = useState(null);
+  const [showTimeslotChoices, setShowTimeslotChoices] = useState(false);
   const [error, setError] = useState(null);
 
   // Form state
@@ -60,13 +69,37 @@ const CompetitionWorkspace = () => {
       setLoading(true);
       setError(null);
 
-      const [competitionData, teamData] = await Promise.all([
+      const [competitionData, teamData, userProfile] = await Promise.all([
         ApiService.getCompetitionById(competitionId),
         ApiService.getTeamById(teamId),
+        ApiService.getProfile(),
       ]);
 
       setCompetition(competitionData);
       setTeam(teamData);
+      setCurrentUserId(userProfile?.user_id || null);
+
+      if (competitionData?.type === 'project') {
+        setTimeslotLoading(true);
+        try {
+          const timeslotResult = await ApiService.getCompetitionWorkspaceTimeslotView(
+            competitionId,
+            teamId
+          );
+          const workspaceData = timeslotResult?.data || null;
+          setTimeslotWorkspace(workspaceData);
+          setShowTimeslotChoices(Boolean(workspaceData?.selection_open));
+        } catch (timeslotErr) {
+          console.error('Error fetching workspace timeslots:', timeslotErr);
+          setTimeslotWorkspace(null);
+          setTimeslotError(timeslotErr.message || 'Failed to load timeslot details');
+        } finally {
+          setTimeslotLoading(false);
+        }
+      } else {
+        setTimeslotWorkspace(null);
+        setShowTimeslotChoices(false);
+      }
 
       if (competitionData?.type === 'task_quiz') {
         const now = new Date();
@@ -78,6 +111,7 @@ const CompetitionWorkspace = () => {
         if (!unlockedForView) {
           setTasks([]);
           setTaskSubmissionMap({});
+          setTaskQuizMarksGate(null);
           setSelectedTaskId(null);
           setSubmission(null);
         } else {
@@ -93,6 +127,10 @@ const CompetitionWorkspace = () => {
           );
           setTasks(list);
           setTaskSubmissionMap(map);
+          const marksData = await ApiService
+            .getMyTaskQuizEvaluation(competitionId, teamId)
+            .catch(() => null);
+          setTaskQuizMarksGate(marksData?.readiness || null);
           setSelectedTaskId((prev) =>
             prev != null && list.some((x) => x.task_id === prev) ? prev : list[0]?.task_id ?? null
           );
@@ -101,11 +139,13 @@ const CompetitionWorkspace = () => {
         setTasks([]);
         setSelectedTaskId(null);
         setTaskSubmissionMap({});
+        setTaskQuizMarksGate(null);
         setSubmission(null);
       } else {
         setTasks([]);
         setSelectedTaskId(null);
         setTaskSubmissionMap({});
+        setTaskQuizMarksGate(null);
         const submissionData = await ApiService
           .getTeamSubmission(competitionId, teamId)
           .catch(() => null);
@@ -283,6 +323,22 @@ const CompetitionWorkspace = () => {
     }
   };
 
+  const handleWorkspaceTimeslotSelection = async (timeslotId) => {
+    if (!competitionId || !teamId || !timeslotId) return;
+
+    try {
+      setTimeslotSavingId(timeslotId);
+      setTimeslotError(null);
+      await ApiService.submitCompetitionWorkspaceTimeslotSelection(competitionId, teamId, timeslotId);
+      await fetchData();
+    } catch (err) {
+      console.error('Error selecting workspace timeslot:', err);
+      setTimeslotError(err.message || 'Failed to select meeting time');
+    } finally {
+      setTimeslotSavingId(null);
+    }
+  };
+
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
@@ -314,6 +370,12 @@ const CompetitionWorkspace = () => {
   const canSubmit = () => {
     if (!competition) return false;
     if (competition.type === 'quiz') return false;
+
+    const isLeader = !!team?.members?.some(
+      (m) => m?.user_id === currentUserId && String(m?.role).toLowerCase() === 'leader'
+    );
+    if (['project', 'task_quiz'].includes(competition.type) && !isLeader) return false;
+
     if (competition.type === 'task_quiz') {
       if (!tasks.length || selectedTaskId == null) return false;
       const now = new Date();
@@ -341,9 +403,16 @@ const CompetitionWorkspace = () => {
     return now < end;
   };
   const allowedSubmitTypes = getAllowedSubmitTypes();
+  const isCurrentUserLeader = !!team?.members?.some(
+    (m) => m?.user_id === currentUserId && String(m?.role).toLowerCase() === 'leader'
+  );
   const isFrontendMultitask = competition?.type === 'project' && competition?.config?.multiTask === true;
   const isClassicQuiz = competition?.type === 'quiz';
   const isTaskQuiz = competition?.type === 'task_quiz';
+  const isProjectCompetition = competition?.type === 'project';
+  const workspaceTimeslotSlots = Array.isArray(timeslotWorkspace?.slots) ? timeslotWorkspace.slots : [];
+  const currentMeetingSlot = timeslotWorkspace?.current_selection || null;
+  const showMeetingDetails = Boolean(isProjectCompetition && (timeslotWorkspace?.selection_open || currentMeetingSlot));
 
   const nowTs = Date.now();
   const quizStart = competition?.quiz_start_at ? new Date(competition.quiz_start_at) : null;
@@ -462,6 +531,14 @@ const CompetitionWorkspace = () => {
     }
   }
 
+  const formatTimeslotDuration = (slot) => {
+    if (!slot?.start_at || !slot?.end_at) return null;
+    const start = new Date(slot.start_at);
+    const end = new Date(slot.end_at);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+    return Math.max(0, Math.round((end - start) / (1000 * 60)));
+  };
+
   return (
     <section className="CompetitionWorkspace">
       <BackButton to={`/competitions/${competitionId}`} label="Back to Competition" />
@@ -496,7 +573,133 @@ const CompetitionWorkspace = () => {
               <span>Deadline: {formatDateTime(competition.end_at)}</span>
             </div>
           )}
+          {isTaskQuiz && taskQuizMarksGate?.can_view_marks === true && (
+            <div className="CompetitionWorkspace__deadlineBox" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="CompetitionWorkspace__quizBtnSecondary"
+                onClick={() => navigate(`/competitions/${competitionId}/team/${teamId}/marks`)}
+              >
+                View my marks
+              </button>
+            </div>
+          )}
         </motion.header>
+
+        {showMeetingDetails && (
+          <motion.section
+            className="CompetitionWorkspace__meetingDetails"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+          >
+            <div className="CompetitionWorkspace__meetingDetailsHeader">
+              <div>
+                <h2 className="CompetitionWorkspace__sectionTitle">
+                  <FiClock size={24} />
+                  Meeting Details
+                </h2>
+                <p className="CompetitionWorkspace__meetingDetailsIntro">
+                  {timeslotWorkspace?.selection_open
+                    ? 'Choose one of the published meeting slots for your team.'
+                    : 'Your meeting slot has been assigned.'}
+                </p>
+              </div>
+
+              {timeslotWorkspace?.selection_open && (
+                <button
+                  type="button"
+                  className="CompetitionWorkspace__meetingToggleBtn"
+                  onClick={() => setShowTimeslotChoices((value) => !value)}
+                >
+                  {showTimeslotChoices ? 'Hide time slots' : currentMeetingSlot ? 'Change time slot' : 'Choose time slot'}
+                </button>
+              )}
+            </div>
+
+            {timeslotLoading ? (
+              <div className="CompetitionWorkspace__meetingState">Loading meeting details...</div>
+            ) : null}
+
+            {!timeslotLoading && timeslotError ? (
+              <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--error">
+                <FiAlertCircle size={18} />
+                <span>{timeslotError}</span>
+              </div>
+            ) : null}
+
+            {!timeslotLoading && currentMeetingSlot ? (
+              <div className="CompetitionWorkspace__meetingCard">
+                <div className="CompetitionWorkspace__meetingCardTop">
+                  <h3>
+                    <FiCheckCircle size={18} />
+                    {currentMeetingSlot.assignment_source === 'admin_assignment' ? 'Admin assigned' : 'Your selected slot'}
+                  </h3>
+                  <span className="CompetitionWorkspace__meetingBadge">
+                    {currentMeetingSlot.assignment_source === 'admin_assignment' ? 'Assigned' : 'Chosen'}
+                  </span>
+                </div>
+                <div className="CompetitionWorkspace__meetingInfo">
+                  <p><strong>From:</strong> {formatDateTime(currentMeetingSlot.start_at)}</p>
+                  <p><strong>To:</strong> {formatDateTime(currentMeetingSlot.end_at)}</p>
+                  <p>
+                    <strong>Discussion length:</strong> {formatTimeslotDuration(currentMeetingSlot)} minutes
+                  </p>
+                  <p>
+                    <strong>Location:</strong>{' '}
+                    {currentMeetingSlot.location_details || competition?.location_details || (competition?.location_type === 'online' ? 'Online meeting details will be shared.' : 'On-campus location will be shared.')}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {!timeslotLoading && !currentMeetingSlot && timeslotWorkspace?.selection_open ? (
+              <div className="CompetitionWorkspace__meetingState">
+                Admin has published available meeting slots. Choose one below.
+              </div>
+            ) : null}
+
+            {showTimeslotChoices && timeslotWorkspace?.selection_open ? (
+              <div className="CompetitionWorkspace__meetingGrid">
+                {workspaceTimeslotSlots.length > 0 ? (
+                  workspaceTimeslotSlots.map((slot) => {
+                    const assignedTeamId = Number(slot.assigned_team_id || 0);
+                    const isMine = assignedTeamId && assignedTeamId === Number(teamId);
+                    const isTakenByOther = assignedTeamId && !isMine;
+                    const durationMinutes = formatTimeslotDuration(slot);
+
+                    return (
+                      <article
+                        key={slot.timeslot_id}
+                        className={`CompetitionWorkspace__meetingSlot ${isMine ? 'CompetitionWorkspace__meetingSlot--mine' : ''} ${isTakenByOther ? 'CompetitionWorkspace__meetingSlot--taken' : ''}`}
+                      >
+                        <div className="CompetitionWorkspace__meetingSlotTop">
+                          <h3>Slot #{slot.timeslot_id}</h3>
+                          {isMine && <span className="CompetitionWorkspace__meetingBadge">Chosen</span>}
+                          {isTakenByOther && <span className="CompetitionWorkspace__meetingBadge CompetitionWorkspace__meetingBadge--taken">Taken</span>}
+                        </div>
+                        <p><FiClock size={14} /> From: {formatDateTime(slot.start_at)}</p>
+                        <p><FiClock size={14} /> To: {formatDateTime(slot.end_at)}</p>
+                        <p><FiClock size={14} /> Discussion length: {durationMinutes != null ? `${durationMinutes} minutes` : '—'}</p>
+                        <p><FiMapPin size={14} /> {slot.location_details || competition?.location_details || (competition?.location_type === 'online' ? 'Online meeting details will be shared.' : 'On-campus location will be shared.')}</p>
+                        <button
+                          type="button"
+                          className="CompetitionWorkspace__meetingChooseBtn"
+                          disabled={Boolean(isTakenByOther || timeslotSavingId)}
+                          onClick={() => handleWorkspaceTimeslotSelection(slot.timeslot_id)}
+                        >
+                          {timeslotSavingId === slot.timeslot_id ? 'Saving...' : isMine ? 'Keep this slot' : isTakenByOther ? 'Unavailable' : 'Choose this slot'}
+                        </button>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="CompetitionWorkspace__meetingState">No meeting slots are available yet.</div>
+                )}
+              </div>
+            ) : null}
+          </motion.section>
+        )}
 
         <div
           className={`CompetitionWorkspace__grid${
@@ -777,14 +980,25 @@ const CompetitionWorkspace = () => {
                       </a>
                     </p>
                   )}
-                  {submission.live_url && (
-                    <p>
-                      <strong>Live URL:</strong>{' '}
-                      <a href={submission.live_url} target="_blank" rel="noopener noreferrer">
-                        {submission.live_url}
-                      </a>
-                    </p>
-                  )}
+                  {submission.live_url &&
+                    (() => {
+                      const liveOpen = normalizeLiveDemoOpenUrl(submission.live_url);
+                      return (
+                        <>
+                          <p>
+                            <strong>Live URL:</strong>{' '}
+                            {liveOpen ? (
+                              <a href={liveOpen} target="_blank" rel="noopener noreferrer">
+                                {submission.live_url}
+                              </a>
+                            ) : (
+                              <span>{submission.live_url}</span>
+                            )}
+                          </p>
+                          <LiveDemoEmbed liveUrl={submission.live_url} embedTitle="Your submission — live preview" />
+                        </>
+                      );
+                    })()}
                   {submission.r2_key && (
                     <p>
                       <strong>File:</strong> Uploaded ✓
@@ -833,7 +1047,9 @@ const CompetitionWorkspace = () => {
                 <div className="CompetitionWorkspace__alert CompetitionWorkspace__alert--warning">
                   <FiAlertCircle size={18} />
                   <span>
-                    {competition?.type === 'external' || competition?.submission_mode === 'none'
+                    {!isCurrentUserLeader && ['project', 'task_quiz'].includes(competition?.type)
+                      ? 'Only the team leader can submit. You can still view team progress and marks.'
+                      : competition?.type === 'external' || competition?.submission_mode === 'none'
                       ? 'This is an external competition. Submissions are disabled.'
                       : competition?.status !== 'open'
                       ? 'Competition is not open for submissions'

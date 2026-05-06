@@ -132,29 +132,56 @@ async function runLighthouse(pageUrl, options = {}) {
     chromeFlags,
     chromePath: process.env.CHROME_PATH || undefined
   });
-  try {
-    log('lighthouse.started', { pageUrl, port: chrome.port });
-    const result = await lighthouse(pageUrl, {
-      logLevel: 'error',
-      output: 'json',
-      onlyCategories: ['performance', 'accessibility'],
-      port: chrome.port,
-      settings: {
-        formFactor: 'desktop',
-        screenEmulation: { disabled: true },
-        throttlingMethod: 'provided'
-      }
-    });
 
+  const baseFlags = {
+    logLevel: 'error',
+    output: 'json',
+    port: chrome.port,
+    settings: {
+      formFactor: 'desktop',
+      screenEmulation: { disabled: true },
+      throttlingMethod: 'provided'
+    }
+  };
+
+  async function runCategories(categories) {
+    const result = await lighthouse(pageUrl, {
+      ...baseFlags,
+      onlyCategories: categories
+    });
     const lhr = result?.lhr;
     const perf = Math.round((lhr?.categories?.performance?.score ?? 0) * 100);
     const a11y = Math.round((lhr?.categories?.accessibility?.score ?? 0) * 100);
+    return { performance: perf, accessibility: a11y, lhr };
+  }
 
-    return {
-      performance: perf,
-      accessibility: a11y,
-      raw: process.env.NODE_ENV === 'development' ? { finalUrl: lhr?.finalUrl } : undefined
-    };
+  try {
+    log('lighthouse.started', { pageUrl, port: chrome.port });
+    try {
+      const { performance: perf, accessibility: a11y, lhr } = await runCategories([
+        'performance',
+        'accessibility'
+      ]);
+      return {
+        performance: perf,
+        accessibility: a11y,
+        raw: process.env.NODE_ENV === 'development' ? { finalUrl: lhr?.finalUrl } : undefined
+      };
+    } catch (primaryErr) {
+      log('lighthouse.performance_run_failed', { message: primaryErr.message });
+      try {
+        const { performance: perf, accessibility: a11y, lhr } = await runCategories(['accessibility']);
+        return {
+          performance: perf,
+          accessibility: a11y,
+          partialRun: true,
+          raw: process.env.NODE_ENV === 'development' ? { finalUrl: lhr?.finalUrl } : undefined
+        };
+      } catch (fallbackErr) {
+        log('lighthouse.fallback_failed', { message: fallbackErr.message });
+        return { performance: 0, accessibility: 0, skipped: true };
+      }
+    }
   } finally {
     await chrome.kill();
     log('lighthouse.chrome_closed', {});

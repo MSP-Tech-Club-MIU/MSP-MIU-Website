@@ -592,6 +592,36 @@ class ApiService {
     }
   }
 
+  static async getSponsors() {
+    try {
+      const url = `${API_BASE_URL}/sponsors`;
+      const cacheKey = getCacheKey(url);
+      const cachedData = getCachedData(cacheKey);
+
+      if (cachedData) {
+        return cachedData;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch sponsors');
+      }
+
+      const data = result.data || result;
+      setCachedData(cacheKey, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching sponsors:', error);
+      throw error;
+    }
+  }
+
   // Get event by ID
   static async getEventById(id) {
     try {
@@ -1292,6 +1322,17 @@ class ApiService {
     return result.data || [];
   }
 
+  /** Admin task list for task_quiz competitions (no unlock gate, requires auth). */
+  static async getAdminCompetitionTasks(competitionId) {
+    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/tasks`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch tasks');
+    return result.data || [];
+  }
+
   // =====================
   // QUIZZES
   // =====================
@@ -1816,7 +1857,7 @@ class ApiService {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${API_BASE_URL}/submissions/competition/${competitionId}`, {
+      const response = await fetch(`${API_BASE_URL}/submissions/competitions/${competitionId}`, {
         method: 'GET',
         headers: this.getHeaders(true),
       });
@@ -1863,6 +1904,69 @@ class ApiService {
       return result.data || result;
     } catch (error) {
       console.error(`Error grading submission ${submissionId}:`, error);
+      throw error;
+    }
+  }
+
+  static async getSubmissionEvaluation(submissionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/evaluation/${submissionId}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to load submission evaluation');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error loading evaluation for submission ${submissionId}:`, error);
+      throw error;
+    }
+  }
+
+  static async submitJudgeScore(submissionId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/evaluation/judge/${submissionId}`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit judge score');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error(`Error submitting judge score for ${submissionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Competitor task_quiz marks page data (team member scoped).
+   */
+  static async getMyTaskQuizEvaluation(competitionId, teamId) {
+    try {
+      const token = this.getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/evaluation/my-task-quiz/${competitionId}/team/${teamId}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch marks');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching task quiz marks:', error);
       throw error;
     }
   }
@@ -2347,6 +2451,45 @@ class ApiService {
   }
 
   /**
+   * Get board judge assignment candidates for a competition (admin panel access).
+   */
+  static async getAdminCompetitionJudges(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/judges`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch judge assignments');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin competition judges:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update board judge assignments for a competition.
+   */
+  static async updateAdminCompetitionJudges(competitionId, assignedBoardUserIds) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/judges`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({
+          assigned_board_user_ids: Array.isArray(assignedBoardUserIds) ? assignedBoardUserIds : [],
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update judge assignments');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin competition judges:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a team for a competition (admin)
    */
   static async createAdminTeam(competitionId, teamData) {
@@ -2401,6 +2544,377 @@ class ApiService {
       throw error;
     }
   }
+
+  /**
+   * Get full team details for admin edit view
+   */
+  static async getAdminTeamDetails(teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/details`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch team details');
+      return result.data;
+    } catch (error) {
+      console.error('Error fetching admin team details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a member from a team (admin)
+   */
+  static async removeAdminTeamMember(teamId, teamMemberId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/members/${teamMemberId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to remove team member');
+      return result;
+    } catch (error) {
+      console.error('Error removing admin team member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a member info inside a team (admin)
+   */
+  static async updateAdminTeamMember(teamId, teamMemberId, memberData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/members/${teamMemberId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(memberData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update team member');
+      return result.data;
+    } catch (error) {
+      console.error('Error updating admin team member:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel a pending team invitation (admin)
+   */
+  static async cancelAdminTeamInvitation(teamId, invitationId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/teams/${teamId}/invitations/${invitationId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to cancel invitation');
+      return result;
+    } catch (error) {
+      console.error('Error cancelling admin team invitation:', error);
+      throw error;
+    }
+  }
+  /**
+   * Get all announcements for a specific competition
+   */
+  static async getCompetitionAnnouncements(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch competition announcements');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching competition announcements:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create an announcement for a specific competition
+   */
+  static async createCompetitionAnnouncement(competitionId, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create competition announcement');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error creating competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an announcement for a specific competition
+   */
+  static async updateCompetitionAnnouncement(competitionId, announcementId, announcementData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(announcementData),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update competition announcement');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error updating competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete an announcement from a specific competition
+   */
+  static async deleteCompetitionAnnouncement(competitionId, announcementId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete competition announcement');
+      return result;
+    } catch (error) {
+      console.error('Error deleting competition announcement:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Resend emails for a specific competition announcement
+   */
+  static async resendCompetitionAnnouncementEmails(competitionId, announcementId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements/${announcementId}/resend-emails`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to resend competition announcement emails');
+      return result;
+    } catch (error) {
+      console.error('Error resending competition announcement emails:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get competition timeslots for admin management.
+   */
+  static async getAdminCompetitionTimeslots(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch competition timeslots');
+      return result;
+    } catch (error) {
+      console.error('Error fetching admin competition timeslots:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create one timeslot under a competition.
+   */
+  static async createAdminCompetitionTimeslot(competitionId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error creating admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update one timeslot under a competition.
+   */
+  static async updateAdminCompetitionTimeslot(competitionId, timeslotId, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error updating admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete one unassigned timeslot.
+   */
+  static async deleteAdminCompetitionTimeslot(competitionId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error deleting admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Publish tokenized selection links to teams by email.
+   */
+  static async publishAdminCompetitionTimeslotSelectionLinks(competitionId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/publish-selection-links`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to publish selection links');
+      return result;
+    } catch (error) {
+      console.error('Error publishing timeslot selection links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assign a timeslot to a team as admin.
+   */
+  static async assignAdminCompetitionTimeslot(competitionId, timeslotId, teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}/assign`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ team_id: teamId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to assign timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error assigning admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear assignment from a timeslot as admin.
+   */
+  static async unassignAdminCompetitionTimeslot(competitionId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots/${timeslotId}/unassign`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to unassign timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error unassigning admin competition timeslot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Public token-based view of available competition timeslots.
+   */
+  static async getCompetitionTimeslotSelectionView(competitionId, token) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/competitions/${competitionId}/timeslots/selection?token=${encodeURIComponent(token)}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(false),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to load timeslot selection view');
+      return result;
+    } catch (error) {
+      console.error('Error fetching competition timeslot selection view:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Public token-based selection submit.
+   */
+  static async submitCompetitionTimeslotSelection(competitionId, token, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/timeslots/selection`, {
+        method: 'POST',
+        headers: this.getHeaders(false),
+        body: JSON.stringify({ token, timeslot_id: timeslotId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to select timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error submitting competition timeslot selection:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Authenticated workspace view of competition timeslots for a specific team.
+   */
+  static async getCompetitionWorkspaceTimeslotView(competitionId, teamId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/team/${teamId}/timeslots`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to load workspace timeslots');
+      return result;
+    } catch (error) {
+      console.error('Error fetching workspace competition timeslots:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Authenticated workspace selection submit.
+   */
+  static async submitCompetitionWorkspaceTimeslotSelection(competitionId, teamId, timeslotId) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/team/${teamId}/timeslots`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ timeslot_id: timeslotId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to select workspace timeslot');
+      return result;
+    } catch (error) {
+      console.error('Error submitting workspace competition timeslot selection:', error);
+      throw error;
+    }
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];
