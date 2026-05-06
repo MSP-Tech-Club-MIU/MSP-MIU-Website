@@ -82,6 +82,8 @@ const CompetitionAnnouncement = sequelize.define('CompetitionAnnouncement', {
 }, {
   tableName: 'competition_announcements',
   timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
   indexes: [
     {
       fields: ['competition_id']
