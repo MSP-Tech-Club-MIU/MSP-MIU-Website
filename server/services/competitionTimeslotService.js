@@ -1,7 +1,18 @@
 const db = require('../config/db');
+const CompetitionTimeslot = require('../models/CompetitionTimeslot');
 const { generateToken, verifyToken } = require('../utils/jwt');
 const { getTeamMemberEmails } = require('./competitionAnnouncementBroadcast');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+
+let competitionTimeslotSyncPromise = null;
+
+async function ensureCompetitionTimeslotTable() {
+  if (!competitionTimeslotSyncPromise) {
+    competitionTimeslotSyncPromise = CompetitionTimeslot.sync();
+  }
+
+  await competitionTimeslotSyncPromise;
+}
 
 function createHttpError(status, message) {
   const err = new Error(message);
@@ -100,30 +111,16 @@ function formatDateForEmail(value) {
 async function createTimeslot({ competitionId, start_at, end_at, location_details }) {
   validateDateRange(start_at, end_at);
   await assertProjectCompetition(competitionId);
+  await ensureCompetitionTimeslotTable();
 
-  const result = await db.query(
-    `INSERT INTO competition_timeslots
-      (competition_id, start_at, end_at, location_details)
-     VALUES (?, ?, ?, ?)`,
-    {
-      replacements: [competitionId, start_at, end_at, location_details || null],
-      type: db.QueryTypes.INSERT
-    }
-  );
+  const created = await CompetitionTimeslot.create({
+    competition_id: competitionId,
+    start_at,
+    end_at,
+    location_details: location_details || null
+  });
 
-  const insertId = normalizeInsertId(result);
-  if (insertId == null) {
-    throw createHttpError(500, 'Failed to resolve new timeslot id after insert');
-  }
-  const rows = await db.query(
-    `SELECT * FROM competition_timeslots WHERE timeslot_id = ? LIMIT 1`,
-    {
-      replacements: [insertId],
-      type: db.QueryTypes.SELECT
-    }
-  );
-
-  return rows[0] || null;
+  return created.get({ plain: true });
 }
 
 async function listCompetitionTimeslots(competitionId) {
