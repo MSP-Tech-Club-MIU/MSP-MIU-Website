@@ -2,7 +2,6 @@ const db = require('../config/db');
 const CompetitionTimeslot = require('../models/CompetitionTimeslot');
 const { generateToken, verifyToken } = require('../utils/jwt');
 const { getTeamMemberEmails } = require('./competitionAnnouncementBroadcast');
-const { normalizeInsertId } = require('../utils/normalizeInsertId');
 
 let competitionTimeslotSyncPromise = null;
 
@@ -75,6 +74,29 @@ async function assertTeamInCompetition(competitionId, teamId, transaction) {
   return rows[0];
 }
 
+async function assertUserInCompetitionTeam(competitionId, teamId, userId, transaction) {
+  const rows = await db.query(
+    `SELECT tm.team_member_id, tm.role, t.team_id, t.team_name
+     FROM team_members tm
+     INNER JOIN teams t ON t.team_id = tm.team_id
+     WHERE tm.team_id = ?
+       AND tm.user_id = ?
+       AND t.competition_id = ?
+     LIMIT 1`,
+    {
+      replacements: [teamId, userId, competitionId],
+      type: db.QueryTypes.SELECT,
+      transaction
+    }
+  );
+
+  if (!rows || rows.length === 0) {
+    throw createHttpError(403, 'You are not a member of this team');
+  }
+
+  return rows[0];
+}
+
 function parseSelectionToken(token, expectedCompetitionId) {
   const verified = verifyToken(token);
   if (!verified.success) {
@@ -121,6 +143,46 @@ async function createTimeslot({ competitionId, start_at, end_at, location_detail
   });
 
   return created.get({ plain: true });
+}
+
+async function getWorkspaceTimeslotView({ competitionId, teamId, userId }) {
+  const competition = await assertProjectCompetition(competitionId);
+  const team = await assertTeamInCompetition(competitionId, teamId);
+  await assertUserInCompetitionTeam(competitionId, teamId, userId);
+
+  const rows = await db.query(
+    `SELECT
+      ts.timeslot_id,
+      ts.competition_id,
+      ts.start_at,
+      ts.end_at,
+      ts.location_details,
+      ts.is_published,
+      ts.assigned_team_id,
+      ts.assigned_by_admin_user_id,
+      ts.assignment_source,
+      ts.assigned_at,
+      t.team_name AS assigned_team_name
+     FROM competition_timeslots ts
+     LEFT JOIN teams t ON t.team_id = ts.assigned_team_id
+     WHERE ts.competition_id = ?
+       AND (ts.is_published = 1 OR ts.assigned_team_id = ?)
+     ORDER BY ts.start_at ASC`,
+    {
+      replacements: [competitionId, teamId],
+      type: db.QueryTypes.SELECT
+    }
+  );
+
+  const currentSelection = rows.find((row) => Number(row.assigned_team_id) === Number(teamId)) || null;
+
+  return {
+    competition,
+    team,
+    slots: rows,
+    current_selection: currentSelection,
+    selection_open: rows.some((row) => Boolean(Number(row.is_published)))
+  };
 }
 
 async function listCompetitionTimeslots(competitionId) {
@@ -443,6 +505,101 @@ async function selectTimeslotByToken({ competitionId, token, timeslotId }) {
   }
 }
 
+async function selectTimeslotForTeam({ competitionId, teamId, userId, timeslotId }) {
+  const tx = await db.transaction();
+
+  try {
+    const competition = await assertProjectCompetition(competitionId, tx);
+    const team = await assertTeamInCompetition(competitionId, teamId, tx);
+    await assertUserInCompetitionTeam(competitionId, teamId, userId, tx);
+
+    const slots = await db.query(
+      `SELECT timeslot_id, assigned_team_id, is_published, start_at, end_at, location_details
+       FROM competition_timeslots
+       WHERE timeslot_id = ? AND competition_id = ?
+       FOR UPDATE`,
+      {
+        replacements: [timeslotId, competitionId],
+        type: db.QueryTypes.SELECT,
+        transaction: tx
+      }
+    );
+
+    if (!slots || slots.length === 0) {
+      throw createHttpError(404, 'Timeslot not found');
+    }
+
+    const targetSlot = slots[0];
+
+    if (!targetSlot.is_published) {
+      throw createHttpError(400, 'Timeslot selection is not published yet');
+    }
+
+    if (targetSlot.assigned_team_id && Number(targetSlot.assigned_team_id) !== Number(teamId)) {
+      throw createHttpError(409, 'Timeslot has already been chosen by another team');
+    }
+
+    const currentRows = await db.query(
+      `SELECT timeslot_id
+       FROM competition_timeslots
+       WHERE competition_id = ? AND assigned_team_id = ?
+       FOR UPDATE`,
+      {
+        replacements: [competitionId, teamId],
+        type: db.QueryTypes.SELECT,
+        transaction: tx
+      }
+    );
+
+    const previous = currentRows.find((row) => Number(row.timeslot_id) !== Number(timeslotId));
+    if (previous) {
+      await db.query(
+        `UPDATE competition_timeslots
+         SET assigned_team_id = NULL,
+             assigned_by_admin_user_id = NULL,
+             assignment_source = 'none',
+             assigned_at = NULL
+         WHERE timeslot_id = ?`,
+        {
+          replacements: [previous.timeslot_id],
+          type: db.QueryTypes.UPDATE,
+          transaction: tx
+        }
+      );
+    }
+
+    await db.query(
+      `UPDATE competition_timeslots
+       SET assigned_team_id = ?,
+           assigned_by_admin_user_id = NULL,
+           assignment_source = 'team_selection',
+           assigned_at = NOW()
+       WHERE timeslot_id = ?`,
+      {
+        replacements: [teamId, timeslotId],
+        type: db.QueryTypes.UPDATE,
+        transaction: tx
+      }
+    );
+
+    await tx.commit();
+
+    return {
+      competition,
+      team,
+      slot: {
+        timeslot_id: Number(targetSlot.timeslot_id),
+        start_at: targetSlot.start_at,
+        end_at: targetSlot.end_at,
+        location_details: targetSlot.location_details
+      }
+    };
+  } catch (error) {
+    await tx.rollback();
+    throw error;
+  }
+}
+
 async function assignTimeslotByAdmin({ competitionId, timeslotId, teamId, adminUserId }) {
   const tx = await db.transaction();
 
@@ -546,11 +703,13 @@ module.exports = {
   assertProjectCompetition,
   buildTeamSelectionLinks,
   createTimeslot,
+  getWorkspaceTimeslotView,
   listCompetitionTimeslots,
   updateTimeslot,
   deleteTimeslot,
   getSelectionView,
   selectTimeslotByToken,
+  selectTimeslotForTeam,
   assignTimeslotByAdmin,
   unassignTimeslotByAdmin,
   getTeamMemberEmails,

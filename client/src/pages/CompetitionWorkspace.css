@@ -74,6 +74,163 @@
     font-weight: 600;
 }
 
+.CompetitionWorkspace__meetingDetails {
+    margin-bottom: 30px;
+    padding: 30px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .34), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.CompetitionWorkspace__meetingDetailsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.CompetitionWorkspace__meetingDetailsIntro {
+    margin: 0;
+    color: #C5DAE9;
+    line-height: 1.6;
+}
+
+.CompetitionWorkspace__meetingToggleBtn,
+.CompetitionWorkspace__meetingChooseBtn {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .2s ease, opacity .2s ease, background .2s ease;
+}
+
+.CompetitionWorkspace__meetingToggleBtn {
+    background: rgba(3, 169, 244, .16);
+    color: #8EC2F0;
+    border: 1px solid rgba(3, 169, 244, .3);
+}
+
+.CompetitionWorkspace__meetingToggleBtn:hover,
+.CompetitionWorkspace__meetingChooseBtn:hover {
+    transform: translateY(-1px);
+}
+
+.CompetitionWorkspace__meetingState {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    color: #C5DAE9;
+    margin-bottom: 16px;
+}
+
+.CompetitionWorkspace__meetingCard {
+    padding: 20px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, .22);
+    border: 1px solid rgba(255, 255, 255, .08);
+    margin-bottom: 18px;
+}
+
+.CompetitionWorkspace__meetingCardTop,
+.CompetitionWorkspace__meetingSlotTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.CompetitionWorkspace__meetingCardTop h3,
+.CompetitionWorkspace__meetingSlotTop h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #eaf2ff;
+}
+
+.CompetitionWorkspace__meetingBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #cef39f;
+    background: rgba(131, 189, 0, .16);
+    border: 1px solid rgba(131, 189, 0, .35);
+}
+
+.CompetitionWorkspace__meetingBadge--taken {
+    color: #ffcab8;
+    background: rgba(244, 88, 31, .16);
+    border-color: rgba(244, 88, 31, .35);
+}
+
+.CompetitionWorkspace__meetingInfo {
+    display: grid;
+    gap: 10px;
+}
+
+.CompetitionWorkspace__meetingInfo p {
+    margin: 0;
+    color: #C5DAE9;
+    line-height: 1.6;
+}
+
+.CompetitionWorkspace__meetingInfo strong {
+    color: #8EC2F0;
+}
+
+.CompetitionWorkspace__meetingGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.CompetitionWorkspace__meetingSlot {
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__meetingSlot--mine {
+    border-color: rgba(131, 189, 0, .4);
+    box-shadow: inset 0 0 0 1px rgba(131, 189, 0, .16);
+}
+
+.CompetitionWorkspace__meetingSlot--taken {
+    opacity: .7;
+}
+
+.CompetitionWorkspace__meetingSlot p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    color: #C5DAE9;
+    line-height: 1.5;
+}
+
+.CompetitionWorkspace__meetingChooseBtn {
+    width: 100%;
+    margin-top: 10px;
+    background: linear-gradient(135deg, #0077cc, #03a9f4);
+    color: #fff;
+}
+
+.CompetitionWorkspace__meetingChooseBtn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
 /* Grid Layout */
 .CompetitionWorkspace__grid {
     display: grid;

@@ -7,6 +7,8 @@ const {
   assertProjectCompetition,
   getSelectionView,
   selectTimeslotByToken,
+  getWorkspaceTimeslotView,
+  selectTimeslotForTeam,
   assignTimeslotByAdmin,
   unassignTimeslotByAdmin,
   getTeamMemberEmails,
@@ -344,6 +346,83 @@ const submitCompetitionTimeslotSelection = async (req, res) => {
   }
 };
 
+const getCompetitionWorkspaceTimeslotView = async (req, res) => {
+  try {
+    const competitionId = Number(req.params.id);
+    const teamId = Number(req.params.teamId);
+    const userId = req.user.user_id;
+
+    if (!teamId) {
+      return res.status(400).json({
+        success: false,
+        error: 'teamId is required'
+      });
+    }
+
+    const view = await getWorkspaceTimeslotView({ competitionId, teamId, userId });
+
+    return res.json({
+      success: true,
+      data: {
+        competition: toCompetitionModeContext(view.competition),
+        team: view.team,
+        current_selection: view.current_selection,
+        selection_open: view.selection_open,
+        slots: view.slots
+      }
+    });
+  } catch (error) {
+    return handleTimeslotError(res, error, 'Failed to fetch workspace timeslot view');
+  }
+};
+
+const submitCompetitionWorkspaceTimeslotSelection = async (req, res) => {
+  try {
+    const competitionId = Number(req.params.id);
+    const teamId = Number(req.params.teamId);
+    const timeslotId = Number(req.body.timeslot_id);
+    const userId = req.user.user_id;
+
+    if (!teamId || !timeslotId) {
+      return res.status(400).json({
+        success: false,
+        error: 'teamId and timeslot_id are required'
+      });
+    }
+
+    const result = await selectTimeslotForTeam({
+      competitionId,
+      teamId,
+      userId,
+      timeslotId
+    });
+
+    try {
+      await sendAssignmentEmail({
+        competition: result.competition,
+        team: result.team,
+        slot: result.slot,
+        isAdminAssignment: false
+      });
+    } catch (mailErr) {
+      console.error('Workspace timeslot confirmation email failed:', mailErr);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Timeslot selected successfully',
+      data: {
+        competition_id: competitionId,
+        competition: toCompetitionModeContext(result.competition),
+        team_id: teamId,
+        timeslot_id: timeslotId
+      }
+    });
+  } catch (error) {
+    return handleTimeslotError(res, error, 'Failed to select workspace timeslot');
+  }
+};
+
 module.exports = {
   getAdminCompetitionTimeslots,
   createAdminCompetitionTimeslot,
@@ -353,5 +432,7 @@ module.exports = {
   assignCompetitionTimeslotByAdmin,
   unassignCompetitionTimeslotByAdmin,
   getCompetitionTimeslotSelectionView,
-  submitCompetitionTimeslotSelection
+  submitCompetitionTimeslotSelection,
+  getCompetitionWorkspaceTimeslotView,
+  submitCompetitionWorkspaceTimeslotSelection
 };
