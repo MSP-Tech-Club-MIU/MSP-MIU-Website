@@ -15,22 +15,16 @@ async function getCompetitorEmails(announcement) {
     }
 
     let teamIds = [];
-    let teams = [];
+    let creatorUserIds = [];
     
     // 2. Specific team
     if (announcement.target_type === 'team' && announcement.target_team_id) {
       teamIds = [announcement.target_team_id];
     } else {
-      // 3. All competitors in competition - fetch teams with their creators
-      teams = await Team.findAll({
+      // 3. All competitors in competition
+      const teams = await Team.findAll({
         where: { competition_id: announcement.competition_id },
-        attributes: ['team_id', 'created_by_user_id'],
-        include: [{
-          model: User,
-          as: 'creator',
-          attributes: ['email', 'is_active'],
-          required: false
-        }]
+        attributes: ['team_id', 'created_by_user_id']
       });
 
       if (teams.length === 0) {
@@ -38,6 +32,10 @@ async function getCompetitorEmails(announcement) {
         return [];
       }
       teamIds = teams.map(team => team.team_id);
+      // Collect creator user IDs for inactive users check
+      creatorUserIds = teams
+        .filter(team => team.created_by_user_id)
+        .map(team => team.created_by_user_id);
     }
 
     // Find all team members and their associated users (includes both active and inactive users)
@@ -59,12 +57,19 @@ async function getCompetitorEmails(announcement) {
         .filter(Boolean)
     );
 
-    // If we fetched teams for "all competitors", also include inactive team creators
-    if (teams.length > 0) {
-      teams.forEach(team => {
-        // Add inactive team creators who may not be team members yet
-        if (team.creator && !team.creator.is_active && team.creator.email) {
-          emails.add((team.creator.email || '').trim());
+    // Also include inactive team creators
+    if (creatorUserIds.length > 0) {
+      const inactiveCreators = await User.findAll({
+        where: {
+          user_id: creatorUserIds,
+          is_active: false
+        },
+        attributes: ['email']
+      });
+
+      inactiveCreators.forEach(user => {
+        if (user?.email) {
+          emails.add((user.email || '').trim());
         }
       });
     }
