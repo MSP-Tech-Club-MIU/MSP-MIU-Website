@@ -2,6 +2,7 @@ const { Team, TeamMember, User, Competition } = require('../models');
 
 /**
  * Get targeted competitor emails for an announcement
+ * Includes both active AND inactive users who are part of competition teams
  * @param {Object} announcement - CompetitionAnnouncement object
  * @returns {Promise<string[]>} Array of unique email addresses
  */
@@ -14,15 +15,22 @@ async function getCompetitorEmails(announcement) {
     }
 
     let teamIds = [];
+    let teams = [];
     
     // 2. Specific team
     if (announcement.target_type === 'team' && announcement.target_team_id) {
       teamIds = [announcement.target_team_id];
     } else {
-      // 3. All competitors in competition
-      const teams = await Team.findAll({
+      // 3. All competitors in competition - fetch teams with their creators
+      teams = await Team.findAll({
         where: { competition_id: announcement.competition_id },
-        attributes: ['team_id']
+        attributes: ['team_id', 'created_by_user_id'],
+        include: [{
+          model: User,
+          as: 'creator',
+          attributes: ['email', 'is_active'],
+          required: false
+        }]
       });
 
       if (teams.length === 0) {
@@ -32,29 +40,38 @@ async function getCompetitorEmails(announcement) {
       teamIds = teams.map(team => team.team_id);
     }
 
-    // Find all team members and their associated users
+    // Find all team members and their associated users (includes both active and inactive users)
     const teamMembers = await TeamMember.findAll({
       where: { team_id: teamIds },
       attributes: ['user_id'],
       include: [{
         model: User,
         as: 'user',
-        attributes: ['email'],
+        attributes: ['email', 'is_active'],
         required: true
       }]
     });
 
-    // Extract unique emails
-    const emails = [
-      ...new Set(
-        teamMembers
-          .map(tm => (tm.user?.email || '').trim())
-          .filter(Boolean)
-      )
-    ];
+    // Extract unique emails from team members (including inactive users)
+    const emails = new Set(
+      teamMembers
+        .map(tm => (tm.user?.email || '').trim())
+        .filter(Boolean)
+    );
 
-    console.log(`Found ${emails.length} unique emails for announcement ${announcement.announcement_id}`);
-    return emails;
+    // If we fetched teams for "all competitors", also include inactive team creators
+    if (teams.length > 0) {
+      teams.forEach(team => {
+        // Add inactive team creators who may not be team members yet
+        if (team.creator && !team.creator.is_active && team.creator.email) {
+          emails.add((team.creator.email || '').trim());
+        }
+      });
+    }
+
+    const emailArray = Array.from(emails);
+    console.log(`Found ${emailArray.length} unique emails for announcement ${announcement.announcement_id} (including inactive users)`);
+    return emailArray;
   } catch (error) {
     console.error('Error fetching competitor emails:', error);
     throw error;
