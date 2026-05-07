@@ -1,4 +1,4 @@
-const { Team, TeamMember, User, Competition } = require('../models');
+const { Team, TeamMember, User, Competition, TeamInvitation } = require('../models');
 
 /**
  * Get targeted competitor emails for an announcement
@@ -74,8 +74,23 @@ async function getCompetitorEmails(announcement) {
       });
     }
 
+    // Also include users with pending team invitations
+    const pendingInvitations = await TeamInvitation.findAll({
+      where: {
+        team_id: teamIds,
+        status: 'pending'
+      },
+      attributes: ['invited_email']
+    });
+
+    pendingInvitations.forEach(invitation => {
+      if (invitation?.invited_email) {
+        emails.add((invitation.invited_email || '').trim());
+      }
+    });
+
     const emailArray = Array.from(emails);
-    console.log(`Found ${emailArray.length} unique emails for announcement ${announcement.announcement_id} (including inactive users)`);
+    console.log(`Found ${emailArray.length} unique emails for announcement ${announcement.announcement_id} (including inactive users and users with pending invitations)`);
     return emailArray;
   } catch (error) {
     console.error('Error fetching competitor emails:', error);
