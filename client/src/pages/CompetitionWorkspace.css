@@ -1,0 +1,1068 @@
+.CompetitionWorkspace {
+    min-height: 100vh;
+    padding: 120px 0 80px;
+    background: transparent;
+}
+
+.CompetitionWorkspace__container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Header */
+.CompetitionWorkspace__header {
+    margin-bottom: 40px;
+    padding: 30px 40px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .4), rgba(29, 79, 130, .2));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+}
+
+.CompetitionWorkspace__headerContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.CompetitionWorkspace__title {
+    margin: 0;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 700;
+    background: linear-gradient(135deg, #8EC2F0, #03A9F4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.CompetitionWorkspace__meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.CompetitionWorkspace__team,
+.CompetitionWorkspace__deadline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 20px;
+    color: #C5DAE9;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.CompetitionWorkspace__deadline {
+    color: #03A9F4;
+    border-color: rgba(3, 169, 244, .3);
+}
+
+.CompetitionWorkspace__deadlineBox {
+    padding: 16px 20px;
+    background: rgba(3, 169, 244, .1);
+    border-left: 4px solid #03A9F4;
+    border-radius: 10px;
+    color: #03A9F4;
+    font-weight: 600;
+}
+
+.CompetitionWorkspace__meetingDetails {
+    margin-bottom: 30px;
+    padding: 30px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .34), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.CompetitionWorkspace__meetingDetailsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.CompetitionWorkspace__meetingDetailsIntro {
+    margin: 0;
+    color: #C5DAE9;
+    line-height: 1.6;
+}
+
+.CompetitionWorkspace__meetingToggleBtn,
+.CompetitionWorkspace__meetingChooseBtn {
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .2s ease, opacity .2s ease, background .2s ease;
+}
+
+.CompetitionWorkspace__meetingToggleBtn {
+    background: rgba(3, 169, 244, .16);
+    color: #8EC2F0;
+    border: 1px solid rgba(3, 169, 244, .3);
+}
+
+.CompetitionWorkspace__meetingToggleBtn:hover,
+.CompetitionWorkspace__meetingChooseBtn:hover {
+    transform: translateY(-1px);
+}
+
+.CompetitionWorkspace__meetingState {
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .06);
+    color: #C5DAE9;
+    margin-bottom: 16px;
+}
+
+.CompetitionWorkspace__meetingCard {
+    padding: 20px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, .22);
+    border: 1px solid rgba(255, 255, 255, .08);
+    margin-bottom: 18px;
+}
+
+.CompetitionWorkspace__meetingCardTop,
+.CompetitionWorkspace__meetingSlotTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.CompetitionWorkspace__meetingCardTop h3,
+.CompetitionWorkspace__meetingSlotTop h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: #eaf2ff;
+}
+
+.CompetitionWorkspace__meetingBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    color: #cef39f;
+    background: rgba(131, 189, 0, .16);
+    border: 1px solid rgba(131, 189, 0, .35);
+}
+
+.CompetitionWorkspace__meetingBadge--taken {
+    color: #ffcab8;
+    background: rgba(244, 88, 31, .16);
+    border-color: rgba(244, 88, 31, .35);
+}
+
+.CompetitionWorkspace__meetingInfo {
+    display: grid;
+    gap: 10px;
+}
+
+.CompetitionWorkspace__meetingInfo p {
+    margin: 0;
+    color: #C5DAE9;
+    line-height: 1.6;
+}
+
+.CompetitionWorkspace__meetingInfo strong {
+    color: #8EC2F0;
+}
+
+.CompetitionWorkspace__meetingGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+}
+
+.CompetitionWorkspace__meetingSlot {
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__meetingSlot--mine {
+    border-color: rgba(131, 189, 0, .4);
+    box-shadow: inset 0 0 0 1px rgba(131, 189, 0, .16);
+}
+
+.CompetitionWorkspace__meetingSlot--taken {
+    opacity: .7;
+}
+
+.CompetitionWorkspace__meetingSlot p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    color: #C5DAE9;
+    line-height: 1.5;
+}
+
+.CompetitionWorkspace__meetingChooseBtn {
+    width: 100%;
+    margin-top: 10px;
+    background: linear-gradient(135deg, #0077cc, #03a9f4);
+    color: #fff;
+}
+
+.CompetitionWorkspace__meetingChooseBtn:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+/* Grid Layout */
+.CompetitionWorkspace__grid {
+    display: grid;
+    grid-template-columns: 1fr 500px;
+    gap: 30px;
+    align-items: start;
+}
+
+.CompetitionWorkspace__grid--taskQuiz {
+    grid-template-columns: minmax(0, 1.4fr) minmax(440px, 520px);
+    gap: 36px;
+}
+
+/* task_quiz: one step at a time — full-width question, then submission */
+.CompetitionWorkspace__grid--taskQuizSolo {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    align-items: stretch;
+}
+
+.CompetitionWorkspace__taskQuizBriefing {
+    padding: 32px 36px 36px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .35), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    min-height: min(72vh, 800px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingTitle {
+    margin: 0;
+    font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+    font-weight: 700;
+    color: #eaf2ff;
+}
+
+.CompetitionWorkspace__taskQuizBriefingIntro {
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1.55;
+    color: rgba(197, 218, 233, .9);
+    max-width: 52rem;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: min(52vh, 560px);
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-right: -4px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar-thumb {
+    background: rgba(3, 169, 244, .35);
+    border-radius: 999px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingBlock {
+    padding: 20px 22px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizBriefingBlockTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    font-size: 1.1rem;
+    font-weight: 650;
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__taskQuizActions--briefing {
+    margin-top: 8px;
+}
+
+.CompetitionWorkspace__taskQuizActions--wizard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.CompetitionWorkspace__taskQuizWizardSpacer {
+    flex: 1;
+    min-width: 8px;
+}
+
+.CompetitionWorkspace__taskQuizWizardBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizWizardProgress {
+    font-size: .84rem;
+    font-weight: 650;
+    color: rgba(142, 194, 240, .92);
+    letter-spacing: .02em;
+}
+
+.CompetitionWorkspace__taskQuizWizardStepLabel {
+    font-size: .9rem;
+    font-weight: 600;
+    color: rgba(197, 218, 233, .88);
+}
+
+.CompetitionWorkspace__taskQuizSubmitHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.CompetitionWorkspace__taskQuizPostSubmit {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.CompetitionWorkspace__taskQuizPostSubmitHint {
+    margin: 0 0 14px;
+    font-size: .9rem;
+    line-height: 1.5;
+    color: rgba(197, 218, 233, .88);
+}
+
+.CompetitionWorkspace__taskQuizQuestion {
+    padding: 32px 36px 36px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .35), rgba(29, 79, 130, .18));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    min-height: min(78vh, 860px);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.CompetitionWorkspace__taskQuizPager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, .16);
+    background: rgba(0, 0, 0, .22);
+    color: #c5dae9;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn:hover:not(:disabled) {
+    border-color: rgba(3, 169, 244, .45);
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__taskQuizPagerBtn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+.CompetitionWorkspace__taskQuizPagerMeta {
+    font-size: .88rem;
+    font-weight: 650;
+    color: rgba(142, 194, 240, .95);
+    letter-spacing: .02em;
+}
+
+.CompetitionWorkspace__taskQuizHeading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px 16px;
+}
+
+.CompetitionWorkspace__taskQuizTitle {
+    margin: 0;
+    flex: 1 1 240px;
+    font-size: clamp(1.35rem, 2.8vw, 1.85rem);
+    font-weight: 700;
+    color: #eaf2ff;
+    line-height: 1.25;
+}
+
+.CompetitionWorkspace__taskQuizBody {
+    color: rgba(197, 218, 233, .95);
+    font-size: 1.02rem;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    max-width: 920px;
+}
+
+.CompetitionWorkspace__taskQuizAssetWrap {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    margin-top: 4px;
+}
+
+.CompetitionWorkspace__taskQuizAssetCaption {
+    margin: 0 0 12px;
+    font-size: .82rem;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: rgba(142, 194, 240, .85);
+}
+
+.CompetitionWorkspace__taskQuizActions {
+    margin-top: auto;
+    padding-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.CompetitionWorkspace__taskQuizNextBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 28px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0077cc, #03a9f4);
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 650;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(3, 169, 244, .3);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizNextBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(3, 169, 244, .45);
+}
+
+.CompetitionWorkspace__taskQuizNextBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.CompetitionWorkspace__taskQuizBackBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .14);
+    color: #c5dae9;
+    font-size: .92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.CompetitionWorkspace__taskQuizBackBtn:hover {
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(3, 169, 244, .35);
+    color: #8ec2f0;
+}
+
+.CompetitionWorkspace__submission--taskQuizFull {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Tasks Column */
+.CompetitionWorkspace__tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.CompetitionWorkspace__section {
+    padding: 30px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .3), rgba(29, 79, 130, .15));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.CompetitionWorkspace__sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 20px;
+    font-size: 1.4rem;
+    font-weight: 650;
+    color: #8EC2F0;
+}
+
+.CompetitionWorkspace__section--taskQuiz {
+    min-height: min(70vh, 720px);
+    padding-bottom: 36px;
+}
+
+.CompetitionWorkspace__section--taskQuiz .CompetitionWorkspace__taskList {
+    gap: 16px;
+}
+
+.CompetitionWorkspace__description,
+.CompetitionWorkspace__requirements,
+.CompetitionWorkspace__rules {
+    color: #C5DAE9;
+    font-size: 1rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
+
+/* Submission Column */
+.CompetitionWorkspace__submission {
+    position: sticky;
+    top: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.CompetitionWorkspace__currentSubmission,
+.CompetitionWorkspace__submitForm {
+    padding: 30px;
+    background: linear-gradient(145deg, rgba(13, 49, 89, .4), rgba(29, 79, 130, .2));
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.CompetitionWorkspace__submissionTitle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 20px;
+    font-size: 1.3rem;
+    font-weight: 650;
+    color: #8EC2F0;
+}
+
+.CompetitionWorkspace__submissionInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.CompetitionWorkspace__submissionInfo p {
+    margin: 0;
+    color: #C5DAE9;
+    font-size: .95rem;
+    line-height: 1.6;
+}
+
+.CompetitionWorkspace__submissionInfo strong {
+    color: #8EC2F0;
+    display: inline-block;
+    min-width: 100px;
+}
+
+.CompetitionWorkspace__submissionInfo a {
+    color: #03A9F4;
+    text-decoration: none;
+    word-break: break-all;
+    transition: color .3s ease;
+}
+
+.CompetitionWorkspace__submissionInfo a:hover {
+    color: #8EC2F0;
+    text-decoration: underline;
+}
+
+.CompetitionWorkspace__score {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(3, 169, 244, .1);
+    border-left: 4px solid #03A9F4;
+    border-radius: 8px;
+}
+
+.CompetitionWorkspace__score strong {
+    color: #03A9F4;
+    font-size: 1.1rem;
+}
+
+.CompetitionWorkspace__feedback {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.CompetitionWorkspace__feedback p {
+    margin-top: 8px;
+    color: #C5DAE9;
+    font-style: italic;
+}
+
+/* Form */
+.CompetitionWorkspace__alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: .9rem;
+}
+
+.CompetitionWorkspace__alert--error {
+    background: rgba(244, 88, 31, .15);
+    border: 1px solid rgba(244, 88, 31, .3);
+    color: #F4581F;
+}
+
+.CompetitionWorkspace__alert--warning {
+    background: rgba(255, 193, 7, .15);
+    border: 1px solid rgba(255, 193, 7, .3);
+    color: #FFC107;
+}
+
+.CompetitionWorkspace__formGroup {
+    margin-bottom: 24px;
+}
+
+.CompetitionWorkspace__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #8EC2F0;
+}
+
+.CompetitionWorkspace__radioGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.CompetitionWorkspace__radio {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(0, 0, 0, .2);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.CompetitionWorkspace__radio:hover:not(:has(input:disabled)) {
+    background: rgba(0, 0, 0, .3);
+    border-color: rgba(3, 169, 244, .4);
+}
+
+.CompetitionWorkspace__radio input[type="radio"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.CompetitionWorkspace__radio span {
+    color: #C5DAE9;
+    font-size: .95rem;
+}
+
+.CompetitionWorkspace__radio:has(input:checked) {
+    background: rgba(3, 169, 244, .15);
+    border-color: rgba(3, 169, 244, .5);
+}
+
+.CompetitionWorkspace__radio:has(input:checked) span {
+    color: #03A9F4;
+    font-weight: 600;
+}
+
+.CompetitionWorkspace__radio:has(input:disabled) {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* File Upload */
+.CompetitionWorkspace__fileInput {
+    display: none;
+}
+
+.CompetitionWorkspace__fileLabel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    background: rgba(0, 0, 0, .2);
+    border: 2px dashed rgba(255, 255, 255, .2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all .3s ease;
+    text-align: center;
+}
+
+.CompetitionWorkspace__fileLabel:hover {
+    background: rgba(0, 0, 0, .3);
+    border-color: rgba(3, 169, 244, .4);
+}
+
+.CompetitionWorkspace__fileLabel svg {
+    color: #03A9F4;
+}
+
+.CompetitionWorkspace__fileLabel span {
+    color: #C5DAE9;
+    font-size: .9rem;
+}
+
+.CompetitionWorkspace__fileInput:disabled + .CompetitionWorkspace__fileLabel {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Input */
+.CompetitionWorkspace__input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: .95rem;
+    transition: all .3s ease;
+    outline: none;
+}
+
+.CompetitionWorkspace__input:focus {
+    border-color: #03A9F4;
+    box-shadow: 0 0 0 3px rgba(3, 169, 244, .1);
+}
+
+.CompetitionWorkspace__input:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* Quiz workspace (link to /quizpage) */
+.CompetitionWorkspace__quizIntro {
+    margin: 0 0 20px 0;
+    font-size: .95rem;
+    line-height: 1.55;
+    color: rgba(197, 218, 233, .92);
+}
+
+.CompetitionWorkspace__quizActions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.CompetitionWorkspace__submitBtn--quizStart {
+    width: 100%;
+}
+
+.CompetitionWorkspace__quizBtnSecondary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    color: #C5DAE9;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+
+.CompetitionWorkspace__quizBtnSecondary:hover {
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(3, 169, 244, .35);
+}
+
+/* Submit Button */
+.CompetitionWorkspace__submitBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: all .3s ease;
+    box-shadow: 0 4px 20px rgba(3, 169, 244, .3);
+}
+
+.CompetitionWorkspace__submitBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(3, 169, 244, .5);
+}
+
+.CompetitionWorkspace__submitBtn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Error State */
+.CompetitionWorkspace__error {
+    text-align: center;
+    padding: 80px 20px;
+    color: #C5DAE9;
+}
+
+.CompetitionWorkspace__error svg {
+    color: #F4581F;
+    margin-bottom: 24px;
+}
+
+.CompetitionWorkspace__error h2 {
+    margin: 0 0 16px;
+    font-size: 2rem;
+    font-weight: 650;
+    color: #fff;
+}
+
+.CompetitionWorkspace__error p {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.CompetitionWorkspace__taskList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.CompetitionWorkspace__taskList li {
+    margin: 0;
+}
+
+.CompetitionWorkspace__taskBtn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.2);
+    color: #eaf2ff;
+    cursor: pointer;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.CompetitionWorkspace__taskBtn:hover {
+    border-color: rgba(3, 169, 244, 0.45);
+}
+
+.CompetitionWorkspace__taskBtn--active {
+    border-color: rgba(3, 169, 244, 0.75);
+    background: rgba(3, 169, 244, 0.12);
+}
+
+.CompetitionWorkspace__taskBadge {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(46, 204, 113, 0.2);
+    color: #b8f5c8;
+}
+
+.CompetitionWorkspace__taskBadge--pending {
+    background: rgba(255, 193, 7, 0.15);
+    color: #ffe7a3;
+}
+
+.CompetitionWorkspace__taskDesc {
+    margin-top: 8px;
+    padding-left: 2px;
+    font-size: 0.92rem;
+    color: rgba(234, 242, 255, 0.85);
+    white-space: pre-wrap;
+}
+
+.CompetitionWorkspace__taskRef {
+    margin-top: 10px;
+}
+
+.CompetitionWorkspace__taskRefBox {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(3, 169, 244, 0.25);
+    background: rgba(3, 169, 244, 0.06);
+}
+
+.CompetitionWorkspace__taskRefCaption {
+    margin: 0 0 12px;
+    font-size: 0.88rem;
+    color: rgba(197, 218, 233, 0.95);
+    line-height: 1.45;
+}
+
+.CompetitionWorkspace__taskRefBox--media {
+    padding: 18px 18px 20px;
+}
+
+.CompetitionWorkspace__taskRefNote {
+    margin-top: 8px;
+    margin-bottom: 0;
+    font-size: 0.82rem;
+    color: rgba(197, 218, 233, 0.75);
+    line-height: 1.4;
+}
+
+.CompetitionWorkspace__taskRefNote code {
+    font-size: 0.9em;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .CompetitionWorkspace__grid,
+    .CompetitionWorkspace__grid--taskQuiz {
+        grid-template-columns: 1fr;
+    }
+
+    .CompetitionWorkspace__submission {
+        position: static;
+    }
+}
+
+@media (max-width: 768px) {
+    .CompetitionWorkspace {
+        padding: 100px 0 60px;
+    }
+
+    .CompetitionWorkspace__container {
+        padding: 0 16px;
+    }
+
+    .CompetitionWorkspace__header {
+        padding: 24px 20px;
+    }
+
+    .CompetitionWorkspace__headerContent {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .CompetitionWorkspace__section,
+    .CompetitionWorkspace__currentSubmission,
+    .CompetitionWorkspace__submitForm {
+        padding: 24px 20px;
+    }
+
+    .CompetitionWorkspace__taskQuizBriefing,
+    .CompetitionWorkspace__taskQuizQuestion {
+        padding: 24px 20px 28px;
+        min-height: unset;
+    }
+
+    .CompetitionWorkspace__taskQuizBriefingScroll {
+        max-height: min(48vh, 420px);
+    }
+
+    .CompetitionWorkspace__taskQuizNextBtn {
+        width: 100%;
+    }
+
+    .CompetitionWorkspace__taskQuizActions {
+        justify-content: stretch;
+    }
+
+    .CompetitionWorkspace__submissionInfo strong {
+        min-width: auto;
+        display: block;
+        margin-bottom: 4px;
+    }
+}

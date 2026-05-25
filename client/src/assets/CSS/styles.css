@@ -75,12 +75,23 @@ body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,A
 .card-title{margin:2px 0 6px 0;text-align:center;font-size:30px;font-weight:800;letter-spacing:.3px}
 .card-sub{margin:0 0 16px 0;text-align:center;color:#9cbce8}
 .step h2{margin:0 0 12px 0;color:#fff}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .grid .col-span-2{grid-column:span 2}
-label{display:flex;flex-direction:column;gap:8px;color:#cde3ff}
+label{display:flex;flex-direction:column;gap:8px;color:#cde3ff;position:relative;isolation:isolate}
 /* increase form control font-size to >=18px to avoid iOS input auto-zoom on focus */
 .grid input,.grid select,.grid textarea{font-size:18px}
-input,select,textarea{color:#eaf2ff;caret-color:#eaf2ff}
+input, select, textarea {
+    color: #000000;
+    caret-color: #000000;
+}
+option {
+    background-color: #091a2c;
+    color: #eaf2ff;
+}
+input.pill, select.pill, textarea.pill {
+    color: #eaf2ff;
+    caret-color: #eaf2ff;
+}
 .pill{padding:16px 16px;min-height:48px;font-size:18px}
 .grid input,.grid select,.grid textarea{width:100%}
 
@@ -88,8 +99,8 @@ input,select,textarea{color:#eaf2ff;caret-color:#eaf2ff}
 .prefix-wrap{position:relative;display:flex;align-items:center}
 .prefix{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;color:#cfe4ff;padding:6px 8px;border-radius:8px;pointer-events:none}
 .phone-input{padding-left:56px}
-.pill{background:rgba(9,20,36,.9);border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.35)}
-.pill:focus{box-shadow:0 0 0 4px rgba(10,120,200,0.18), 0 0 0 1px rgba(0,168,255,.8) inset;border-color:rgba(0,168,255,.8)}
+.pill{background:rgba(9,20,36,.9);border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.35);position:relative;z-index:1}
+.pill:focus{box-shadow:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.35);border-color:rgba(0,168,255,.8);z-index:2;outline:none}
 .btn:focus{outline:none;box-shadow:0 0 0 4px rgba(10,120,200,0.18)}
 ::placeholder{color:#8aa3c6}
 input:hover,select:hover,textarea:hover{border-color:var(--blue-400)}
@@ -157,6 +168,11 @@ select.pill{background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://ww
 
 /* make 1-column layout earlier for tablets/large phones */
 @media (max-width:1024px){.grid{grid-template-columns:1fr}.stepper{max-width:640px}}
+/* Phone number on separate row for mobile */
+@media (max-width:768px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid .phone-full-width{grid-column:1/-1}
+}
 @media (max-width:900px){.stepper{max-width:640px}}
 @media (max-width:520px){
   .container{padding:20px 12px}
@@ -179,4 +195,44 @@ select.pill{background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://ww
 @media (max-width:720px){
   .card-logos img{width:48px;height:48px;padding:6px}
 }
+
+/* ========== Attendance Request Form Styles ========== */
+.attendance-form{display:flex;flex-direction:column;gap:20px}
+
+/* Floating Placeholder Effect */
+.floating-input{position:relative}
+.floating-input input::placeholder{transition:all .3s cubic-bezier(.4,0,.2,1);transform-origin:left center}
+.floating-input input:focus::placeholder{opacity:0;transform:translateY(-20px) translateX(-10px) scale(.75)}
+.floating-input input:focus::after,
+.floating-input input:not(:placeholder-shown)::after{content:attr(placeholder);position:absolute;left:14px;top:-8px;font-size:11px;color:rgba(3,169,244,.95);background:rgba(9,20,36,.95);padding:0 6px;font-weight:700;letter-spacing:.4px;z-index:5;pointer-events:none}
+.floating-input .phone-input:focus::placeholder{opacity:0;transform:translateY(-20px) translateX(10px) scale(.75)}
+.attendance-toggle{margin:16px 0;padding:18px 20px;background:rgba(14,39,68,.5);border:2px solid rgba(74,166,255,.15);border-radius:16px;transition:all .3s cubic-bezier(.4,0,.2,1);position:relative}
+.attendance-toggle:hover{border-color:rgba(74,166,255,.3);background:rgba(14,39,68,.65)}
+.checkbox-label{display:flex;align-items:center;gap:16px;cursor:pointer;user-select:none}
+.checkbox-label span{color:#cfe4ff;font-size:16px;font-weight:600;transition:all .3s ease;letter-spacing:.2px}
+.attendance-checkbox{position:relative;width:24px;height:24px;cursor:pointer;appearance:none;-webkit-appearance:none;background:rgba(9,20,36,.95);border:3px solid rgba(138,180,248,.3);border-radius:8px;transition:all .25s cubic-bezier(.4,0,.2,1);flex-shrink:0}
+.attendance-checkbox::after{content:"";position:absolute;left:50%;top:50%;width:10px;height:6px;border-left:3px solid #fff;border-bottom:3px solid #fff;transform:translate(-50%,-60%) rotate(-45deg) scale(0);opacity:0;transition:all .2s cubic-bezier(.68,-.55,.27,1.55)}
+.attendance-checkbox:hover{border-color:rgba(74,166,255,.6);transform:scale(1.08)}
+.attendance-checkbox:checked{background:linear-gradient(135deg,#0d7bd8,#03A9F4);border-color:rgba(3,169,244,.9);box-shadow:0 0 0 4px rgba(3,169,244,.2),0 4px 12px rgba(3,169,244,.3);transform:scale(1)}
+.attendance-checkbox:checked::after{transform:translate(-50%,-60%) rotate(-45deg) scale(1);opacity:1}
+.attendance-checkbox:checked ~ span{color:#fff}
+.attendance-fields{overflow:hidden;padding-top:8px;will-change:opacity,transform}
+.error-border{border-color:rgba(255,91,31,.6) !important}
+.loading-inline{display:inline-flex;align-items:center;gap:10px}
+.dots-loader{display:inline-flex;gap:6px;align-items:center}
+.dots-loader span{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,#0077CC,#03A9F4);opacity:.85;transform:scale(.8);animation:pulse-dots 1.2s ease-in-out infinite}
+.dots-loader span:nth-child(2){animation-delay:.15s}
+.dots-loader span:nth-child(3){animation-delay:.3s}
+@keyframes pulse-dots{0%{transform:scale(.7);opacity:.5}30%{transform:scale(1);opacity:1}60%{transform:scale(.8);opacity:.7}100%{transform:scale(.7);opacity:.5}}
+
+/* Success Modal */
+.success-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;background:rgba(3,28,53,.85);backdrop-filter:blur(8px)}
+.success-card{width:min(420px,90vw);background:rgba(9,26,44,.96);border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:32px 28px;text-align:center;color:#eaf2ff;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.success-icon{width:80px;height:80px;margin:0 auto 16px;border-radius:50%;background:linear-gradient(135deg,rgba(132,189,0,.2),rgba(132,189,0,.35));border:2px solid rgba(132,189,0,.6);display:flex;align-items:center;justify-content:center;font-size:48px;color:#84bd00;animation:success-pop .4s cubic-bezier(.2,.9,.3,1)}
+.success-card h2{margin:8px 0 6px;font-size:1.6rem;background:linear-gradient(90deg,#0077CC,#03A9F4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.success-card p{margin:0 0 18px;color:rgba(255,255,255,.8);font-size:15px}
+.success-loader{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+.success-loader .bar{position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,rgba(0,119,204,.3),rgba(3,169,244,.95),rgba(0,119,204,.3));animation:slide-bar 1.8s ease-in-out infinite}
+@keyframes success-pop{0%{transform:scale(.5) rotate(-12deg);opacity:0}60%{transform:scale(1.08) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:1}}
+@keyframes slide-bar{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 

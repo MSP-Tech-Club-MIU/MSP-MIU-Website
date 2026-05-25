@@ -1,16 +1,19 @@
 import React, { useEffect, useState, useCallback, useRef, memo } from "react";
+import { useNavigate } from "react-router-dom";
 import ApiService from "../services/api";
 import { getDepartmentNameById } from "../data/departments";
+import PageLoader from "../components/PageLoader";
+import BackButton from "../components/BackButton";
 
 // Import components
 import CommentModal from "../components/CommentModal";
-import PasswordModal from "../components/PasswordModal";
 import TextModal from "../components/TextModal";
 import ChartsSection from "../components/ChartsSection";
 import FiltersSection from "../components/FiltersSection";
 import ApplicationsTable from "../components/ApplicationsTable";
 
 const FormAdmin = memo(() => {
+  const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isFiltering, setIsFiltering] = useState(false);
@@ -19,9 +22,14 @@ const FormAdmin = memo(() => {
   const [hasSearched, setHasSearched] = useState(false);
   const [expandedText, setExpandedText] = useState({ field: null, appId: null });
   const [commentModal, setCommentModal] = useState({ isOpen: false, application: null, comment: '' });
-  const [passwordModal, setPasswordModal] = useState({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
+  const [statusAlert, setStatusAlert] = useState(null);
   const textareaRef = useRef(null);
-  const passwordRef = useRef(null);
+  
+  // Authentication states
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+  const [userDepartment, setUserDepartment] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -93,64 +101,6 @@ const FormAdmin = memo(() => {
     setCommentModal({ isOpen: false, application: null, comment: '' });
   };
 
-  // Function to open password modal
-  const openPasswordModal = (application, newStatus) => {
-    setPasswordModal({
-      isOpen: true,
-      application: application,
-      newStatus: newStatus,
-      password: '',
-      error: ''
-    });
-  };
-
-  // Function to close password modal
-  const closePasswordModal = () => {
-    setPasswordModal({ isOpen: false, application: null, newStatus: '', password: '', error: '' });
-  };
-
-  // Function to confirm status change with password
-  const confirmStatusChange = async () => {
-    if (!passwordModal.password) {
-      setPasswordModal(prev => ({ ...prev, error: 'Please enter the password' }));
-      return;
-    }
-
-    try {
-      await ApiService.updateApplicationStatus(
-        passwordModal.application.application_id, 
-        passwordModal.newStatus, 
-        passwordModal.password
-      );
-      
-      // Update local state
-      setApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      // Also update filtered applications
-      setFilteredApplications(prev =>
-        prev.map(app => 
-          app.application_id === passwordModal.application.application_id 
-            ? { ...app, status: passwordModal.newStatus }
-            : app
-        )
-      );
-      
-      closePasswordModal();
-    } catch (error) {
-      console.error('Error updating application status:', error);
-      setPasswordModal(prev => ({ 
-        ...prev, 
-        error: error.message || 'Failed to update application status. Please check the password and try again.' 
-      }));
-    }
-  };
-
   // Focus textarea when modal opens
   useEffect(() => {
     if (commentModal.isOpen && textareaRef.current) {
@@ -158,12 +108,11 @@ const FormAdmin = memo(() => {
     }
   }, [commentModal.isOpen]);
 
-  // Focus password input when modal opens
   useEffect(() => {
-    if (passwordModal.isOpen && passwordRef.current) {
-      passwordRef.current.focus();
-    }
-  }, [passwordModal.isOpen]);
+    if (!statusAlert) return;
+    const timeout = setTimeout(() => setStatusAlert(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [statusAlert]);
 
   // Function to get status color
   const getStatusColor = (status) => {
@@ -255,10 +204,69 @@ const FormAdmin = memo(() => {
     }
   }, []);
 
-  // Initial load
+  // Check authentication and role on mount
   useEffect(() => {
-    fetchApplications();
-  }, [fetchApplications]);
+    const checkAuthAndRole = async () => {
+      setIsCheckingAuth(true);
+      
+      // Check if user is authenticated
+      if (!ApiService.isAuthenticated()) {
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        // Redirect to login page
+        navigate('/login', { replace: true });
+        return;
+      }
+      
+      // Fetch user profile to check role and department
+      try {
+        const user = await ApiService.getProfile();
+        setIsAuthenticated(true);
+        setUserRole(user.role);
+        setUserDepartment(user.department_id);
+        
+        // Check if user has board role OR department 5
+        // Validate role exists and is in allowed list
+        const hasBoardRole = user.role === 'board';
+        
+        // Validate department_id - must be a number and equals 5
+        // Type check to prevent manipulation (coerce to number and validate)
+        const userDepartmentId = user.department_id;
+        const departmentId = typeof userDepartmentId === 'number' 
+            ? userDepartmentId 
+            : parseInt(userDepartmentId, 10);
+        const hasDept5Access = !isNaN(departmentId) && departmentId === 5;
+        
+        const hasAccess = hasBoardRole || hasDept5Access;
+        
+        if (!hasAccess) {
+          setIsCheckingAuth(false);
+          // Don't redirect, show unauthorized message
+          return;
+        }
+        
+        // User is authenticated and has access, proceed to load applications
+        setIsCheckingAuth(false);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        setIsAuthenticated(false);
+        setIsCheckingAuth(false);
+        // Redirect to login if token is invalid
+        ApiService.removeAuthToken();
+        navigate('/login', { replace: true });
+      }
+    };
+    
+    checkAuthAndRole();
+  }, [navigate]);
+
+  // Initial load - only fetch applications if authenticated and has access
+  useEffect(() => {
+    const hasAccess = (userRole === 'board') || (userDepartment === 5);
+    if (!isCheckingAuth && isAuthenticated && hasAccess) {
+      fetchApplications();
+    }
+  }, [isCheckingAuth, isAuthenticated, userRole, userDepartment, fetchApplications]);
 
   // Handle filter changes (no immediate API call)
   const handleFilterChange = useCallback((filterKey, value) => {
@@ -311,12 +319,36 @@ const FormAdmin = memo(() => {
   }, [debouncedSearchTerm, filters, fetchApplications]);
 
   const handleStatusChange = async (application_id, newStatus) => {
-    // For all status changes, show password modal
-    const application = applications.find(app => app.application_id === application_id);
-    openPasswordModal(application, newStatus);
+    try {
+      await ApiService.updateApplicationStatus(application_id, newStatus);
+
+      setApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setFilteredApplications(prev =>
+        prev.map(app =>
+          app.application_id === application_id ? { ...app, status: newStatus } : app
+        )
+      );
+
+      setStatusAlert({
+        type: 'success',
+        message: `Application status updated to "${newStatus}".`
+      });
+    } catch (error) {
+      console.error('Error updating application status:', error);
+      setStatusAlert({
+        type: 'error',
+        message: error.message || 'Failed to update application status.'
+      });
+    }
   };
 
-  if (loading) {
+  // Show loading while checking authentication
+  if (isCheckingAuth) {
     return (
       <div style={{ 
         textAlign: "center", 
@@ -336,10 +368,10 @@ const FormAdmin = memo(() => {
           marginBottom: "16px"
         }}></div>
         <h3 style={{ color: "#495057", margin: "0 0 8px 0" }}>
-          Loading Applications
+          Verifying Access...
         </h3>
         <p style={{ color: "#6c757d", margin: "0", fontSize: "14px" }}>
-          Please wait while we fetch the latest data...
+          Please wait while we verify your permissions...
         </p>
         <style>
           {`
@@ -353,8 +385,57 @@ const FormAdmin = memo(() => {
     );
   }
 
+  // Show unauthorized message if user is authenticated but doesn't have access
+  // Validate department_id - must be a number and equals 5
+  const departmentId = typeof userDepartment === 'number' 
+    ? userDepartment 
+    : parseInt(userDepartment, 10);
+  const hasAccess = (userRole === 'board') || (!isNaN(departmentId) && departmentId === 5);
+  if (isAuthenticated && !hasAccess) {
+    return (
+      <div style={{ 
+        textAlign: "center", 
+        padding: "50px",
+        backgroundColor: "#fff3cd",
+        borderRadius: "8px",
+        margin: "20px",
+        border: "2px solid #ffc107"
+      }}>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>
+          ⚠️
+        </div>
+        <h2 style={{ color: "#856404", margin: "0 0 8px 0" }}>
+          Access Denied
+        </h2>
+        <p style={{ color: "#856404", margin: "0 0 24px 0", fontSize: "16px" }}>
+          You don't have permission to access this page. Only board members and authorized departments can view the applications dashboard.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#395a7f",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            fontSize: "14px",
+            cursor: "pointer"
+          }}
+        >
+          Go to Home
+        </button>
+      </div>
+    );
+  }
+
+  // Show loading while fetching applications
+  if (loading) {
+    return <PageLoader message="Loading applications..." />;
+  }
+
   return (
     <div style={{ padding: "20px" }}>
+      <BackButton to="/" label="Back to Home" />
       <TextModal 
         expandedText={expandedText}
         closeExpandedText={closeExpandedText}
@@ -366,13 +447,20 @@ const FormAdmin = memo(() => {
         saveComment={saveComment}
         textareaRef={textareaRef}
       />
-      <PasswordModal 
-        passwordModal={passwordModal}
-        setPasswordModal={setPasswordModal}
-        closePasswordModal={closePasswordModal}
-        confirmApproval={confirmStatusChange}
-        passwordRef={passwordRef}
-      />
+      {statusAlert && (
+        <div
+          style={{
+            marginBottom: "16px",
+            padding: "12px 16px",
+            borderRadius: "6px",
+            border: `1px solid ${statusAlert.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+            backgroundColor: statusAlert.type === 'success' ? '#d4edda' : '#f8d7da',
+            color: statusAlert.type === 'success' ? '#155724' : '#721c24'
+          }}
+        >
+          {statusAlert.message}
+        </div>
+      )}
       <h2>Applications Dashboard</h2>
       
       <ChartsSection 

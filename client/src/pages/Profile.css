@@ -84,62 +84,131 @@
 /* Main Content Layout */
 .profile-content-layout {
   display: grid;
-  grid-template-columns: 400px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 3rem;
   align-items: start;
 }
 
-/* Profile Card Section */
+/* Profile Picture Section */
 .profile-card-section {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   position: sticky;
   top: 2rem;
+  align-items: center;
 }
 
-.profile-card-wrapper-custom {
-  position: relative;
+.profile-picture-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
   width: 100%;
-  max-width: 400px;
-  aspect-ratio: 1024 / 1536;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.upload-overlay {
+.profile-picture-circle {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 5px solid rgba(3, 169, 244, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-picture-circle.editable {
+  cursor: pointer;
+}
+
+.profile-picture-circle.editable:hover {
+  border-color: rgba(3, 169, 244, 0.6);
+  box-shadow: 0 12px 40px rgba(3, 169, 244, 0.4);
+  transform: scale(1.02);
+}
+
+.profile-picture-circle:not(.editable):hover {
+  border-color: rgba(3, 169, 244, 0.4);
+}
+
+.profile-picture-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-picture-overlay {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  padding: 1.5rem;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  z-index: 100;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
 }
 
-.upload-btn {
+.profile-picture-overlay:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.upload-icon {
+  font-size: 2rem;
+  color: white;
+}
+
+.upload-text {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-name {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #eaf2ff;
+  text-align: center;
+}
+
+.profile-role-text {
+  margin: 0;
+  font-size: 1rem;
+  color: #b8c5d6;
+  text-align: center;
+  font-weight: 500;
+}
+
+.file-selected-indicator-profile {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #03A9F4 0%, #0077CC 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(3, 169, 244, 0.3);
+  padding: 0.5rem 1rem;
+  background: rgba(46, 213, 115, 0.15);
+  border: 2px solid rgba(46, 213, 115, 0.3);
+  border-radius: 20px;
+  color: #2ed573;
+  font-size: 0.875rem;
+  font-weight: 500;
+  max-width: 100%;
+  word-break: break-word;
+  text-align: center;
 }
 
-.upload-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(3, 169, 244, 0.5);
+.file-selected-indicator-profile svg {
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .role-badge-container {
@@ -355,6 +424,8 @@ select.detail-input option {
   background: rgba(46, 213, 115, 0.1);
   border: 2px solid rgba(46, 213, 115, 0.3);
   border-radius: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .file-check-icon {
@@ -371,6 +442,19 @@ select.detail-input option {
   padding: 0;
   background: transparent;
   text-align: left;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-selected-info a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
 }
 
 .schedule-display {
@@ -478,23 +562,15 @@ select.detail-input option {
 /* Responsive Design */
 @media (max-width: 1400px) {
   .profile-content-layout {
-    grid-template-columns: 350px 1fr;
+    grid-template-columns: 280px 1fr;
     gap: 2rem;
-  }
-
-  .profile-card-wrapper-custom {
-    max-width: 350px;
   }
 }
 
 @media (max-width: 1200px) {
   .profile-content-layout {
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 260px 1fr;
     gap: 2rem;
-  }
-
-  .profile-card-wrapper-custom {
-    max-width: 300px;
   }
 
   .details-grid {
@@ -517,12 +593,9 @@ select.detail-input option {
     align-items: center;
   }
 
-  .profile-card-wrapper-custom {
-    max-width: 400px;
-  }
-
   .role-badge-container {
     max-width: 400px;
+    width: 100%;
   }
 }
 
@@ -573,6 +646,19 @@ select.detail-input option {
   .detail-value {
     font-size: 1rem;
   }
+
+  .file-selected-info {
+    padding: 0.875rem;
+    gap: 0.875rem;
+  }
+
+  .file-check-icon {
+    font-size: 1.35rem;
+  }
+
+  .file-selected-info .file-name {
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -580,50 +666,106 @@ select.detail-input option {
     padding: 0.75rem;
   }
 
+  .profile-header {
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
   .profile-header h1 {
     font-size: 1.75rem;
+    width: 100%;
   }
 
   .profile-actions {
     flex-direction: column;
+    width: 100%;
   }
 
   .action-btn {
     width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
   }
 
-  .profile-card-wrapper-custom {
-    max-width: 100%;
+  .profile-content-layout {
+    gap: 1.5rem;
   }
 
   .role-badge-container {
     max-width: 100%;
+    width: 100%;
+  }
+  
+  .profile-picture-circle {
+    width: 160px;
+    height: 160px;
+  }
+
+  .profile-name {
+    font-size: 1.5rem;
+  }
+
+  .profile-role-text {
+    font-size: 0.9rem;
   }
 
   .details-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .detail-card {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
     padding: 1rem;
   }
 
   .detail-icon {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    font-size: 1.2rem;
   }
 
   .detail-content {
     width: 100%;
   }
 
+  .detail-label {
+    font-size: 0.8rem;
+  }
+
+  .detail-value {
+    font-size: 0.95rem;
+  }
+
   .upload-schedule-btn {
     font-size: 0.9rem;
     padding: 0.875rem 1.25rem;
+  }
+
+  .file-selected-indicator-profile {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .file-selected-info {
+    padding: 0.75rem;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .file-check-icon {
+    font-size: 1.25rem;
+  }
+
+  .file-selected-info .file-name {
+    font-size: 0.875rem;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    hyphens: auto;
   }
 }
 

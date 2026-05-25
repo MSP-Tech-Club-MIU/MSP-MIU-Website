@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
-const { User } = require('../models');
-const { generateToken: generateJWTToken } = require('../utils/jwt');
+const { User, Member, Board, PasswordToken } = require('../models');
+const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
 
 /**
@@ -471,12 +471,894 @@ const verifyToken = async (req, res) => {
     }
 };
 
+/**
+ * Verify activation token and return email
+ * POST /api/auth/verify-activation-token
+ * This endpoint verifies an activation token and returns the email
+ * Used by the frontend to verify the token and get the email before showing the form
+ */
+const verifyActivationToken = async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token is required'
+            });
+        }
+
+        const tokenResult = verifyJWTToken(token);
+
+        if (!tokenResult.success) {
+            logSecurityEvent('ACTIVATION_TOKEN_VERIFICATION_FAILED', {
+                reason: tokenResult.error,
+                error: tokenResult.error
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: tokenResult.error === 'Token expired' 
+                    ? 'Activation link has expired. Please request a new activation email.'
+                    : 'Invalid activation token.'
+            });
+        }
+
+        const decoded = tokenResult.decoded;
+        
+        // Verify token type and extract email
+        if (decoded.type === 'board_activation') {
+            // Verify board member exists
+            const boardMember = await Board.findOne({ 
+                where: { 
+                    email: decoded.email,
+                    board_id: decoded.board_id 
+                } 
+            });
+            
+            if (!boardMember) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Board member not found for this token.'
+                });
+            }
+
+            // Check if already activated
+            const existingUser = await User.findOne({ where: { email: decoded.email } });
+            if (existingUser && existingUser.password_hash) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Account already activated. Please use the login page.'
+                });
+            }
+
+            res.json({
+                success: true,
+                email: decoded.email,
+                type: 'board',
+                board_id: decoded.board_id
+            });
+
+        } else if (decoded.type === 'member_activation' || decoded.type === 'activation') {
+            // Verify member exists
+            const member = await Member.findOne({ where: { email: decoded.email } });
+            
+            if (!member) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Member not found for this token.'
+                });
+            }
+
+            // Check if already activated
+            const existingUser = await User.findOne({ where: { email: decoded.email } });
+            if (existingUser && existingUser.password_hash) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Account already activated. Please use the login page.'
+                });
+            }
+
+            res.json({
+                success: true,
+                email: decoded.email,
+                type: 'member'
+            });
+
+        } else if (decoded.email) {
+            // Legacy token format - just has email
+            res.json({
+                success: true,
+                email: decoded.email,
+                type: 'unknown'
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid token format.'
+            });
+        }
+
+    } catch (error) {
+        logError('auth.verifyActivationToken', error, {
+            token_provided: !!req.body?.token
+        }, req);
+        
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+};
+
+/**
+ * Activate account - Set password for member/user by token or email
+ * POST /api/auth/activate
+ * This endpoint is used when a member/board member receives an activation email
+ * and needs to set their password to activate their account
+ * 
+ * Accepts either:
+ * - token: JWT token containing email and type (preferred, more secure)
+ * - email: email address (legacy support, less secure)
+ */
+const activateAccount = async (req, res) => {
+    try {
+        const { token, email, password } = req.body;
+
+        // Validation - require password and either token or email
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password is required'
+            });
+        }
+
+        if (!token && !email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Token or email is required'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password must be at least 6 characters long'
+            });
+        }
+
+        let activationEmail = email;
+        let isBoardMember = false;
+        let boardMember = null;
+        let member = null;
+
+        // If token is provided, verify it and extract email
+        if (token) {
+            const { verifyToken } = require('../utils/jwt');
+            const tokenResult = verifyToken(token);
+            
+            if (!tokenResult.success) {
+                logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                    reason: 'Invalid or expired token',
+                    error: tokenResult.error
+                }, req);
+                
+                return res.status(400).json({
+                    success: false,
+                    error: tokenResult.error === 'Token expired' 
+                        ? 'Activation link has expired. Please request a new activation email.'
+                        : 'Invalid activation token. Please use the link from your email.'
+                });
+            }
+
+            const decoded = tokenResult.decoded;
+            
+            // Verify token type
+            if (decoded.type === 'board_activation') {
+                isBoardMember = true;
+                activationEmail = decoded.email;
+                
+                // Verify board member exists
+                boardMember = await Board.findOne({ 
+                    where: { 
+                        email: activationEmail,
+                        board_id: decoded.board_id 
+                    } 
+                });
+                
+                if (!boardMember) {
+                    logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                        reason: 'Board member not found for token',
+                        email: activationEmail,
+                        board_id: decoded.board_id
+                    }, req);
+                    
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Invalid activation token. Board member not found.'
+                    });
+                }
+            } else if (decoded.type === 'member_activation' || decoded.type === 'activation') {
+                activationEmail = decoded.email;
+                // Find member by email
+                member = await Member.findOne({ where: { email: activationEmail } });
+                
+                if (!member) {
+                    logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                        reason: 'Member not found for token',
+                        email: activationEmail
+                    }, req);
+                    
+                    return res.status(404).json({
+                        success: false,
+                        error: 'Invalid activation token. Member not found.'
+                    });
+                }
+            } else if (decoded.email) {
+                // Legacy token format - just has email
+                activationEmail = decoded.email;
+                
+                // Look up member or board member by email
+                member = await Member.findOne({ where: { email: activationEmail } });
+                
+                if (!member) {
+                    // If not a member, check if it's a board member
+                    boardMember = await Board.findOne({ where: { email: activationEmail } });
+                    if (boardMember) {
+                        isBoardMember = true;
+                    }
+                }
+            } else {
+                logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                    reason: 'Invalid token payload',
+                    token_type: decoded.type
+                }, req);
+                
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid activation token format.'
+                });
+            }
+        } else {
+            // Legacy support: email provided directly (less secure)
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid email format'
+                });
+            }
+
+            activationEmail = email;
+
+            // Find member or board member by email
+            // First check if it's a member
+            member = await Member.findOne({ where: { email: activationEmail } });
+
+            // If not a member, check if it's a board member
+            if (!member) {
+                // Find board member by email directly from board table
+                boardMember = await Board.findOne({ where: { email: activationEmail } });
+                if (boardMember) {
+                    isBoardMember = true;
+                }
+            }
+        }
+
+        if (!member && !boardMember) {
+            logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                reason: 'Member or board member not found',
+                email: activationEmail
+            }, req);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'No account found. Please contact the administrator.'
+            });
+        }
+
+        // Check if user already exists
+        let user = null;
+        let role = 'member';
+        let recordId = null;
+        let recordType = 'member';
+        
+        if (isBoardMember && boardMember) {
+            role = 'board';
+            recordId = boardMember.board_id;
+            recordType = 'board';
+            
+            if (boardMember.user_id) {
+                user = await User.findByPk(boardMember.user_id);
+            } else {
+                user = await User.findOne({ where: { email: activationEmail } });
+            }
+        } else if (member) {
+            role = 'member';
+            recordId = member.member_id;
+            recordType = 'member';
+            
+            if (member.user_id) {
+                user = await User.findByPk(member.user_id);
+            } else {
+                user = await User.findOne({ where: { email: activationEmail } });
+            }
+        }
+
+        // Hash password
+        const saltRounds = 10;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+
+        if (user) {
+            // User exists - update password and activate
+            if (user.password_hash) {
+                // User already has a password set
+                logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
+                    reason: 'Password already set',
+                    user_id: user.user_id,
+                    email: activationEmail
+                }, req);
+                
+                return res.status(400).json({
+                    success: false,
+                    error: 'Account already activated. Please use the login page.'
+                });
+            }
+
+            // Update user: set password, role, and activate
+            // If it's a board member, ensure role is set to 'board'
+            const updateData = {
+                password_hash,
+                is_active: true
+            };
+            
+            // Always set role to 'board' if it's a board member
+            if (isBoardMember) {
+                updateData.role = 'board';
+            } else {
+                updateData.role = role;
+            }
+            
+            await user.update(updateData);
+
+            // Link record to user if not already linked
+            if (isBoardMember && boardMember && !boardMember.user_id) {
+                await boardMember.update({ user_id: user.user_id });
+            } else if (member && !member.user_id) {
+                await member.update({ user_id: user.user_id });
+            }
+
+            // Refresh user to get updated role
+            await user.reload();
+
+            // Log activation
+            logAuditEvent('ACCOUNT_ACTIVATED', {
+                user_id: user.user_id,
+                email: activationEmail,
+                role: user.role,
+                record_id: recordId,
+                record_type: recordType
+            }, req);
+
+            res.json({
+                success: true,
+                message: 'Account activated successfully',
+                user: {
+                    user_id: user.user_id,
+                    email: user.email,
+                    university_id: user.university_id,
+                    role: user.role,
+                    is_active: true
+                }
+            });
+
+        } else {
+            // User doesn't exist - create new user
+            if (isBoardMember && boardMember) {
+                // Create user for board member with role 'board'
+                // Get university_id directly from board table (now stored in board table)
+                // Fallback to Application table if not in board table (for backwards compatibility)
+                let universityId = boardMember.university_id || null;
+                
+                // If university_id not in board table, try to get it from Application table
+                if (!universityId) {
+                    try {
+                        const { Application } = require('../models');
+                        const application = await Application.findOne({ 
+                            where: { email: activationEmail },
+                            order: [['created_at', 'DESC']]
+                        });
+                        if (application && application.university_id) {
+                            universityId = application.university_id;
+                        }
+                    } catch (appError) {
+                        // If Application model doesn't exist or query fails, just continue with null university_id
+                        console.warn('Could not fetch university_id from Application:', appError.message);
+                    }
+                }
+                
+                user = await User.create({
+                    email: boardMember.email,
+                    university_id: universityId,
+                    full_name: boardMember.full_name,
+                    password_hash,
+                    department_id: boardMember.department_id,
+                    role: 'board', // Ensure role is set to 'board'
+                    is_active: true
+                });
+
+                // Link board member to user
+                await boardMember.update({ user_id: user.user_id });
+
+                // Log activation
+                logAuditEvent('ACCOUNT_ACTIVATED', {
+                    user_id: user.user_id,
+                    email: activationEmail,
+                    role: 'board',
+                    board_id: boardMember.board_id
+                }, req);
+
+            } else if (member) {
+                // Create user for member
+                user = await User.create({
+                    email: member.email,
+                    university_id: member.university_id,
+                    full_name: member.full_name,
+                    password_hash,
+                    department_id: member.department_id,
+                    role: 'member',
+                    is_active: true
+                });
+
+                // Link member to user
+                await member.update({ user_id: user.user_id });
+
+                // Log activation
+                logAuditEvent('ACCOUNT_ACTIVATED', {
+                    user_id: user.user_id,
+                    email: activationEmail,
+                    role: 'member',
+                    member_id: member.member_id
+                }, req);
+            }
+
+            res.status(201).json({
+                success: true,
+                message: 'Account activated successfully',
+                user: {
+                    user_id: user.user_id,
+                    email: user.email,
+                    university_id: user.university_id,
+                    role: user.role,
+                    is_active: true
+                }
+            });
+        }
+
+    } catch (error) {
+        // Determine error type for better error messages
+        let errorMessage = 'Account activation failed';
+        let statusCode = 500;
+
+        if (error.name === 'SequelizeUniqueConstraintError') {
+            errorMessage = 'Account with this email already exists';
+            statusCode = 409;
+        } else if (error.name === 'SequelizeValidationError') {
+            errorMessage = 'Invalid input data';
+            statusCode = 400;
+        } else if (error.message) {
+            // Include the actual error message for debugging
+            errorMessage = error.message;
+        }
+
+        // Log detailed error information
+        logError('auth.activateAccount', error, {
+            email: req.body?.email || (req.body?.token ? 'token_provided' : 'unknown'),
+            error_name: error.name,
+            error_message: error.message,
+            stack: error.stack
+        }, req);
+        
+        // In development, include more details
+        const isDevelopment = process.env.NODE_ENV !== 'production';
+        
+        res.status(statusCode).json({
+            success: false,
+            error: errorMessage,
+            ...(isDevelopment && { details: error.message, stack: error.stack })
+        });
+    }
+};
+
+/**
+ * Request password reset
+ * POST /api/auth/forgot-password
+ * Accepts university_id or email, sends reset link via email
+ */
+const forgotPassword = async (req, res) => {
+    try {
+        const { university_id, email } = req.body;
+
+        // Validation - require either university_id or email
+        if (!university_id && !email) {
+            return res.status(400).json({
+                success: false,
+                error: 'University ID or email is required'
+            });
+        }
+
+        let user = null;
+
+        // Find user by university_id or email
+        if (university_id) {
+            // Validate university ID format (xxxx/xxxxx)
+            const universityIdRegex = /^\d{4}\/\d{5}$/;
+            if (!universityIdRegex.test(university_id)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid university ID format. Expected format: xxxx/xxxxx (e.g. 20xx/xxxxx)'
+                });
+            }
+            user = await User.findOne({ where: { university_id } });
+        } else {
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid email format'
+                });
+            }
+            user = await User.findOne({ where: { email } });
+        }
+
+        // Always return success message (security best practice - don't reveal if user exists)
+        // But only send email if user exists
+        if (user && user.email) {
+            // Generate JWT token for password reset (expires in 1 hour)
+            const resetTokenResult = generateJWTToken({
+                user_id: user.user_id,
+                email: user.email,
+                type: 'password_reset'
+            }, '1h'); // Override default expiration to 1 hour
+
+            if (!resetTokenResult.success) {
+                logError('auth.forgotPassword', new Error(resetTokenResult.error), {
+                    user_id: user.user_id,
+                    university_id: user.university_id || 'unknown',
+                    email: user.email
+                }, req);
+                
+                // Still return success to user (security best practice)
+                return res.json({
+                    success: true,
+                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
+                });
+            }
+
+            // Store token in database for tracking (optional but recommended)
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+
+            try {
+                // Invalidate any existing unused reset tokens for this user
+                await PasswordToken.update(
+                    { used: true },
+                    { where: { user_id: user.user_id, used: false } }
+                );
+
+                // Hash the token before storing (security best practice)
+                const saltRounds = 10;
+                const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
+
+                // Create new password reset token record with hashed token
+                await PasswordToken.create({
+                    user_id: user.user_id,
+                    token: tokenHash,
+                    expires_at: expiresAt,
+                    used: false
+                });
+            } catch (tokenError) {
+                // Log but don't fail - token generation succeeded
+                logError('auth.forgotPassword.tokenStorage', tokenError, {
+                    user_id: user.user_id
+                }, req);
+            }
+
+            // Generate reset link
+            const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
+
+            // Send password reset email (using dynamic import for ES module)
+            try {
+                const { sendEmail } = await import('../utils/email.mjs');
+                await sendEmail({
+                    to: user.email,
+                    subject: 'Password Reset Request - MSP MIU',
+                    html: `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset="utf-8">
+                            <style>
+                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                                .header { background-color: #4a90e2; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+                                .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+                                .button { display: inline-block; padding: 12px 30px; background-color: #4a90e2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                                .button:hover { background-color: #357abd; }
+                                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+                                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 20px 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                <div class="header">
+                                    <h1>Password Reset Request</h1>
+                                </div>
+                                <div class="content">
+                                    <p>Hello ${user.full_name || 'User'},</p>
+                                    <p>We received a request to reset your password for your MSP MIU account.</p>
+                                    <p>Click the button below to reset your password:</p>
+                                    <p style="text-align: center;">
+                                        <a href="${resetLink}" class="button">Reset Password</a>
+                                    </p>
+                                    <p>Or copy and paste this link into your browser:</p>
+                                    <p style="word-break: break-all; color: #4a90e2;">${resetLink}</p>
+                                    <div class="warning">
+                                        <strong>⚠️ Security Notice:</strong>
+                                        <ul>
+                                            <li>This link will expire in 1 hour</li>
+                                            <li>If you didn't request this reset, please ignore this email</li>
+                                            <li>Never share this link with anyone</li>
+                                        </ul>
+                                    </div>
+                                    <p>If you didn't request a password reset, you can safely ignore this email.</p>
+                                </div>
+                                <div class="footer">
+                                    <p>MSP MIU Website</p>
+                                    <p>This is an automated email, please do not reply.</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `,
+                    text: `
+Password Reset Request - MSP MIU
+
+Hello ${user.full_name || 'User'},
+
+We received a request to reset your password for your MSP MIU account.
+
+Click the following link to reset your password:
+${resetLink}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email.
+
+Security Notice:
+- This link will expire in 1 hour
+- If you didn't request this reset, please ignore this email
+- Never share this link with anyone
+
+MSP MIU Website
+This is an automated email, please do not reply.
+                    `
+                });
+
+                logAuditEvent('PASSWORD_RESET_REQUESTED', {
+                    user_id: user.user_id,
+                    university_id: user.university_id || 'unknown',
+                    email: user.email
+                }, req);
+            } catch (emailError) {
+                logError('auth.forgotPassword.email', emailError, {
+                    user_id: user.user_id,
+                    email: user.email
+                }, req);
+                
+                // Still return success to user (security best practice)
+                return res.json({
+                    success: true,
+                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
+                });
+            }
+        }
+
+        // Always return success (security best practice - don't reveal if user exists)
+        res.json({
+            success: true,
+            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        });
+
+    } catch (error) {
+        logError('auth.forgotPassword', error, {
+            university_id: req.body?.university_id || 'unknown',
+            email: req.body?.email || 'unknown'
+        }, req);
+        
+        // Still return success to user (security best practice)
+        res.json({
+            success: true,
+            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        });
+    }
+};
+
+/**
+ * Reset password using token
+ * POST /api/auth/reset-password
+ * Accepts token and new password
+ */
+const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = req.body;
+
+        // Validation
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                error: 'Reset token is required'
+            });
+        }
+
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                error: 'New password is required'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Verify token
+        const tokenResult = verifyJWTToken(token);
+        
+        if (!tokenResult.success) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Invalid or expired token',
+                error: tokenResult.error
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: tokenResult.error === 'Token expired' 
+                    ? 'Password reset link has expired. Please request a new one.'
+                    : 'Invalid reset token. Please use the link from your email.'
+            });
+        }
+
+        const decoded = tokenResult.decoded;
+        
+        // Verify token type
+        if (decoded.type !== 'password_reset') {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Invalid token type',
+                token_type: decoded.type
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid reset token type'
+            });
+        }
+
+        // Find user
+        const user = await User.findByPk(decoded.user_id);
+        
+        if (!user) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'User not found',
+                user_id: decoded.user_id
+            }, req);
+            
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        // Verify token in database (check if it's been used or expired)
+        // Get all unused tokens for this user and compare hashes
+        const passwordTokens = await PasswordToken.findAll({
+            where: {
+                user_id: user.user_id,
+                used: false
+            },
+            order: [['created_at', 'DESC']],
+            limit: 5 // Mitigate potential DoS by limiting tokens to check
+        });
+
+        // Find the matching token by comparing hashes
+        let passwordToken = null;
+        for (const storedToken of passwordTokens) {
+            const isMatch = await bcrypt.compare(token, storedToken.token);
+            if (isMatch) {
+                passwordToken = storedToken;
+                break;
+            }
+        }
+
+        if (!passwordToken) {
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Token not found or already used',
+                user_id: user.user_id
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid or already used reset token. Please request a new one.'
+            });
+        }
+
+        // Check if token has expired (database check)
+        if (new Date() > new Date(passwordToken.expires_at)) {
+            // Mark as used
+            await passwordToken.update({ used: true });
+            
+            logSecurityEvent('PASSWORD_RESET_FAILED', {
+                reason: 'Token expired (database check)',
+                user_id: user.user_id
+            }, req);
+            
+            return res.status(400).json({
+                success: false,
+                error: 'Password reset link has expired. Please request a new one.'
+            });
+        }
+
+        // Hash new password
+        const saltRounds = 10;
+        const password_hash = await bcrypt.hash(password, saltRounds);
+
+        // Update user password
+        await user.update({ password_hash });
+
+        // Mark token as used
+        await passwordToken.update({ used: true });
+
+        // Log successful password reset
+        logAuditEvent('PASSWORD_RESET_SUCCESS', {
+            user_id: user.user_id,
+            university_id: user.university_id || 'unknown',
+            email: user.email
+        }, req);
+
+        res.json({
+            success: true,
+            message: 'Password has been reset successfully. You can now login with your new password.'
+        });
+
+    } catch (error) {
+        logError('auth.resetPassword', error, {
+            token_provided: !!req.body?.token
+        }, req);
+        
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+};
+
 module.exports = {
     login,
     register,
     logout,
     getMe,
     changePassword,
-    verifyToken
+    verifyToken,
+    verifyActivationToken,
+    activateAccount,
+    forgotPassword,
+    resetPassword
 };
 

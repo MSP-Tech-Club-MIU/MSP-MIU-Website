@@ -1,0 +1,323 @@
+.QuizPage {
+  min-height: 100vh;
+  padding: 24px 16px 48px;
+}
+
+.QuizPage__container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.QuizPage__takeQuiz {
+  margin-top: 4px;
+}
+
+.QuizPage__loginHint {
+  margin: 0;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(234, 242, 255, 0.85);
+  font-size: 0.95rem;
+}
+
+.QuizPage__publishedHint {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(74, 166, 255, 0.1);
+  border: 1px solid rgba(74, 166, 255, 0.22);
+  color: rgba(234, 242, 255, 0.88);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.QuizPage__takeCta {
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  text-align: center;
+}
+
+.QuizPage__takeCtaText {
+  margin: 0 0 16px 0;
+  color: rgba(234, 242, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.QuizPage__takeCtaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 650;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(135deg, #0077cc, #03a9f4);
+  box-shadow: 0 4px 20px rgba(3, 169, 244, 0.35);
+}
+
+.QuizPage__takeCtaBtn:hover {
+  filter: brightness(1.06);
+}
+
+.QuizPage__error {
+  max-width: 700px;
+  margin: 32px auto;
+  background: rgba(26, 34, 53, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 24px;
+  color: #eaf2ff;
+}
+
+.QuizPageHeader,
+.QuizAttemptCard,
+.QuizQuestionsList {
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 18px;
+  color: #eaf2ff;
+}
+
+.QuizPageHeader__titleArea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.QuizPageHeader__title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.QuizPageHeader__description {
+  margin: 10px 0;
+  color: rgba(234, 242, 255, 0.9);
+}
+
+.QuizPageHeader__timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.92rem;
+  color: rgba(234, 242, 255, 0.9);
+}
+
+.QuizStatusBadge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.QuizStatusBadge--draft {
+  background: rgba(117, 117, 117, 0.2);
+  color: #c5c5c5;
+}
+
+.QuizStatusBadge--published {
+  background: rgba(3, 169, 244, 0.2);
+  color: #7dd3fc;
+}
+
+.QuizStatusBadge--active {
+  background: rgba(131, 189, 0, 0.2);
+  color: #b6e14b;
+}
+
+.QuizStatusBadge--closed {
+  background: rgba(244, 88, 31, 0.22);
+  color: #ff9f7b;
+}
+
+.QuizOverviewCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.QuizOverviewCards__card {
+  background: rgba(26, 34, 53, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px;
+  color: #eaf2ff;
+}
+
+.QuizOverviewCards__card h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: rgba(234, 242, 255, 0.82);
+}
+
+.QuizOverviewCards__card p {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.QuizAttemptCard__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.QuizAttemptCard__header h2,
+.QuizQuestionsList h2 {
+  margin: 0;
+}
+
+.QuizAttemptCard__grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.QuizAttemptCard__grid h4 {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: rgba(234, 242, 255, 0.82);
+}
+
+.QuizAttemptCard__grid p,
+.QuizAttemptCard__empty {
+  margin: 0;
+}
+
+.QuizQuestionsList__list {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.QuizQuestionsList__card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(19, 27, 45, 0.68);
+}
+
+.QuizQuestionsList__head {
+  display: flex;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: rgba(234, 242, 255, 0.86);
+}
+
+.QuizQuestionsList__text {
+  margin: 10px 0;
+}
+
+.QuizQuestionsList__solutionHint {
+  margin: 8px 0 0;
+  font-size: 0.88rem;
+  color: rgba(234, 242, 255, 0.78);
+}
+
+.QuizQuestionsList__options {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.QuizQuestionsList__option {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.95rem;
+}
+
+.QuizQuestionsList__option--correct {
+  border-color: rgba(46, 204, 113, 0.65);
+  background: rgba(46, 204, 113, 0.12);
+  color: #d4f5df;
+  font-weight: 600;
+}
+
+.QuizQuestionsList__option--wrongPick {
+  border-color: rgba(231, 76, 60, 0.75);
+  background: rgba(231, 76, 60, 0.12);
+  color: #ffd6d2;
+  font-weight: 600;
+}
+
+.QuizQuestionsList__option--selectedLegacy {
+  color: #b6e14b;
+  font-weight: 600;
+}
+
+.QuizQuestionsList__textBlock {
+  display: grid;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+
+.QuizQuestionsList__yourText--correct {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(46, 204, 113, 0.55);
+  background: rgba(46, 204, 113, 0.1);
+  color: #eafcf0;
+}
+
+.QuizQuestionsList__yourText--wrong {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(231, 76, 60, 0.6);
+  background: rgba(231, 76, 60, 0.1);
+  color: #ffe8e5;
+}
+
+.QuizQuestionsList__expectedText {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(46, 204, 113, 0.55);
+  background: rgba(46, 204, 113, 0.08);
+  color: #d4f5df;
+}
+
+.QuizQuestionsList__textAnswer {
+  font-size: 0.95rem;
+}
+
+.QuizQuestionsList__answerMeta {
+  margin-top: 10px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: rgba(234, 242, 255, 0.9);
+}
+
+@media (max-width: 900px) {
+  .QuizOverviewCards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .QuizOverviewCards,
+  .QuizAttemptCard__grid {
+    grid-template-columns: 1fr;
+  }
+}

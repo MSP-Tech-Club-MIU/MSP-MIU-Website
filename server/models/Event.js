@@ -28,7 +28,39 @@ const Event = sequelize.define('Event', {
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
+  },
+  location: {
+    type: DataTypes.STRING(255),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+  category: {
+    type: DataTypes.ENUM('Session', 'Workshop', 'Entertainment'),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+  upload_file: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  attendees: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  main_image: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  registration_enabled: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
   }
+  
 }, {
   tableName: 'events',
   timestamps: true,

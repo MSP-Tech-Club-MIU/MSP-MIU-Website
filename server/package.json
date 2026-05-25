@@ -10,17 +10,32 @@
     "send-demo-email": "node scripts/sendDemoEmail.mjs",
     "check-email-config": "node scripts/checkEmailConfig.mjs",
     "send-acceptance-emails": "node scripts/sendAcceptanceEmails.mjs",
-    "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs"
+    "test-acceptance-email": "node scripts/testAcceptanceEmail.mjs",
+    "send-activation-emails": "node scripts/sendActivationEmails.mjs",
+    "send-board-activation-emails": "node scripts/sendBoardActivationEmails.mjs",
+    "send-certificate-emails": "node scripts/sendCertificateEmails.mjs",
+    "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs",
+    "test-announcement-email": "node scripts/sendLatestAnnouncementTestEmail.mjs",
+    "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.940.0",
+    "adm-zip": "^0.5.16",
+    "bcrypt": "^6.0.0",
+    "chrome-launcher": "^1.1.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "dotenv": "^16.6.1",
+    "eslint": "^8.57.1",
+    "express": "^4.22.0",
+    "htmlhint": "^1.1.4",
+    "lighthouse": "^12.2.1",
     "mysql2": "^3.11.3",
-    "nodemailer": "^7.0.10",
-    "sequelize": "^6.37.3"
+    "nodemailer": "^8.0.4",
+    "sequelize": "^6.37.3",
+    "stylelint": "^14.16.1",
+    "stylelint-config-standard": "^29.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "nodemon": "^3.1.9"
   }
 }

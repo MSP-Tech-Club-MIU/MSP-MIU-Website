@@ -1,0 +1,366 @@
+/* Full-page competition editor (admin) — complements AdminPanel form tokens */
+
+.CompetitionManagement {
+  --comp-mgmt-max: 1320px;
+  min-height: 100vh;
+  padding: 28px clamp(16px, 3vw, 40px) 64px;
+  background: linear-gradient(135deg, #060e1a 0%, #091a2c 40%, #0c2240 100%);
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #eaf2ff;
+  box-sizing: border-box;
+}
+
+.CompetitionManagement__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+}
+
+.CompetitionManagement__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  color: #c5dae9;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.CompetitionManagement__back:hover {
+  border-color: rgba(3, 169, 244, 0.45);
+  color: #fff;
+}
+
+.CompetitionManagement__titleBlock h1 {
+  margin: 0 0 6px;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  background: linear-gradient(135deg, #8ec2f0, #03a9f4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.CompetitionManagement__titleBlock p {
+  margin: 0;
+  color: rgba(197, 218, 233, 0.85);
+  font-size: 0.95rem;
+}
+
+.CompetitionManagement__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.CompetitionManagement__btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+}
+
+.CompetitionManagement__btn--secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__btn--secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.CompetitionManagement__btn--primary {
+  background: linear-gradient(135deg, #1a6fc4, #03a9f4);
+  color: #fff;
+}
+
+.CompetitionManagement__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.CompetitionManagement__btn--danger {
+  background: rgba(244, 88, 31, 0.15);
+  border-color: rgba(244, 88, 31, 0.45);
+  color: #ffb4a0;
+}
+
+.CompetitionManagement__btn--danger:hover:not(:disabled) {
+  background: rgba(244, 88, 31, 0.25);
+}
+
+.CompetitionManagement__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.CompetitionManagement__alert {
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.CompetitionManagement__alert--success {
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  color: #b8f5c8;
+}
+
+.CompetitionManagement__alert--error {
+  background: rgba(244, 88, 31, 0.12);
+  border: 1px solid rgba(244, 88, 31, 0.35);
+  color: #ffb4a0;
+}
+
+.CompetitionManagement__formCard {
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+  padding: 28px 32px 36px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(13, 49, 89, 0.35), rgba(29, 79, 130, 0.12));
+  backdrop-filter: blur(12px);
+  box-sizing: border-box;
+}
+
+.CompetitionManagement__summary {
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.CompetitionManagement__summaryItem {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.CompetitionManagement__summaryLabel {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(197, 218, 233, 0.65);
+  margin-bottom: 6px;
+}
+
+.CompetitionManagement__summaryValue {
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__tabs {
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.CompetitionManagement__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+  color: #b8d4ea;
+  font-weight: 650;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.CompetitionManagement__tab:hover {
+  border-color: rgba(3, 169, 244, 0.35);
+  color: #fff;
+}
+
+.CompetitionManagement__tab--active {
+  border-color: rgba(3, 169, 244, 0.55);
+  background: rgba(3, 169, 244, 0.12);
+  color: #fff;
+}
+
+.CompetitionManagement__tabIcon {
+  display: inline-flex;
+  opacity: 0.9;
+}
+
+.CompetitionManagement__panelCard {
+  width: 100%;
+  max-width: var(--comp-mgmt-max);
+  margin-inline: auto;
+  padding: 24px 28px 32px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(13, 49, 89, 0.28), rgba(29, 79, 130, 0.1));
+  margin-bottom: 32px;
+  box-sizing: border-box;
+}
+
+.CompetitionManagement__panelTitle {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__panelLead {
+  margin: 0 0 20px;
+  color: rgba(197, 218, 233, 0.88);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.CompetitionManagement__panelCard--teams .AdminPanel__teamsSection {
+  margin-top: 0;
+}
+
+.CompetitionManagement__teamsTableWrap {
+  overflow-x: auto;
+  margin-top: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.CompetitionManagement__btn--link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.CompetitionManagement__judgeAssignment {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.CompetitionManagement__judgeAssignmentHead h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__judgeAssignmentHead p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: rgba(197, 218, 233, 0.84);
+}
+
+.CompetitionManagement__judgeHint {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  color: rgba(197, 218, 233, 0.9);
+}
+
+.CompetitionManagement__judgeList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.CompetitionManagement__judgeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.CompetitionManagement__judgeItem span {
+  display: grid;
+  gap: 2px;
+}
+
+.CompetitionManagement__judgeItem strong {
+  font-size: 0.92rem;
+  color: #eaf2ff;
+}
+
+.CompetitionManagement__judgeItem em {
+  font-size: 0.8rem;
+  color: rgba(197, 218, 233, 0.78);
+  font-style: normal;
+}
+
+.CompetitionManagement__judgeActions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Embedded quiz / task panels: scroll long content inside page */
+.AdminQuizManage--embedded .AdminPanel__quizModalBody,
+.AdminTaskQuizManage--embedded .AdminPanel__quizModalBody {
+  max-height: none;
+  padding-right: 4px;
+}
+
+.AdminTaskQuizManage__timing {
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(3, 169, 244, 0.2);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.AdminTaskQuizManage__timingTitle {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+.AdminTaskQuizManage__timing .AdminQuizManage--embedded {
+  width: 100%;
+}
+
+.AdminQuizManage--embedded .AdminPanel__quizQuestionList,
+.AdminTaskQuizManage--embedded .AdminPanel__quizQuestionList {
+  max-height: min(70vh, 920px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+@media (max-width: 640px) {
+  .CompetitionManagement {
+    padding: 20px 16px 48px;
+  }
+
+  .CompetitionManagement__formCard {
+    padding: 20px 16px 28px;
+  }
+}

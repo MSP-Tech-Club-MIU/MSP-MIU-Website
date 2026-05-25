@@ -1,0 +1,30 @@
+.LiveDemoEmbed {
+  margin-top: 12px;
+}
+
+.LiveDemoEmbed--blocked {
+  margin-top: 10px;
+}
+
+.LiveDemoEmbed__note {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #c5dae9;
+  line-height: 1.4;
+}
+
+.LiveDemoEmbed__wrap {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  min-height: 420px;
+}
+
+.LiveDemoEmbed__frame {
+  display: block;
+  width: 100%;
+  min-height: 420px;
+  border: 0;
+  background: #fff;
+}

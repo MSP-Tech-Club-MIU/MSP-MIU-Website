@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { generateToken: generateJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const { r2, PutObjectCommand } = require('../config/cloud');
 
 /**
  * Register user (only through invitation)
@@ -294,6 +295,13 @@ const logoutUser = async (req, res) => {
 const getProfile = async (req, res) => {
     try {
         // User is attached by authenticateToken middleware
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
         const userId = req.user.user_id;
 
         const user = await User.findByPk(userId, {
@@ -310,7 +318,12 @@ const getProfile = async (req, res) => {
         // Convert to plain object and add profile picture URL
         const userObj = user.toJSON();
         if (userObj.profile_picture) {
-            userObj.profile_picture_url = `/uploads/${userObj.profile_picture}`;
+            // If it's a cloud URL, use it directly, otherwise use local path
+            if (userObj.profile_picture.startsWith('http://') || userObj.profile_picture.startsWith('https://')) {
+                userObj.profile_picture_url = userObj.profile_picture;
+            } else {
+                userObj.profile_picture_url = `${process.env.R2_PUBLIC_DOMAIN || ''}/Profile_Pictures/${userObj.profile_picture}`;
+            }
         }
 
         res.json({
@@ -331,14 +344,36 @@ const getProfile = async (req, res) => {
 };
 
 /**
+ * Upload file to cloud storage
+ */
+const uploadToCloud = async (file, directory, filename) => {
+    try {
+        const key = `${directory}${filename}`;
+        const command = new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET,
+            Key: key,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+        });
+        await r2.send(command);
+        const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
+        return { key, url: publicURL };
+    } catch (error) {
+        console.error('Cloud upload error:', error);
+        throw error;
+    }
+};
+
+/**
  * Update profile (name, picture, schedule)
  * PUT /api/users/profile
  */
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user.user_id;
-        const { full_name, schedule } = req.body;
-        const profile_picture = req.file ? req.file.filename : null;
+        const { full_name } = req.body;
+        const profilePictureFile = req.files?.profile_picture ? req.files.profile_picture[0] : null;
+        const scheduleFile = req.files?.schedule ? req.files.schedule[0] : null;
 
         // Get user
         const user = await User.findByPk(userId);
@@ -353,27 +388,46 @@ const updateProfile = async (req, res) => {
         // Prepare update data
         const updateData = {};
         if (full_name) updateData.full_name = full_name;
-        if (profile_picture) {
-            // Delete old profile picture if exists
-            if (user.profile_picture) {
-                const oldPicturePath = path.join(__dirname, '../uploads', user.profile_picture);
-                if (fs.existsSync(oldPicturePath)) {
-                    fs.unlinkSync(oldPicturePath);
-                }
-            }
-            updateData.profile_picture = profile_picture;
-        }
-        if (schedule) {
-            // Validate schedule is valid JSON
-            try {
-                const scheduleObj = typeof schedule === 'string' ? JSON.parse(schedule) : schedule;
-                updateData.schedule = scheduleObj;
-            } catch (error) {
+
+        // Handle profile picture upload
+        if (profilePictureFile) {
+            // Validate file type (images only)
+            if (!profilePictureFile.mimetype.startsWith('image/')) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Invalid schedule format. Must be valid JSON.'
+                    error: 'Profile picture must be an image file'
                 });
             }
+
+            // Generate filename for profile picture
+            const ext = path.extname(profilePictureFile.originalname);
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 8);
+            const filename = `${user.university_id}_${timestamp}_${randomStr}${ext}`;
+
+            // Upload to cloud storage
+            const uploadResult = await uploadToCloud(profilePictureFile, 'Profile_Pictures/', filename);
+            updateData.profile_picture = uploadResult.url;
+        }
+
+        // Handle schedule upload
+        if (scheduleFile) {
+            // Validate file type (PDF only)
+            if (scheduleFile.mimetype !== 'application/pdf') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Schedule must be a PDF file'
+                });
+            }
+
+            // Generate filename: user.name_user.universityId_StudentSchedule.pdf
+            const sanitizedName = (user.full_name || 'User').replace(/[^a-zA-Z0-9]/g, '_');
+            const sanitizedUniversityId = (user.university_id || '').replace(/[^a-zA-Z0-9]/g, '_');
+            const filename = `${sanitizedName}_${sanitizedUniversityId}_StudentSchedule.pdf`;
+
+            // Upload to cloud storage
+            const uploadResult = await uploadToCloud(scheduleFile, 'Student_Schedules/', filename);
+            updateData.schedule = uploadResult.url;
         }
 
         // Update user
@@ -387,7 +441,12 @@ const updateProfile = async (req, res) => {
         // Convert to plain object and add profile picture URL
         const userObj = updatedUser.toJSON();
         if (userObj.profile_picture) {
-            userObj.profile_picture_url = `/uploads/${userObj.profile_picture}`;
+            // If it's already a full URL, use it, otherwise construct it
+            if (userObj.profile_picture.startsWith('http://') || userObj.profile_picture.startsWith('https://')) {
+                userObj.profile_picture_url = userObj.profile_picture;
+            } else {
+                userObj.profile_picture_url = `${process.env.R2_PUBLIC_DOMAIN || ''}/Profile_Pictures/${userObj.profile_picture}`;
+            }
         }
 
         res.json({

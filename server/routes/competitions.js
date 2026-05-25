@@ -1,0 +1,61 @@
+const express = require('express');
+const router = express.Router();
+const {
+  getAllCompetitions,
+  getCompetitionById,
+  createCompetition,
+  updateCompetition,
+  deleteCompetition,
+  getUserTeamForCompetition,
+  getCompetitionLeaderboard
+} = require('../controllers/competitions');
+const {
+  getCompetitionTimeslotSelectionView,
+  submitCompetitionTimeslotSelection,
+  getCompetitionWorkspaceTimeslotView,
+  submitCompetitionWorkspaceTimeslotSelection
+} = require('../controllers/competitionTimeslots.controller');
+const { getCompetitionTasksPublic } = require('../controllers/competitionTasks.controller');
+const { getCompetitionTeams } = require('../controllers/teams');
+const competitionAnnouncementsRouter = require('./competitionAnnouncements');
+const { authenticateToken, verifyRole } = require('../middlewares/auth');
+
+// Get all competitions (public - shows only open/finished; admin/board sees all)
+router.get('/', getAllCompetitions);
+
+// Leaderboard (public)
+router.get('/:id/leaderboard', getCompetitionLeaderboard);
+
+// Task-quiz task list (public; only returns data for type task_quiz)
+router.get('/:id/tasks', getCompetitionTasksPublic);
+
+// Token-based timeslot selection (project competitions only)
+router.get('/:id/timeslots/selection', getCompetitionTimeslotSelectionView);
+router.post('/:id/timeslots/selection', submitCompetitionTimeslotSelection);
+
+// Authenticated workspace timeslot selection (project competitions only)
+router.get('/:id/team/:teamId/timeslots', authenticateToken, getCompetitionWorkspaceTimeslotView);
+router.post('/:id/team/:teamId/timeslots', authenticateToken, submitCompetitionWorkspaceTimeslotSelection);
+
+// Get competition by ID (public)
+router.get('/:id', getCompetitionById);
+
+// Get teams for a competition (public)
+router.get('/:competitionId/teams', getCompetitionTeams);
+
+// Get user's team for a specific competition (authenticated)
+router.get('/:id/my-team', authenticateToken, getUserTeamForCompetition);
+
+// Create competition (admin and board only)
+router.post('/', authenticateToken, verifyRole('admin', 'board'), createCompetition);
+
+// Update competition (admin and board only)
+router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateCompetition);
+
+// Delete competition (admin only)
+router.delete('/:id', authenticateToken, verifyRole('admin'), deleteCompetition);
+
+// Mount competition announcements routes
+router.use('/:competitionId/announcements', competitionAnnouncementsRouter);
+
+module.exports = router;

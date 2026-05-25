@@ -1,15 +1,29 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// App often runs with cwd = server/; dotenv default misses Back-End/.env. Load known locations first.
+const envPaths = [
+  path.join(__dirname, '../../.env'),
+  path.join(__dirname, '../.env'),
+];
+envPaths.forEach((p, i) => {
+  if (fs.existsSync(p)) {
+    dotenv.config({ path: p, override: i > 0 });
+  }
+});
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: process.env.SMTP_SECURE === 'true', // true for SSL (465), false for TLS (587)
+  host: process.env.MAIL_HOST,
+  port: Number(process.env.MAIL_PORT),
+  secure: Number(process.env.MAIL_PORT) === 465, // true for SSL (465), false for TLS (587)
   auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
+    user: process.env.MAIL_USERNAME,
+    pass: process.env.MAIL_PASSWORD,
   },
   // Allow self-signed certificates (common in development or certain SMTP servers)
   tls: {
@@ -21,19 +35,20 @@ const transporter = nodemailer.createTransport({
  * Send an email using the configured transporter
  * @param {Object} mailOptions - Email options (to, subject, text, html, etc.)
  * @param {string} mailOptions.fromName - Optional sender name (defaults to "MSP MIU Website")
+ * @param {Array} mailOptions.attachments - Optional array of attachment objects
  * @returns {Promise} Promise that resolves with email info
  */
 export async function sendEmail(mailOptions) {
   try {
-    const fromName = mailOptions.fromName || process.env.SMTP_FROM_NAME || 'MSP MIU Website';
-    const fromEmail = process.env.SMTP_USER || mailOptions.from || 'noreply@msp-miu.tech';
+    const fromName = mailOptions.fromName || 'MSP MIU Website';
+    const fromEmail = process.env.MAIL_FROM_ADDRESS || mailOptions.from || 'noreply@msp-miu.tech';
     
-    if (!process.env.SMTP_USER && !mailOptions.from) {
-      console.warn('⚠️  Warning: SMTP_USER not set in .env file. Using default from address.');
+    if (!process.env.MAIL_FROM_ADDRESS && !mailOptions.from) {
+      console.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
     }
     
     // Extract domain from email address for proper Message-ID
-    const emailDomain = fromEmail.split('@')[1] || process.env.SMTP_HOST || 'msp-miu.tech';
+    const emailDomain = fromEmail.split('@')[1] || process.env.MAIL_HOST || 'msp-miu.tech';
     
     // Escape quotes in the name and format from address
     const escapedName = fromName.replace(/"/g, '\\"');
@@ -55,6 +70,7 @@ export async function sendEmail(mailOptions) {
       subject: mailOptions.subject,
       text: mailOptions.text, // Always include plain text version
       html: mailOptions.html,
+      attachments: mailOptions.attachments || [], // Support attachments
       // Advanced headers to improve deliverability and reduce spam
       headers: {
         'Message-ID': messageId,

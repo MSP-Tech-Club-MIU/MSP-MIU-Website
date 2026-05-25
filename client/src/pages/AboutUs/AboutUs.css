@@ -41,6 +41,11 @@
     color: transparent;
 }
 
+.AboutHero__title--animate {
+    animation: cardFadeIn 0.6s ease-out forwards;
+    opacity: 0;
+}
+
 .AboutHero__subtitle {
     max-width: 860px;
     margin: 0 auto;
@@ -48,6 +53,11 @@
     line-height: 1.6;
     color: #C5DAE9;
     opacity: .9;
+}
+
+.AboutHero__subtitle--animate {
+    animation: cardFadeIn 0.6s ease-out forwards;
+    opacity: 0;
 }
 
 /* Mission Vision Values */
@@ -72,6 +82,11 @@
     border-radius: 28px;
     position: relative;
     overflow: hidden;
+}
+
+.TriadCard--animate {
+    animation: cardFadeIn 0.5s ease-out forwards;
+    opacity: 0;
 }
 
 .TriadCard::before {
@@ -151,6 +166,11 @@
     letter-spacing: .5px;
 }
 
+.AboutMeaning__title--animate {
+    animation: cardFadeIn 0.6s ease-out forwards;
+    opacity: 0;
+}
+
 .AboutMeaning__content {
     position: relative;
 }
@@ -193,6 +213,11 @@
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(10px) saturate(150%);
+}
+
+.AboutMeaning__iconList li.li--animate {
+    animation: cardFadeIn 0.5s ease-out forwards;
+    opacity: 0;
 }
 
 .AboutMeaning__iconList li svg {
@@ -423,6 +448,18 @@
     filter: drop-shadow(0 0 6px rgba(0, 160, 255, .6));
 }
 
+/* Animation keyframes */
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Utilities / Responsiveness */
 @media (max-width:1100px) {
     .TimelineItem {
@@ -476,20 +513,109 @@
     }
 }
 
-@media (max-width:560px) {
+@media (max-width: 560px) {
     .About {
-        gap: 100px;
+        gap: 80px;
+    }
+
+    .AboutHero {
+        padding: 100px 0 80px;
+    }
+
+    .AboutHero__inner {
+        padding: 0 20px;
     }
 
     .AboutHero__title {
-        font-size: clamp(2.2rem, 9vw, 3.2rem);
+        font-size: clamp(1.8rem, 8vw, 2.5rem);
+    }
+
+    .AboutHero__subtitle {
+        font-size: 0.95rem;
+    }
+
+    .AboutTriad__grid {
+        padding: 0 20px;
+        gap: 24px;
     }
 
     .TriadCard {
-        padding: 34px 26px 40px;
+        padding: 28px 20px 32px;
+    }
+
+    .TriadCard__icon {
+        font-size: 2rem;
+        margin-bottom: 16px;
+    }
+
+    .TriadCard__title {
+        font-size: 1.3rem;
+        margin-bottom: 12px;
+    }
+
+    .TriadCard__body {
+        font-size: 0.9rem;
+    }
+
+    .AboutMeaning {
+        padding: 0 20px 10px;
+    }
+
+    .AboutMeaning__title {
+        font-size: 1.8rem;
+    }
+
+    .AboutTimeline {
+        padding: 0 20px;
     }
 
     .TimelineItem {
-        padding: 0 0 64px 42px;
+        padding: 0 0 56px 38px;
+    }
+
+    .TimelineItem__dot {
+        left: 10px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .AboutCTA {
+        padding: 0 20px 40px;
+    }
+
+    .AboutCTA__title {
+        font-size: 1.6rem;
+    }
+
+    .AboutCTA__description {
+        font-size: 0.95rem;
+    }
+
+    .AboutCTA__actions {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .Btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 360px) {
+    .AboutHero__title {
+        font-size: 1.6rem;
+    }
+
+    .TriadCard {
+        padding: 24px 16px 28px;
+    }
+
+    .TriadCard__title {
+        font-size: 1.2rem;
+    }
+
+    .AboutMeaning__title {
+        font-size: 1.5rem;
     }
 }

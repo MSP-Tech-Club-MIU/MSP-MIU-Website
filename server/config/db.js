@@ -10,11 +10,15 @@ const sequelize = new Sequelize(
     database: process.env.DB_NAME,
     dialect: "mysql",
     logging: false,
+      logging: console.log,
     dialectOptions: {
       ssl: {
         require: true,
         rejectUnauthorized: false
-      }
+      },
+      // Avoid BIGINT → JS BigInt from mysql2, which breaks JSON.stringify / res.json()
+      supportBigNumbers: true,
+      bigNumberStrings: true
     }
   }
 );

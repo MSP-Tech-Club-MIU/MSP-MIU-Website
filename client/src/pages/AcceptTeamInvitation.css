@@ -1,0 +1,379 @@
+.AcceptInvitation {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #0D3159 0%, #1D4F82 100%);
+}
+
+.AcceptInvitation__container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.AcceptInvitation__card {
+    background: linear-gradient(145deg, rgba(13, 49, 89, 0.95), rgba(29, 79, 130, 0.9));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 40px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Header */
+.AcceptInvitation__header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.AcceptInvitation__icon {
+    color: #03A9F4;
+    margin-bottom: 20px;
+}
+
+.AcceptInvitation__title {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #8EC2F0, #03A9F4);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Invitation Details */
+.AcceptInvitation__details {
+    margin-bottom: 30px;
+}
+
+.AcceptInvitation__infoBox {
+    padding: 24px;
+    background: rgba(3, 169, 244, 0.1);
+    border-left: 4px solid #03A9F4;
+    border-radius: 12px;
+}
+
+.AcceptInvitation__infoBox h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: #8EC2F0;
+    font-weight: 600;
+}
+
+.AcceptInvitation__teamName {
+    margin: 0 0 16px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #03A9F4;
+}
+
+.AcceptInvitation__competitionName,
+.AcceptInvitation__inviter {
+    margin: 8px 0;
+    font-size: 1rem;
+    color: #C5DAE9;
+}
+
+.AcceptInvitation__competitionName strong,
+.AcceptInvitation__inviter strong {
+    color: #8EC2F0;
+}
+
+/* Form Header */
+.AcceptInvitation__formHeader {
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.AcceptInvitation__formHeader h2 {
+    margin: 0 0 8px;
+    font-size: 1.5rem;
+    font-weight: 650;
+    color: #8EC2F0;
+}
+
+.AcceptInvitation__formHeader p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #C5DAE9;
+    opacity: 0.9;
+}
+
+/* User Info */
+.AcceptInvitation__userInfo,
+.AcceptInvitation__existingUser {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+}
+
+.AcceptInvitation__infoRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    color: #C5DAE9;
+    font-size: 0.95rem;
+}
+
+.AcceptInvitation__infoRow svg {
+    color: #03A9F4;
+    flex-shrink: 0;
+}
+
+.AcceptInvitation__infoRow strong {
+    color: #8EC2F0;
+}
+
+/* Form */
+.AcceptInvitation__form {
+    margin-bottom: 24px;
+}
+
+.AcceptInvitation__formGroup {
+    margin-bottom: 20px;
+}
+
+.AcceptInvitation__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #8EC2F0;
+}
+
+.AcceptInvitation__input {
+    width: 100%;
+    padding: 14px 18px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.AcceptInvitation__input:focus {
+    border-color: #03A9F4;
+    box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.1);
+}
+
+.AcceptInvitation__input.error {
+    border-color: #F4581F;
+}
+
+.AcceptInvitation__input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.AcceptInvitation__fieldError {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #F4581F;
+}
+
+.AcceptInvitation__hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #8EC2F0;
+    opacity: 0.8;
+}
+
+/* Alerts */
+.AcceptInvitation__alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.AcceptInvitation__alert--error {
+    background: rgba(244, 88, 31, 0.15);
+    border: 1px solid rgba(244, 88, 31, 0.3);
+    color: #F4581F;
+}
+
+/* Buttons */
+.AcceptInvitation__submitBtn {
+    width: 100%;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 650;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(3, 169, 244, 0.3);
+}
+
+.AcceptInvitation__submitBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(3, 169, 244, 0.5);
+}
+
+.AcceptInvitation__submitBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Footer */
+.AcceptInvitation__footer {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.AcceptInvitation__footer p {
+    margin: 0 0 12px;
+    font-size: 0.9rem;
+    color: #C5DAE9;
+}
+
+.AcceptInvitation__declineBtn {
+    padding: 10px 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    color: #C5DAE9;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.AcceptInvitation__declineBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.AcceptInvitation__declineBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Loader */
+.AcceptInvitation__loader {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.AcceptInvitation__loader .spinner {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto 20px;
+    border: 4px solid rgba(3, 169, 244, 0.2);
+    border-top-color: #03A9F4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.AcceptInvitation__loader p {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #8EC2F0;
+}
+
+/* Error State */
+.AcceptInvitation__error {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.AcceptInvitation__error svg {
+    color: #F4581F;
+    margin-bottom: 24px;
+}
+
+.AcceptInvitation__error h2 {
+    margin: 0 0 16px;
+    font-size: 2rem;
+    font-weight: 650;
+    color: #fff;
+}
+
+.AcceptInvitation__error p {
+    margin: 0 0 30px;
+    font-size: 1.05rem;
+    color: #C5DAE9;
+}
+
+.AcceptInvitation__homeBtn {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #0077CC, #03A9F4);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.AcceptInvitation__homeBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(3, 169, 244, 0.4);
+}
+
+/* Success State */
+.AcceptInvitation__success {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.AcceptInvitation__success svg {
+    color: #4CAF50;
+    margin-bottom: 24px;
+}
+
+.AcceptInvitation__success h2 {
+    margin: 0 0 16px;
+    font-size: 2rem;
+    font-weight: 650;
+    color: #fff;
+}
+
+.AcceptInvitation__success p {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+    color: #C5DAE9;
+}
+
+.AcceptInvitation__redirect {
+    color: #03A9F4 !important;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .AcceptInvitation__card {
+        padding: 30px 20px;
+    }
+
+    .AcceptInvitation__title {
+        font-size: 1.6rem;
+    }
+
+    .AcceptInvitation__teamName {
+        font-size: 1.4rem;
+    }
+}

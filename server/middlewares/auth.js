@@ -164,6 +164,94 @@ const verifyRole = (...roles) => {
     };
 };
 
+const verifyDepartment = (...departments) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+        
+        // Get department_id - must be a valid number, no fallback
+        const userDepartment = req.user.department_id;
+        
+        // Validate department_id exists and is a valid number
+        if (userDepartment === null || userDepartment === undefined) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        
+        // Ensure department_id is a number (prevent type coercion attacks)
+        const departmentId = typeof userDepartment === 'number' ? userDepartment : parseInt(userDepartment, 10);
+        if (isNaN(departmentId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        
+        // Validate department is in allowed list
+        if (!departments.includes(departmentId)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Department not allowed'
+            });
+        }
+        
+        next();
+    };
+};
+
+/**
+ * Verify role OR department middleware
+ * Allows access if user has required role(s) OR department(s)
+ */
+const verifyRoleOrDepartment = (roles, departments) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication required'
+            });
+        }
+
+        // Check if user has required role (validate role exists and is in allowed list)
+        const userRole = req.user.role;
+        const hasRole = roles && userRole && roles.includes(userRole);
+
+        // Check if user has required department - validate properly
+        let hasDepartment = false;
+        if (departments && departments.length > 0) {
+            const userDepartment = req.user.department_id;
+            
+            // Validate department_id exists and is a valid number
+            if (userDepartment !== null && userDepartment !== undefined) {
+                // Ensure department_id is a number (prevent type coercion attacks)
+                const departmentId = typeof userDepartment === 'number' 
+                    ? userDepartment 
+                    : parseInt(userDepartment, 10);
+                
+                // Only check if it's a valid number
+                if (!isNaN(departmentId)) {
+                    hasDepartment = departments.includes(departmentId);
+                }
+            }
+        }
+
+        // Allow if user has required role OR department
+        if (hasRole || hasDepartment) {
+            return next();
+        }
+
+        return res.status(403).json({
+            success: false,
+            error: 'Access denied'
+        });
+    };
+};
 /**
  * Optional authentication middleware
  * Attaches user if token is valid, but doesn't require it
@@ -238,6 +326,8 @@ module.exports = {
     authenticateToken,
     authorize,
     verifyRole,
-    optionalAuth
+    optionalAuth,
+    verifyDepartment,
+    verifyRoleOrDepartment
 };
 
