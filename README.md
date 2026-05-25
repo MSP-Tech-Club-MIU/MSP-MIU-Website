@@ -1,4 +1,4 @@
-# MSP-MIU Website
+# MSP-MIU-Website “Forked from the official MSP-MIU site — includes my core contributions"
 
 Official MSP-MIU Club Website - A full-stack platform for managing members, sessions, events, exercises, and leaderboards with role-based admin dashboards.
 
