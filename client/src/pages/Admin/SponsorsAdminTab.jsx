@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { MdAdd, MdBusiness, MdClose, MdCloudUpload, MdLink, MdOpenInNew } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
+import SeasonBadge from '../../components/SeasonBadge';
+import { useSeason } from '../../context/SeasonContext';
 
 const emptyForm = () => ({
   name: '',
@@ -18,6 +20,7 @@ const emptyForm = () => ({
 const LIST_LIMIT = 20;
 
 export default function SponsorsAdminTab({ onAlert }) {
+  const { seasonFilters, isAll, selectedSeasonId } = useSeason();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
@@ -31,7 +34,7 @@ export default function SponsorsAdminTab({ onAlert }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await ApiService.getSponsors({ page, limit: LIST_LIMIT });
+      const result = await ApiService.getSponsors({ page, limit: LIST_LIMIT, ...seasonFilters });
       setItems(Array.isArray(result?.data) ? result.data : []);
       setPagination(result?.pagination || null);
     } catch (err) {
@@ -40,7 +43,7 @@ export default function SponsorsAdminTab({ onAlert }) {
     } finally {
       setLoading(false);
     }
-  }, [page, onAlert]);
+  }, [page, onAlert, seasonFilters]);
 
   useEffect(() => {
     load();
@@ -122,6 +125,9 @@ export default function SponsorsAdminTab({ onAlert }) {
         sort_order: Number(form.sort_order) || 0,
         social_links: form.social_links?.trim() || null
       };
+      if (!editing && typeof selectedSeasonId === 'number') {
+        payload.season_id = selectedSeasonId;
+      }
       if (editing) {
         await ApiService.updateSponsor(editing.sponsor_id, payload);
         onAlert?.({ type: 'success', message: 'Sponsor updated.' });
@@ -357,7 +363,12 @@ export default function SponsorsAdminTab({ onAlert }) {
                         )}
                       </div>
                       <div className="SponsorsAdmin__rowText">
-                        <span className="SponsorsAdmin__rowName">{row.name}</span>
+                        <span className="SponsorsAdmin__rowName">
+                          {row.name}
+                          {isAll && (row.season || row.season_id) && (
+                            <> {' '}<SeasonBadge season={row.season} /></>
+                          )}
+                        </span>
                         {row.tagline ? (
                           <span className="SponsorsAdmin__rowTagline">{row.tagline}</span>
                         ) : null}

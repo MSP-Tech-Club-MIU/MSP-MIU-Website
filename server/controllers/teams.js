@@ -6,14 +6,9 @@ const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 // Import email templates
 const {
-    generateNewUserInvitationEmailHTML,
-    generateExistingUserInvitationEmailHTML,
-    generateNewUserInvitationEmailText,
-    generateExistingUserInvitationEmailText,
-    getInvitationEmailSubject,
-    generateGuestLeaderTeamCreatedEmailHTML,
-    generateGuestLeaderTeamCreatedEmailText,
-    getGuestLeaderTeamCreatedSubject
+    generateNewUserInvitationEmail,
+    generateExistingUserInvitationEmail,
+    generateGuestLeaderTeamCreatedEmail
 } = require('../scripts/teamInvitationEmail');
 
 // Import sendEmail utility (using dynamic import for ESM)
@@ -367,12 +362,13 @@ const createTeam = async (req, res) => {
                             workspaceUrl,
                             email: leaderEmail
                         };
+                        const guestEmail = await generateGuestLeaderTeamCreatedEmail(leaderCreatedPayload);
                         await mail({
                             to: leaderEmail,
                             fromName: 'MSP MIU - Competitions',
-                            subject: getGuestLeaderTeamCreatedSubject(team_name, competition.title),
-                            text: generateGuestLeaderTeamCreatedEmailText(leaderCreatedPayload),
-                            html: generateGuestLeaderTeamCreatedEmailHTML(leaderCreatedPayload)
+                            subject: guestEmail.subject,
+                            text: guestEmail.text,
+                            html: guestEmail.html
                         });
                         console.log(`✅ Guest leader team-created email sent to ${leaderEmail}`);
                     }
@@ -428,15 +424,14 @@ const createTeam = async (req, res) => {
             try {
                 const mail = await ensureSendEmail();
                 if (mail) {
-                    const htmlContent = generateNewUserInvitationEmailHTML(emailData);
-                    const textContent = generateNewUserInvitationEmailText(emailData);
+                    const inviteEmail = await generateNewUserInvitationEmail(emailData);
 
                     await mail({
                         to: leader_email,
                         fromName: 'MSP MIU - Competitions',
-                        subject: `🎯 Team Leader Invitation: Create Account for "${team_name}" - MSP MIU`,
-                        text: textContent,
-                        html: htmlContent
+                        subject: inviteEmail.subject,
+                        text: inviteEmail.text,
+                        html: inviteEmail.html
                     });
 
                     console.log(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
@@ -533,12 +528,13 @@ const createTeam = async (req, res) => {
                             email: memberEmail
                         };
 
+                            const existingInvite = await generateExistingUserInvitationEmail(existingEmailData);
                             await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
-                                subject: getInvitationEmailSubject(team_name, competition.title, true),
-                                text: generateExistingUserInvitationEmailText(existingEmailData),
-                                html: generateExistingUserInvitationEmailHTML(existingEmailData)
+                                subject: existingInvite.subject,
+                                text: existingInvite.text,
+                                html: existingInvite.html
                             });
                     } catch (emailErr) {
                         console.error('Failed to send member notification email (existing user):', emailErr);
@@ -587,12 +583,13 @@ const createTeam = async (req, res) => {
                             invitedUniversityId: memberUniversityId
                         };
 
+                            const newInvite = await generateNewUserInvitationEmail(newUserEmailData);
                             await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
-                                subject: getInvitationEmailSubject(team_name, competition.title, false),
-                                text: generateNewUserInvitationEmailText(newUserEmailData),
-                                html: generateNewUserInvitationEmailHTML(newUserEmailData)
+                                subject: newInvite.subject,
+                                text: newInvite.text,
+                                html: newInvite.html
                             });
                     } catch (emailErr) {
                         console.error('Failed to send member invitation email (new user):', emailErr);
@@ -1000,15 +997,9 @@ const inviteToTeam = async (req, res) => {
         }
 
         // Generate email HTML and text based on user existence
-        let htmlContent, textContent;
-        
-        if (userExists) {
-            htmlContent = generateExistingUserInvitationEmailHTML(emailData);
-            textContent = generateExistingUserInvitationEmailText(emailData);
-        } else {
-            htmlContent = generateNewUserInvitationEmailHTML(emailData);
-            textContent = generateNewUserInvitationEmailText(emailData);
-        }
+        const invitePayload = userExists
+            ? await generateExistingUserInvitationEmail(emailData)
+            : await generateNewUserInvitationEmail(emailData);
 
         // Send email
         try {
@@ -1017,9 +1008,9 @@ const inviteToTeam = async (req, res) => {
                 await mail({
                     to: email,
                     fromName: 'MSP MIU - Competitions',
-                    subject: getInvitationEmailSubject(details.team_name, details.title, userExists),
-                    text: textContent,
-                    html: htmlContent
+                    subject: invitePayload.subject,
+                    text: invitePayload.text,
+                    html: invitePayload.html
                 });
 
                 console.log(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);

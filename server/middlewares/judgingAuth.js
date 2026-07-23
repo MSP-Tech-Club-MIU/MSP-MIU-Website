@@ -1,5 +1,6 @@
 const { Board } = require('../models');
 const db = require('../config/db');
+const { getDefaultSeasonId } = require('../utils/seasonFilter');
 
 function parseCsv(value) {
   return String(value || '')
@@ -98,9 +99,19 @@ const authorizeJudgingAccess = async (req, res, next) => {
       });
     }
 
+    const where = { user_id: req.user.user_id };
+    try {
+      const defaultSeasonId = await getDefaultSeasonId();
+      if (defaultSeasonId) {
+        where.season_id = defaultSeasonId;
+      }
+    } catch (_) {
+      // ignore — fall back to any board row
+    }
+
     const boardMember = await Board.findOne({
-      where: { user_id: req.user.user_id },
-      attributes: ['board_id', 'position', 'department_id']
+      where,
+      attributes: ['board_id', 'position', 'department_id', 'season_id']
     });
 
     const competitionId = await resolveCompetitionId(req);

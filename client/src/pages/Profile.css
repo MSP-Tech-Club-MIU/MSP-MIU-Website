@@ -45,6 +45,15 @@
   cursor: not-allowed;
 }
 
+.admin-btn {
+  background: linear-gradient(135deg, #0077CC 0%, #005fa3 100%);
+}
+
+.admin-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 12px rgba(0, 119, 204, 0.4);
+  transform: translateY(-2px);
+}
+
 .edit-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
@@ -213,7 +222,10 @@
 
 .role-badge-container {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   gap: 0.75rem;
   width: 100%;
 }

@@ -34,6 +34,7 @@ dotenv.config();
 const CERTIFICATES_DIR = path.join(__dirname, '../../certificates');
 const FEEDBACK_FORM_URL = process.env.FEEDBACK_FORM_URL || 'https://forms.gle/fHvgKDML7DEw5TAM9';
 const GITHUB_COPILOT_LEARNING_PATH_URL = process.env.GITHUB_COPILOT_LEARNING_PATH_URL || 'https://learn.microsoft.com/training/paths/copilot/?wt.mc_id=studentamb_503559';
+const COURSE_NAME = process.env.COURSE_NAME || null;
 const WEBSITE_URL = process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://msp-miu.tech';
 const LOGO_URL = process.env.LOGO_URL || `${WEBSITE_URL}/src/assets/Images/MSP%20-%20Logo.png`;
 
@@ -126,12 +127,12 @@ function findCertificateFileFromEmail(email) {
 /**
  * Generate LinkedIn post text (without @ tag since it doesn't work in URLs)
  */
-function generateLinkedInPostText(studentName) {
-  const postText = `🎉 Excited to share that I've completed the Front-End Course with MSP Tech Club - MIU at Misr International University! 
+function generateLinkedInPostText(studentName, courseName = COURSE_NAME) {
+  const postText = `🎉 Excited to share that I've completed the ${courseName} with MSP Tech Club - MIU at Misr International University! 
 
 Grateful for the opportunity to learn and grow with such an amazing community. Looking forward to applying these skills in future projects!
 
-#MSPTechClub #MIU #FrontEndDevelopment #WebDevelopment #TechCommunity`;
+#MSPTechClub #MIU #TechCommunity`;
 
   return encodeURIComponent(postText);
 }
@@ -370,13 +371,21 @@ async function sendSingleCertificateEmail(name, universityId, email = null) {
     const githubCopilotUrl = GITHUB_COPILOT_LEARNING_PATH_URL;
     
     // Generate LinkedIn post URL (works on mobile and web)
-    const linkedInPostText = generateLinkedInPostText(name);
+    // Generate email content from editable template
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    const { renderTemplate, getCertificateCourseName } = require('../utils/emailTemplates/render');
+    const courseName = COURSE_NAME || (await getCertificateCourseName());
+    const linkedInPostText = generateLinkedInPostText(name, courseName);
     // Use feed URL with text parameter - works on both mobile apps and web
     const linkedInPostUrl = `https://www.linkedin.com/feed/?shareActive=true&text=${linkedInPostText}`;
-    
-    // Generate email content
-    const plainText = generatePlainTextEmail(name, feedbackFormUrl, linkedInPostUrl, githubCopilotUrl);
-    const htmlContent = generateHtmlEmail(name, feedbackFormUrl, linkedInPostUrl, githubCopilotUrl);
+    const rendered = await renderTemplate('course_certificate', {
+      studentName: name,
+      courseName,
+      feedbackFormUrl,
+      linkedInPostUrl,
+      githubCopilotUrl
+    });
     
     // Read certificate file
     const certificateBuffer = fs.readFileSync(certificateFilePath);
@@ -386,9 +395,9 @@ async function sendSingleCertificateEmail(name, universityId, email = null) {
     const mailOptions = {
       to: studentEmail,
       fromName: 'MSP Tech Club',
-      subject: 'Your Front-End Course Certificate - MSP Tech Club',
-      text: plainText,
-      html: htmlContent,
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
       attachments: [
         {
           filename: certificateFilename,

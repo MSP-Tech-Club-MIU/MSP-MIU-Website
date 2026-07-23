@@ -583,6 +583,14 @@ body.admin-panel-active .SiteLayout__main {
     margin-bottom: 28px;
 }
 
+.AdminPanel__greetingTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
 .AdminPanel__greetingSub {
     font-size: 0.9rem;
     color: rgba(197, 218, 233, 0.5);
@@ -599,6 +607,43 @@ body.admin-panel-active .SiteLayout__main {
     background-clip: text;
     color: transparent;
     line-height: 1.2;
+}
+
+.AdminPanel__exportCsvBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #3cb371 0%, #2e8b57 55%, #228b4a 100%);
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: 0 8px 22px -8px rgba(34, 139, 74, 0.65);
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.AdminPanel__exportCsvBtn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow: 0 10px 26px -8px rgba(34, 139, 74, 0.75);
+}
+
+.AdminPanel__exportCsvBtn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.AdminPanel__exportCsvBtn svg {
+    width: 1.05em;
+    height: 1.05em;
+    flex-shrink: 0;
 }
 
 /* ── Alert ── */
@@ -938,6 +983,21 @@ body.admin-panel-active .SiteLayout__main {
     color: #eaf2ff;
 }
 
+.AdminPanel__modalTitle:has(+ .AdminPanel__emailNote) {
+    margin-bottom: 12px;
+}
+
+.AdminPanel__emailNote {
+    margin: 0 0 20px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(74, 166, 255, 0.28);
+    background: rgba(74, 166, 255, 0.1);
+    color: #8EC2F0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
 .AdminPanel__formGroup {
     margin-bottom: 20px;
 }
@@ -949,6 +1009,20 @@ body.admin-panel-active .SiteLayout__main {
     font-weight: 600;
     color: rgba(138, 163, 198, 0.8);
     letter-spacing: 0.3px;
+}
+
+.AdminPanel__charCount {
+    display: block;
+    margin-top: 6px;
+    text-align: right;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    color: rgba(138, 163, 198, 0.65);
+}
+
+.AdminPanel__charCount.is-max {
+    color: #ffb4b4;
 }
 
 .AdminPanel__formGroup input,

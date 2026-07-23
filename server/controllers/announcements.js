@@ -1,6 +1,7 @@
 const { Announcement, User } = require('../models');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 /**
  * Notify all users by email.
@@ -20,7 +21,7 @@ async function broadcastNewAnnouncementEmails(announcement) {
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildAnnouncementEmail } = await import('../utils/announcementEmail.mjs');
 
-  const { subject, text, html } = buildAnnouncementEmail(announcement, {
+  const { subject, text, html } = await buildAnnouncementEmail(announcement, {
     frontendUrl: process.env.FRONTEND_URL
   });
 
@@ -44,21 +45,27 @@ const getAllAnnouncements = async (req, res) => {
   try {
     const { includeInactive } = req.query;
     const { page, limit, offset } = parsePagination(req.query);
-    
-    const whereClause = {};
+    const seasonFilter = await resolveSeasonFilter(req.query);
+
+    const whereClause = { ...seasonFilter.where };
     
     // Only show active announcements by default (unless admin/board requests all)
     if (!includeInactive || includeInactive !== 'true') {
       whereClause.is_active = true;
     }
 
+    const include = [{
+      model: User,
+      as: 'creator',
+      attributes: ['user_id', 'full_name', 'email']
+    }];
+    if (seasonFilter.includeSeason) {
+      include.push(seasonInclude());
+    }
+
     const { rows: announcements, count: total } = await Announcement.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
-      }],
+      include,
       order: [
         ['priority', 'DESC'],
         ['announcement_date', 'DESC'],
@@ -76,6 +83,9 @@ const getAllAnnouncements = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error fetching announcements:', error);
     return res.status(500).json({
       success: false,
@@ -154,7 +164,8 @@ const addAnnouncement = async (req, res) => {
       announcement_date: announcement_date,
       priority: priority === true || priority === 'true' || priority === 1,
       created_by: userId,
-      is_active: true
+      is_active: true,
+      season_id: await resolveSeasonIdForWrite(req.body, req.query)
     });
 
     const createdAnnouncement = await Announcement.findByPk(announcement.announcement_id, {
@@ -173,6 +184,9 @@ const addAnnouncement = async (req, res) => {
       data: createdAnnouncement
     });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error creating announcement:', error);
     return res.status(500).json({
       success: false,

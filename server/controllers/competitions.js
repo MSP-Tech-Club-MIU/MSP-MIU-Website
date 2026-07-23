@@ -5,6 +5,7 @@ const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition'
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+const { resolveSeasonFilter, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
@@ -56,6 +57,7 @@ const getAllCompetitions = async (req, res) => {
         const { status } = req.query;
         const userRole = req.user?.role; // From JWT if authenticated
         const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
 
         // Apply status filter if provided
         if (status) {
@@ -73,11 +75,16 @@ const getAllCompetitions = async (req, res) => {
         let replacements = [];
 
         if (userRole !== 'admin' && userRole !== 'board' && !status) {
-            sqlWhere = 'status != ?';
+            sqlWhere = 'competitions.status != ?';
             replacements.push('draft');
         } else if (status) {
-            sqlWhere = 'status = ?';
+            sqlWhere = 'competitions.status = ?';
             replacements.push(status);
+        }
+
+        if (seasonFilter.where.season_id != null) {
+            sqlWhere += ' AND competitions.season_id = ?';
+            replacements.push(seasonFilter.where.season_id);
         }
 
         const countRows = await db.query(
@@ -89,29 +96,44 @@ const getAllCompetitions = async (req, res) => {
         );
         const total = Number(countRows[0]?.total) || 0;
 
+        const seasonJoin = seasonFilter.includeSeason
+            ? 'LEFT JOIN seasons s ON s.season_id = competitions.season_id'
+            : '';
+        const seasonSelect = seasonFilter.includeSeason
+            ? `,
+                s.season_id AS season_season_id,
+                s.label AS season_label,
+                s.start_year AS season_start_year,
+                s.end_year AS season_end_year,
+                s.is_default AS season_is_default`
+            : '';
+
         const competitions = await db.query(
             `SELECT 
-                competition_id,
-                title,
-                description,
-                rules,
-                start_at,
-                end_at,
-                max_team_size,
-                min_team_size,
-                is_team_based,
-                status,
-                location_type,
-                location_details,
-                type,
-                submission_mode,
-                evaluation_mode,
-                config,
-                created_by,
-                created_at
+                competitions.competition_id,
+                competitions.title,
+                competitions.description,
+                competitions.rules,
+                competitions.start_at,
+                competitions.end_at,
+                competitions.max_team_size,
+                competitions.min_team_size,
+                competitions.is_team_based,
+                competitions.status,
+                competitions.location_type,
+                competitions.location_details,
+                competitions.type,
+                competitions.submission_mode,
+                competitions.evaluation_mode,
+                competitions.config,
+                competitions.created_by,
+                competitions.created_at,
+                competitions.season_id
+                ${seasonSelect}
             FROM competitions
+            ${seasonJoin}
             WHERE ${sqlWhere}
-            ORDER BY start_at DESC
+            ORDER BY competitions.start_at DESC
             LIMIT ? OFFSET ?`,
             {
                 replacements: [...replacements, limit, offset],
@@ -119,7 +141,26 @@ const getAllCompetitions = async (req, res) => {
             }
         );
 
-        const normalizedCompetitions = competitions.map(parseCompetitionConfig);
+        const normalizedCompetitions = competitions.map((row) => {
+            const competition = parseCompetitionConfig(row);
+            if (seasonFilter.includeSeason) {
+                competition.season = row.season_season_id
+                    ? {
+                        season_id: row.season_season_id,
+                        label: row.season_label,
+                        start_year: row.season_start_year,
+                        end_year: row.season_end_year,
+                        is_default: !!row.season_is_default
+                    }
+                    : null;
+                delete competition.season_season_id;
+                delete competition.season_label;
+                delete competition.season_start_year;
+                delete competition.season_end_year;
+                delete competition.season_is_default;
+            }
+            return competition;
+        });
         res.status(200).json({
             success: true,
             data: normalizedCompetitions,
@@ -128,6 +169,9 @@ const getAllCompetitions = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
@@ -379,12 +423,13 @@ const createCompetition = async (req, res) => {
         }
 
         const serializedConfig = normalizeConfigForWrite(config || null);
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
         // Insert competition
         const result = await db.query(
             `INSERT INTO competitions 
-            (title, description, rules, start_at, end_at, max_team_size, min_team_size, is_team_based, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (title, description, rules, start_at, end_at, max_team_size, min_team_size, is_team_based, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by, season_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
                     title,
@@ -402,7 +447,8 @@ const createCompetition = async (req, res) => {
                     resolvedSubmissionMode,
                     resolvedEvaluationMode,
                     serializedConfig,
-                    created_by
+                    created_by,
+                    season_id
                 ],
                 type: db.QueryTypes.INSERT
             }
@@ -441,6 +487,9 @@ const createCompetition = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error creating competition:', error);
         res.status(500).json({
             success: false,

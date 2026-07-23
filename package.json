@@ -19,7 +19,9 @@
     "clean": "rm -rf node_modules client/node_modules server/node_modules",
     "deploy": "npm run build && npm run start",
     "test": "cd client && npm test",
-    "lint": "cd client && npm run lint"
+    "lint": "cd client && npm run lint",
+    "patch:season-schema": "node server/scripts/patchSeasonSchema.js",
+    "cleanup:users-indexes": "node server/scripts/cleanupUsersIndexes.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

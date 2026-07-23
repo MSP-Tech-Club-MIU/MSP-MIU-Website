@@ -6,6 +6,9 @@ import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import Pagination from '../components/Pagination';
+import SeasonBadge from '../components/SeasonBadge';
+import SeasonSelector from '../components/SeasonSelector';
+import { useSeason } from '../context/SeasonContext';
 import './Events.css';
 import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 
@@ -21,6 +24,7 @@ const FILTER_TO_CATEGORY = {
 };
 
 const Events = () => {
+  const { seasonFilters, isAll } = useSeason();
   const [events, setEvents] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
@@ -70,7 +74,7 @@ const Events = () => {
         }
         setError(null);
 
-        const filters = { page, limit: PAGE_SIZE };
+        const filters = { page, limit: PAGE_SIZE, ...seasonFilters };
         if (filter !== 'all' && FILTER_TO_CATEGORY[filter]) {
           filters.category = FILTER_TO_CATEGORY[filter];
         }
@@ -96,6 +100,8 @@ const Events = () => {
           image_url:
             event.main_image && event.main_image.trim() ? event.main_image : mspLogo,
           category: event.category,
+          season: event.season || null,
+          season_id: event.season_id ?? null,
         }));
 
         setEvents(mappedEvents);
@@ -128,7 +134,7 @@ const Events = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, filter]);
+  }, [page, filter, seasonFilters]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -225,6 +231,7 @@ const Events = () => {
           </div>
 
           <div className="EventsPage__sort">
+            <SeasonSelector />
             <label htmlFor="sort-select" className="EventsPage__sortLabel">
               Sort by:
             </label>
@@ -302,7 +309,12 @@ const Events = () => {
                       </div>
                     </div>
                     <div className="EventCard__body">
-                      <h3 className="EventCard__title">{event.name}</h3>
+                      <h3 className="EventCard__title">
+                        {event.name}
+                        {isAll && (event.season || event.season_id) && (
+                          <> {' '}<SeasonBadge season={event.season} /></>
+                        )}
+                      </h3>
                       <div className="EventCard__meta">
                         <span className="EventCard__metaItem">
                           <FiCalendar />

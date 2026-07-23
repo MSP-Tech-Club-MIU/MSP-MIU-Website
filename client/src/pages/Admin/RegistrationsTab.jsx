@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import ApiService from '../../services/api';
+import { useSeason } from '../../context/SeasonContext';
 import { getDepartmentNameById } from '../../data/departments';
 import CommentModal from '../../components/CommentModal';
 import TextModal from '../../components/TextModal';
@@ -43,9 +44,11 @@ const mapStatsToChart = (items, total, mapDept = false) =>
         .sort((a, b) => b.count - a.count);
 
 const RegistrationsTab = memo(({ onAlert }) => {
+    const { seasonFilters } = useSeason();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
+    const [sendingActivation, setSendingActivation] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filteredApplications, setFilteredApplications] = useState([]);
     const [hasSearched, setHasSearched] = useState(false);
@@ -136,7 +139,8 @@ const RegistrationsTab = memo(({ onAlert }) => {
 
             const currentFilters = {
                 page,
-                limit: LIMIT
+                limit: LIMIT,
+                ...seasonFilters
             };
             Object.entries(appliedFilters).forEach(([key, value]) => {
                 if (value !== '' && value != null) currentFilters[key] = value;
@@ -162,7 +166,7 @@ const RegistrationsTab = memo(({ onAlert }) => {
             setIsFiltering(false);
             setLoading(false);
         }
-    }, [onAlert, appliedFilters, debouncedSearchTerm, page]);
+    }, [onAlert, appliedFilters, debouncedSearchTerm, page, seasonFilters]);
 
     useEffect(() => {
         fetchApplications();
@@ -228,6 +232,45 @@ const RegistrationsTab = memo(({ onAlert }) => {
         }
     };
 
+    const handleSendActivationEmails = async () => {
+        const confirmed = window.confirm(
+            'Send activation emails to all accepted members who do not have an account yet?\n\n' +
+            'Members who already activated their account will be skipped. This may take a while.'
+        );
+        if (!confirmed) return;
+
+        try {
+            setSendingActivation(true);
+            const result = await ApiService.sendMemberActivationEmails(seasonFilters);
+            const summary = result?.data;
+            const sent = summary?.sent ?? 0;
+            const skipped = summary?.skipped ?? 0;
+            const failed = summary?.failed ?? 0;
+
+            if (failed > 0 && sent === 0) {
+                onAlert?.({
+                    type: 'error',
+                    message: result?.message || `Failed to send activation emails (${failed} error(s)).`
+                });
+            } else {
+                onAlert?.({
+                    type: 'success',
+                    message:
+                        result?.message ||
+                        `Sent ${sent} activation email(s). Skipped ${skipped}. Failed ${failed}.`
+                });
+            }
+        } catch (error) {
+            console.error('Error sending activation emails:', error);
+            onAlert?.({
+                type: 'error',
+                message: error.message || 'Failed to send activation emails.'
+            });
+        } finally {
+            setSendingActivation(false);
+        }
+    };
+
     if (loading && !isFiltering) {
         return (
             <div className="RegistrationsAdmin__loading">
@@ -249,6 +292,19 @@ const RegistrationsTab = memo(({ onAlert }) => {
                 saveComment={saveComment}
                 textareaRef={textareaRef}
             />
+
+            <div className="RegistrationsAdmin__toolbar">
+                <button
+                    type="button"
+                    className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                    onClick={handleSendActivationEmails}
+                    disabled={sendingActivation}
+                >
+                    {sendingActivation
+                        ? 'Sending activation emails…'
+                        : 'Send activation emails to all accepted members'}
+                </button>
+            </div>
 
             <ChartsSection
                 theme="admin"

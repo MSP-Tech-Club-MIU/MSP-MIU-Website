@@ -85,6 +85,14 @@ const Member = sequelize.define('Member', {
       model: 'users',
       key: 'user_id'
     }
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
   }
 }, {
   tableName: 'members',

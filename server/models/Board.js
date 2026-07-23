@@ -48,6 +48,19 @@ const Board = sequelize.define('Board', {
     allowNull: true,
     field: 'ID' // Map to the actual database column name 'ID'
   },
+  faculty: {
+    type: DataTypes.ENUM(
+      'Computer Science',
+      'Engineering Sciences & Arts - ECE',
+      'Mass Communication',
+      'Dentistry',
+      'Engineering Sciences & Arts - Architecture',
+      'Pharmacy',
+      'Business',
+      'Alsun'
+    ),
+    allowNull: true
+  },
   user_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
@@ -77,6 +90,14 @@ const Board = sequelize.define('Board', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
   }
 }, {
   tableName: 'board',

@@ -5,10 +5,14 @@ import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import Pagination from '../components/Pagination';
 import SponsorCard from '../components/SponsorCard';
+import SeasonBadge from '../components/SeasonBadge';
+import SeasonSelector from '../components/SeasonSelector';
+import { useSeason } from '../context/SeasonContext';
 import './PageBase.css';
 import './Sponsors.css';
 
 export const Sponsors = () => {
+  const { seasonFilters, isAll } = useSeason();
   const [sponsors, setSponsors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,7 +24,7 @@ export const Sponsors = () => {
       try {
         setLoading(true);
         setError(null);
-        const result = await ApiService.getSponsors({ page, limit: 20 });
+        const result = await ApiService.getSponsors({ page, limit: 20, ...seasonFilters });
         const list = Array.isArray(result) ? result : (result.data || []);
         setSponsors(list);
         setPagination(Array.isArray(result) ? null : (result.pagination || null));
@@ -33,7 +37,7 @@ export const Sponsors = () => {
       }
     };
     load();
-  }, [page]);
+  }, [page, seasonFilters]);
 
   return (
     <section className="PageBase SponsorsPage">
@@ -42,7 +46,10 @@ export const Sponsors = () => {
         description="Organizations and partners supporting MSP Tech Club at MIU."
       />
       <BackButton to="/" label="Back to Home" />
-      <h1>Sponsors</h1>
+      <div className="SponsorsPage__titleRow">
+        <h1>Sponsors</h1>
+        <SeasonSelector />
+      </div>
       <p className="SponsorsPage__intro">
         Partners who help us grow the community. Each organization is showcased with room for their story.
       </p>
@@ -59,7 +66,13 @@ export const Sponsors = () => {
         <>
           <ul className="SponsorsPage__grid">
             {sponsors.map((s) => (
-              <SponsorCard key={s.sponsor_id} sponsor={s} />
+              <SponsorCard
+                key={s.sponsor_id}
+                sponsor={s}
+                seasonBadge={
+                  isAll && (s.season || s.season_id) ? <SeasonBadge season={s.season} /> : null
+                }
+              />
             ))}
           </ul>
           <Pagination pagination={pagination} onPageChange={setPage} />

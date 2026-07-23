@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
-import { MdGroups, MdEmojiEvents } from 'react-icons/md';
+import { MdGroups, MdEmojiEvents, MdFeedback } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
@@ -209,6 +209,7 @@ const Navbar = memo(() => {
       { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
+      { to: '/suggestions', label: 'Suggestions', icon: <MdFeedback /> },
     ];
     if (!isCapacitor()) {
       extended.push({ to: '/download-android', label: 'Download App', icon: <FaAndroid /> });

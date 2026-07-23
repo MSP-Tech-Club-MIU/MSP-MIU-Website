@@ -143,7 +143,7 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
     const { sendEmail } = await import('../utils/email.mjs');
     const { buildCompetitionAnnouncementEmail } = await import('../utils/competitionAnnouncementEmail.mjs');
 
-    const { subject, text, html } = buildCompetitionAnnouncementEmail(announcement, competition, {
+    const { subject, text, html } = await buildCompetitionAnnouncementEmail(announcement, competition, {
       frontendUrl: process.env.FRONTEND_URL
     });
 

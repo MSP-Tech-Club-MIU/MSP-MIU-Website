@@ -1,5 +1,6 @@
 const { Application } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 function buildFieldCounts(rows, field) {
     const counts = {};
@@ -53,6 +54,8 @@ const createApplication = async (req, res) => {
         }
 
         // Create new application
+        // Note: Application.year is the student's academic year (INT), not the MSP season
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
         const application = await Application.create({
             university_id,
             full_name,
@@ -64,7 +67,8 @@ const createApplication = async (req, res) => {
             second_choice: second_choice || null, // Allow null for second_choice
             skills,
             motivation,
-            interview
+            interview,
+            season_id
         });
 
         res.status(201).json({
@@ -78,6 +82,9 @@ const createApplication = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error submitting application:', error);
         console.error('Error details:', {
             message: error.message,
@@ -99,6 +106,7 @@ const createApplication = async (req, res) => {
 const getAllApplications = async (req, res) => {
     try {
         // Extract query parameters for filtering
+        // Note: query.year filters Application.year (student year INT), not MSP season
         const { 
             first_choice, 
             second_choice, 
@@ -108,8 +116,10 @@ const getAllApplications = async (req, res) => {
             search 
         } = req.query;
 
+        const seasonFilter = await resolveSeasonFilter(req.query);
+
         // Build where clause for filtering
-        const whereClause = {};
+        const whereClause = { ...seasonFilter.where };
         
         if (first_choice) {
             whereClause.first_choice = parseInt(first_choice);
@@ -133,11 +143,17 @@ const getAllApplications = async (req, res) => {
 
         // Build the query options
         const { page, limit, offset } = parsePagination(req.query);
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
         const queryOptions = {
             where: whereClause,
+            include,
             order: [['application_id', 'DESC']],
             limit,
-            offset
+            offset,
+            distinct: true
         };
 
         // Add text search if provided
@@ -205,10 +221,14 @@ const getAllApplications = async (req, res) => {
                 status,
                 faculty,
                 year,
-                search
+                search,
+                season_id: req.query.season_id ?? req.query.season
             }
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching applications:', error);
         res.status(500).json({
             success: false,

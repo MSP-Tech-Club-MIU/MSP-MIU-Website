@@ -16,7 +16,10 @@
     "send-certificate-emails": "node scripts/sendCertificateEmails.mjs",
     "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs",
     "test-announcement-email": "node scripts/sendLatestAnnouncementTestEmail.mjs",
-    "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs"
+    "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs",
+    "patch:season-schema": "node scripts/patchSeasonSchema.js",
+    "patch:email-schema": "node scripts/patchEmailSchema.js",
+    "patch:board-faculty": "node scripts/patchBoardFaculty.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

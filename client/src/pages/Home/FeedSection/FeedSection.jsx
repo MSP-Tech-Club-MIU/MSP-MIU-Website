@@ -4,9 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './FeedSection.css';
 import ApiService from '../../../services/api';
 import Pagination from '../../../components/Pagination';
+import SeasonBadge from '../../../components/SeasonBadge';
+import { useSeason } from '../../../context/SeasonContext';
 import { FiPlus, FiX } from 'react-icons/fi';
 
 const FeedSection = memo(() => {
+  const { seasonFilters, isAll, selectedSeasonId } = useSeason();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,7 +49,11 @@ const FeedSection = memo(() => {
     try {
       setLoading(true);
       setError(null);
-      const result = await ApiService.getAnnouncements({ page: pageNum, limit: 20 });
+      const result = await ApiService.getAnnouncements({
+        page: pageNum,
+        limit: 20,
+        ...seasonFilters,
+      });
       const list = Array.isArray(result) ? result : (result.data || []);
       
       // Map API response to component format
@@ -56,7 +63,9 @@ const FeedSection = memo(() => {
         dept: announcement.department,
         date: announcement.announcement_date,
         desc: announcement.description,
-        priority: announcement.priority
+        priority: announcement.priority,
+        season: announcement.season || null,
+        season_id: announcement.season_id ?? null,
       }));
       
       setAnnouncements(mappedAnnouncements);
@@ -78,7 +87,8 @@ const FeedSection = memo(() => {
 
   useEffect(() => {
     fetchAnnouncements(page);
-  }, [page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, seasonFilters]);
 
   const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
   const canCreateAnnouncements = isBoardOrAdmin;
@@ -97,7 +107,11 @@ const FeedSection = memo(() => {
     setSubmitError(null);
 
     try {
-      await ApiService.createAnnouncement(formData);
+      const payload = { ...formData };
+      if (typeof selectedSeasonId === 'number') {
+        payload.season_id = selectedSeasonId;
+      }
+      await ApiService.createAnnouncement(payload);
       setShowModal(false);
       setFormData({
         title: '',
@@ -172,7 +186,12 @@ const FeedSection = memo(() => {
               <span className="FeedCard__dept" data-dept={a.dept}>{a.dept}</span>
               <time className="FeedCard__date" dateTime={a.date}>{a.date}</time>
             </div>
-            <h3 className="FeedCard__title">{a.title}</h3>
+            <h3 className="FeedCard__title">
+              {a.title}
+              {isAll && (a.season || a.season_id) && (
+                <> {' '}<SeasonBadge season={a.season} /></>
+              )}
+            </h3>
             <p className="FeedCard__desc">{a.desc}</p>
             {/* <motion.a href="/announcements" className="FeedCard__more" whileHover={{ color: '#fff', x: 3 }}>Read more →</motion.a> */}
           </motion.article>

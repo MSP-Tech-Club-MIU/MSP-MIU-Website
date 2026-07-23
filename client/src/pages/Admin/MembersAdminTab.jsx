@@ -2,17 +2,49 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { MdPeople } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
-import { getDepartmentNameById } from '../../data/departments';
+import SeasonBadge from '../../components/SeasonBadge';
+import { useSeason } from '../../context/SeasonContext';
+import { getDepartmentNameById, memberDepartments } from '../../data/departments';
 
 const LIST_LIMIT = 20;
 
+const FACULTIES = [
+  'Computer Science',
+  'Engineering Sciences & Arts - ECE',
+  'Mass Communication',
+  'Dentistry',
+  'Engineering Sciences & Arts - Architecture',
+  'Pharmacy',
+  'Business',
+  'Alsun',
+];
+
 export default function MembersAdminTab({ onAlert }) {
+  const { seasonFilters, isAll } = useSeason();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [faculty, setFaculty] = useState('');
+  const [departments, setDepartments] = useState(memberDepartments);
+  const [sendingId, setSendingId] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await ApiService.getDepartments({ limit: 100, page: 1 });
+        const rows = Array.isArray(result?.data) ? result.data : [];
+        if (rows.length) {
+          setDepartments(rows.map((d) => ({ id: d.department_id, name: d.name })));
+        }
+      } catch {
+        /* keep memberDepartments fallback */
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -28,7 +60,10 @@ export default function MembersAdminTab({ onAlert }) {
       const result = await ApiService.getMembers({
         page,
         limit: LIST_LIMIT,
-        search: debounced || undefined
+        search: debounced || undefined,
+        department_id: departmentId || undefined,
+        faculty: faculty || undefined,
+        ...seasonFilters
       });
       setItems(Array.isArray(result?.data) ? result.data : []);
       setPagination(result?.pagination || null);
@@ -38,7 +73,7 @@ export default function MembersAdminTab({ onAlert }) {
     } finally {
       setLoading(false);
     }
-  }, [page, debounced, onAlert]);
+  }, [page, debounced, departmentId, faculty, onAlert, seasonFilters]);
 
   useEffect(() => {
     load();
@@ -52,6 +87,26 @@ export default function MembersAdminTab({ onAlert }) {
       await load();
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Delete failed' });
+    }
+  };
+
+  const sendAccountMail = async (row) => {
+    if (!row?.email) {
+      onAlert?.({ type: 'error', message: 'This member has no email address.' });
+      return;
+    }
+    if (!window.confirm(`Send account creation email to ${row.full_name} (${row.email})?`)) return;
+    try {
+      setSendingId(row.member_id);
+      const result = await ApiService.sendMemberActivationEmail(row.member_id);
+      onAlert?.({
+        type: 'success',
+        message: result.message || `Account creation email sent to ${row.email}`
+      });
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to send email' });
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -71,6 +126,38 @@ export default function MembersAdminTab({ onAlert }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          className="AdminPanel__filterSelect"
+          value={departmentId}
+          onChange={(e) => {
+            setDepartmentId(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by department"
+        >
+          <option value="">All departments</option>
+          {departments.map((dept) => (
+            <option key={dept.id} value={dept.id}>
+              {dept.name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="AdminPanel__filterSelect"
+          value={faculty}
+          onChange={(e) => {
+            setFaculty(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by faculty"
+        >
+          <option value="">All faculties</option>
+          {FACULTIES.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -88,29 +175,59 @@ export default function MembersAdminTab({ onAlert }) {
                 <th>Faculty</th>
                 <th>Year</th>
                 <th>Department</th>
+                <th>Account</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => (
-                <tr key={row.member_id}>
-                  <td style={{ fontWeight: 600 }}>{row.full_name}</td>
-                  <td>{row.university_id}</td>
-                  <td>{row.email}</td>
-                  <td>{row.faculty}</td>
-                  <td>{row.year}</td>
-                  <td>{row.department?.name || getDepartmentNameById(row.department_id)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                      onClick={() => remove(row)}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {items.map((row) => {
+                const hasAccount = Boolean(row.has_active_account);
+                return (
+                  <tr key={row.member_id}>
+                    <td style={{ fontWeight: 600 }}>
+                      {row.full_name}
+                      {isAll && (row.season || row.season_id) && (
+                        <> {' '}<SeasonBadge season={row.season} /></>
+                      )}
+                    </td>
+                    <td>{row.university_id}</td>
+                    <td>{row.email}</td>
+                    <td>{row.faculty}</td>
+                    <td>{row.year}</td>
+                    <td>{row.department?.name || getDepartmentNameById(row.department_id)}</td>
+                    <td>
+                      <span
+                        className={`AdminPanel__badge AdminPanel__badge--${
+                          hasAccount ? 'active' : 'pending'
+                        }`}
+                      >
+                        {hasAccount ? 'Active' : 'No account'}
+                      </span>
+                    </td>
+                    <td>
+                      {!hasAccount && (
+                        <button
+                          type="button"
+                          className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                          disabled={sendingId === row.member_id}
+                          onClick={() => sendAccountMail(row)}
+                        >
+                          {sendingId === row.member_id
+                            ? 'Sending…'
+                            : 'Send account creation mail'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                        onClick={() => remove(row)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
