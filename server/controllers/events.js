@@ -1,5 +1,6 @@
 const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Helper function to convert registration_enabled to boolean
@@ -114,6 +115,7 @@ const addEvent = async (req, res) => {
 const getAllEvents = async (req, res) => {
     try {
         const { category, upcoming, past } = req.query;
+        const { page, limit, offset } = parsePagination(req.query);
         
         // Build where clause
         const where = {};
@@ -134,15 +136,18 @@ const getAllEvents = async (req, res) => {
             };
         }
 
-        const events = await Event.findAll({
+        const { rows: events, count: total } = await Event.findAndCountAll({
             where,
-            order: [['event_date', 'ASC']]
+            order: [['event_date', 'ASC']],
+            limit,
+            offset
         });
 
         res.status(200).json({
             success: true,
             data: events,
-            count: events.length
+            count: events.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
@@ -439,18 +444,22 @@ const getEventFeedback = async (req, res) => {
             });
         }
 
-        // Get all feedback for this event
-        const feedbacks = await EventFeedback.findAll({
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const { rows: feedbacks, count: total } = await EventFeedback.findAndCountAll({
             where: {
                 event_id: id
             },
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
         });
 
         res.status(200).json({
             success: true,
             data: feedbacks,
-            count: feedbacks.length
+            count: feedbacks.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {

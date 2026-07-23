@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { useGesture } from 'react-use-gesture';
 import './Dome.css';
 import ApiService from '../services/api';
+import useSiteContent from '../hooks/useSiteContent';
 
 const DEFAULTS = {
   maxVerticalRotationDeg: 90,
@@ -111,6 +112,10 @@ export default function DomeGallery({
   const [cloudImages, setCloudImages] = useState<string[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [imagesError, setImagesError] = useState<string | null>(null);
+  const { data: galleryContent } = useSiteContent(['gallery'], {
+    gallery: { title: 'Gallery', subtitle: 'Moments from our journey together' }
+  });
+  const gallery = galleryContent.gallery || { title: 'Gallery', subtitle: 'Moments from our journey together' };
 
   // Fetch images from cloud API
   useEffect(() => {
@@ -118,7 +123,8 @@ export default function DomeGallery({
       try {
         setImagesLoading(true);
         setImagesError(null);
-        const imageData = await ApiService.getImages();
+        const result = await ApiService.getImages({ limit: 100, page: 1 });
+        const imageData = Array.isArray(result) ? result : (result.images || result.data || []);
         // Extract URLs from image objects (API returns {url, key, name, ...})
         const imageUrls = imageData.map((img: { url: string }) => img.url);
         setCloudImages(imageUrls);
@@ -346,8 +352,8 @@ export default function DomeGallery({
   return (
     <div className="DomeGallery">
     <div className="DomeGallery__head">
-          <h2 className="DomeGallery__title">Gallery</h2>
-          <p className="DomeGallery__subtitle">Moments from our journey together</p>
+          <h2 className="DomeGallery__title">{gallery.title || 'Gallery'}</h2>
+          <p className="DomeGallery__subtitle">{gallery.subtitle || 'Moments from our journey together'}</p>
         </div>
     <div
       ref={rootRef}

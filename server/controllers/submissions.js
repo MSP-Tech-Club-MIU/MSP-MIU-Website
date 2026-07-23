@@ -2,6 +2,7 @@ const db = require('../config/db');
 const { uploadToR2 } = require('../config/cloud');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Submit team work (ZIP file and/or links)
@@ -543,6 +544,17 @@ const getCompetitionSubmissions = async (req, res) => {
             });
         }
 
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM submissions WHERE competition_id = ?`,
+            {
+                replacements: [competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
+
         const submissions = await db.query(
             `SELECT s.*, t.team_name,
                     ANY_VALUE(ct.title) AS task_title,
@@ -557,16 +569,19 @@ const getCompetitionSubmissions = async (req, res) => {
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE s.competition_id = ?
              GROUP BY s.submission_id
-             ORDER BY s.submitted_at DESC`,
+             ORDER BY s.submitted_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [competitionId],
+                replacements: [competitionId, limit, offset],
                 type: db.QueryTypes.SELECT
             }
         );
 
         res.status(200).json({
             success: true,
-            data: submissions
+            data: submissions,
+            count: submissions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {

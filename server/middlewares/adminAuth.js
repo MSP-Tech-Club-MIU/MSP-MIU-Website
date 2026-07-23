@@ -1,69 +1,67 @@
-const { Board } = require('../models');
+const { QueryTypes } = require('sequelize');
+const sequelize = require('../config/db');
 
 /**
- * Admin Authorization Middleware that
- * allows only admin users to access the admin panel
- * which are President, Vice President, and Head of Software Development
- * That must be used after authentication Token middleware
+ * Admin Authorization Middleware
+ * Allows President, Vice President, and Heads of Software Development (1)
+ * or Technical Training (2). Must run after authenticateToken.
+ *
+ * Uses a raw SELECT of core columns so auth still works if optional CMS
+ * columns (photo_url, is_visible, …) have not been migrated yet.
  */
-
 const adminAuth = async (req, res, next) => {
     try {
         if (!req.user) {
-            return res.status(401).json(
-                {
-                    success: false,
-                    error: 'Authentication Required'
-                });
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication Required'
+            });
         }
 
-        // Now let us check if user logged-in even exist in Board or not
-
-        const boardMember = await Board.findOne(
+        const rows = await sequelize.query(
+            `SELECT board_id, full_name, position, department_id, year, email, user_id
+             FROM board
+             WHERE user_id = ?
+             LIMIT 1`,
             {
-                where: { user_id: req.user.user_id }
+                replacements: [req.user.user_id],
+                type: QueryTypes.SELECT
+            }
+        );
 
-            });
+        const boardMember = rows[0];
 
         if (!boardMember) {
             return res.status(403).json({
                 success: false,
-                error: 'Acccess denied, Admin Panel is restriced only to Admin Members.'
+                error: 'Access denied. Admin Panel is restricted to board members linked to a user account.'
             });
         }
 
-        // President and Vice President now have full access as Admins
-        const allowedPositions = ['President', 'Vice President'];
-        const position = boardMember.position;
+        const position = String(boardMember.position || '').trim();
+        const departmentId = Number(boardMember.department_id);
 
-        if (allowedPositions.includes(position)) {
+        if (position === 'President' || position === 'Vice President') {
             req.boardMember = boardMember;
             return next();
         }
 
-        // Head of SW Development Dept now have full access as Admin when (department_id = 1)
-
-        if (position === 'Head' && boardMember.department_id === 1 || position === 'Head' && boardMember.department_id === 2) {
+        if (position === 'Head' && (departmentId === 1 || departmentId === 2)) {
             req.boardMember = boardMember;
             return next();
         }
 
-        // Everyone else is denied from guests, Other Board members cause they have specific roles not as Admins but aa I gave them
-        return res.status(403).json(
-            {
-                success: false,
-                error: 'Access denied. Only President, Vice President, and Head of Software Development can access the admin panel.'
-            });
-    }
-
-    catch (error) {
+        return res.status(403).json({
+            success: false,
+            error: 'Access denied. Only President, Vice President, and Head of Software Development / Technical Training can access the admin panel.'
+        });
+    } catch (error) {
         console.error('Admin auth middleware error:', error);
-        return res.status(500).json(
-            {
-                success: false,
-                error: 'Authorization error'
-            });
+        return res.status(500).json({
+            success: false,
+            error: 'Authorization error'
+        });
     }
 };
-module.exports = { adminAuth };
 
+module.exports = { adminAuth };

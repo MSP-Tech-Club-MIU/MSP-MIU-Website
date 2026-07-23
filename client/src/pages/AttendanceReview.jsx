@@ -5,7 +5,10 @@ import { FiDownload } from 'react-icons/fi';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import Pagination from '../components/Pagination';
 import './PageBase.css';
+
+const LIMIT = 20;
 
 const AttendanceReview = () => {
   const navigate = useNavigate();
@@ -15,6 +18,8 @@ const AttendanceReview = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -81,8 +86,8 @@ const AttendanceReview = () => {
     const fetchEvents = async () => {
       try {
         setLoadingEvents(true);
-        const eventsData = await ApiService.getEvents();
-        setEvents(eventsData || []);
+        const eventsResult = await ApiService.getEvents({ limit: 100 });
+        setEvents(Array.isArray(eventsResult?.data) ? eventsResult.data : []);
       } catch (error) {
         console.error('Error fetching events:', error);
       } finally {
@@ -102,23 +107,25 @@ const AttendanceReview = () => {
       setError(null);
       
       // Build filters object (only include defined values)
-      const filtersToSend = {};
+      const filtersToSend = { page, limit: LIMIT };
       if (filters.event_id) filtersToSend.event_id = filters.event_id;
       if (filters.attended !== '') filtersToSend.attended = filters.attended === 'true';
       if (filters.search) filtersToSend.search = filters.search;
 
-      const data = await ApiService.getAttendanceRequests(filtersToSend);
-      setAttendanceRequests(data || []);
+      const result = await ApiService.getAttendanceRequests(filtersToSend);
+      setAttendanceRequests(Array.isArray(result?.data) ? result.data : []);
+      setPagination(result?.pagination || null);
     } catch (error) {
       console.error('Error fetching attendance requests:', error);
       setError(error.message || 'Failed to load attendance requests');
       setAttendanceRequests([]);
+      setPagination(null);
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, page]);
 
-  // Fetch requests when filters change or after authentication
+  // Fetch requests when filters/page change or after authentication
   useEffect(() => {
     if (isAuthenticated) {
       fetchAttendanceRequests();
@@ -131,6 +138,7 @@ const AttendanceReview = () => {
       ...prev,
       [name]: value
     }));
+    setPage(1);
   };
 
   // Handle attended status update
@@ -318,8 +326,8 @@ const AttendanceReview = () => {
             )}
           </div>
 
-          {/* Summary Stats - Top */}
-          {!loading && attendanceRequests.length > 0 && (
+          {/* Summary Stats - Top (counts for current page; total from pagination) */}
+          {!loading && (attendanceRequests.length > 0 || (pagination?.total > 0)) && (
             <div style={{
               display: 'flex',
               gap: '1.5rem',
@@ -333,7 +341,7 @@ const AttendanceReview = () => {
             }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#8EC2F0', marginBottom: '0.25rem' }}>
-                  {attendanceRequests.length}
+                  {pagination?.total ?? attendanceRequests.length}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Total Requests</div>
               </div>
@@ -341,13 +349,13 @@ const AttendanceReview = () => {
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4caf50', marginBottom: '0.25rem' }}>
                   {attendanceRequests.filter(r => r.attended).length}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Attended</div>
+                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Attended (page)</div>
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ffc107', marginBottom: '0.25rem' }}>
                   {attendanceRequests.filter(r => !r.attended).length}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Didn't Attend</div>
+                <div style={{ fontSize: '0.85rem', color: '#B0C4DE' }}>Didn't Attend (page)</div>
               </div>
             </div>
           )}
@@ -590,6 +598,7 @@ const AttendanceReview = () => {
                   </table>
                 </div>
               )}
+              <Pagination pagination={pagination} onPageChange={(p) => { setPage(p); }} />
             </>
           )}
         </motion.div>

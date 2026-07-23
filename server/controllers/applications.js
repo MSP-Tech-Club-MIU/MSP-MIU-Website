@@ -1,4 +1,18 @@
 const { Application } = require('../models');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+
+function buildFieldCounts(rows, field) {
+    const counts = {};
+    for (const row of rows) {
+        let value = row[field];
+        if (value === null || value === undefined || value === '') value = 'N/A';
+        const key = String(value);
+        counts[key] = (counts[key] || 0) + 1;
+    }
+    return Object.entries(counts)
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => b.count - a.count);
+}
 
 // Submit new application
 const createApplication = async (req, res) => {
@@ -118,9 +132,12 @@ const getAllApplications = async (req, res) => {
         }
 
         // Build the query options
+        const { page, limit, offset } = parsePagination(req.query);
         const queryOptions = {
             where: whereClause,
-            order: [['application_id', 'DESC']]
+            order: [['application_id', 'DESC']],
+            limit,
+            offset
         };
 
         // Add text search if provided
@@ -159,12 +176,29 @@ const getAllApplications = async (req, res) => {
             };
         }
 
-        const applications = await Application.findAll(queryOptions);
+        const whereForStats = queryOptions.where;
+        const [{ rows: applications, count: total }, allForStats] = await Promise.all([
+            Application.findAndCountAll(queryOptions),
+            Application.findAll({
+                where: whereForStats,
+                attributes: ['first_choice', 'second_choice', 'faculty', 'status']
+            })
+        ]);
+
+        const stats = {
+            total,
+            by_first_choice: buildFieldCounts(allForStats, 'first_choice'),
+            by_second_choice: buildFieldCounts(allForStats, 'second_choice'),
+            by_faculty: buildFieldCounts(allForStats, 'faculty'),
+            by_status: buildFieldCounts(allForStats, 'status')
+        };
 
         res.json({
             success: true,
             data: applications,
             count: applications.length,
+            pagination: paginationMeta({ page, limit, total }),
+            stats,
             filters: {
                 first_choice,
                 second_choice,

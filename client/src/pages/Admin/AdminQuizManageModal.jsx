@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { toCairoDateAndTimeStrings } from '../../utils/quizTimeEgypt';
@@ -620,11 +621,13 @@ const AdminQuizManageModal = ({
     return <div className="AdminQuizManage--embedded">{body}</div>;
   }
 
-  return (
-    <div className="AdminPanel__modalOverlay" onClick={onClose}>
+  return createPortal(
+    <div className="AdminPanel__modalOverlay" onClick={onClose} role="presentation">
       <div
         className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="AdminPanel__modalHeader">
           <div>
@@ -637,7 +640,8 @@ const AdminQuizManageModal = ({
         </div>
         {body}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

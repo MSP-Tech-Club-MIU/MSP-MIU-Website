@@ -16,11 +16,11 @@ const EventsSection = memo(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        // Fetch all events (like Events.jsx does)
-        const data = await ApiService.getEvents();
+        const result = await ApiService.getEvents({ limit: 3, page: 1 });
+        const list = Array.isArray(result) ? result : (result.data || []);
         
         // Map database fields to component fields (exactly like Events.jsx)
-        const mappedEvents = Array.isArray(data) ? data.map(event => ({
+        const mappedEvents = list.map(event => ({
           event_id: event.event_id,
           name: event.name,
           description: event.description,
@@ -33,15 +33,10 @@ const EventsSection = memo(() => {
           // Use main_image from database if available, otherwise fallback to MSP logo
           image_url: (event.main_image && event.main_image.trim()) ? event.main_image : mspLogo,
           category: event.category
-        })) : [];
+        }));
         
-        // Sort by date (newest first - descending) and limit to latest 3
-        const sortedEvents = mappedEvents
-          .sort((a, b) => new Date(b.event_date) - new Date(a.event_date))
-          .slice(0, 3);
-        
-        console.log('Fetched events:', mappedEvents.length, 'Displaying:', sortedEvents.length);
-        setEvents(sortedEvents);
+        console.log('Fetched events:', mappedEvents.length);
+        setEvents(mappedEvents);
       } catch (err) {
         console.error('Error fetching events:', err);
         setEvents([]);

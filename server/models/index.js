@@ -31,6 +31,7 @@ const QuizOption = require('./QuizOption');
 const QuizAttempt = require('./QuizAttempt');
 const QuizAnswer = require('./QuizAnswer');
 const AdminNotification = require('./AdminNotification');
+const SiteContent = require('./SiteContent');
 
 // Initialize models
 const models = {
@@ -63,7 +64,8 @@ const models = {
   QuizOption,
   QuizAttempt,
   QuizAnswer,
-  AdminNotification
+  AdminNotification,
+  SiteContent
 };
 
 // Set up associations

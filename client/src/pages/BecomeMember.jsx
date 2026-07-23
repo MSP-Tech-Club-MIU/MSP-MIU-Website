@@ -4,7 +4,8 @@ import BackButton from '../components/BackButton'
 import miuLogo from '../assets/Images/miu-logo.png'
 import mspLogo from '../assets/Images/msp-logo.png'
 import ApiService from '../services/api'
-import { departments, getDepartmentIdByName } from '../data/departments'
+import { departments as defaultDepartments, getDepartmentIdByName, isBoardPosition } from '../data/departments'
+import useSiteContent from '../hooks/useSiteContent'
 
 // Memoized constants to prevent recreation
 const palette = {
@@ -22,7 +23,7 @@ const palette = {
   blue300: '#8EC2F0',
 }
 
-const faculties = [
+const DEFAULT_FACULTIES = [
   'Computer Science',
   'Engineering Sciences & Arts - ECE',
   'Mass Communication',
@@ -33,16 +34,13 @@ const faculties = [
   'Alsun',
 ]
 
-// Year mapping to integers (matches database schema)
-const years = [
+const DEFAULT_YEARS = [
   { value: 1, label: 'Freshman' },
   { value: 2, label: 'Sophomore' },
   { value: 3, label: 'Junior' },
   { value: 4, label: 'Senior' },
   { value: 5, label: 'Senior 2' }
 ]
-
-// Departments are now imported from data/departments.js
 
 const Stepper = memo(({ step }) => {
   const items = useMemo(() => [0,1,2,3,4], []);
@@ -69,6 +67,34 @@ const BecomeMember = memo(() => {
   const [screen, setScreen] = useState('welcome')
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const { data: content } = useSiteContent(['lookups'], {})
+  const lookups = content.lookups || {}
+
+  const faculties = useMemo(() => {
+    if (Array.isArray(lookups.faculties) && lookups.faculties.length) return lookups.faculties
+    return DEFAULT_FACULTIES
+  }, [lookups.faculties])
+
+  const years = useMemo(() => {
+    if (Array.isArray(lookups.years) && lookups.years.length) {
+      return lookups.years.map((label, idx) =>
+        typeof label === 'object' && label?.value != null
+          ? label
+          : { value: idx + 1, label: String(label) }
+      )
+    }
+    return DEFAULT_YEARS
+  }, [lookups.years])
+
+  const departments = useMemo(() => {
+    if (Array.isArray(lookups.departments) && lookups.departments.length) {
+      return lookups.departments.map((d) => ({
+        id: d.id ?? d.department_id,
+        name: d.name
+      }))
+    }
+    return defaultDepartments
+  }, [lookups.departments])
 
   const [form, setForm] = useState({
     name: '',
@@ -165,8 +191,8 @@ const BecomeMember = memo(() => {
         faculty: form.faculty,
         year: parseInt(form.year),
         phone_number: `+20${form.phone}`,
-        first_choice: getDepartmentIdByName(form.dept1),
-        second_choice: getDepartmentIdByName(form.dept2),
+        first_choice: departments.find((d) => d.name === form.dept1)?.id ?? getDepartmentIdByName(form.dept1),
+        second_choice: departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2),
         skills: form.skills,
         motivation: form.motivation,
         interview: form.interview
@@ -344,8 +370,8 @@ const BecomeMember = memo(() => {
                     <option value="">Select department</option>
                     {departments
                       .filter(d => {
-                        // exclude board positions
-                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                        // exclude board positions (Founder / President / VP are display-only)
+                        if (isBoardPosition(d)) {
                           return false
                         }
                         // hide software & technical unless faculty is CS or ECE
@@ -366,8 +392,7 @@ const BecomeMember = memo(() => {
                     <option value="">Select department (optional)</option>
                     {departments
                       .filter(d => {
-                        // exclude board positions
-                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                        if (isBoardPosition(d)) {
                           return false
                         }
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {

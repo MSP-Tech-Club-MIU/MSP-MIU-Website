@@ -1,38 +1,88 @@
 import React from 'react';
 
-const PieChart = ({ data, title, size = 200 }) => {
-  if (!data || data.length === 0) return <div style={{ 
-    textAlign: 'center', 
-    margin: '20px',
-    fontFamily: 'Arial, sans-serif',
-    color: '#666'
-  }}>No data available</div>;
+const PieChart = ({ data, title, size = 200, theme = 'light' }) => {
+  const isAdmin = theme === 'admin';
+
+  if (!data || data.length === 0) {
+    return isAdmin
+      ? <div className="RegAdmin__pieEmpty">No data available</div>
+      : (
+        <div style={{
+          textAlign: 'center',
+          margin: '20px',
+          fontFamily: 'Arial, sans-serif',
+          color: '#666'
+        }}>
+          No data available
+        </div>
+      );
+  }
 
   let cumulativePercentage = 0;
-  
+
+  if (isAdmin) {
+    return (
+      <div className="RegAdmin__pie">
+        <h3 className="RegAdmin__pieTitle">{title}</h3>
+        <div style={{ position: 'relative', display: 'inline-block', width: size, height: size }}>
+          <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+            {data.map((item, index) => {
+              const circumference = 2 * Math.PI * (size / 2 - 10);
+              const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
+              const strokeDashoffset = -(cumulativePercentage / 100) * circumference;
+              cumulativePercentage += item.percentage;
+              return (
+                <circle
+                  key={index}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={size / 2 - 10}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="18"
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              );
+            })}
+          </svg>
+          <div className="RegAdmin__pieCenter">
+            {data.reduce((sum, item) => sum + item.count, 0)}
+          </div>
+        </div>
+        <div className="RegAdmin__pieLegend">
+          {data.map((item, index) => (
+            <div key={index} className="RegAdmin__pieLegendItem">
+              <span className="RegAdmin__pieSwatch" style={{ backgroundColor: item.color }} />
+              <span>{item.label}: {item.count} ({item.percentage}%)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ 
-      textAlign: 'center', 
+    <div style={{
+      textAlign: 'center',
       margin: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      <h3 style={{ 
-        marginBottom: '15px', 
+      <h3 style={{
+        marginBottom: '15px',
         color: '#395a7f',
         fontSize: '16px',
         fontWeight: '600',
         fontFamily: 'Arial, sans-serif'
       }}>{title}</h3>
-      
+
       <div style={{ position: 'relative', display: 'inline-block', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
           {data.map((item, index) => {
             const circumference = 2 * Math.PI * (size / 2 - 10);
             const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
             const strokeDashoffset = -(cumulativePercentage / 100) * circumference;
-            
             cumulativePercentage += item.percentage;
-            
             return (
               <circle
                 key={index}
@@ -44,7 +94,7 @@ const PieChart = ({ data, title, size = 200 }) => {
                 strokeWidth="18"
                 strokeDasharray={strokeDasharray}
                 strokeDashoffset={strokeDashoffset}
-                style={{ 
+                style={{
                   transition: 'all 0.3s ease',
                   filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
                 }}
@@ -52,7 +102,7 @@ const PieChart = ({ data, title, size = 200 }) => {
             );
           })}
         </svg>
-        
+
         <div style={{
           position: 'absolute',
           top: '50%',
@@ -66,16 +116,16 @@ const PieChart = ({ data, title, size = 200 }) => {
           {data.reduce((sum, item) => sum + item.count, 0)}
         </div>
       </div>
-      
-      <div style={{ 
-        marginTop: '15px', 
+
+      <div style={{
+        marginTop: '15px',
         textAlign: 'left',
         maxWidth: '250px'
       }}>
         {data.map((item, index) => (
-          <div key={index} style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div key={index} style={{
+            display: 'flex',
+            alignItems: 'center',
             margin: '8px 0',
             padding: '4px 0'
           }}>
@@ -86,8 +136,8 @@ const PieChart = ({ data, title, size = 200 }) => {
               borderRadius: '3px',
               marginRight: '10px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-            }}></div>
-            <span style={{ 
+            }} />
+            <span style={{
               fontSize: '13px',
               fontFamily: 'Arial, sans-serif',
               color: '#333',

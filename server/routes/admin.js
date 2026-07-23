@@ -15,6 +15,8 @@ const {
     getNotifications,
     getSuggestions,
     getEventFeedbackAll,
+    deleteSuggestion,
+    deleteAdminFeedback,
     getCompetitionTeams,
     getCompetitionJudges,
     createAdminTeam,
@@ -101,7 +103,9 @@ router.get('/notifications', getNotifications);
 
 // Suggestions & Feedback (admin view)
 router.get('/suggestions', getSuggestions);
+router.delete('/suggestions/:id', deleteSuggestion);
 router.get('/feedback', getEventFeedbackAll);
+router.delete('/feedback/:id', deleteAdminFeedback);
 
 // Teams (Admin Management)
 router.get('/competitions/:id/teams', getCompetitionTeams);

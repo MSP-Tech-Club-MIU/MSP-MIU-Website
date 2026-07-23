@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
 import TaskQuizAssetMedia from '../../components/TaskQuizAssetMedia';
@@ -24,8 +25,8 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
     if (!competitionId) return;
     setLoading(true);
     try {
-      const list = await ApiService.getAdminCompetitionTasks(competitionId);
-      setTasks(Array.isArray(list) ? list : []);
+      const result = await ApiService.getAdminCompetitionTasks(competitionId, { limit: 100 });
+      setTasks(Array.isArray(result?.data) ? result.data : []);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to load tasks' });
       setTasks([]);
@@ -392,11 +393,13 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
     return <div className="AdminTaskQuizManage--embedded">{body}</div>;
   }
 
-  return (
-    <div className="AdminPanel__modalOverlay" onClick={onClose}>
+  return createPortal(
+    <div className="AdminPanel__modalOverlay" onClick={onClose} role="presentation">
       <div
         className="AdminPanel__modalContent AdminPanel__modalContent--large AdminPanel__quizModal"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
       >
         <div className="AdminPanel__modalHeader">
           <div>
@@ -409,7 +412,8 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
         </div>
         {body}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

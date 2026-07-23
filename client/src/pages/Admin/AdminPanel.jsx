@@ -1,159 +1,59 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    MdDashboard, MdEmojiEvents, MdFactCheck, MdAppRegistration,
-    MdSearch, MdNotifications, MdLogout, MdHome, MdAdd, MdMenu,
-    MdClose, MdPeople, MdEvent, MdPendingActions, MdDescription,
-    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson,
-    MdSettings
+    MdDashboard, MdEmojiEvents, MdAppRegistration,
+    MdNotifications, MdHome, MdAdd,
+    MdPeople, MdEvent, MdPendingActions, MdDescription,
+    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson, MdSettings,
+    MdBusiness, MdGroups, MdPermMedia, MdArticle
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
-import mspLogo from '../../assets/Images/msp-logo.png';
+import Pagination from '../../components/Pagination';
+import AdminShell, { ParticleBackground } from './AdminShell';
+import RegistrationsTab from './RegistrationsTab';
+import SponsorsAdminTab from './SponsorsAdminTab';
+import BoardAdminTab from './BoardAdminTab';
+import MediaAdminTab from './MediaAdminTab';
+import SiteContentAdminTab from './SiteContentAdminTab';
+import MembersAdminTab from './MembersAdminTab';
+import EventsAdminTab from './EventsAdminTab';
 import './AdminPanel.css';
 
-/* ═══════════════════════════════════════════════════════════
-   Antigravity-style Particle Background (Canvas)
-   ═══════════════════════════════════════════════════════════ */
-const ParticleBackground = () => {
-    const canvasRef = useRef(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let animationId;
-        let particles = [];
-
-        const resize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-        resize();
-        window.addEventListener('resize', resize);
-
-        // Create particles
-        const PARTICLE_COUNT = 180;
-        const colors = [
-            'rgba(74, 166, 255, 0.4)',
-            'rgba(30, 198, 255, 0.35)',
-            'rgba(13, 123, 216, 0.3)',
-            'rgba(191, 224, 255, 0.2)',
-            'rgba(0, 51, 255, 0.25)',
-        ];
-
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                size: Math.random() * 2.2 + 0.3,
-                speedX: (Math.random() - 0.5) * 0.35,
-                speedY: (Math.random() - 0.5) * 0.35,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                pulse: Math.random() * Math.PI * 2,
-                pulseSpeed: Math.random() * 0.015 + 0.005,
-                depth: Math.random(),
-            });
-        }
-
-        // Mouse interaction
-        let mouse = { x: -1000, y: -1000 };
-        const handleMouseMove = (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            particles.forEach((p, i) => {
-                p.pulse += p.pulseSpeed;
-                const sizeMod = Math.sin(p.pulse) * 0.5 + 0.5;
-                const currentSize = p.size * (0.6 + sizeMod * 0.6);
-
-                // Mouse repulsion (antigravity effect)
-                const dx = p.x - mouse.x;
-                const dy = p.y - mouse.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const magnetRadius = 120;
-
-                if (dist < magnetRadius && dist > 0) {
-                    const force = (1 - dist / magnetRadius) * 2.5;
-                    p.x += (dx / dist) * force;
-                    p.y += (dy / dist) * force;
-                }
-
-                // Movement
-                p.x += p.speedX * (0.5 + p.depth * 0.5);
-                p.y += p.speedY * (0.5 + p.depth * 0.5);
-
-                // Wrap around
-                if (p.x < -10) p.x = canvas.width + 10;
-                if (p.x > canvas.width + 10) p.x = -10;
-                if (p.y < -10) p.y = canvas.height + 10;
-                if (p.y > canvas.height + 10) p.y = -10;
-
-                // Draw particle
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.fill();
-
-                // Draw connections
-                for (let j = i + 1; j < particles.length; j++) {
-                    const p2 = particles[j];
-                    const cdx = p.x - p2.x;
-                    const cdy = p.y - p2.y;
-                    const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
-                    const connectDist = 100 + p.depth * 40;
-
-                    if (cdist < connectDist) {
-                        const alpha = (1 - cdist / connectDist) * 0.12;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.strokeStyle = `rgba(74, 166, 255, ${alpha})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-            });
-
-            animationId = requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animationId);
-            window.removeEventListener('resize', resize);
-            window.removeEventListener('mousemove', handleMouseMove);
-        };
-    }, []);
-
-    return <canvas ref={canvasRef} className="AdminPanel__particleBg" />;
-};
+const LIST_LIMIT = 20;
+const NOTIFICATIONS_LIMIT = 50;
 
 const ADMIN_TAB_TO_ROUTE = {
     dashboard: 'dashboard',
+    events: 'events',
     competitions: 'competitions',
-    attendance: 'attendance',
     registrations: 'registrations',
     notifications: 'notifications',
     announcements: 'announcements',
-    suggestions: 'suggestions'
+    suggestions: 'suggestions',
+    sponsors: 'sponsors',
+    board: 'board',
+    media: 'media',
+    content: 'content',
+    members: 'members'
 };
 
 const ADMIN_ROUTE_TO_TAB = {
     dashboard: 'dashboard',
+    events: 'events',
     competitions: 'competitions',
-    attendance: 'attendance',
+    attendance: 'events',
     registrations: 'registrations',
     notifications: 'notifications',
     announcements: 'announcements',
-    suggestions: 'suggestions'
+    suggestions: 'suggestions',
+    sponsors: 'sponsors',
+    board: 'board',
+    media: 'media',
+    content: 'content',
+    members: 'members'
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -173,46 +73,54 @@ const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState(() => getAdminTabFromPath(location.pathname));
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    /** 'full' | 'registrations' — registrations = board/dept5 without full admin */
+    const [accessLevel, setAccessLevel] = useState('full');
     const [alert, setAlert] = useState(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Hide Navbar and Footer when AdminPanel is mounted
     useEffect(() => {
         document.body.classList.add('admin-panel-active');
-        return () => {
-            document.body.classList.remove('admin-panel-active');
-        };
+        return () => document.body.classList.remove('admin-panel-active');
     }, []);
 
     useEffect(() => {
         if (location.pathname === '/admin' || location.pathname === '/admin/') {
-            navigate('/admin/dashboard', { replace: true });
+            navigate(accessLevel === 'registrations' ? '/admin/registrations' : '/admin/dashboard', { replace: true });
+            return;
+        }
+
+        // Attendance lives under Events now
+        if (location.pathname === '/admin/attendance') {
+            navigate('/admin/events?view=attendance', { replace: true });
             return;
         }
 
         const tabFromPath = getAdminTabFromPath(location.pathname);
+        if (accessLevel === 'registrations' && tabFromPath !== 'registrations') {
+            navigate('/admin/registrations', { replace: true });
+            setActiveTab('registrations');
+            return;
+        }
         setActiveTab((prev) => (prev === tabFromPath ? prev : tabFromPath));
-    }, [location.pathname, navigate, getAdminTabFromPath]);
+    }, [location.pathname, navigate, getAdminTabFromPath, accessLevel]);
 
     // Dashboard state
     const [stats, setStats] = useState(null);
 
     // Competitions state
     const [competitions, setCompetitions] = useState([]);
+    const [competitionsPage, setCompetitionsPage] = useState(1);
+    const [competitionsPagination, setCompetitionsPagination] = useState(null);
 
-    // Attendance state
-    const [attendance, setAttendance] = useState([]);
-    const [attendanceFilters, setAttendanceFilters] = useState({ event_id: '', attended: '' });
-
-    // Registrations state
-    const [registrations, setRegistrations] = useState([]);
-    const [regSearch, setRegSearch] = useState('');
-    const [regStatusFilter, setRegStatusFilter] = useState('');
+    // Attendance review is nested under Events tab
+    // Registrations handled by RegistrationsTab (rich FormAdmin UI)
 
     // Notifications state
     const [notifications, setNotifications] = useState([]);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notificationsError, setNotificationsError] = useState(null);
+    const [notificationsPage, setNotificationsPage] = useState(1);
+    const [notificationsPagination, setNotificationsPagination] = useState(null);
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     const notificationsFetchedRef = useRef(false);
 
@@ -220,6 +128,8 @@ const AdminPanel = () => {
     const [announcements, setAnnouncements] = useState([]);
     const [announcementsLoading, setAnnouncementsLoading] = useState(false);
     const [announcementsError, setAnnouncementsError] = useState(null);
+    const [announcementsPage, setAnnouncementsPage] = useState(1);
+    const [announcementsPagination, setAnnouncementsPagination] = useState(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
     const [announcementForm, setAnnouncementForm] = useState({
@@ -233,25 +143,40 @@ const AdminPanel = () => {
     const [suggestionsError, setSuggestionsError] = useState(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [feedbackError, setFeedbackError] = useState(null);
+    const [suggestionsPage, setSuggestionsPage] = useState(1);
+    const [suggestionsPagination, setSuggestionsPagination] = useState(null);
+    const [feedbackPage, setFeedbackPage] = useState(1);
+    const [feedbackPagination, setFeedbackPagination] = useState(null);
 
     // Admin profile for avatar
     const [adminProfile, setAdminProfile] = useState(null);
 
-    // Global search (top bar)
-    const [searchQuery, setSearchQuery] = useState('');
-
     // Navigation items
-    const navItems = [
+    const fullNavItems = useMemo(() => [
         { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
+        { key: 'events', label: 'Events', icon: <MdEvent /> },
         { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
-        { key: 'attendance', label: 'Attendance', icon: <MdFactCheck /> },
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
+        { key: 'members', label: 'Members', icon: <MdPeople /> },
+        { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness /> },
+        { key: 'board', label: 'Board', icon: <MdGroups /> },
+        { key: 'media', label: 'Media', icon: <MdPermMedia /> },
+        { key: 'content', label: 'Site content', icon: <MdArticle /> },
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
-        { key: 'suggestions', label: 'Suggestions & Feedback', icon: <MdFeedback /> },
+        { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+    ], []);
+
+    const registrationsOnlyNav = useMemo(() => [
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
+    ], []);
+
+    const navItems = accessLevel === 'registrations' ? registrationsOnlyNav : fullNavItems;
+
+    const bottomItems = useMemo(() => [
         { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
         { key: 'home', label: 'Home', icon: <MdHome />, onClick: () => navigate('/') },
-    ];
+    ], [navigate]);
 
     // Get greeting based on time
     const getGreeting = () => {
@@ -269,33 +194,46 @@ const AdminPanel = () => {
                 return;
             }
 
-            const result = await ApiService.checkAdminAccess();
-            if (!result.success) {
-                setHasAccess(false);
-                setLoading(false);
-                return;
-            }
-
-            setHasAccess(true);
-            setLoading(false);
-
-            // Load initial data for the admin
-            fetchDashboard();
-            fetchCompetitions();
-            fetchAttendance();
-            fetchRegistrations();
-            fetchNotifications();
-
-            // Load admin profile for avatar / initials
+            let profile = null;
             try {
-                const profile = await ApiService.getProfile();
+                profile = await ApiService.getProfile();
                 setAdminProfile(profile);
             } catch (err) {
                 console.error('Failed to load admin profile:', err);
             }
+
+            const result = await ApiService.checkAdminAccess();
+            if (result.success) {
+                setAccessLevel('full');
+                setHasAccess(true);
+                setLoading(false);
+                fetchDashboard();
+                fetchCompetitions();
+                fetchNotifications();
+                return;
+            }
+
+            // Board or department 5 → registrations-only access
+            const deptRaw = profile?.department_id;
+            const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+            const hasRegAccess = profile?.role === 'board' || (!isNaN(deptId) && deptId === 5);
+
+            if (hasRegAccess) {
+                setAccessLevel('registrations');
+                setHasAccess(true);
+                setLoading(false);
+                if (!location.pathname.includes('/admin/registrations')) {
+                    navigate('/admin/registrations', { replace: true });
+                }
+                return;
+            }
+
+            setHasAccess(false);
+            setLoading(false);
         };
 
         checkAccess();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate]);
 
     // Auto dismiss alerts
@@ -317,107 +255,117 @@ const AdminPanel = () => {
 
     const fetchCompetitions = useCallback(async () => {
         try {
-            const data = await ApiService.getAdminCompetitions();
-            setCompetitions(data || []);
+            const result = await ApiService.getAdminCompetitions({
+                page: competitionsPage,
+                limit: LIST_LIMIT
+            });
+            setCompetitions(Array.isArray(result?.data) ? result.data : []);
+            setCompetitionsPagination(result?.pagination || null);
         } catch (err) {
             console.error('Failed to load competitions:', err);
+            setCompetitions([]);
+            setCompetitionsPagination(null);
         }
-    }, []);
+    }, [competitionsPage]);
 
-    const fetchAttendance = useCallback(async () => {
-        try {
-            const data = await ApiService.getAdminAttendance(attendanceFilters);
-            setAttendance(data || []);
-        } catch (err) {
-            console.error('Failed to load attendance:', err);
-        }
-    }, [attendanceFilters]);
-
-    const fetchRegistrations = useCallback(async (overrideSearch) => {
-        try {
-            const filters = {};
-            if (regStatusFilter) filters.status = regStatusFilter;
-            const searchValue = overrideSearch !== undefined ? overrideSearch : regSearch;
-            if (searchValue) filters.search = searchValue;
-            const data = await ApiService.getAdminRegistrations(filters);
-            setRegistrations(data || []);
-        } catch (err) {
-            console.error('Failed to load registrations:', err);
-        }
-    }, [regStatusFilter, regSearch]);
-
-    const fetchNotifications = useCallback(async () => {
+    const fetchNotifications = useCallback(async (opts = {}) => {
+        const { forDropdown = false } = opts;
         try {
             setNotificationsLoading(true);
             setNotificationsError(null);
-            const data = await ApiService.getAdminNotifications(100);
-            setNotifications(Array.isArray(data) ? data : []);
+            const result = await ApiService.getAdminNotifications(
+                forDropdown
+                    ? { limit: 100, page: 1 }
+                    : { limit: NOTIFICATIONS_LIMIT, page: notificationsPage }
+            );
+            setNotifications(Array.isArray(result?.data) ? result.data : []);
+            if (!forDropdown) {
+                setNotificationsPagination(result?.pagination || null);
+            }
         } catch (err) {
             console.error('Failed to load notifications:', err);
             setNotificationsError(err.message || 'Failed to load notifications');
             setNotifications([]);
+            if (!forDropdown) setNotificationsPagination(null);
         } finally {
             setNotificationsLoading(false);
             notificationsFetchedRef.current = true;
         }
-    }, []);
+    }, [notificationsPage]);
 
     const fetchAnnouncementsAdmin = useCallback(async (showLoading = true) => {
         try {
             if (showLoading) setAnnouncementsLoading(true);
             setAnnouncementsError(null);
-            const data = await ApiService.getAnnouncements(false);
-            setAnnouncements(Array.isArray(data) ? data : []);
+            const result = await ApiService.getAnnouncements({
+                includeInactive: false,
+                page: announcementsPage,
+                limit: LIST_LIMIT
+            });
+            setAnnouncements(Array.isArray(result?.data) ? result.data : []);
+            setAnnouncementsPagination(result?.pagination || null);
         } catch (err) {
             console.error('Failed to load announcements:', err);
             setAnnouncementsError(err.message || 'Failed to load announcements');
             setAnnouncements([]);
+            setAnnouncementsPagination(null);
         } finally {
             setAnnouncementsLoading(false);
         }
-    }, []);
+    }, [announcementsPage]);
 
-    // Load data when tab changes
+    const fetchSuggestionsAndFeedback = useCallback(async () => {
+        setSuggestionsLoading(true);
+        setSuggestionsError(null);
+        setFeedbackLoading(true);
+        setFeedbackError(null);
+        try {
+            const [sug, fb] = await Promise.all([
+                ApiService.getAdminSuggestions({ page: suggestionsPage, limit: LIST_LIMIT }),
+                ApiService.getAdminFeedback({ page: feedbackPage, limit: LIST_LIMIT })
+            ]);
+            setSuggestions(Array.isArray(sug?.data) ? sug.data : []);
+            setSuggestionsPagination(sug?.pagination || null);
+            setFeedbackList(Array.isArray(fb?.data) ? fb.data : []);
+            setFeedbackPagination(fb?.pagination || null);
+        } catch (err) {
+            console.error('Failed to load suggestions/feedback:', err);
+            setSuggestionsError(err.message || 'Failed to load');
+            setFeedbackError(err.message || 'Failed to load');
+            setSuggestions([]);
+            setFeedbackList([]);
+        } finally {
+            setSuggestionsLoading(false);
+            setFeedbackLoading(false);
+        }
+    }, [suggestionsPage, feedbackPage]);
+
+    // Reset list page when switching tabs
     useEffect(() => {
-        if (!hasAccess) return;
+        setCompetitionsPage(1);
+        setNotificationsPage(1);
+        setAnnouncementsPage(1);
+        setSuggestionsPage(1);
+        setFeedbackPage(1);
+    }, [activeTab]);
+
+    // Load data when tab / page changes
+    useEffect(() => {
+        if (!hasAccess || accessLevel !== 'full') return;
         if (activeTab === 'dashboard') fetchDashboard();
         if (activeTab === 'competitions') fetchCompetitions();
-        if (activeTab === 'attendance') fetchAttendance();
-        if (activeTab === 'registrations') fetchRegistrations();
-        if (activeTab === 'notifications') fetchNotifications();
-        if (activeTab === 'announcements') fetchAnnouncementsAdmin(announcements.length === 0);
-        if (activeTab === 'suggestions') {
-            (async () => {
-                setSuggestionsLoading(true);
-                setSuggestionsError(null);
-                setFeedbackLoading(true);
-                setFeedbackError(null);
-                try {
-                    const [sug, fb] = await Promise.all([
-                        ApiService.getAdminSuggestions(),
-                        ApiService.getAdminFeedback()
-                    ]);
-                    setSuggestions(sug || []);
-                    setFeedbackList(fb || []);
-                } catch (err) {
-                    console.error('Failed to load suggestions/feedback:', err);
-                    setSuggestionsError(err.message || 'Failed to load');
-                    setFeedbackError(err.message || 'Failed to load');
-                } finally {
-                    setSuggestionsLoading(false);
-                    setFeedbackLoading(false);
-                }
-            })();
-        }
+        if (activeTab === 'notifications') fetchNotifications({ forDropdown: false });
+        if (activeTab === 'announcements') fetchAnnouncementsAdmin(true);
+        if (activeTab === 'suggestions') fetchSuggestionsAndFeedback();
     }, [
         activeTab,
         hasAccess,
+        accessLevel,
         fetchDashboard,
         fetchCompetitions,
-        fetchAttendance,
-        fetchRegistrations,
         fetchNotifications,
-        fetchAnnouncementsAdmin
+        fetchAnnouncementsAdmin,
+        fetchSuggestionsAndFeedback
     ]);
 
     // Refresh list when returning from full-page competition editor
@@ -426,29 +374,9 @@ const AdminPanel = () => {
         if (location.pathname === '/admin/competitions') {
             fetchCompetitions();
         }
-    }, [location.pathname, hasAccess, fetchCompetitions]);
-
-    // Attendance toggle
-    const toggleAttendance = async (id, current) => {
-        try {
-            await ApiService.updateAdminAttendance(id, !current);
-            setAlert({ type: 'success', message: 'Attendance updated!' });
-            fetchAttendance();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to update attendance' });
-        }
-    };
-
-    // Registration status
-    const updateRegStatus = async (id, status) => {
-        try {
-            await ApiService.updateAdminRegistration(id, status);
-            setAlert({ type: 'success', message: `Application ${status}!` });
-            fetchRegistrations();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to update status' });
-        }
-    };
+        // Only re-run on path/access change — not when page-driven fetchCompetitions identity changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, hasAccess]);
 
     const openAnnouncementModal = (announcement = null) => {
         if (announcement) {
@@ -521,11 +449,7 @@ const AdminPanel = () => {
     };
 
     const handleTabChange = (key) => {
-        const item = navItems.find(n => n.key === key);
-        if (item?.onClick) {
-            item.onClick();
-            return;
-        }
+        if (accessLevel === 'registrations' && key !== 'registrations') return;
         setActiveTab(key);
         setMobileMenuOpen(false);
 
@@ -544,13 +468,7 @@ const AdminPanel = () => {
         return item ? item.label : 'Dashboard';
     };
 
-    const handleSearchSubmit = () => {
-        if (activeTab === 'registrations') {
-            setRegSearch(searchQuery);
-            fetchRegistrations(searchQuery);
-        }
-        // Competitions and attendance filter client-side by searchQuery (state already drives the filter)
-    };
+    const handleRegAlert = useCallback((a) => setAlert(a), []);
 
     const adminName = stats?.adminInfo?.full_name || adminProfile?.full_name || 'Admin';
     const adminTitle = stats?.adminInfo?.title || 'Admin Panel';
@@ -563,6 +481,9 @@ const AdminPanel = () => {
         roleInitials = 'VP';
     } else if (position === 'Head') {
         roleInitials = 'H';
+    } else if (adminProfile?.full_name) {
+        const parts = adminProfile.full_name.trim().split(/\s+/);
+        roleInitials = ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'AD';
     }
 
     const avatarInitials = roleInitials;
@@ -587,7 +508,7 @@ const AdminPanel = () => {
                 <div className="AdminPanel__accessDenied">
                     <div style={{ fontSize: '3rem' }}>🔒</div>
                     <h2>Access Denied</h2>
-                    <p>Only the President, Vice President, and Head of Software Development can access the admin panel.</p>
+                    <p>Only authorized board members can access the admin panel. Registration managers need board role or HR department access.</p>
                     <button className="AdminPanel__accessDeniedBtn" onClick={() => navigate('/')}>
                         Go to Home
                     </button>
@@ -596,137 +517,103 @@ const AdminPanel = () => {
         );
     }
 
-    return (
-        <div className="AdminPanel">
-            <SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" />
-            <ParticleBackground />
+    const topRight = (
+        <>
+            {accessLevel === 'full' && (
+                <button
+                    className="AdminPanel__topBtn"
+                    aria-label="Notifications"
+                    onClick={() => {
+                        const open = !showNotificationsDropdown;
+                        setShowNotificationsDropdown(open);
+                        if (open && !notificationsFetchedRef.current) {
+                            fetchNotifications({ forDropdown: true });
+                        }
+                    }}
+                >
+                    <MdNotifications />
+                </button>
+            )}
+            <div className="AdminPanel__userAvatar">
+                {adminProfile?.profile_picture_url ? (
+                    <img
+                        src={adminProfile.profile_picture_url}
+                        alt={adminName}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '8px',
+                            objectFit: 'cover'
+                        }}
+                    />
+                ) : (
+                    avatarInitials
+                )}
+            </div>
 
-            {/* Mobile overlay */}
-            <div
-                className={`AdminPanel__mobileOverlay ${mobileMenuOpen ? 'visible' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-            />
-
-            {/* ── Sidebar ── */}
-            <aside className={`AdminPanel__sidebar ${mobileMenuOpen ? 'open' : ''}`}>
-                <img
-                    src={mspLogo}
-                    alt="MSP Logo"
-                    className="AdminPanel__sidebarLogo"
-                    onClick={() => navigate('/')}
-                />
-
-                <nav className="AdminPanel__sidebarNav">
-                    {navItems.map(item => (
-                        <button
-                            key={item.key}
-                            className={`AdminPanel__navItem ${activeTab === item.key ? 'active' : ''}`}
-                            onClick={() => handleTabChange(item.key)}
-                            aria-label={item.label}
-                        >
-                            {item.icon}
-                            <span className="AdminPanel__navTooltip">{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-
-
-            </aside>
-
-            {/* ── Main Content ── */}
-            <main className="AdminPanel__main">
-                {/* Top Bar */}
-                <header className="AdminPanel__topBar">
-                    <div className="AdminPanel__topLeft">
-                        <h1 className="AdminPanel__pageTitle">
-                            <span className="AdminPanel__pageTitleIcon">
-                                {navItems.find(n => n.key === activeTab)?.icon}
-                            </span>
-                            {getPageTitle()}
-                        </h1>
+            {showNotificationsDropdown && accessLevel === 'full' && (
+                <div className="AdminPanel__notificationsDropdown">
+                    <div className="AdminPanel__notificationsHeader">
+                        <span>Recent activity</span>
                     </div>
-
-                    <div className="AdminPanel__topRight">
-                        <button
-                            className="AdminPanel__topBtn"
-                            aria-label="Notifications"
-                            onClick={() => {
-                                const open = !showNotificationsDropdown;
-                                setShowNotificationsDropdown(open);
-                                if (open && !notificationsFetchedRef.current) {
-                                    fetchNotifications();
-                                }
-                            }}
-                        >
-                            <MdNotifications />
-                        </button>
-                        <div className="AdminPanel__userAvatar">
-                            {adminProfile?.profile_picture_url ? (
-                                <img
-                                    src={adminProfile.profile_picture_url}
-                                    alt={adminName}
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        borderRadius: '8px',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ) : (
-                                avatarInitials
-                            )}
+                    {notificationsLoading ? (
+                        <div className="AdminPanel__notificationsEmpty">Loading...</div>
+                    ) : notificationsError ? (
+                        <div className="AdminPanel__notificationsEmpty">
+                            {notificationsError}
                         </div>
+                    ) : notifications.length === 0 ? (
+                        <div className="AdminPanel__notificationsEmpty">
+                            No notifications. When another admin takes an action (e.g. competition or registration), it will appear here.
+                        </div>
+                    ) : (
+                        <ul className="AdminPanel__notificationsList">
+                            {notifications.slice(0, 4).map((n) => (
+                                <li key={n.notification_id} className="AdminPanel__notificationItem">
+                                    <p className="AdminPanel__notificationMessage">{n.message}</p>
+                                    <span className="AdminPanel__notificationMeta">
+                                        {n.performer_position} •{' '}
+                                        {new Date(n.created_at).toLocaleString()}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <button
+                        className="AdminPanel__notificationsViewAll"
+                        onClick={() => {
+                            setShowNotificationsDropdown(false);
+                            handleTabChange('notifications');
+                        }}
+                    >
+                        View all notifications
+                    </button>
+                </div>
+            )}
+        </>
+    );
 
-                        {showNotificationsDropdown && (
-                            <div className="AdminPanel__notificationsDropdown">
-                                <div className="AdminPanel__notificationsHeader">
-                                    <span>Recent activity</span>
-                                </div>
-                                {notificationsLoading ? (
-                                    <div className="AdminPanel__notificationsEmpty">Loading...</div>
-                                ) : notificationsError ? (
-                                    <div className="AdminPanel__notificationsEmpty">
-                                        {notificationsError}
-                                    </div>
-                                ) : notifications.length === 0 ? (
-                                    <div className="AdminPanel__notificationsEmpty">
-                                        No notifications. When another admin takes an action (e.g. competition or registration), it will appear here.
-                                    </div>
-                                ) : (
-                                    <ul className="AdminPanel__notificationsList">
-                                        {notifications.slice(0, 4).map((n) => (
-                                            <li key={n.notification_id} className="AdminPanel__notificationItem">
-                                                <p className="AdminPanel__notificationMessage">{n.message}</p>
-                                                <span className="AdminPanel__notificationMeta">
-                                                    {n.performer_position} •{' '}
-                                                    {new Date(n.created_at).toLocaleString()}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                                <button
-                                    className="AdminPanel__notificationsViewAll"
-                                    onClick={() => {
-                                        setShowNotificationsDropdown(false);
-                                        setActiveTab('notifications');
-                                    }}
-                                >
-                                    View all notifications
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </header>
-
-                {/* Scrollable Content */}
-                <div className="AdminPanel__content">
-                    {/* Greeting */}
-                    <div className="AdminPanel__greeting">
-                        <p className="AdminPanel__greetingSub">{getGreeting()},</p>
-                        <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
-                        <p className="AdminPanel__greetingSub">{adminName}</p>
-                    </div>
+    return (
+        <AdminShell
+            seo={<SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" />}
+            navItems={navItems}
+            bottomItems={bottomItems}
+            activeKey={activeTab}
+            onNavClick={handleTabChange}
+            pageTitle={getPageTitle()}
+            pageIcon={navItems.find(n => n.key === activeTab)?.icon}
+            topRight={topRight}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
+        >
+                    {/* Greeting — dashboard only */}
+                    {activeTab === 'dashboard' && accessLevel === 'full' && (
+                        <div className="AdminPanel__greeting">
+                            <p className="AdminPanel__greetingSub">{getGreeting()},</p>
+                            <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
+                            <p className="AdminPanel__greetingSub">{adminName}</p>
+                        </div>
+                    )}
 
                     {/* Alert */}
                     <AnimatePresence>
@@ -743,7 +630,7 @@ const AdminPanel = () => {
                     </AnimatePresence>
 
                     {/* === DASHBOARD === */}
-                    {activeTab === 'dashboard' && stats && (
+                    {accessLevel === 'full' && activeTab === 'dashboard' && stats && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__stats">
                                 {[
@@ -815,8 +702,15 @@ const AdminPanel = () => {
                         </motion.div>
                     )}
 
+                    {/* === EVENTS === */}
+                    {accessLevel === 'full' && activeTab === 'events' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EventsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
                     {/* === COMPETITIONS === */}
-                    {activeTab === 'competitions' && (
+                    {accessLevel === 'full' && activeTab === 'competitions' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
@@ -832,22 +726,15 @@ const AdminPanel = () => {
                                 </div>
 
                                 {(() => {
-                                    const filtered = competitions.filter(comp => {
-                                        if (!searchQuery || activeTab !== 'competitions') return true;
-                                        const q = searchQuery.toLowerCase();
-                                        return (
-                                            comp.title?.toLowerCase().includes(q) ||
-                                            comp.status?.toLowerCase().includes(q)
-                                        );
-                                    });
-                                    if (filtered.length === 0) {
+                                    if (competitions.length === 0) {
                                         return (
                                             <div className="AdminPanel__empty">
-                                                <p>{searchQuery && activeTab === 'competitions' ? `No competitions match "${searchQuery}".` : 'No competitions yet.'}</p>
+                                                <p>No competitions yet.</p>
                                             </div>
                                         );
                                     }
                                     return (
+                                        <div className="AdminPanel__tableWrap">
                                         <table className="AdminPanel__table" key="comp-table">
                                             <thead>
                                                 <tr>
@@ -862,7 +749,7 @@ const AdminPanel = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filtered.map(comp => (
+                                                {competitions.map(comp => (
                                                     <tr key={comp.competition_id}>
                                                         <td style={{ fontWeight: 600 }}>{comp.title}</td>
                                                         <td>{formatCompetitionType(comp.type)}</td>
@@ -896,72 +783,13 @@ const AdminPanel = () => {
                                                 ))}
                                             </tbody>
                                         </table>
+                                        </div>
                                     );
                                 })()}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* === ATTENDANCE === */}
-                    {activeTab === 'attendance' && (
-                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                            <div className="AdminPanel__section">
-                                <div className="AdminPanel__sectionHeader">
-                                    <h2 className="AdminPanel__sectionTitle">
-                                        <MdFactCheck /> Attendance Review
-                                    </h2>
-                                </div>
-
-                                <div className="AdminPanel__filters">
-                                    <select
-                                        className="AdminPanel__filterSelect"
-                                        value={attendanceFilters.attended}
-                                        onChange={e => setAttendanceFilters({ ...attendanceFilters, attended: e.target.value })}
-                                    >
-                                        <option value="">All Status</option>
-                                        <option value="true">Attended</option>
-                                        <option value="false">Not Attended</option>
-                                    </select>
-                                    <button
-                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                        onClick={fetchAttendance}
-                                    >
-                                        Apply Filter
-                                    </button>
-                                </div>
-
-                                {attendance.length === 0 ? (
-                                    <div className="AdminPanel__empty"><p>No attendance requests found.</p></div>
-                                ) : (
-                                    <table className="AdminPanel__table">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>University ID</th>
-                                                <th>Event</th>
-                                                <th>Date</th>
-                                                <th>Attended</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {attendance.map(req => (
-                                                <tr key={req.attendance_id}>
-                                                    <td style={{ fontWeight: 600 }}>{req.full_name}</td>
-                                                    <td>{req.university_id}</td>
-                                                    <td>{req.event_name || req.event_id}</td>
-                                                    <td>{formatDate(req.created_at)}</td>
-                                                    <td>
-                                                        <button
-                                                            className={`AdminPanel__toggle ${req.attended ? 'active' : ''}`}
-                                                            onClick={() => toggleAttendance(req.attendance_id, req.attended)}
-                                                            title={req.attended ? 'Attended' : 'Not attended'}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                <Pagination
+                                    pagination={competitionsPagination}
+                                    onPageChange={(p) => { setCompetitionsPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
@@ -972,91 +800,46 @@ const AdminPanel = () => {
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
                                     <h2 className="AdminPanel__sectionTitle">
-                                        <MdAppRegistration /> Registration Management
+                                        <MdAppRegistration /> Applications Dashboard
                                     </h2>
                                 </div>
-
-                                <div className="AdminPanel__filters">
-                                    <input
-                                        className="AdminPanel__filterInput"
-                                        placeholder="Search by name, email, or ID..."
-                                        value={regSearch}
-                                        onChange={e => setRegSearch(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && fetchRegistrations()}
-                                    />
-                                    <select
-                                        className="AdminPanel__filterSelect"
-                                        value={regStatusFilter}
-                                        onChange={e => setRegStatusFilter(e.target.value)}
-                                    >
-                                        <option value="">All Status</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
-                                    </select>
-                                    <button
-                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                        onClick={() => fetchRegistrations()}
-                                    >
-                                        Search
-                                    </button>
-                                </div>
-
-                                {registrations.length === 0 ? (
-                                    <div className="AdminPanel__empty"><p>No registrations found.</p></div>
-                                ) : (
-                                    <table className="AdminPanel__table">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Email</th>
-                                                <th>University ID</th>
-                                                <th>Status</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {registrations.map(reg => (
-                                                <tr key={reg.application_id}>
-                                                    <td style={{ fontWeight: 600 }}>{reg.full_name}</td>
-                                                    <td>{reg.email}</td>
-                                                    <td>{reg.university_id}</td>
-                                                    <td>
-                                                        <span className={`AdminPanel__badge AdminPanel__badge--${reg.status?.split('_')[0] || 'pending'}`}>
-                                                            {reg.status || 'pending'}
-                                                        </span>
-                                                    </td>
-                                                    <td>{formatDate(reg.created_at)}</td>
-                                                    <td>
-                                                        {reg.status !== 'approved' && (
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
-                                                                onClick={() => updateRegStatus(reg.application_id, 'approved')}
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                        )}
-                                                        {reg.status !== 'rejected' && (
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--reject"
-                                                                onClick={() => updateRegStatus(reg.application_id, 'rejected')}
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                <RegistrationsTab onAlert={handleRegAlert} />
                             </div>
                         </motion.div>
                     )}
 
+                    {accessLevel === 'full' && activeTab === 'sponsors' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SponsorsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'board' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <BoardAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'media' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <MediaAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'content' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SiteContentAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'members' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <MembersAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
                     {/* === NOTIFICATIONS (FULL LIST) === */}
-                    {activeTab === 'notifications' && (
+                    {accessLevel === 'full' && activeTab === 'notifications' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
@@ -1095,12 +878,16 @@ const AdminPanel = () => {
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={notificationsPagination}
+                                    onPageChange={(p) => { setNotificationsPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
 
                     {/* === ANNOUNCEMENTS OVERVIEW === */}
-                    {activeTab === 'announcements' && (
+                    {accessLevel === 'full' && activeTab === 'announcements' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
@@ -1149,46 +936,62 @@ const AdminPanel = () => {
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={announcementsPagination}
+                                    onPageChange={(p) => { setAnnouncementsPage(p); }}
+                                />
                             </div>
 
-                            {showAnnouncementModal && (
-                                <div className="AdminPanel__modal" onClick={() => setShowAnnouncementModal(false)}>
-                                    <div className="AdminPanel__modalContent" onClick={e => e.stopPropagation()}>
-                                        <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Title *</label>
-                                            <input value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Title" />
+                            {showAnnouncementModal
+                                ? createPortal(
+                                    <div
+                                        className="AdminPanel__modal"
+                                        onClick={() => setShowAnnouncementModal(false)}
+                                        role="presentation"
+                                    >
+                                        <div
+                                            className="AdminPanel__modalContent"
+                                            onClick={e => e.stopPropagation()}
+                                            role="dialog"
+                                            aria-modal="true"
+                                        >
+                                            <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Title *</label>
+                                                <input value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Title" />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Description *</label>
+                                                <textarea value={announcementForm.description} onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value })} placeholder="Description" rows={4} />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Department *</label>
+                                                <input value={announcementForm.department} onChange={e => setAnnouncementForm({ ...announcementForm, department: e.target.value })} placeholder="e.g. Technical" />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Date *</label>
+                                                <input type="date" value={announcementForm.announcement_date} onChange={e => setAnnouncementForm({ ...announcementForm, announcement_date: e.target.value })} />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>
+                                                    <input type="checkbox" checked={announcementForm.priority} onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.checked })} />
+                                                    {' '}Priority
+                                                </label>
+                                            </div>
+                                            <div className="AdminPanel__modalActions">
+                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
+                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>{editingAnnouncement ? 'Save' : 'Create'}</button>
+                                            </div>
                                         </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Description *</label>
-                                            <textarea value={announcementForm.description} onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value })} placeholder="Description" rows={4} />
-                                        </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Department *</label>
-                                            <input value={announcementForm.department} onChange={e => setAnnouncementForm({ ...announcementForm, department: e.target.value })} placeholder="e.g. Technical" />
-                                        </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Date *</label>
-                                            <input type="date" value={announcementForm.announcement_date} onChange={e => setAnnouncementForm({ ...announcementForm, announcement_date: e.target.value })} />
-                                        </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>
-                                                <input type="checkbox" checked={announcementForm.priority} onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.checked })} />
-                                                {' '}Priority
-                                            </label>
-                                        </div>
-                                        <div className="AdminPanel__modalActions">
-                                            <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
-                                            <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>{editingAnnouncement ? 'Save' : 'Create'}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                    </div>,
+                                    document.body
+                                )
+                                : null}
                         </motion.div>
                     )}
 
                     {/* === SUGGESTIONS & FEEDBACK === */}
-                    {activeTab === 'suggestions' && (
+                    {accessLevel === 'full' && activeTab === 'suggestions' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <h2 className="AdminPanel__sectionTitle"><MdFeedback /> Suggestions</h2>
@@ -1206,6 +1009,7 @@ const AdminPanel = () => {
                                                 <th>From</th>
                                                 <th>Suggestion</th>
                                                 <th>Anonymous</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1215,11 +1019,33 @@ const AdminPanel = () => {
                                                     <td>{s.anonymous ? '—' : (s.member?.full_name || s.member_id)}</td>
                                                     <td style={{ maxWidth: 320 }}>{s.suggestion}</td>
                                                     <td>{s.anonymous ? 'Yes' : 'No'}</td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Delete this suggestion?')) return;
+                                                                try {
+                                                                    await ApiService.deleteAdminSuggestion(s.suggestion_id);
+                                                                    setAlert({ type: 'success', message: 'Suggestion deleted.' });
+                                                                    fetchSuggestionsAndFeedback();
+                                                                } catch (err) {
+                                                                    setAlert({ type: 'error', message: err.message || 'Delete failed' });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={suggestionsPagination}
+                                    onPageChange={(p) => { setSuggestionsPage(p); }}
+                                />
                             </div>
                             <div className="AdminPanel__section" style={{ marginTop: 24 }}>
                                 <h2 className="AdminPanel__sectionTitle">Event Feedback</h2>
@@ -1236,6 +1062,7 @@ const AdminPanel = () => {
                                                 <th>Date</th>
                                                 <th>Event</th>
                                                 <th>Feedback</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1244,26 +1071,37 @@ const AdminPanel = () => {
                                                     <td>{formatDate(f.created_at)}</td>
                                                     <td>{f.event?.name || f.event_id}</td>
                                                     <td style={{ maxWidth: 400 }}>{f.feedback}</td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Delete this feedback?')) return;
+                                                                try {
+                                                                    await ApiService.deleteAdminFeedback(f.feedback_id);
+                                                                    setAlert({ type: 'success', message: 'Feedback deleted.' });
+                                                                    fetchSuggestionsAndFeedback();
+                                                                } catch (err) {
+                                                                    setAlert({ type: 'error', message: err.message || 'Delete failed' });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={feedbackPagination}
+                                    onPageChange={(p) => { setFeedbackPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
-                </div>
-            </main>
-
-            {/* Mobile toggle button */}
-            <button
-                className="AdminPanel__mobileToggle"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Toggle menu"
-            >
-                {mobileMenuOpen ? <MdClose /> : <MdMenu />}
-            </button>
-        </div>
+        </AdminShell>
     );
 };
 

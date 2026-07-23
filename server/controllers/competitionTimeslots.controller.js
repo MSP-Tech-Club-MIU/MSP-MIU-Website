@@ -111,11 +111,16 @@ const getAdminCompetitionTimeslots = async (req, res) => {
   try {
     const competitionId = Number(req.params.id);
     const competition = await assertProjectCompetition(competitionId);
+    const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+    const { page, limit, offset } = parsePagination(req.query);
     const timeslots = await listCompetitionTimeslots(competitionId);
+    const { rows, total } = paginateArray(timeslots, { page, limit, offset });
     return res.json({
       success: true,
       competition: toCompetitionModeContext(competition),
-      data: timeslots
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     return handleTimeslotError(res, error, 'Failed to fetch competition timeslots');

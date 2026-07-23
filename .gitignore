@@ -3,7 +3,7 @@
 /server/.env
 /client/.env
 /server/scripts/.env
-
+/.agent
 # Dependencies
 /node_modules
 /server/node_modules

@@ -64,6 +64,17 @@ const Competition = sequelize.define('Competition', {
       }
     }
   },
+  max_teams: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 1
+    }
+  },
+  registration_deadline: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   is_team_based: {
     type: DataTypes.BOOLEAN,
     allowNull: false,

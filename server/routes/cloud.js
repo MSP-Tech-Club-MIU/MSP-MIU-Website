@@ -1,9 +1,34 @@
 const express = require('express');
 const router = express.Router();
-const { getImages, getAssetsByType, getSlides, getVideos, getCodes, getAssets, getEventThumbnails, getDocuments } = require('../controllers/cloud');
+const {
+  getImages,
+  getAssetsByType,
+  getSlides,
+  getVideos,
+  getCodes,
+  getAssets,
+  getEventThumbnails,
+  getDocuments,
+  deleteCloudObject,
+  replaceCloudObject
+} = require('../controllers/cloud');
+const { authenticateToken, verifyRole } = require('../middlewares/auth');
+const { upload } = require('../middlewares/multer');
 
 // Images endpoint (kept separate due to special handling)
 router.get('/images', getImages);
+
+// Delete a stored object (admin/board)
+router.delete('/object', authenticateToken, verifyRole('admin', 'board'), deleteCloudObject);
+
+// Replace a stored object in-place (same key) — admin/board
+router.put(
+  '/object',
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  upload.single('file'),
+  replaceCloudObject
+);
 
 // Legacy individual endpoints (for backward compatibility)
 // These should come before the generic route to avoid conflicts

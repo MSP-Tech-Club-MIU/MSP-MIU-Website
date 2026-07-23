@@ -55,6 +55,28 @@ const Board = sequelize.define('Board', {
       model: 'users',
       key: 'user_id'
     }
+  },
+  photo_url: {
+    type: DataTypes.STRING(512),
+    allowNull: true
+  },
+  linkedin_url: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  github_url: {
+    type: DataTypes.STRING(255),
+    allowNull: true
+  },
+  sort_order: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  is_visible: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: true
   }
 }, {
   tableName: 'board',

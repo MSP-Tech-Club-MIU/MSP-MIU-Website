@@ -1,5 +1,22 @@
-const { r2 } = require('../config/cloud');
-const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { r2, PutObjectCommand } = require('../config/cloud');
+const { ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const path = require('path');
+const { Op } = require('sequelize');
+const Event = require('../models/Event');
+const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+
+const CLOUD_DIRECTORY_PREFIXES = [
+  'Assets/',
+  'Codes/',
+  'Events_Thumbnails/',
+  'Images/',
+  'Mobile Application/',
+  'Slides/',
+  'Profile_Pictures/',
+  'Student_Schedules/',
+  'Videos/',
+  'Documents/'
+];
 
 /**
  * Validates and sanitizes the base URL from environment variable
@@ -75,6 +92,67 @@ function buildSafeUrl(baseUrl, objectKey) {
   return `${validatedBase}/${sanitizedKey}`;
 }
 
+/**
+ * Normalize a stored media URL/path for comparison against R2 keys.
+ */
+function normalizeMediaRef(value) {
+  if (!value || typeof value !== 'string') return '';
+  let cleaned = value.trim().split('?')[0].split('#')[0];
+  try {
+    cleaned = decodeURIComponent(cleaned);
+  } catch {
+    // keep original if malformed encoding
+  }
+  return cleaned.replace(/\\/g, '/');
+}
+
+/**
+ * Whether a stored event media field references this cloud object.
+ */
+function mediaRefMatchesAsset(stored, asset) {
+  const ref = normalizeMediaRef(stored);
+  if (!ref || !asset?.key) return false;
+  if (asset.url && (ref === normalizeMediaRef(asset.url) || ref.endsWith(`/${asset.key}`))) {
+    return true;
+  }
+  return ref === asset.key || ref.endsWith(`/${asset.key}`) || ref.includes(asset.key);
+}
+
+/**
+ * Attach linked event(s) for slides (upload_file) / thumbnails (main_image).
+ */
+async function attachEventLinks(assets, type) {
+  if (!Array.isArray(assets) || assets.length === 0) return assets;
+  if (type !== 'slides' && type !== 'event-thumbnails') return assets;
+
+  const field = type === 'event-thumbnails' ? 'main_image' : 'upload_file';
+  const events = await Event.findAll({
+    attributes: ['event_id', 'name', 'event_date', field],
+    where: {
+      [field]: {
+        [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }]
+      }
+    },
+    order: [['event_date', 'DESC'], ['event_id', 'DESC']]
+  });
+
+  return assets.map((asset) => {
+    const linked = events
+      .filter((ev) => mediaRefMatchesAsset(ev[field], asset))
+      .map((ev) => ({
+        event_id: ev.event_id,
+        name: ev.name,
+        event_date: ev.event_date
+      }));
+
+    return {
+      ...asset,
+      events: linked,
+      event: linked[0] || null
+    };
+  });
+}
+
 // Get all images from cloud storage
 const getImages = async (req, res) => {
   try {
@@ -111,10 +189,15 @@ const getImages = async (req, res) => {
         };
       });
 
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = paginateArray(imageFiles, { page, limit, offset });
+
     res.json({
       success: true,
-      images: imageFiles,
-      count: imageFiles.length
+      images: rows,
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     console.error('Error fetching images from R2:', error);
@@ -182,15 +265,18 @@ const getAssetsByType = async (req, res) => {
     
     // Validate response.Contents exists before mapping
     if (!response.Contents || !Array.isArray(response.Contents)) {
+      const { page, limit } = parsePagination(req.query);
       return res.json({
         success: true,
         [type]: [],
-        count: 0
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
       });
     }
     
     // Filter and map assets
-    const assets = response.Contents
+    let assets = response.Contents
       .filter(obj => {
         const key = obj.Key;
         const isDirectory = key.endsWith('/');
@@ -213,10 +299,18 @@ const getAssetsByType = async (req, res) => {
         };
       });
 
+    // Link slides / event thumbnails to the events that use them
+    assets = await attachEventLinks(assets, type);
+
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = paginateArray(assets, { page, limit, offset });
+
     res.json({
       success: true,
-      [type]: assets,
-      count: assets.length
+      [type]: rows,
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     console.error(`Error fetching ${req.params.type} from R2:`, error);
@@ -259,9 +353,107 @@ const getDocuments = async (req, res) => {
   return getAssetsByType(req, res);
 };
 
+/**
+ * DELETE cloud object by key (admin/board).
+ * Body or query: { key: "Images/foo.jpg" }
+ */
+const deleteCloudObject = async (req, res) => {
+  try {
+    const rawKey = req.body?.key || req.query?.key;
+    const key = sanitizeObjectKey(rawKey);
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'key is required' });
+    }
+
+    const allowed = CLOUD_DIRECTORY_PREFIXES.some((prefix) => key.startsWith(prefix));
+    if (!allowed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Key is not in an allowed media directory'
+      });
+    }
+
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key
+      })
+    );
+
+    return res.json({ success: true, message: 'Object deleted', key });
+  } catch (error) {
+    console.error('Error deleting cloud object:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to delete object'
+    });
+  }
+};
+
+/**
+ * REPLACE cloud object at an existing key (admin/board).
+ * Multipart: file + key (or query key). Overwrites the same R2 key so URLs stay stable.
+ */
+const replaceCloudObject = async (req, res) => {
+  try {
+    const rawKey = req.body?.key || req.query?.key;
+    const key = sanitizeObjectKey(rawKey);
+    const file = req.file;
+
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'key is required' });
+    }
+    if (!file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const allowed = CLOUD_DIRECTORY_PREFIXES.some((prefix) => key.startsWith(prefix));
+    if (!allowed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Key is not in an allowed media directory'
+      });
+    }
+
+    const existingExt = path.extname(key).toLowerCase();
+    const uploadExt = path.extname(file.originalname).toLowerCase();
+    if (existingExt && uploadExt && existingExt !== uploadExt) {
+      return res.status(400).json({
+        success: false,
+        error: `Replacement must use the same file extension (${existingExt})`
+      });
+    }
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype
+      })
+    );
+
+    const url = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, key);
+    return res.json({
+      success: true,
+      message: 'Object replaced',
+      key,
+      url: url || key
+    });
+  } catch (error) {
+    console.error('Error replacing cloud object:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to replace object'
+    });
+  }
+};
+
 module.exports = {
   getImages,
   getAssetsByType,
+  deleteCloudObject,
+  replaceCloudObject,
   // Legacy functions for backward compatibility
   getSlides,
   getVideos,

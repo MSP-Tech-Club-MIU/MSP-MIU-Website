@@ -1,4 +1,5 @@
 const { Attendance, Event, sequelize } = require('../models');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Helper function to update the attendees count in the events table
@@ -178,6 +179,7 @@ const getAllAttendanceRequests = async (req, res) => {
         }
 
         // Build the query options
+        const { page, limit, offset } = parsePagination(req.query);
         const queryOptions = {
             where: whereClause,
             include: [{
@@ -185,7 +187,10 @@ const getAllAttendanceRequests = async (req, res) => {
                 as: 'event',
                 attributes: ['event_id', 'name', 'event_date']
             }],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         };
 
         // Add text search if provided
@@ -221,12 +226,13 @@ const getAllAttendanceRequests = async (req, res) => {
             };
         }
 
-        const attendanceRequests = await Attendance.findAll(queryOptions);
+        const { rows: attendanceRequests, count: total } = await Attendance.findAndCountAll(queryOptions);
 
         res.json({
             success: true,
             data: attendanceRequests,
             count: attendanceRequests.length,
+            pagination: paginationMeta({ page, limit, total }),
             filters: {
                 event_id,
                 attended,
