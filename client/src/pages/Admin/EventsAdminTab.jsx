@@ -14,6 +14,8 @@ import {
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
+import SeasonBadge from '../../components/SeasonBadge';
+import { useSeason } from '../../context/SeasonContext';
 import AttendanceTab from './AttendanceTab';
 import mspLogo from '../../assets/Images/msp-logo.png';
 
@@ -48,6 +50,7 @@ function normalizeEventDate(value) {
 }
 
 export default function EventsAdminTab({ onAlert }) {
+  const { seasonFilters, isAll, selectedSeasonId } = useSeason();
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('view') === 'attendance' ? 'attendance' : 'events';
 
@@ -86,7 +89,7 @@ export default function EventsAdminTab({ onAlert }) {
       } else {
         setInitialLoading(true);
       }
-      const result = await ApiService.getEvents({ page, limit: PAGE_SIZE });
+      const result = await ApiService.getEvents({ page, limit: PAGE_SIZE, ...seasonFilters });
       setItems(Array.isArray(result?.data) ? result.data : []);
       const meta = Array.isArray(result) ? null : result?.pagination || null;
       if (!meta || meta.totalPages <= 1 || (typeof meta.total === 'number' && meta.total <= PAGE_SIZE)) {
@@ -105,7 +108,7 @@ export default function EventsAdminTab({ onAlert }) {
       setInitialLoading(false);
       setPageLoading(false);
     }
-  }, [page, onAlert, view]);
+  }, [page, onAlert, view, seasonFilters]);
 
   useEffect(() => {
     load();
@@ -235,6 +238,9 @@ export default function EventsAdminTab({ onAlert }) {
         upload_file: form.upload_file.trim() || null,
         registration_enabled: !!form.registration_enabled
       };
+      if (!editing && typeof selectedSeasonId === 'number') {
+        payload.season_id = selectedSeasonId;
+      }
 
       if (editing) {
         await ApiService.updateEvent(editing.event_id, payload);
@@ -556,7 +562,12 @@ export default function EventsAdminTab({ onAlert }) {
                             )}
                           </div>
                           <div className="SponsorsAdmin__rowText">
-                            <span className="SponsorsAdmin__rowName">{row.name}</span>
+                            <span className="SponsorsAdmin__rowName">
+                              {row.name}
+                              {isAll && (row.season || row.season_id) && (
+                                <> {' '}<SeasonBadge season={row.season} /></>
+                              )}
+                            </span>
                             {row.description ? (
                               <span className="SponsorsAdmin__rowTagline">
                                 {String(row.description).slice(0, 80)}

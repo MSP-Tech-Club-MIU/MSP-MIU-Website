@@ -3,15 +3,28 @@ import { createPortal } from 'react-dom';
 import { MdAdd, MdGroups } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
+import SeasonBadge from '../../components/SeasonBadge';
+import { useSeason } from '../../context/SeasonContext';
 import { departments as fallbackDepts } from '../../data/departments';
 
 const POSITIONS = ['Founder', 'President', 'Vice President', 'Head', 'Co-Head'];
+const FACULTIES = [
+  'Computer Science',
+  'Engineering Sciences & Arts - ECE',
+  'Mass Communication',
+  'Dentistry',
+  'Engineering Sciences & Arts - Architecture',
+  'Pharmacy',
+  'Business',
+  'Alsun'
+];
 const LIST_LIMIT = 50;
 
 const emptyForm = () => ({
   full_name: '',
   position: 'Head',
   department_id: '',
+  faculty: '',
   year: '2025-2026',
   email: '',
   university_id: '',
@@ -24,6 +37,7 @@ const emptyForm = () => ({
 });
 
 export default function BoardAdminTab({ onAlert }) {
+  const { seasonFilters, isAll, selectedSeasonId } = useSeason();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
@@ -52,7 +66,12 @@ export default function BoardAdminTab({ onAlert }) {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await ApiService.getBoard({ page, limit: LIST_LIMIT, includeHidden: true });
+      const result = await ApiService.getBoard({
+        page,
+        limit: LIST_LIMIT,
+        includeHidden: true,
+        ...seasonFilters
+      });
       setItems(Array.isArray(result?.data) ? result.data : []);
       setPagination(result?.pagination || null);
     } catch (err) {
@@ -61,7 +80,7 @@ export default function BoardAdminTab({ onAlert }) {
     } finally {
       setLoading(false);
     }
-  }, [page, onAlert]);
+  }, [page, onAlert, seasonFilters]);
 
   useEffect(() => {
     load();
@@ -93,6 +112,7 @@ export default function BoardAdminTab({ onAlert }) {
       full_name: row.full_name || '',
       position: row.position || 'Head',
       department_id: row.department_id ?? '',
+      faculty: row.faculty || '',
       year: row.year || '2025-2026',
       email: row.email || '',
       university_id: row.university_id || '',
@@ -131,6 +151,7 @@ export default function BoardAdminTab({ onAlert }) {
         full_name: form.full_name.trim(),
         position: form.position,
         department_id: form.department_id === '' ? null : Number(form.department_id),
+        faculty: form.faculty || null,
         year: form.year,
         email: form.email || null,
         university_id: form.university_id || null,
@@ -141,6 +162,9 @@ export default function BoardAdminTab({ onAlert }) {
         sort_order: Number(form.sort_order) || 0,
         is_visible: Boolean(form.is_visible)
       };
+      if (!editing && typeof selectedSeasonId === 'number') {
+        payload.season_id = selectedSeasonId;
+      }
       if (editing) {
         await ApiService.updateBoardMember(editing.board_id, payload);
         onAlert?.({ type: 'success', message: 'Board member updated.' });
@@ -191,6 +215,7 @@ export default function BoardAdminTab({ onAlert }) {
                 <th>Name</th>
                 <th>Position</th>
                 <th>Dept</th>
+                <th>Faculty</th>
                 <th>Visible</th>
                 <th>Order</th>
                 <th>Actions</th>
@@ -199,9 +224,15 @@ export default function BoardAdminTab({ onAlert }) {
             <tbody>
               {items.map((row) => (
                 <tr key={row.board_id}>
-                  <td style={{ fontWeight: 600 }}>{row.full_name}</td>
+                  <td style={{ fontWeight: 600 }}>
+                    {row.full_name}
+                    {isAll && (row.season || row.season_id) && (
+                      <> {' '}<SeasonBadge season={row.season} /></>
+                    )}
+                  </td>
                   <td>{row.position}</td>
                   <td>{row.department?.name || row.department_id || '—'}</td>
+                  <td>{row.faculty || '—'}</td>
                   <td>{row.is_visible === false ? 'Hidden' : 'Yes'}</td>
                   <td>{row.sort_order}</td>
                   <td>
@@ -241,6 +272,12 @@ export default function BoardAdminTab({ onAlert }) {
                     <select value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
                       <option value="">None / Leadership</option>
                       {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </label>
+                  <label>Faculty
+                    <select value={form.faculty} onChange={(e) => setForm({ ...form, faculty: e.target.value })}>
+                      <option value="">Select faculty</option>
+                      {FACULTIES.map((f) => <option key={f} value={f}>{f}</option>)}
                     </select>
                   </label>
                   <label>Year<input value={form.year} onChange={(e) => setForm({ ...form, year: e.target.value })} placeholder="2025-2026" /></label>

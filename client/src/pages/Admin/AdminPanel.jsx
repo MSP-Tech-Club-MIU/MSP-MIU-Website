@@ -6,12 +6,15 @@ import {
     MdDashboard, MdEmojiEvents, MdAppRegistration,
     MdNotifications, MdHome, MdAdd,
     MdPeople, MdEvent, MdPendingActions, MdDescription,
-    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson, MdSettings,
-    MdBusiness, MdGroups, MdPermMedia, MdArticle
+    MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail
 } from 'react-icons/md';
+import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import Pagination from '../../components/Pagination';
+import SeasonBadge from '../../components/SeasonBadge';
+import { useSeason } from '../../context/SeasonContext';
 import AdminShell, { ParticleBackground } from './AdminShell';
 import RegistrationsTab from './RegistrationsTab';
 import SponsorsAdminTab from './SponsorsAdminTab';
@@ -20,10 +23,14 @@ import MediaAdminTab from './MediaAdminTab';
 import SiteContentAdminTab from './SiteContentAdminTab';
 import MembersAdminTab from './MembersAdminTab';
 import EventsAdminTab from './EventsAdminTab';
+import SeasonsAdminTab from './SeasonsAdminTab';
+import EmailManagementAdminTab from './EmailManagementAdminTab';
 import './AdminPanel.css';
 
 const LIST_LIMIT = 20;
 const NOTIFICATIONS_LIMIT = 50;
+const ANNOUNCEMENT_TITLE_MAX = 50;
+const ANNOUNCEMENT_DESC_MAX = 220;
 
 const ADMIN_TAB_TO_ROUTE = {
     dashboard: 'dashboard',
@@ -37,7 +44,9 @@ const ADMIN_TAB_TO_ROUTE = {
     board: 'board',
     media: 'media',
     content: 'content',
-    members: 'members'
+    members: 'members',
+    seasons: 'seasons',
+    emails: 'emails'
 };
 
 const ADMIN_ROUTE_TO_TAB = {
@@ -53,7 +62,9 @@ const ADMIN_ROUTE_TO_TAB = {
     board: 'board',
     media: 'media',
     content: 'content',
-    members: 'members'
+    members: 'members',
+    seasons: 'seasons',
+    emails: 'emails'
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -62,6 +73,7 @@ const ADMIN_ROUTE_TO_TAB = {
 const AdminPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { seasonFilters, isAll, selectedSeasonId } = useSeason();
 
     const getAdminTabFromPath = useCallback((pathname) => {
         if (!pathname.startsWith('/admin')) return 'dashboard';
@@ -106,6 +118,7 @@ const AdminPanel = () => {
 
     // Dashboard state
     const [stats, setStats] = useState(null);
+    const [isExportingCsv, setIsExportingCsv] = useState(false);
 
     // Competitions state
     const [competitions, setCompetitions] = useState([]);
@@ -160,8 +173,10 @@ const AdminPanel = () => {
         { key: 'members', label: 'Members', icon: <MdPeople /> },
         { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness /> },
         { key: 'board', label: 'Board', icon: <MdGroups /> },
+        { key: 'seasons', label: 'Season', icon: <MdCalendarMonth /> },
         { key: 'media', label: 'Media', icon: <MdPermMedia /> },
         { key: 'content', label: 'Site content', icon: <MdArticle /> },
+        { key: 'emails', label: 'Email management', icon: <MdEmail /> },
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
         { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback /> },
@@ -246,18 +261,31 @@ const AdminPanel = () => {
     // Fetch functions
     const fetchDashboard = useCallback(async () => {
         try {
-            const data = await ApiService.getAdminDashboard();
+            const data = await ApiService.getAdminDashboard({ ...seasonFilters });
             setStats(data);
         } catch (err) {
             console.error('Failed to load dashboard:', err);
         }
-    }, []);
+    }, [seasonFilters]);
+
+    const exportMembersAndBoardCsv = useCallback(async () => {
+        try {
+            setIsExportingCsv(true);
+            await ApiService.exportMembersAndBoardToCSV({ ...seasonFilters });
+            setAlert({ type: 'success', message: 'Members/board CSV export started.' });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to export members/board.' });
+        } finally {
+            setIsExportingCsv(false);
+        }
+    }, [seasonFilters]);
 
     const fetchCompetitions = useCallback(async () => {
         try {
             const result = await ApiService.getAdminCompetitions({
                 page: competitionsPage,
-                limit: LIST_LIMIT
+                limit: LIST_LIMIT,
+                ...seasonFilters
             });
             setCompetitions(Array.isArray(result?.data) ? result.data : []);
             setCompetitionsPagination(result?.pagination || null);
@@ -266,7 +294,7 @@ const AdminPanel = () => {
             setCompetitions([]);
             setCompetitionsPagination(null);
         }
-    }, [competitionsPage]);
+    }, [competitionsPage, seasonFilters]);
 
     const fetchNotifications = useCallback(async (opts = {}) => {
         const { forDropdown = false } = opts;
@@ -275,8 +303,8 @@ const AdminPanel = () => {
             setNotificationsError(null);
             const result = await ApiService.getAdminNotifications(
                 forDropdown
-                    ? { limit: 100, page: 1 }
-                    : { limit: NOTIFICATIONS_LIMIT, page: notificationsPage }
+                    ? { limit: 100, page: 1, ...seasonFilters }
+                    : { limit: NOTIFICATIONS_LIMIT, page: notificationsPage, ...seasonFilters }
             );
             setNotifications(Array.isArray(result?.data) ? result.data : []);
             if (!forDropdown) {
@@ -291,7 +319,7 @@ const AdminPanel = () => {
             setNotificationsLoading(false);
             notificationsFetchedRef.current = true;
         }
-    }, [notificationsPage]);
+    }, [notificationsPage, seasonFilters]);
 
     const fetchAnnouncementsAdmin = useCallback(async (showLoading = true) => {
         try {
@@ -300,7 +328,8 @@ const AdminPanel = () => {
             const result = await ApiService.getAnnouncements({
                 includeInactive: false,
                 page: announcementsPage,
-                limit: LIST_LIMIT
+                limit: LIST_LIMIT,
+                ...seasonFilters
             });
             setAnnouncements(Array.isArray(result?.data) ? result.data : []);
             setAnnouncementsPagination(result?.pagination || null);
@@ -312,7 +341,7 @@ const AdminPanel = () => {
         } finally {
             setAnnouncementsLoading(false);
         }
-    }, [announcementsPage]);
+    }, [announcementsPage, seasonFilters]);
 
     const fetchSuggestionsAndFeedback = useCallback(async () => {
         setSuggestionsLoading(true);
@@ -382,8 +411,8 @@ const AdminPanel = () => {
         if (announcement) {
             setEditingAnnouncement(announcement);
             setAnnouncementForm({
-                title: announcement.title || '',
-                description: announcement.description || '',
+                title: (announcement.title || '').slice(0, ANNOUNCEMENT_TITLE_MAX),
+                description: (announcement.description || '').slice(0, ANNOUNCEMENT_DESC_MAX),
                 department: announcement.department || '',
                 announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
                 priority: !!announcement.priority
@@ -401,11 +430,15 @@ const AdminPanel = () => {
 
     const saveAnnouncement = async () => {
         try {
+            const payload = { ...announcementForm };
+            if (!editingAnnouncement && typeof selectedSeasonId === 'number') {
+                payload.season_id = selectedSeasonId;
+            }
             if (editingAnnouncement) {
-                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, announcementForm);
+                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, payload);
                 setAlert({ type: 'success', message: 'Announcement updated!' });
             } else {
-                await ApiService.createAnnouncement(announcementForm);
+                await ApiService.createAnnouncement(payload);
                 setAlert({ type: 'success', message: 'Announcement created!' });
             }
             setShowAnnouncementModal(false);
@@ -464,6 +497,17 @@ const AdminPanel = () => {
 
     // Get current page title
     const getPageTitle = () => {
+        if (activeTab === 'emails') {
+            const sub = location.pathname.split('/')[3];
+            if (sub === 'whatsapp') return 'WhatsApp links';
+            if (sub) {
+                return sub
+                    .split('_')
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(' ');
+            }
+            return 'Email management';
+        }
         const item = navItems.find(n => n.key === activeTab);
         return item ? item.label : 'Dashboard';
     };
@@ -609,9 +653,22 @@ const AdminPanel = () => {
                     {/* Greeting — dashboard only */}
                     {activeTab === 'dashboard' && accessLevel === 'full' && (
                         <div className="AdminPanel__greeting">
-                            <p className="AdminPanel__greetingSub">{getGreeting()},</p>
-                            <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
-                            <p className="AdminPanel__greetingSub">{adminName}</p>
+                            <div className="AdminPanel__greetingTop">
+                                <div>
+                                    <p className="AdminPanel__greetingSub">{getGreeting()},</p>
+                                    <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
+                                    <p className="AdminPanel__greetingSub">{adminName}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="AdminPanel__exportCsvBtn"
+                                    onClick={exportMembersAndBoardCsv}
+                                    disabled={isExportingCsv}
+                                >
+                                    <FiDownload />
+                                    {isExportingCsv ? 'Exporting…' : 'Export Members/Board to CSV'}
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -751,7 +808,12 @@ const AdminPanel = () => {
                                             <tbody>
                                                 {competitions.map(comp => (
                                                     <tr key={comp.competition_id}>
-                                                        <td style={{ fontWeight: 600 }}>{comp.title}</td>
+                                                        <td style={{ fontWeight: 600 }}>
+                                                            {comp.title}
+                                                            {isAll && (comp.season || comp.season_id) && (
+                                                                <> {' '}<SeasonBadge season={comp.season} /></>
+                                                            )}
+                                                        </td>
                                                         <td>{formatCompetitionType(comp.type)}</td>
                                                         <td>
                                                             <span className={`AdminPanel__badge AdminPanel__badge--${comp.status || 'draft'}`}>
@@ -820,6 +882,12 @@ const AdminPanel = () => {
                         </motion.div>
                     )}
 
+                    {accessLevel === 'full' && activeTab === 'seasons' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SeasonsAdminTab />
+                        </motion.div>
+                    )}
+
                     {accessLevel === 'full' && activeTab === 'media' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <MediaAdminTab onAlert={setAlert} />
@@ -829,6 +897,12 @@ const AdminPanel = () => {
                     {accessLevel === 'full' && activeTab === 'content' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <SiteContentAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'emails' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EmailManagementAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 
@@ -919,7 +993,12 @@ const AdminPanel = () => {
                                         <tbody>
                                             {announcements.map((a) => (
                                                 <tr key={a.announcement_id}>
-                                                    <td style={{ fontWeight: 600 }}>{a.title}</td>
+                                                    <td style={{ fontWeight: 600 }}>
+                                                        {a.title}
+                                                        {isAll && (a.season || a.season_id) && (
+                                                            <> {' '}<SeasonBadge season={a.season} /></>
+                                                        )}
+                                                    </td>
                                                     <td>{a.department}</td>
                                                     <td>{formatDate(a.announcement_date)}</td>
                                                     <td>
@@ -956,13 +1035,37 @@ const AdminPanel = () => {
                                             aria-modal="true"
                                         >
                                             <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
+                                            {!editingAnnouncement && (
+                                                <p className="AdminPanel__emailNote" role="note">
+                                                    Note: creating this announcement will send an email about it to all members.
+                                                </p>
+                                            )}
                                             <div className="AdminPanel__formGroup">
-                                                <label>Title *</label>
-                                                <input value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Title" />
+                                                <label htmlFor="announcement-title">Title *</label>
+                                                <input
+                                                    id="announcement-title"
+                                                    value={announcementForm.title}
+                                                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value.slice(0, ANNOUNCEMENT_TITLE_MAX) })}
+                                                    placeholder="Title"
+                                                    maxLength={ANNOUNCEMENT_TITLE_MAX}
+                                                />
+                                                <span className={`AdminPanel__charCount${announcementForm.title.length >= ANNOUNCEMENT_TITLE_MAX ? ' is-max' : ''}`}>
+                                                    {announcementForm.title.length}/{ANNOUNCEMENT_TITLE_MAX}
+                                                </span>
                                             </div>
                                             <div className="AdminPanel__formGroup">
-                                                <label>Description *</label>
-                                                <textarea value={announcementForm.description} onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value })} placeholder="Description" rows={4} />
+                                                <label htmlFor="announcement-description">Description *</label>
+                                                <textarea
+                                                    id="announcement-description"
+                                                    value={announcementForm.description}
+                                                    onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, ANNOUNCEMENT_DESC_MAX) })}
+                                                    placeholder="Description"
+                                                    rows={4}
+                                                    maxLength={ANNOUNCEMENT_DESC_MAX}
+                                                />
+                                                <span className={`AdminPanel__charCount${announcementForm.description.length >= ANNOUNCEMENT_DESC_MAX ? ' is-max' : ''}`}>
+                                                    {announcementForm.description.length}/{ANNOUNCEMENT_DESC_MAX}
+                                                </span>
                                             </div>
                                             <div className="AdminPanel__formGroup">
                                                 <label>Department *</label>
@@ -1016,7 +1119,11 @@ const AdminPanel = () => {
                                             {suggestions.map((s) => (
                                                 <tr key={s.suggestion_id}>
                                                     <td>{formatDate(s.created_at)}</td>
-                                                    <td>{s.anonymous ? '—' : (s.member?.full_name || s.member_id)}</td>
+                                                    <td>
+                                                        {s.anonymous
+                                                            ? '—'
+                                                            : (s.member?.full_name || s.name || s.email || s.member_id || 'Guest')}
+                                                    </td>
                                                     <td style={{ maxWidth: 320 }}>{s.suggestion}</td>
                                                     <td>{s.anonymous ? 'Yes' : 'No'}</td>
                                                     <td>

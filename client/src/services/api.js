@@ -34,6 +34,13 @@ function appendPaginationParams(queryParams, options = {}) {
   }
 }
 
+/** Append season_id when present (current | all | numeric). */
+function appendSeasonParams(queryParams, options = {}) {
+  if (options.season_id != null && options.season_id !== '') {
+    queryParams.append('season_id', String(options.season_id));
+  }
+}
+
 // Simple cache implementation
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -456,6 +463,7 @@ class ApiService {
       if (filters.year) queryParams.append('year', filters.year);
       if (filters.search) queryParams.append('search', filters.search);
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/applications${queryString ? `?${queryString}` : ''}`;
@@ -570,6 +578,7 @@ class ApiService {
       if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
       if (filters.past) queryParams.append('past', filters.past);
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/events${queryString ? `?${queryString}` : ''}`;
@@ -606,6 +615,7 @@ class ApiService {
     try {
       const queryParams = new URLSearchParams();
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/sponsors${queryString ? `?${queryString}` : ''}`;
       const cacheKey = getCacheKey(url, filters);
@@ -672,6 +682,7 @@ class ApiService {
   static async getBoard(filters = {}) {
     const queryParams = new URLSearchParams();
     appendPaginationParams(queryParams, filters);
+    appendSeasonParams(queryParams, filters);
     if (filters.includeHidden) queryParams.set('includeHidden', 'true');
     const qs = queryParams.toString();
     const response = await fetch(`${API_BASE_URL}/board${qs ? `?${qs}` : ''}`, {
@@ -837,6 +848,7 @@ class ApiService {
   static async getMembers(filters = {}) {
     const queryParams = new URLSearchParams();
     appendPaginationParams(queryParams, filters);
+    appendSeasonParams(queryParams, filters);
     if (filters.search) queryParams.set('search', filters.search);
     if (filters.department_id) queryParams.set('department_id', filters.department_id);
     if (filters.faculty) queryParams.set('faculty', filters.faculty);
@@ -868,6 +880,193 @@ class ApiService {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to delete member');
+    return result;
+  }
+
+  /** Export members (per faculty) + board as a ZIP of CSV files. */
+  static async exportMembersAndBoardToCSV(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      appendSeasonParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const url = `${API_BASE_URL}/members/export/csv${qs ? `?${qs}` : ''}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || 'Failed to export members/board');
+      }
+
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `MSP - MIU Members & Board ${new Date().getFullYear()}.zip`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) filename = filenameMatch[1];
+      }
+
+      const link = document.createElement('a');
+      const urlObj = URL.createObjectURL(blob);
+      link.setAttribute('href', urlObj);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(urlObj), 100);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error exporting members/board to CSV:', error);
+      throw error;
+    }
+  }
+
+  /** Send activation emails to members without an activated account (optional season filter). */
+  static async sendMemberActivationEmails(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendSeasonParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/members/send-activation-emails${qs ? `?${qs}` : ''}`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send activation emails');
+    return result;
+  }
+
+  /** Send an account-creation / activation email to a single member. */
+  static async sendMemberActivationEmail(id) {
+    const response = await fetch(
+      `${API_BASE_URL}/members/${id}/send-activation-email`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send activation email');
+    return result;
+  }
+
+  // ── Email templates (Email Management) ──────────────────────────
+  static async getEmailTemplates() {
+    const response = await fetch(`${API_BASE_URL}/email-templates`, {
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to load email templates');
+    return result;
+  }
+
+  static async getEmailTemplate(key) {
+    const response = await fetch(`${API_BASE_URL}/email-templates/${encodeURIComponent(key)}`, {
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to load email template');
+    return result;
+  }
+
+  static async updateEmailTemplate(key, payload) {
+    const response = await fetch(`${API_BASE_URL}/email-templates/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update email template');
+    return result;
+  }
+
+  static async resetEmailTemplate(key) {
+    const response = await fetch(`${API_BASE_URL}/email-templates/${encodeURIComponent(key)}/reset`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to reset email template');
+    return result;
+  }
+
+  static async sendEmailTemplateTest(key, body = {}) {
+    const response = await fetch(`${API_BASE_URL}/email-templates/${encodeURIComponent(key)}/test`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send test email');
+    return result;
+  }
+
+  static async getDepartmentWhatsAppLinks() {
+    const response = await fetch(`${API_BASE_URL}/email-templates/departments/whatsapp`, {
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to load WhatsApp links');
+    return result;
+  }
+
+  static async updateDepartmentWhatsApp(id, whatsapp_group_url) {
+    const response = await fetch(
+      `${API_BASE_URL}/email-templates/departments/${id}/whatsapp`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ whatsapp_group_url }),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update WhatsApp link');
+    return result;
+  }
+
+  static async sendEmailMemberActivation(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendSeasonParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/email-templates/send/member-activation${qs ? `?${qs}` : ''}`,
+      { method: 'POST', headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send member activation emails');
+    return result;
+  }
+
+  static async sendEmailBoardActivation(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendSeasonParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/email-templates/send/board-activation${qs ? `?${qs}` : ''}`,
+      { method: 'POST', headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send board activation emails');
+    return result;
+  }
+
+  static async sendEmailMemberAcceptance(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendSeasonParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/email-templates/send/member-acceptance${qs ? `?${qs}` : ''}`,
+      { method: 'POST', headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send acceptance emails');
     return result;
   }
 
@@ -918,6 +1117,7 @@ class ApiService {
       const queryParams = new URLSearchParams();
       if (options.includeInactive) queryParams.append('includeInactive', 'true');
       appendPaginationParams(queryParams, options);
+      appendSeasonParams(queryParams, options);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/announcements${queryString ? `?${queryString}` : ''}`;
@@ -1221,6 +1421,29 @@ class ApiService {
       return result.data || result;
     } catch (error) {
       console.error('Error adding feedback:', error);
+      throw error;
+    }
+  }
+
+  /** Public suggestion form — auth optional (links member when logged in). */
+  static async submitSuggestion(payload) {
+    try {
+      const includeAuth = this.isAuthenticated();
+      const response = await fetch(`${API_BASE_URL}/suggestions`, {
+        method: 'POST',
+        headers: this.getHeaders(includeAuth),
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit suggestion');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error submitting suggestion:', error);
       throw error;
     }
   }
@@ -1533,6 +1756,7 @@ class ApiService {
         queryParams.append('status', filters.status);
       }
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
 
       const url = `${API_BASE_URL}/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
@@ -2292,9 +2516,12 @@ class ApiService {
   /**
    * Get admin dashboard statistics
    */
-  static async getAdminDashboard() {
+  static async getAdminDashboard(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+      const queryParams = new URLSearchParams();
+      appendSeasonParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(`${API_BASE_URL}/admin/dashboard${qs ? `?${qs}` : ''}`, {
         method: 'GET',
         headers: this.getHeaders(true),
       });
@@ -2319,6 +2546,7 @@ class ApiService {
     try {
       const queryParams = new URLSearchParams();
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
       const qs = queryParams.toString();
       const response = await fetch(
         `${API_BASE_URL}/admin/competitions${qs ? `?${qs}` : ''}`,
@@ -2619,6 +2847,7 @@ class ApiService {
       if (filters.status) queryParams.append('status', filters.status);
       if (filters.search) queryParams.append('search', filters.search);
       appendPaginationParams(queryParams, filters);
+      appendSeasonParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/admin/registrations${queryString ? `?${queryString}` : ''}`;
@@ -2681,6 +2910,7 @@ class ApiService {
         page: filters.page ?? 1,
         limit: filters.limit ?? 50
       });
+      appendSeasonParams(queryParams, filters);
 
       const url = `${API_BASE_URL}/admin/notifications${
         queryParams.toString() ? `?${queryParams.toString()}` : ''
@@ -3275,6 +3505,63 @@ class ApiService {
       console.error('Error submitting workspace competition timeslot selection:', error);
       throw error;
     }
+  }
+
+  // --- Seasons ---
+
+  static async getSeasons(filters = {}) {
+    const queryParams = new URLSearchParams();
+    if (filters.includeInactive) queryParams.set('includeInactive', 'true');
+    const qs = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/seasons${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      headers: this.getHeaders(!!filters.includeInactive),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch seasons');
+    return result;
+  }
+
+  static async getCurrentSeason() {
+    const response = await fetch(`${API_BASE_URL}/seasons/current`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch current season');
+    return result;
+  }
+
+  static async createSeason(payload) {
+    const response = await fetch(`${API_BASE_URL}/seasons`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create season');
+    return result;
+  }
+
+  static async updateSeason(id, payload) {
+    const response = await fetch(`${API_BASE_URL}/seasons/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update season');
+    return result;
+  }
+
+  static async setDefaultSeason(id) {
+    const response = await fetch(`${API_BASE_URL}/seasons/${id}/set-default`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to set default season');
+    return result;
   }
 
   // Clear cache for a specific key pattern

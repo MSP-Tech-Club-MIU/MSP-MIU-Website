@@ -43,6 +43,14 @@ const Sponsor = sequelize.define('Sponsor', {
     allowNull: false,
     defaultValue: 0
   },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

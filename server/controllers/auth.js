@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { User, Member, Board, PasswordToken } = require('../models');
 const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const { resolveSeasonIdForWrite, getDefaultSeasonId } = require('../utils/seasonFilter');
 
 /**
  * Login user
@@ -228,12 +229,20 @@ const register = async (req, res) => {
         const validRoles = ['member', 'board', 'admin'];
         const userRole = role && validRoles.includes(role) ? role : 'member';
 
+        let season_id;
+        try {
+            season_id = await resolveSeasonIdForWrite(req.body, req.query);
+        } catch (_) {
+            season_id = await getDefaultSeasonId();
+        }
+
         // Create user (default to inactive, admin must activate)
         const user = await User.create({
             email,
             password_hash,
             role: userRole,
-            is_active: false // Default to inactive, require admin activation
+            is_active: false, // Default to inactive, require admin activation
+            season_id
         });
 
         // Generate token
@@ -886,7 +895,8 @@ const activateAccount = async (req, res) => {
                     password_hash,
                     department_id: boardMember.department_id,
                     role: 'board', // Ensure role is set to 'board'
-                    is_active: true
+                    is_active: true,
+                    season_id: boardMember.season_id || (await getDefaultSeasonId())
                 });
 
                 // Link board member to user
@@ -909,7 +919,8 @@ const activateAccount = async (req, res) => {
                     password_hash,
                     department_id: member.department_id,
                     role: 'member',
-                    is_active: true
+                    is_active: true,
+                    season_id: member.season_id || (await getDefaultSeasonId())
                 });
 
                 // Link member to user
@@ -1073,79 +1084,16 @@ const forgotPassword = async (req, res) => {
             // Send password reset email (using dynamic import for ES module)
             try {
                 const { sendEmail } = await import('../utils/email.mjs');
+                const { renderTemplate } = require('../utils/emailTemplates/render');
+                const rendered = await renderTemplate('password_reset', {
+                    fullName: user.full_name || 'User',
+                    resetLink
+                });
                 await sendEmail({
                     to: user.email,
-                    subject: 'Password Reset Request - MSP MIU',
-                    html: `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="utf-8">
-                            <style>
-                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                                .header { background-color: #4a90e2; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                                .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                                .button { display: inline-block; padding: 12px 30px; background-color: #4a90e2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                                .button:hover { background-color: #357abd; }
-                                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 20px 0; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="header">
-                                    <h1>Password Reset Request</h1>
-                                </div>
-                                <div class="content">
-                                    <p>Hello ${user.full_name || 'User'},</p>
-                                    <p>We received a request to reset your password for your MSP MIU account.</p>
-                                    <p>Click the button below to reset your password:</p>
-                                    <p style="text-align: center;">
-                                        <a href="${resetLink}" class="button">Reset Password</a>
-                                    </p>
-                                    <p>Or copy and paste this link into your browser:</p>
-                                    <p style="word-break: break-all; color: #4a90e2;">${resetLink}</p>
-                                    <div class="warning">
-                                        <strong>⚠️ Security Notice:</strong>
-                                        <ul>
-                                            <li>This link will expire in 1 hour</li>
-                                            <li>If you didn't request this reset, please ignore this email</li>
-                                            <li>Never share this link with anyone</li>
-                                        </ul>
-                                    </div>
-                                    <p>If you didn't request a password reset, you can safely ignore this email.</p>
-                                </div>
-                                <div class="footer">
-                                    <p>MSP MIU Website</p>
-                                    <p>This is an automated email, please do not reply.</p>
-                                </div>
-                            </div>
-                        </body>
-                        </html>
-                    `,
-                    text: `
-Password Reset Request - MSP MIU
-
-Hello ${user.full_name || 'User'},
-
-We received a request to reset your password for your MSP MIU account.
-
-Click the following link to reset your password:
-${resetLink}
-
-This link will expire in 1 hour.
-
-If you didn't request a password reset, you can safely ignore this email.
-
-Security Notice:
-- This link will expire in 1 hour
-- If you didn't request this reset, please ignore this email
-- Never share this link with anyone
-
-MSP MIU Website
-This is an automated email, please do not reply.
-                    `
+                    subject: rendered.subject,
+                    html: rendered.html,
+                    text: rendered.text
                 });
 
                 logAuditEvent('PASSWORD_RESET_REQUESTED', {

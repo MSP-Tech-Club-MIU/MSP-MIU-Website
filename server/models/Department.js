@@ -14,6 +14,10 @@ const Department = sequelize.define('Department', {
     validate: {
       notEmpty: true
     }
+  },
+  whatsapp_group_url: {
+    type: DataTypes.STRING(512),
+    allowNull: true
   }
 }, {
   tableName: 'departments',

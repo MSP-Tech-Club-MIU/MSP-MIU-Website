@@ -1,6 +1,7 @@
 const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 /**
  * Helper function to convert registration_enabled to boolean
@@ -52,6 +53,7 @@ const addEvent = async (req, res) => {
 
         // Convert registration_enabled to boolean (handle string "true"/"false" from form)
         const regEnabled = convertToBoolean(registration_enabled, true);
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
         // Create new event
         // Files are stored on R2 cloud, so we only accept URLs from req.body
@@ -64,7 +66,8 @@ const addEvent = async (req, res) => {
             upload_file: upload_file || null, // URL from R2 cloud storage
             main_image: main_image || null, // URL from R2 cloud storage
             attendees: attendees || null,
-            registration_enabled: regEnabled
+            registration_enabled: regEnabled,
+            season_id
         });
 
         res.status(201).json({
@@ -74,6 +77,9 @@ const addEvent = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error creating event:', error);
         console.error('Error details:', {
             name: error.name,
@@ -116,9 +122,10 @@ const getAllEvents = async (req, res) => {
     try {
         const { category, upcoming, past } = req.query;
         const { page, limit, offset } = parsePagination(req.query);
-        
+
+        const seasonFilter = await resolveSeasonFilter(req.query);
         // Build where clause
-        const where = {};
+        const where = { ...seasonFilter.where };
         
         if (category) {
             where.category = category;
@@ -136,11 +143,18 @@ const getAllEvents = async (req, res) => {
             };
         }
 
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+
         const { rows: events, count: total } = await Event.findAndCountAll({
             where,
+            include,
             order: [['event_date', 'ASC']],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
         res.status(200).json({
@@ -151,6 +165,9 @@ const getAllEvents = async (req, res) => {
         });
 
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching events:', error);
         res.status(500).json({
             success: false,

@@ -6,6 +6,18 @@
     gap: 20px;
 }
 
+.RegistrationsAdmin__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.RegistrationsAdmin__toolbar .AdminPanel__actionBtn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
 .RegistrationsAdmin__loading {
     display: flex;
     flex-direction: column;

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdClose, MdMenu, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import mspLogo from '../../assets/Images/msp-logo.png';
+import SeasonSelector from '../../components/SeasonSelector';
 import './AdminPanel.css';
 
 const SIDEBAR_COLLAPSED_KEY = 'msp-admin-sidebar-collapsed';
@@ -211,7 +212,10 @@ const AdminShell = ({
                             {pageTitle}
                         </h1>
                     </div>
-                    {topRight && <div className="AdminPanel__topRight">{topRight}</div>}
+                    <div className="AdminPanel__topRight">
+                        <SeasonSelector />
+                        {topRight}
+                    </div>
                 </header>
 
                 <div className="AdminPanel__content">{children}</div>

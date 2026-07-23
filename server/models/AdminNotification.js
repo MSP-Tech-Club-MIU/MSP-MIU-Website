@@ -43,6 +43,14 @@ const AdminNotification = sequelize.define('AdminNotification', {
         type: DataTypes.INTEGER,
         allowNull: true
     },
+    season_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'seasons',
+            key: 'season_id'
+        }
+    },
     created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,

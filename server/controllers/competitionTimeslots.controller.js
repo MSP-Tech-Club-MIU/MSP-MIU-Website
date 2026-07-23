@@ -56,7 +56,7 @@ async function sendSelectionLinksEmailBatch({ competition, slotCount, links }) {
         continue;
       }
 
-      const emailPayload = buildCompetitionTimeslotSelectionEmail({
+      const emailPayload = await buildCompetitionTimeslotSelectionEmail({
         competitionTitle: competition.title,
         teamName: linkData.team_name,
         slotCount,
@@ -87,7 +87,7 @@ async function sendAssignmentEmail({ competition, team, slot, isAdminAssignment 
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildCompetitionTimeslotAssignedEmail } = await import('../utils/competitionTimeslotEmail.mjs');
 
-  const emailPayload = buildCompetitionTimeslotAssignedEmail({
+  const emailPayload = await buildCompetitionTimeslotAssignedEmail({
     competitionTitle: competition.title,
     teamName: team.team_name,
     startAt: formatDateForEmail(slot.start_at),

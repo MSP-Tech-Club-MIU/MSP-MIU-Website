@@ -32,6 +32,8 @@ const QuizAttempt = require('./QuizAttempt');
 const QuizAnswer = require('./QuizAnswer');
 const AdminNotification = require('./AdminNotification');
 const SiteContent = require('./SiteContent');
+const Season = require('./Season');
+const EmailTemplate = require('./EmailTemplate');
 
 // Initialize models
 const models = {
@@ -65,7 +67,9 @@ const models = {
   QuizAttempt,
   QuizAnswer,
   AdminNotification,
-  SiteContent
+  SiteContent,
+  Season,
+  EmailTemplate
 };
 
 // Set up associations
@@ -488,11 +492,45 @@ User.hasMany(AdminNotification, {
   as: 'adminNotifications'
 });
 
-// Sync models with database
+// Season associations
+const seasonScoped = [
+  { model: Board, as: 'boardMembers' },
+  { model: Event, as: 'events' },
+  { model: Sponsor, as: 'sponsors' },
+  { model: Competition, as: 'competitions' },
+  { model: Announcement, as: 'announcements' },
+  { model: Application, as: 'applications' },
+  { model: Member, as: 'members' },
+  { model: AdminNotification, as: 'adminNotificationsBySeason' },
+  { model: User, as: 'users' }
+];
+
+seasonScoped.forEach(({ model, as }) => {
+  model.belongsTo(Season, {
+    foreignKey: 'season_id',
+    as: 'season'
+  });
+  Season.hasMany(model, {
+    foreignKey: 'season_id',
+    as
+  });
+});
+
+// Sync models with database.
+// Prefer targeted patch scripts (patchCmsSchema / patchSeasonSchema) over alter:true.
+// MySQL InnoDB allows max 64 indexes per table; repeated alter sync piles up FKs/indexes
+// and can fail with ER_TOO_MANY_KEYS (seen on users after season_id).
+// Opt in only when needed: DB_SYNC_ALTER=true
 const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: true });
-    console.log('Models synchronized with database successfully');
+    const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
+    if (useAlter) {
+      await sequelize.sync({ alter: true });
+      console.log('Models synchronized with database successfully (alter: true)');
+    } else {
+      await sequelize.sync();
+      console.log('Models synchronized with database successfully');
+    }
   } catch (error) {
     console.error('Error synchronizing models:', error);
     console.log('Note: If you have existing data, you may need to manually adjust the schema');

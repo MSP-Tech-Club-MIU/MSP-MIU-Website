@@ -6,6 +6,9 @@ import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import Pagination from '../components/Pagination';
+import SeasonBadge from '../components/SeasonBadge';
+import SeasonSelector from '../components/SeasonSelector';
+import { useSeason } from '../context/SeasonContext';
 import './Competitions.css';
 import { 
   FiCalendar, 
@@ -19,6 +22,7 @@ import {
 } from 'react-icons/fi';
 
 const Competitions = () => {
+  const { seasonFilters, isAll } = useSeason();
   const [competitions, setCompetitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -65,7 +69,7 @@ const Competitions = () => {
       try {
         setLoading(true);
         setError(null);
-        const filters = { page, limit: 20 };
+        const filters = { page, limit: 20, ...seasonFilters };
         if (filter !== 'all') {
           filters.status = filter;
         }
@@ -84,7 +88,7 @@ const Competitions = () => {
     };
 
     fetchCompetitions();
-  }, [page, filter]);
+  }, [page, filter, seasonFilters]);
 
   const canAccessAdminFeatures = userRole === 'board' || userRole === 'admin';
   const availableStatuses = canAccessAdminFeatures
@@ -201,6 +205,7 @@ const Competitions = () => {
               </div>
 
               <div className="CompetitionsPage__sort">
+                <SeasonSelector />
                 <label className="CompetitionsPage__sortLabel">Sort by:</label>
                 <select
                   className="CompetitionsPage__sortSelect"
@@ -235,7 +240,12 @@ const Competitions = () => {
                         onClick={() => handleCompetitionClick(competition.competition_id)}
                       >
                         <div className="CompetitionCard__header">
-                          <h3 className="CompetitionCard__title">{competition.title}</h3>
+                          <h3 className="CompetitionCard__title">
+                            {competition.title}
+                            {isAll && (competition.season || competition.season_id) && (
+                              <> {' '}<SeasonBadge season={competition.season} /></>
+                            )}
+                          </h3>
                           {getStatusBadge(competition.status)}
                         </div>
 

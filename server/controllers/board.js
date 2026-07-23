@@ -1,5 +1,6 @@
-const { Board, Department } = require('../models');
+const { Board, Department, Season } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
 
@@ -14,27 +15,35 @@ const getBoard = async (req, res) => {
         return res.status(401).json({ success: false, error: 'Auth required to include hidden members' });
       }
     }
-    const where = {};
+
+    const seasonFilter = await resolveSeasonFilter(req.query);
+    const where = { ...seasonFilter.where };
     if (!includeHidden) {
       where.is_visible = true;
     }
 
+    const include = [
+      {
+        model: Department,
+        as: 'department',
+        attributes: ['department_id', 'name'],
+        required: false
+      }
+    ];
+    if (seasonFilter.includeSeason) {
+      include.push(seasonInclude());
+    }
+
     const { rows, count: total } = await Board.findAndCountAll({
       where,
-      include: [
-        {
-          model: Department,
-          as: 'department',
-          attributes: ['department_id', 'name'],
-          required: false
-        }
-      ],
+      include,
       order: [
         ['sort_order', 'ASC'],
         ['board_id', 'ASC']
       ],
       limit,
-      offset
+      offset,
+      distinct: true
     });
 
     res.json({
@@ -44,6 +53,9 @@ const getBoard = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
+    if (err.status) {
+      return res.status(err.status).json({ success: false, error: err.message });
+    }
     console.error(err);
     res.status(500).json({ success: false, error: 'Database error' });
   }
@@ -58,6 +70,7 @@ const createBoardMember = async (req, res) => {
       year,
       email,
       university_id,
+      faculty,
       user_id,
       photo_url,
       linkedin_url,
@@ -75,17 +88,26 @@ const createBoardMember = async (req, res) => {
         error: `position must be one of: ${POSITION_VALUES.join(', ')}`
       });
     }
-    if (!year || !String(year).trim()) {
+
+    const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+    const season = await Season.findByPk(season_id);
+    let yearValue = year != null && String(year).trim() ? String(year).trim() : null;
+    if (!yearValue && season) {
+      yearValue = `${season.start_year}-${season.end_year}`;
+    }
+    if (!yearValue) {
       return res.status(400).json({ success: false, error: 'year is required (e.g. 2025-2026)' });
     }
 
-    const member = await Board.create({
+const member = await Board.create({
       full_name: String(full_name).trim(),
       position,
       department_id: department_id != null && department_id !== '' ? Number(department_id) : null,
-      year: String(year).trim(),
+      year: yearValue,
+      season_id,
       email: email || null,
       university_id: university_id || null,
+      faculty: faculty != null && String(faculty).trim() ? String(faculty).trim() : null,
       user_id: user_id != null && user_id !== '' ? Number(user_id) : null,
       photo_url: photo_url || null,
       linkedin_url: linkedin_url || null,
@@ -94,8 +116,34 @@ const createBoardMember = async (req, res) => {
       is_visible: is_visible === undefined ? true : Boolean(is_visible)
     });
 
-    res.status(201).json({ success: true, data: member });
+    let activationEmail = null;
+    if (member.email) {
+      try {
+        const { sendEmail } = await import('../utils/email.mjs');
+        const { sendBoardActivationEmailForMember } = require('../utils/boardActivationEmail');
+        const result = await sendBoardActivationEmailForMember(member, sendEmail);
+        activationEmail = result;
+      } catch (emailErr) {
+        console.error('Board activation email failed:', emailErr);
+        activationEmail = {
+          success: false,
+          error: emailErr.message || 'Failed to send activation email'
+        };
+      }
+    }
+
+    const payload = { success: true, data: member };
+    if (activationEmail) {
+      payload.activationEmail = activationEmail;
+      if (!activationEmail.success && !activationEmail.skipped) {
+        payload.warning = activationEmail.error || 'Board member created but activation email failed';
+      }
+    }
+    res.status(201).json(payload);
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error creating board member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create board member' });
   }
@@ -116,6 +164,7 @@ const updateBoardMember = async (req, res) => {
       'year',
       'email',
       'university_id',
+      'faculty',
       'user_id',
       'photo_url',
       'linkedin_url',
@@ -139,11 +188,19 @@ const updateBoardMember = async (req, res) => {
           raw === null || raw === '' ? (field === 'sort_order' ? 0 : null) : Number(raw);
       } else if (field === 'is_visible') {
         updates[field] = Boolean(req.body[field]);
-      } else if (field === 'full_name' || field === 'year') {
-        updates[field] = String(req.body[field]).trim();
+      } else if (field === 'full_name' || field === 'year' || field === 'faculty') {
+        const raw = req.body[field];
+        updates[field] =
+          raw === null || raw === ''
+            ? (field === 'faculty' ? null : String(raw || '').trim())
+            : String(raw).trim();
       } else {
         updates[field] = req.body[field] || null;
       }
+    }
+
+    if (req.body.season_id !== undefined) {
+      updates.season_id = await resolveSeasonIdForWrite(req.body, req.query);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -154,6 +211,9 @@ const updateBoardMember = async (req, res) => {
     await member.reload();
     res.json({ success: true, data: member });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error updating board member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update board member' });
   }

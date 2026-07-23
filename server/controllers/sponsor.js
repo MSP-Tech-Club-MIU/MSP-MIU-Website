@@ -1,16 +1,27 @@
 const { Sponsor } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 
 const getAllSponsors = async (req, res) => {
   try {
     const { page, limit, offset } = parsePagination(req.query);
+    const seasonFilter = await resolveSeasonFilter(req.query);
+    const where = { ...seasonFilter.where };
+    const include = [];
+    if (seasonFilter.includeSeason) {
+      include.push(seasonInclude());
+    }
+
     const { rows: sponsors, count: total } = await Sponsor.findAndCountAll({
+      where,
+      include,
       order: [
         ['sort_order', 'ASC'],
         ['created_at', 'DESC']
       ],
       limit,
-      offset
+      offset,
+      distinct: true
     });
     res.status(200).json({
       success: true,
@@ -19,6 +30,9 @@ const getAllSponsors = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error fetching sponsors:', error);
     res.status(500).json({
       success: false,
@@ -49,6 +63,8 @@ const createSponsor = async (req, res) => {
       socialLinksValue = JSON.stringify(social_links);
     }
 
+    const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
     const sponsor = await Sponsor.create({
       name: String(name).trim(),
       logo_url: logo_url || null,
@@ -57,11 +73,15 @@ const createSponsor = async (req, res) => {
       tagline: tagline || null,
       description: description || null,
       tier: tier || null,
-      sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0
+      sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
+      season_id
     });
 
     res.status(201).json({ success: true, data: sponsor });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error creating sponsor:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create sponsor' });
   }
@@ -102,6 +122,9 @@ const updateSponsor = async (req, res) => {
     if (sort_order !== undefined) {
       updates.sort_order = Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0;
     }
+    if (req.body.season_id !== undefined) {
+      updates.season_id = await resolveSeasonIdForWrite(req.body, req.query);
+    }
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ success: false, error: 'No fields to update' });
@@ -111,6 +134,9 @@ const updateSponsor = async (req, res) => {
     await sponsor.reload();
     res.json({ success: true, data: sponsor });
   } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
     console.error('Error updating sponsor:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update sponsor' });
   }

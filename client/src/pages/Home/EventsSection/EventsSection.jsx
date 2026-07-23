@@ -3,20 +3,23 @@ import { motion } from 'framer-motion';
 import './EventsSection.css';
 import { useNavigate } from 'react-router-dom';
 import ApiService from '../../../services/api';
+import SeasonBadge from '../../../components/SeasonBadge';
+import { useSeason } from '../../../context/SeasonContext';
 
 import mspLogo from '../../../assets/Images/msp-logo.png';
 
 const EventsSection = memo(() => {
+  const { seasonFilters, isAll } = useSeason();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Fetch events from API (only once)
+  // Fetch events from API (refetch when season changes)
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const result = await ApiService.getEvents({ limit: 3, page: 1 });
+        const result = await ApiService.getEvents({ limit: 3, page: 1, ...seasonFilters });
         const list = Array.isArray(result) ? result : (result.data || []);
         
         // Map database fields to component fields (exactly like Events.jsx)
@@ -32,7 +35,9 @@ const EventsSection = memo(() => {
                      event.category === 'Entertainment' ? 'entertainment' : 'event',
           // Use main_image from database if available, otherwise fallback to MSP logo
           image_url: (event.main_image && event.main_image.trim()) ? event.main_image : mspLogo,
-          category: event.category
+          category: event.category,
+          season: event.season || null,
+          season_id: event.season_id ?? null,
         }));
         
         console.log('Fetched events:', mappedEvents.length);
@@ -46,8 +51,7 @@ const EventsSection = memo(() => {
     };
 
     fetchEvents();
-  }, []);
-
+  }, [seasonFilters]);
 
   // Format date helper (exactly like Events.jsx)
   const formatDate = useCallback((dateString) => {
@@ -110,7 +114,12 @@ const EventsSection = memo(() => {
                   }} 
                 />
                 <div className="EventCard__body">
-                  <h3 className="EventCard__title">{ev.name}</h3>
+                  <h3 className="EventCard__title">
+                    {ev.name}
+                    {isAll && (ev.season || ev.season_id) && (
+                      <> {' '}<SeasonBadge season={ev.season} /></>
+                    )}
+                  </h3>
                   <p className="EventCard__meta">{formatDate(ev.event_date)}</p>
                   <motion.button 
                     className="EventCard__btn" 

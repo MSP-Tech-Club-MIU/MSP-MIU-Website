@@ -75,6 +75,15 @@
 
 
 /* Board Members Section */
+.BoardToolbar {
+  max-width: 1200px;
+  margin: 8px auto 0;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .BoardMembers {
   padding: 40px 0 80px;
 }

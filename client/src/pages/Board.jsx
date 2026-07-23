@@ -6,7 +6,10 @@ import ProfileCard from '../components/ProfileCard';
 import DepartmentMenu from './Board/DepartmentMenu';
 import BackButton from '../components/BackButton';
 import PageLoader from '../components/PageLoader';
+import SeasonBadge from '../components/SeasonBadge';
+import SeasonSelector from '../components/SeasonSelector';
 import ApiService from '../services/api';
+import { useSeason } from '../context/SeasonContext';
 import { getDepartmentNameById } from '../data/departments';
 import './Board/Board.css';
 
@@ -75,10 +78,13 @@ function mapApiMember(row) {
     github: row.github_url,
     email: row.email,
     sort_order: row.sort_order ?? 0,
+    season: row.season || null,
+    season_id: row.season_id ?? null,
   };
 }
 
 const Board = memo(() => {
+  const { seasonFilters, isAll } = useSeason();
   const [selectedDepartment, setSelectedDepartment] = useState(1);
   const [boardMembers, setBoardMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -88,7 +94,7 @@ const Board = memo(() => {
     (async () => {
       try {
         setLoading(true);
-        const result = await ApiService.getBoard({ limit: 100, page: 1 });
+        const result = await ApiService.getBoard({ limit: 100, page: 1, ...seasonFilters });
         const rows = Array.isArray(result?.data) ? result.data : [];
         const mapped = rows.map(mapApiMember);
         if (!cancelled) {
@@ -103,7 +109,7 @@ const Board = memo(() => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [seasonFilters]);
 
   const groupedMembers = useMemo(() => {
     let members = boardMembers;
@@ -178,6 +184,9 @@ const Board = memo(() => {
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
       />
+      <div className="BoardToolbar">
+        <SeasonSelector />
+      </div>
       {loading ? (
         <PageLoader />
       ) : (
@@ -191,6 +200,11 @@ const Board = memo(() => {
                     className="BoardMembers__card BoardMembers__card--head BoardMembers__card--animate"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
+                    {isAll && (member.season || member.season_id) && (
+                      <div style={{ marginBottom: 8, textAlign: 'center' }}>
+                        <SeasonBadge season={member.season} />
+                      </div>
+                    )}
                     <ProfileCard
                       avatarUrl={member.image}
                       name={member.name}
@@ -209,6 +223,11 @@ const Board = memo(() => {
                         className="BoardMembers__card BoardMembers__card--cohead BoardMembers__card--animate"
                         style={{ animationDelay: `${(group.heads.length + index) * 0.1}s` }}
                       >
+                        {isAll && (member.season || member.season_id) && (
+                          <div style={{ marginBottom: 8, textAlign: 'center' }}>
+                            <SeasonBadge season={member.season} />
+                          </div>
+                        )}
                         <ProfileCard
                           avatarUrl={member.image}
                           name={member.name}

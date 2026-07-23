@@ -9,20 +9,34 @@ const Suggestion = sequelize.define('Suggestion', {
   },
   member_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
+    allowNull: true,
     references: {
       model: 'members',
       key: 'member_id'
-    },
+    }
+  },
+  name: {
+    type: DataTypes.STRING(120),
+    allowNull: true
+  },
+  email: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
     validate: {
-      notEmpty: true
+      isEmail: {
+        msg: 'Must be a valid email address'
+      }
     }
   },
   suggestion: {
     type: DataTypes.TEXT,
     allowNull: false,
     validate: {
-      notEmpty: true
+      notEmpty: true,
+      len: {
+        args: [1, 2000],
+        msg: 'Suggestion must be between 1 and 2000 characters'
+      }
     }
   },
   anonymous: {

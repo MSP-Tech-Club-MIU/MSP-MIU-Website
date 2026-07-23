@@ -4,6 +4,12 @@ const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition'
 const AdminNotification = require('../models/AdminNotification');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const {
+    resolveSeasonFilter,
+    seasonInclude,
+    resolveSeasonIdForWrite,
+    getDefaultSeasonId
+} = require('../utils/seasonFilter');
 
 /**
  * Helper: Log an admin notification
@@ -11,6 +17,12 @@ const { parsePagination, paginationMeta } = require('../utils/pagination');
 const logAdminAction = async (actionType, message, req, entityType = null, entityId = null) => {
     try {
         const boardMember = req.boardMember;
+        let season_id = null;
+        try {
+            season_id = await resolveSeasonIdForWrite(req.body || {}, req.query || {});
+        } catch (_) {
+            season_id = await getDefaultSeasonId();
+        }
         await AdminNotification.create({
             action_type: actionType,
             message,
@@ -18,7 +30,8 @@ const logAdminAction = async (actionType, message, req, entityType = null, entit
             performer_name: boardMember?.full_name || 'Admin',
             performer_position: boardMember?.position || 'Admin',
             entity_type: entityType,
-            entity_id: entityId
+            entity_id: entityId,
+            season_id
         });
     } catch (err) {
         console.error('Failed to log admin notification:', err);
@@ -45,6 +58,9 @@ function writeCompetitionConfig(configObj) {
  */
 const getDashboardStats = async (req, res) => {
     try {
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const seasonWhere = seasonFilter.where;
+
         const [
             totalMembers,
             totalCompetitions,
@@ -53,12 +69,12 @@ const getDashboardStats = async (req, res) => {
             totalApplications,
             pendingApplications
         ] = await Promise.all([
-            Member.count(),
-            Competition.count(),
-            Event.count(),
+            Member.count({ where: seasonWhere }),
+            Competition.count({ where: seasonWhere }),
+            Event.count({ where: seasonWhere }),
             Attendance.count({ where: { attended: false } }),
-            Application.count(),
-            Application.count({ where: { status: 'pending' } })
+            Application.count({ where: seasonWhere }),
+            Application.count({ where: { ...seasonWhere, status: 'pending' } })
         ]);
 
         // Get the logged-in admin's board info
@@ -91,6 +107,9 @@ const getDashboardStats = async (req, res) => {
             }
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching dashboard stats:', error);
         res.status(500).json({
             success: false,
@@ -105,10 +124,18 @@ const getDashboardStats = async (req, res) => {
 const getCompetitions = async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
         const { rows: competitions, count: total } = await Competition.findAndCountAll({
+            where: seasonFilter.where,
+            include,
             order: [['created_at', 'DESC']],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
         res.json({
@@ -118,6 +145,9 @@ const getCompetitions = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
@@ -182,6 +212,8 @@ const createCompetition = async (req, res) => {
             maxSize = 1;
         }
 
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
         const competition = await Competition.create({
             title,
             description,
@@ -206,7 +238,8 @@ const createCompetition = async (req, res) => {
             evaluation_mode: resolvedEvaluation,
             is_team_based: effectiveIsTeamBased,
             config: config ?? null,
-            created_by: req.user.user_id
+            created_by: req.user.user_id,
+            season_id
         });
 
         await ensureQuizForCompetition(competition.get({ plain: true }), req.user.user_id);
@@ -225,6 +258,9 @@ const createCompetition = async (req, res) => {
             data: competition
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
@@ -642,7 +678,8 @@ const getRegistrations = async (req, res) => {
     try {
         const { status, search } = req.query;
         const { page, limit, offset } = parsePagination(req.query);
-        const where = {};
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const where = { ...seasonFilter.where };
 
         if (status) where.status = status;
         if (search) {
@@ -653,11 +690,18 @@ const getRegistrations = async (req, res) => {
             ];
         }
 
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+
         const { rows: applications, count: total } = await Application.findAndCountAll({
             where,
+            include,
             order: [['created_at', 'DESC']],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
         res.json({
@@ -667,6 +711,9 @@ const getRegistrations = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching registrations:', error);
         res.status(500).json({
             success: false,
@@ -722,11 +769,19 @@ const updateRegistrationStatus = async (req, res) => {
 const getNotifications = async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50 });
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
 
         const { rows: notifications, count: total } = await AdminNotification.findAndCountAll({
+            where: seasonFilter.where,
+            include,
             order: [['created_at', 'DESC']],
             limit,
-            offset
+            offset,
+            distinct: true
         });
 
         res.json({
@@ -736,6 +791,9 @@ const getNotifications = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching notifications:', error);
         res.status(500).json({
             success: false,
@@ -751,7 +809,12 @@ const getSuggestions = async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
         const { rows: suggestions, count: total } = await Suggestion.findAndCountAll({
-            include: [{ model: Member, as: 'member', attributes: ['member_id', 'full_name', 'email', 'university_id'] }],
+            include: [{
+                model: Member,
+                as: 'member',
+                attributes: ['member_id', 'full_name', 'email', 'university_id'],
+                required: false
+            }],
             order: [['created_at', 'DESC']],
             limit,
             offset,

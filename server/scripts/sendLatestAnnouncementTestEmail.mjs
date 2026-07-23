@@ -75,7 +75,7 @@ async function main() {
   }
 
   if (singleTo) {
-    const { subject, text, html } = buildAnnouncementEmail(announcement, {
+    const { subject, text, html } = await buildAnnouncementEmail(announcement, {
       testMode,
       announcementId: announcement.announcement_id,
       frontendUrl: process.env.FRONTEND_URL

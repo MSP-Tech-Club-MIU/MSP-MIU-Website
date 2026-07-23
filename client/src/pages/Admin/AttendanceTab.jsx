@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState, memo } from 'react';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
+import { useSeason } from '../../context/SeasonContext';
 
 const LIMIT = 20;
 
@@ -12,6 +13,7 @@ const emptyFilters = () => ({
 });
 
 const AttendanceTab = memo(({ onAlert }) => {
+    const { seasonFilters } = useSeason();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFiltering, setIsFiltering] = useState(false);
@@ -37,7 +39,7 @@ const AttendanceTab = memo(({ onAlert }) => {
         const fetchEvents = async () => {
             try {
                 setLoadingEvents(true);
-                const result = await ApiService.getEvents({ limit: 100 });
+                const result = await ApiService.getEvents({ limit: 100, ...seasonFilters });
                 setEvents(Array.isArray(result?.data) ? result.data : []);
             } catch (err) {
                 console.error('Error fetching events:', err);
@@ -47,7 +49,7 @@ const AttendanceTab = memo(({ onAlert }) => {
             }
         };
         fetchEvents();
-    }, []);
+    }, [seasonFilters]);
 
     const fetchAttendance = useCallback(async () => {
         try {

@@ -91,6 +91,14 @@ const Application = sequelize.define('Application', {
     type: DataTypes.STRING(500),
     allowNull: true
   },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

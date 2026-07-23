@@ -59,8 +59,15 @@ const Event = sequelize.define('Event', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: true
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
   }
-  
 }, {
   tableName: 'events',
   timestamps: true,

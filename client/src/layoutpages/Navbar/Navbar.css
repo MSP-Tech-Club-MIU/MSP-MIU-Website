@@ -81,6 +81,18 @@
     flex: 1;
 }
 
+.Navbar__season {
+    display: flex;
+    align-items: center;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.NavDrawer__seasonRow {
+    list-style: none;
+    padding: 0.35rem 1rem 0.75rem;
+}
+
 .Navbar__moreWrap {
     position: relative;
     list-style: none;

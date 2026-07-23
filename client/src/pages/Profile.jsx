@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../components/SEO';
-import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle, FaCog } from 'react-icons/fa';
 import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import SeasonBadge from '../components/SeasonBadge';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -20,6 +21,7 @@ const Profile = () => {
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [scheduleFile, setScheduleFile] = useState(null);
   const [scheduleFileName, setScheduleFileName] = useState(null);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const fileInputRef = useRef(null);
   const scheduleInputRef = useRef(null);
 
@@ -33,6 +35,27 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
+  const resolveAdminAccess = async (userData) => {
+    try {
+      const adminAccess = await ApiService.checkAdminAccess();
+      if (adminAccess.success) {
+        setHasAdminAccess(true);
+        return;
+      }
+    } catch {
+      // Fall through to role/department check
+    }
+
+    const deptRaw = userData?.department_id;
+    const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+    const hasRegistrationsAccess =
+      userData?.role === 'board' ||
+      userData?.role === 'admin' ||
+      (!Number.isNaN(deptId) && deptId === 5);
+
+    setHasAdminAccess(Boolean(hasRegistrationsAccess));
+  };
+
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -42,6 +65,7 @@ const Profile = () => {
       setEditedData({
         full_name: userData.full_name || '',
       });
+      await resolveAdminAccess(userData);
     } catch (error) {
       console.error('Error fetching profile:', error);
       
@@ -270,6 +294,16 @@ const Profile = () => {
           <div className="profile-actions">
             {!isEditing ? (
               <>
+                {hasAdminAccess && (
+                  <motion.button
+                    className="action-btn admin-btn"
+                    onClick={() => { window.location.href = '/admin'; }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaCog /> Go to Admin Panel
+                  </motion.button>
+                )}
                 <motion.button 
                   className="action-btn edit-btn"
                   onClick={handleEdit}
@@ -354,9 +388,6 @@ const Profile = () => {
                 </motion.div>
               )}
               <h2 className="profile-name">{displayedName || 'No Name'}</h2>
-              <p className="profile-role-text">
-                {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member'}
-              </p>
             </div>
 
             <div className="role-badge-container">
@@ -366,6 +397,9 @@ const Profile = () => {
               >
                 {user.role?.toUpperCase() || 'MEMBER'}
               </span>
+              {user.season?.label && (
+                <SeasonBadge season={user.season} muted={!user.is_active_season} />
+              )}
             </div>
           </div>
 
