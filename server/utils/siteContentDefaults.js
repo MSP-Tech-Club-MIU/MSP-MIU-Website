@@ -86,6 +86,14 @@ const DEFAULTS = {
     title: 'Gallery',
     subtitle: 'Moments from our journey together'
   },
+  android_app: {
+    versionName: '1.0.0',
+    versionCode: 1,
+    fileSizeBytes: 0,
+    releaseNotes: '',
+    apkKey: 'Mobile Application/MSP-MIU.apk',
+    updatedAt: null
+  },
   lookups: {
     faculties: [
       'Computer Science',

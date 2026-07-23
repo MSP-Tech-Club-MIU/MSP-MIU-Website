@@ -1,18 +1,38 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import SEO from '../components/SEO';
 import BackButton from '../components/BackButton';
 import { FiDownload, FiSmartphone, FiShield, FiZap, FiCheck } from 'react-icons/fi';
 import { FaAndroid } from 'react-icons/fa';
+import ApiService from '../services/api';
 import './DownloadAndroidApp.css';
 
 const DownloadAndroidApp = memo(() => {
+  const [appInfo, setAppInfo] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await ApiService.getAndroidApp();
+        if (!cancelled) setAppInfo(result.data || null);
+      } catch (err) {
+        console.warn('Failed to load Android app metadata:', err.message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const versionLabel = appInfo?.versionName || '1.0.0';
+  const sizeLabel = appInfo?.fileSizeLabel || '~35 MB';
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "MSP - MIU Android App",
     "applicationCategory": "MobileApplication",
     "operatingSystem": "Android",
+    "softwareVersion": versionLabel,
     "offers": {
       "@type": "Offer",
       "price": "0",
@@ -39,32 +59,31 @@ const DownloadAndroidApp = memo(() => {
   ];
 
   const handleDownload = () => {
-    // Get the R2 public domain from environment variables
-    // In Vite, environment variables must be prefixed with VITE_ to be accessible in client code
+    if (appInfo?.downloadUrl) {
+      window.open(appInfo.downloadUrl, '_blank');
+      return;
+    }
+
+    // Fallback to env-based R2 URL if metadata is unavailable
     let r2Domain = import.meta.env.VITE_R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN;
-    
+
     if (!r2Domain) {
       console.error('R2_PUBLIC_DOMAIN environment variable is not set');
       alert('Download URL is not configured. Please contact the administrator.');
       return;
     }
-    
-    // Clean up the domain (remove any leading = or whitespace)
+
     r2Domain = r2Domain.trim().replace(/^=+/, '');
-    
-    // Ensure the domain has a protocol
+
     if (!r2Domain.startsWith('http://') && !r2Domain.startsWith('https://')) {
       r2Domain = `https://${r2Domain}`;
     }
-    
-    // Remove trailing slash if present
+
     r2Domain = r2Domain.replace(/\/+$/, '');
-    
-    // Construct the APK URL with proper encoding
+
     const apkPath = '/Mobile Application/MSP-MIU.apk';
     const apkUrl = `${r2Domain}${encodeURI(apkPath)}`;
-    
-    console.log('[Download] APK URL:', apkUrl);
+
     window.open(apkUrl, '_blank');
   };
 
@@ -78,16 +97,16 @@ const DownloadAndroidApp = memo(() => {
         url="https://msp-miu.tech/download-android"
         structuredData={structuredData}
       />
-      
+
       <section className="DownloadHero">
         <div className="DownloadHero__bg" aria-hidden="true" />
-        <motion.div 
+        <motion.div
           className="DownloadHero__inner"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <motion.div 
+          <motion.div
             className="DownloadHero__icon"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -104,7 +123,7 @@ const DownloadAndroidApp = memo(() => {
 
       <section className="DownloadContent">
         <div className="DownloadContent__container">
-          <motion.div 
+          <motion.div
             className="DownloadCard"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -112,14 +131,14 @@ const DownloadAndroidApp = memo(() => {
           >
             <div className="DownloadCard__header">
               <h2>MSP - MIU Mobile App</h2>
-              <p className="DownloadCard__version">Version 1.0.0</p>
+              <p className="DownloadCard__version">Version {versionLabel}</p>
             </div>
-            
+
             <div className="DownloadCard__body">
               <p className="DownloadCard__description">
-                Experience MSP Tech Club on the go with our native Android app. 
-                Access events, view board members, check leaderboards, and stay connected 
-                with the community wherever you are.
+                {appInfo?.releaseNotes?.trim()
+                  ? appInfo.releaseNotes
+                  : 'Experience MSP Tech Club on the go with our native Android app. Access events, view board members, check leaderboards, and stay connected with the community wherever you are.'}
               </p>
 
               <motion.button
@@ -139,13 +158,13 @@ const DownloadAndroidApp = memo(() => {
                 </p>
                 <p className="DownloadCard__info-text">
                   <FiCheck className="DownloadCard__info-icon" />
-                  File size: ~35 MB
+                  File size: {sizeLabel}
                 </p>
               </div>
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="FeaturesGrid"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -170,7 +189,7 @@ const DownloadAndroidApp = memo(() => {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="InstallInstructions"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -194,5 +213,3 @@ const DownloadAndroidApp = memo(() => {
 DownloadAndroidApp.displayName = 'DownloadAndroidApp';
 
 export default DownloadAndroidApp;
-
-

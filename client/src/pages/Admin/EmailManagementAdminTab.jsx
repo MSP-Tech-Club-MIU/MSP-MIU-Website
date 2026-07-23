@@ -14,7 +14,8 @@ import {
   MdCampaign,
   MdEmojiEvents,
   MdLock,
-  MdLink
+  MdLink,
+  MdPhoneAndroid
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { useSeason } from '../../context/SeasonContext';
@@ -37,6 +38,7 @@ const TEMPLATE_ICONS = {
   member_acceptance: MdChat,
   password_reset: MdLock,
   site_announcement: MdCampaign,
+  android_app_update: MdPhoneAndroid,
   competition_announcement: MdCampaign,
   team_invite_new: MdEmojiEvents,
   team_invite_existing: MdEmojiEvents,

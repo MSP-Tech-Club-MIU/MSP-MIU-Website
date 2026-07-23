@@ -2,14 +2,22 @@ const multer = require("multer");
 const path = require("path");
 const {r2, PutObjectCommand} = require("../config/cloud");
 
-// Only allow PDFs or images (pizza filtering)
+// Only allow PDFs, office docs, images, zip, or Android APK
 const fileFilter = (req, file, cb) => {
-  const allowedExt = ['pdf','jpg','jpeg','png','gif','pptx','ppt','docx','doc','xls','xlsx', 'zip'];
+  const allowedExt = ['pdf','jpg','jpeg','png','gif','pptx','ppt','docx','doc','xls','xlsx', 'zip', 'apk'];
   const ext = file.originalname.split('.').pop().toLowerCase();
 
   if (!allowedExt.includes(ext)) {
     console.log('Rejected file extension:', ext);
-    return cb(new Error('Only PDF, PowerPoint, Word, Excel, image, or ZIP files allowed'), false);
+    return cb(new Error('Only PDF, PowerPoint, Word, Excel, image, ZIP, or APK files allowed'), false);
+  }
+  cb(null, true);
+};
+
+const apkFileFilter = (req, file, cb) => {
+  const ext = file.originalname.split('.').pop().toLowerCase();
+  if (ext !== 'apk') {
+    return cb(new Error('Only APK files are allowed'), false);
   }
   cb(null, true);
 };
@@ -17,6 +25,13 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({ storage: multer.memoryStorage(),
  fileFilter
  });
+
+/** Dedicated uploader for Android APKs (up to ~100 MB). */
+const apkUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: apkFileFilter,
+  limits: { fileSize: 100 * 1024 * 1024 }
+});
 
 // Map type → directory
 const directoryMap = {
@@ -78,5 +93,6 @@ const multerUpload = upload.single("file");
 
 module.exports = {
   uploadFile,
-  upload
+  upload,
+  apkUpload
 };

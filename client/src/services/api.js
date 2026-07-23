@@ -3564,6 +3564,67 @@ class ApiService {
     return result;
   }
 
+  // --- Android app ---
+
+  static async getAndroidApp() {
+    const response = await fetch(`${API_BASE_URL}/android-app`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch Android app info');
+    return result;
+  }
+
+  /**
+   * Replace the public APK and optionally email all users.
+   * @param {Object} payload
+   * @param {File} payload.file
+   * @param {string} payload.versionName
+   * @param {number|string} [payload.versionCode]
+   * @param {string} [payload.releaseNotes]
+   * @param {boolean} [payload.notifyUsers=true]
+   */
+  static async publishAndroidAppUpdate({
+    file,
+    versionName,
+    versionCode,
+    releaseNotes = '',
+    notifyUsers = true
+  }) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    if (!file) throw new Error('APK file is required');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('versionName', versionName);
+    if (versionCode !== undefined && versionCode !== null && versionCode !== '') {
+      formData.append('versionCode', String(versionCode));
+    }
+    formData.append('releaseNotes', releaseNotes || '');
+    formData.append('notifyUsers', notifyUsers ? 'true' : 'false');
+
+    const response = await fetch(`${API_BASE_URL}/android-app/publish`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to publish Android app update');
+    return result;
+  }
+
+  static async notifyAndroidAppUpdate() {
+    const response = await fetch(`${API_BASE_URL}/android-app/notify`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send Android app update emails');
+    return result;
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];
