@@ -22,7 +22,7 @@ export const Login = () => {
   const handleClose = () => {
     setShowLoginCard(false);
     // Check if user is authenticated after a brief delay
-    // If login was successful, LoginCard will redirect to /profile
+    // If login was successful, LoginCard redirects to admin (when allowed) or /profile
     // If user just closed the card, navigate to home
     setTimeout(() => {
       if (!ApiService.isAuthenticated()) {
