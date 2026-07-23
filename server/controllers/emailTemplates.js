@@ -142,6 +142,17 @@ const SAMPLE_VARS = {
     preheader: 'This is a sample announcement body.',
     testBannerHtml: ''
   },
+  android_app_update: {
+    title: 'Android app update 1.0.1',
+    versionName: '1.0.1',
+    releaseNotes: 'Bug fixes and performance improvements.',
+    downloadUrl: 'https://msp-miu.tech/download-android',
+    frontendUrl: 'https://msp-miu.tech',
+    titleHtml: 'Android app update 1.0.1',
+    versionNameHtml: '1.0.1',
+    notesHtml: 'Bug fixes and performance improvements.',
+    preheader: 'MSP MIU Android app 1.0.1 is ready to download.'
+  },
   competition_announcement: {
     competitionTitle: 'Sample Competition',
     announcementTitle: 'Sample Title',

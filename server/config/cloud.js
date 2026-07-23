@@ -28,7 +28,8 @@ const r2 = new S3Client({
   requestHandler: new NodeHttpHandler({
     httpsAgent: buildHttpsAgent(),
     connectionTimeout: 10000,
-    requestTimeout: 60000
+    // Large media / APK replaces can exceed 60s on slower links
+    requestTimeout: 300000
   })
 });
 

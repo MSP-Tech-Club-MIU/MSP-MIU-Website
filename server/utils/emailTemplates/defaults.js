@@ -420,6 +420,73 @@ MSP MIU · {{frontendUrl}}`,
     ['title', 'description', 'frontendUrl', 'titleHtml', 'descriptionHtml', 'preheader', 'testBannerHtml']
   ),
 
+  android_app_update: def(
+    'android_app_update',
+    'Android app update broadcast',
+    'announcement',
+    'MSP MIU Android app update {{versionName}}',
+    `A new version of the MSP MIU Android app is available.
+
+Version: {{versionName}}
+
+{{releaseNotes}}
+
+Download the update:
+{{downloadUrl}}
+
+—
+MSP MIU · {{frontendUrl}}`,
+    `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+</head>
+<body style="margin:0;padding:0;background:#091a2c;-webkit-text-size-adjust:100%;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#091a2c;opacity:0;">{{preheader}}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#091a2c;">
+    <tr>
+      <td align="center" style="padding:28px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0e2744;border:1px solid #1e3a52;border-radius:18px;overflow:hidden;">
+          <tr><td style="height:4px;line-height:4px;font-size:0;background:#3DDC84;">&nbsp;</td></tr>
+          <tr>
+            <td style="background:#031c35;padding:20px 26px 18px;border-bottom:1px solid rgba(255,255,255,0.08);">
+              <p style="margin:0;font-family:Inter,system-ui,sans-serif;font-size:20px;font-weight:700;letter-spacing:0.5px;line-height:1.2;">
+                <span style="color:#8EC2F0;">MSP</span><span style="color:#eaf2ff;"> · MIU</span>
+              </p>
+              <p style="margin:8px 0 0;font-family:Inter,system-ui,sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#3DDC84;font-weight:600;">Android App Update</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 26px 8px;font-family:Inter,system-ui,sans-serif;">
+              <h1 style="margin:0;font-size:19px;font-weight:600;letter-spacing:0.4px;color:#ffffff;line-height:1.35;">{{titleHtml}}</h1>
+              <p style="margin:10px 0 0;font-size:13px;color:#3DDC84;font-weight:600;">Version {{versionNameHtml}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:10px 26px 26px;font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.55;color:#8EC2F0;">{{notesHtml}}</td>
+          </tr>
+          <tr>
+            <td style="padding:0 26px 28px;font-family:Inter,system-ui,sans-serif;" align="center">
+              <a href="{{downloadUrl}}" style="display:inline-block;padding:12px 26px;background:#3DDC84;color:#031c35;text-decoration:none;border-radius:12px;font-weight:700;font-size:13px;letter-spacing:0.35px;">Download update</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 26px 24px;border-top:1px solid rgba(255,255,255,0.08);font-family:Inter,system-ui,sans-serif;font-size:12px;line-height:1.55;color:#8a8a8a;text-align:center;">
+              <p style="margin:0 0 10px;"><a href="{{frontendUrl}}" style="color:#03A9F4;text-decoration:none;font-weight:600;">{{frontendUrl}}</a></p>
+              <p style="margin:0;color:#8a8a8a;">You receive these messages because you have an account with MSP MIU.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    ['title', 'versionName', 'releaseNotes', 'downloadUrl', 'frontendUrl', 'titleHtml', 'versionNameHtml', 'notesHtml', 'preheader']
+  ),
+
   competition_announcement: def(
     'competition_announcement',
     'Competition announcement',

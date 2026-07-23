@@ -7,7 +7,7 @@ import {
     MdNotifications, MdHome, MdAdd,
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
-    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -25,6 +25,7 @@ import MembersAdminTab from './MembersAdminTab';
 import EventsAdminTab from './EventsAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
+import AndroidAppAdminTab from './AndroidAppAdminTab';
 import './AdminPanel.css';
 
 const LIST_LIMIT = 20;
@@ -46,7 +47,8 @@ const ADMIN_TAB_TO_ROUTE = {
     content: 'content',
     members: 'members',
     seasons: 'seasons',
-    emails: 'emails'
+    emails: 'emails',
+    android: 'android'
 };
 
 const ADMIN_ROUTE_TO_TAB = {
@@ -64,7 +66,8 @@ const ADMIN_ROUTE_TO_TAB = {
     content: 'content',
     members: 'members',
     seasons: 'seasons',
-    emails: 'emails'
+    emails: 'emails',
+    android: 'android'
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -176,6 +179,7 @@ const AdminPanel = () => {
         { key: 'seasons', label: 'Season', icon: <MdCalendarMonth /> },
         { key: 'media', label: 'Media', icon: <MdPermMedia /> },
         { key: 'content', label: 'Site content', icon: <MdArticle /> },
+        { key: 'android', label: 'Android app', icon: <MdPhoneAndroid /> },
         { key: 'emails', label: 'Email management', icon: <MdEmail /> },
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
@@ -897,6 +901,12 @@ const AdminPanel = () => {
                     {accessLevel === 'full' && activeTab === 'content' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <SiteContentAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'android' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <AndroidAppAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 
