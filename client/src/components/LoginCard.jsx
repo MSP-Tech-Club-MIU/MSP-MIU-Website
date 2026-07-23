@@ -18,6 +18,7 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
   const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState(false);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [welcomeUserName, setWelcomeUserName] = useState('');
+  const [loggedInUser, setLoggedInUser] = useState(null);
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -81,10 +82,12 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
       setErrors({});
       onClose();
       if (result.user) {
+        setLoggedInUser(result.user);
         const displayName = result.user.full_name || result.user.university_id || 'User';
         setWelcomeUserName(displayName);
         setShowWelcomeModal(true);
       } else {
+        setLoggedInUser(null);
         setWelcomeUserName('');
         setShowWelcomeModal(true);
       }
@@ -183,17 +186,37 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
     setForgotPasswordData({ university_id: '', email: '' });
   }, []);
 
-  const handleWelcomeModalClose = useCallback(() => {
+  const handleWelcomeModalClose = useCallback(async () => {
     setShowWelcomeModal(false);
-    const target =
+
+    if (
       postLoginRedirect &&
       typeof postLoginRedirect === 'string' &&
       postLoginRedirect.startsWith('/') &&
       !postLoginRedirect.startsWith('//')
-        ? postLoginRedirect
-        : '/profile';
-    window.location.href = target;
-  }, [postLoginRedirect]);
+    ) {
+      window.location.href = postLoginRedirect;
+      return;
+    }
+
+    // Prefer admin panel when the user can access any of its pages
+    try {
+      const adminAccess = await ApiService.checkAdminAccess();
+      if (adminAccess.success) {
+        window.location.href = '/admin';
+        return;
+      }
+    } catch {
+      // Fall through to role/department check
+    }
+
+    const deptRaw = loggedInUser?.department_id;
+    const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+    const hasRegistrationsAccess =
+      loggedInUser?.role === 'board' || (!Number.isNaN(deptId) && deptId === 5);
+
+    window.location.href = hasRegistrationsAccess ? '/admin' : '/profile';
+  }, [postLoginRedirect, loggedInUser]);
 
   useEffect(() => {
     if (!isOpen) return;
