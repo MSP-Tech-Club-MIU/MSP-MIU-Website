@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard, FiClock } from 'react-icons/fi';
-import { MdQuiz, MdCampaign } from 'react-icons/md';
+import { MdQuiz, MdCampaign, MdEmojiEvents, MdEvent, MdDashboard, MdAppRegistration, MdNotifications, MdFeedback, MdPerson, MdHome } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import PageLoader from '../../components/PageLoader';
+import Pagination from '../../components/Pagination';
 import AdminQuizManageModal from './AdminQuizManageModal';
 import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
+import AdminShell from './AdminShell';
 import './AdminPanel.css';
 import './CompetitionManagement.css';
 
 const TAB_KEYS = ['details', 'quiz', 'tasks', 'timeslots', 'teams', 'announcements'];
+const LIST_LIMIT = 20;
+const SELECT_LIMIT = 100;
 
 const emptyCompForm = () => ({
   name: '',
@@ -52,10 +57,12 @@ function competitionToForm(comp) {
     description: comp.description || '',
     start_date: comp.start_at ? comp.start_at.split('T')[0] : '',
     end_date: comp.end_at ? comp.end_at.split('T')[0] : '',
-    registration_deadline: '',
+    registration_deadline: comp.registration_deadline
+      ? String(comp.registration_deadline).split('T')[0]
+      : '',
     max_team_size: comp.max_team_size || 4,
     min_team_size: comp.min_team_size || 1,
-    max_teams: '',
+    max_teams: comp.max_teams != null ? comp.max_teams : '',
     status: comp.status || 'draft',
     location_type: comp.location_type || 'on-campus',
     location: comp.location_details || '',
@@ -74,8 +81,13 @@ function buildSavePayload(compForm) {
     description: compForm.description,
     start_at: compForm.start_date,
     end_at: compForm.end_date,
+    registration_deadline: compForm.registration_deadline || null,
     max_team_size: compForm.max_team_size,
     min_team_size: compForm.min_team_size,
+    max_teams:
+      compForm.max_teams === '' || compForm.max_teams == null
+        ? null
+        : Number(compForm.max_teams),
     status: compForm.status,
     location_type: compForm.location_type || 'on-campus',
     location_details: compForm.location || null,
@@ -106,6 +118,7 @@ const CompetitionManagement = () => {
 
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
   const [compForm, setCompForm] = useState(emptyCompForm);
@@ -113,6 +126,8 @@ const CompetitionManagement = () => {
 
   const [teamsList, setTeamsList] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  const [teamsPage, setTeamsPage] = useState(1);
+  const [teamsPagination, setTeamsPagination] = useState(null);
   const [editingTeam, setEditingTeam] = useState(null);
   const [teamForm, setTeamForm] = useState({ team_name: '', is_locked: false });
   const [showTeamEditorModal, setShowTeamEditorModal] = useState(false);
@@ -128,6 +143,8 @@ const CompetitionManagement = () => {
   // Announcements state
   const [announcementsList, setAnnouncementsList] = useState([]);
   const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementsPage, setAnnouncementsPage] = useState(1);
+  const [announcementsPagination, setAnnouncementsPagination] = useState(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', send_email: true, target_type: 'all', target_team_id: '', target_user_id: '' });
   const [resendingEmails, setResendingEmails] = useState(null);
@@ -135,6 +152,8 @@ const CompetitionManagement = () => {
   // Timeslots state
   const [timeslotsList, setTimeslotsList] = useState([]);
   const [timeslotsLoading, setTimeslotsLoading] = useState(false);
+  const [timeslotsPage, setTimeslotsPage] = useState(1);
+  const [timeslotsPagination, setTimeslotsPagination] = useState(null);
   const [timeslotsActionLoading, setTimeslotsActionLoading] = useState(false);
   const [timeslotForm, setTimeslotForm] = useState({
     start_at: '',
@@ -144,6 +163,7 @@ const CompetitionManagement = () => {
     window_end_at: '',
     slot_length_minutes: 15
   });
+  const [editingTimeslotId, setEditingTimeslotId] = useState(null);
 
   const urlTab = searchParams.get('tab') || 'details';
   const activeTab = useMemo(
@@ -159,15 +179,34 @@ const CompetitionManagement = () => {
   );
 
   useEffect(() => {
-    document.body.classList.add('admin-panel-active');
-    return () => document.body.classList.remove('admin-panel-active');
-  }, []);
-
-  useEffect(() => {
     if (!alert) return;
     const t = setTimeout(() => setAlert(null), 5000);
     return () => clearTimeout(t);
   }, [alert]);
+
+  const shellNavItems = useMemo(() => [
+    { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
+    { key: 'events', label: 'Events', icon: <MdEvent /> },
+    { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
+    { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
+    { key: 'members', label: 'Members', icon: <MdPerson /> },
+    { key: 'sponsors', label: 'Sponsors', icon: <MdEmojiEvents /> },
+    { key: 'board', label: 'Board', icon: <MdPerson /> },
+    { key: 'media', label: 'Media', icon: <MdDashboard /> },
+    { key: 'content', label: 'Site content', icon: <MdCampaign /> },
+    { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
+    { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
+    { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+  ], []);
+
+  const shellBottomItems = useMemo(() => [
+    { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
+    { key: 'home', label: 'Home', icon: <MdHome />, onClick: () => navigate('/') },
+  ], [navigate]);
+
+  const handleShellNav = useCallback((key) => {
+    navigate(`/admin/${key}`);
+  }, [navigate]);
 
   useEffect(() => {
     if (!isEditMode || !loadedComp) return;
@@ -178,10 +217,19 @@ const CompetitionManagement = () => {
   }, [isEditMode, loadedComp, urlTab, setSearchParams]);
 
   const loadCompetition = useCallback(async () => {
-    const list = await ApiService.getAdminCompetitions();
-    const rows = Array.isArray(list) ? list : [];
+    // Prefer admin list (has full admin fields); high limit so we can find by id under pagination.
+    const result = await ApiService.getAdminCompetitions({ page: 1, limit: SELECT_LIMIT });
+    const rows = Array.isArray(result?.data) ? result.data : [];
     const id = parseInt(competitionId, 10);
-    const comp = rows.find((c) => Number(c.competition_id) === id);
+    let comp = rows.find((c) => Number(c.competition_id) === id);
+    if (!comp) {
+      // Fallback to public detail if not in first page of admin list
+      try {
+        comp = await ApiService.getCompetitionById(competitionId);
+      } catch {
+        comp = null;
+      }
+    }
     if (!comp) {
       setAlert({ type: 'error', message: 'Competition not found.' });
       setCompForm(emptyCompForm());
@@ -230,22 +278,36 @@ const CompetitionManagement = () => {
     };
   }, [navigate, isEditMode, loadCompetition]);
 
-  const fetchCompTeams = useCallback(async () => {
+  const fetchCompTeams = useCallback(async (opts = {}) => {
     if (!loadedComp?.competition_id) return;
+    const page = opts.page ?? teamsPage;
+    const limit = opts.limit ?? LIST_LIMIT;
     try {
       setTeamsLoading(true);
-      const data = await ApiService.getAdminCompetitionTeams(loadedComp.competition_id);
-      setTeamsList(data || []);
+      const result = await ApiService.getAdminCompetitionTeams(loadedComp.competition_id, {
+        page,
+        limit
+      });
+      setTeamsList(Array.isArray(result?.data) ? result.data : []);
+      setTeamsPagination(limit >= SELECT_LIMIT ? null : (result?.pagination || null));
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to load teams' });
+      setTeamsList([]);
+      setTeamsPagination(null);
     } finally {
       setTeamsLoading(false);
     }
-  }, [loadedComp?.competition_id]);
+  }, [loadedComp?.competition_id, teamsPage]);
 
   useEffect(() => {
-    if ((activeTab === 'teams' || activeTab === 'announcements') && loadedComp?.competition_id) {
-      fetchCompTeams();
+    if (activeTab === 'teams' && loadedComp?.competition_id) {
+      fetchCompTeams({ page: teamsPage, limit: LIST_LIMIT });
+    }
+  }, [activeTab, loadedComp?.competition_id, fetchCompTeams, teamsPage]);
+
+  useEffect(() => {
+    if ((activeTab === 'announcements' || activeTab === 'timeslots') && loadedComp?.competition_id) {
+      fetchCompTeams({ page: 1, limit: SELECT_LIMIT });
     }
   }, [activeTab, loadedComp?.competition_id, fetchCompTeams]);
 
@@ -253,27 +315,39 @@ const CompetitionManagement = () => {
     if (!loadedComp?.competition_id) return;
     try {
       setAnnouncementsLoading(true);
-      const data = await ApiService.getCompetitionAnnouncements(loadedComp.competition_id);
-      setAnnouncementsList(data || []);
+      const result = await ApiService.getCompetitionAnnouncements(loadedComp.competition_id, {
+        page: announcementsPage,
+        limit: LIST_LIMIT
+      });
+      setAnnouncementsList(Array.isArray(result?.data) ? result.data : []);
+      setAnnouncementsPagination(result?.pagination || null);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to load announcements' });
+      setAnnouncementsList([]);
+      setAnnouncementsPagination(null);
     } finally {
       setAnnouncementsLoading(false);
     }
-  }, [loadedComp?.competition_id]);
+  }, [loadedComp?.competition_id, announcementsPage]);
 
   const fetchCompTimeslots = useCallback(async () => {
     if (!loadedComp?.competition_id) return;
     try {
       setTimeslotsLoading(true);
-      const result = await ApiService.getAdminCompetitionTimeslots(loadedComp.competition_id);
+      const result = await ApiService.getAdminCompetitionTimeslots(loadedComp.competition_id, {
+        page: timeslotsPage,
+        limit: LIST_LIMIT
+      });
       setTimeslotsList(Array.isArray(result?.data) ? result.data : []);
+      setTimeslotsPagination(result?.pagination || null);
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to load timeslots' });
+      setTimeslotsList([]);
+      setTimeslotsPagination(null);
     } finally {
       setTimeslotsLoading(false);
     }
-  }, [loadedComp?.competition_id]);
+  }, [loadedComp?.competition_id, timeslotsPage]);
 
   useEffect(() => {
     if (activeTab === 'announcements' && loadedComp?.competition_id) {
@@ -284,9 +358,14 @@ const CompetitionManagement = () => {
   useEffect(() => {
     if (activeTab === 'timeslots' && loadedComp?.competition_id) {
       fetchCompTimeslots();
-      fetchCompTeams();
     }
-  }, [activeTab, loadedComp?.competition_id, fetchCompTimeslots, fetchCompTeams]);
+  }, [activeTab, loadedComp?.competition_id, fetchCompTimeslots]);
+
+  useEffect(() => {
+    setTeamsPage(1);
+    setAnnouncementsPage(1);
+    setTimeslotsPage(1);
+  }, [activeTab]);
 
   const createTimeslotSingle = async () => {
     if (!loadedComp?.competition_id) return;
@@ -296,18 +375,46 @@ const CompetitionManagement = () => {
     }
     try {
       setTimeslotsActionLoading(true);
-      await ApiService.createAdminCompetitionTimeslot(loadedComp.competition_id, {
-        start_at: timeslotForm.start_at,
-        end_at: timeslotForm.end_at,
-        location_details: timeslotForm.location_details || null
-      });
-      setAlert({ type: 'success', message: 'Timeslot created.' });
+      if (editingTimeslotId) {
+        await ApiService.updateAdminCompetitionTimeslot(loadedComp.competition_id, editingTimeslotId, {
+          start_at: timeslotForm.start_at,
+          end_at: timeslotForm.end_at,
+          location_details: timeslotForm.location_details || null
+        });
+        setAlert({ type: 'success', message: 'Timeslot updated.' });
+        setEditingTimeslotId(null);
+      } else {
+        await ApiService.createAdminCompetitionTimeslot(loadedComp.competition_id, {
+          start_at: timeslotForm.start_at,
+          end_at: timeslotForm.end_at,
+          location_details: timeslotForm.location_details || null
+        });
+        setAlert({ type: 'success', message: 'Timeslot created.' });
+      }
+      setTimeslotForm((s) => ({ ...s, start_at: '', end_at: '', location_details: '' }));
       await fetchCompTimeslots();
     } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to create timeslot' });
+      setAlert({ type: 'error', message: err.message || 'Failed to save timeslot' });
     } finally {
       setTimeslotsActionLoading(false);
     }
+  };
+
+  const beginEditTimeslot = (slot) => {
+    const toLocalInput = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return String(iso).slice(0, 16);
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setEditingTimeslotId(slot.timeslot_id);
+    setTimeslotForm((s) => ({
+      ...s,
+      start_at: toLocalInput(slot.start_at),
+      end_at: toLocalInput(slot.end_at),
+      location_details: slot.location_details || ''
+    }));
   };
 
   const createGeneratedTimeslots = async () => {
@@ -793,13 +900,24 @@ const CompetitionManagement = () => {
   }
 
   return (
-    <section className="CompetitionManagement">
-      <SEO
-        title={isEditMode ? 'Manage competition' : 'New competition'}
-        description="Manage MSP competition settings (admin)."
-        noindex
-      />
-
+    <AdminShell
+      seo={
+        <SEO
+          title={isEditMode ? 'Manage competition' : 'New competition'}
+          description="Manage MSP competition settings (admin)."
+          noindex
+        />
+      }
+      navItems={shellNavItems}
+      bottomItems={shellBottomItems}
+      activeKey="competitions"
+      onNavClick={handleShellNav}
+      pageTitle={isEditMode && loadedComp ? loadedComp.title : isEditMode ? 'Competition' : 'Create competition'}
+      pageIcon={<MdEmojiEvents />}
+      mobileMenuOpen={mobileMenuOpen}
+      setMobileMenuOpen={setMobileMenuOpen}
+    >
+    <section className="CompetitionManagement CompetitionManagement--embedded">
       <div className="CompetitionManagement__top">
         <div className="CompetitionManagement__titleBlock">
           <button
@@ -810,9 +928,6 @@ const CompetitionManagement = () => {
             <FiArrowLeft size={18} aria-hidden />
             Back to competitions
           </button>
-          <h1 style={{ marginTop: 20 }}>
-            {isEditMode && loadedComp ? loadedComp.title : isEditMode ? 'Competition' : 'Create competition'}
-          </h1>
           <p>
             {isEditMode && loadedComp
               ? `${typeLabel(loadedComp.type)} · ID ${loadedComp.competition_id} — use the tabs to edit settings, ${
@@ -832,8 +947,6 @@ const CompetitionManagement = () => {
               <FiClipboard size={16} aria-hidden /> Public page
             </a>
           ) : null}
-
-
 
           <button
             type="button"
@@ -1290,8 +1403,24 @@ const CompetitionManagement = () => {
               onClick={createTimeslotSingle}
               disabled={timeslotsActionLoading}
             >
-              {timeslotsActionLoading ? 'Saving...' : 'Add exact timeslot'}
+              {timeslotsActionLoading
+                ? 'Saving...'
+                : editingTimeslotId
+                  ? 'Update timeslot'
+                  : 'Add exact timeslot'}
             </button>
+            {editingTimeslotId ? (
+              <button
+                type="button"
+                className="AdminPanel__actionBtn"
+                onClick={() => {
+                  setEditingTimeslotId(null);
+                  setTimeslotForm((s) => ({ ...s, start_at: '', end_at: '', location_details: '' }));
+                }}
+              >
+                Cancel edit
+              </button>
+            ) : null}
           </div>
 
           <div className="AdminPanel__formRow">
@@ -1386,6 +1515,14 @@ const CompetitionManagement = () => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                              onClick={() => beginEditTimeslot(slot)}
+                              disabled={timeslotsActionLoading}
+                            >
+                              Edit
+                            </button>
                             <select
                               defaultValue=""
                               onChange={(e) => {
@@ -1428,6 +1565,10 @@ const CompetitionManagement = () => {
               </table>
             </div>
           )}
+          <Pagination
+            pagination={timeslotsPagination}
+            onPageChange={(p) => { setTimeslotsPage(p); }}
+          />
         </div>
       ) : null}
 
@@ -1564,11 +1705,21 @@ const CompetitionManagement = () => {
                 </table>
               </div>
             )}
+            <Pagination
+              pagination={teamsPagination}
+              onPageChange={(p) => { setTeamsPage(p); }}
+            />
           </div>
 
-          {showTeamEditorModal && editingTeam ? (
-            <div className="AdminPanel__modal" onClick={closeTeamEditor}>
-              <div className="AdminPanel__modalContent" onClick={(e) => e.stopPropagation()}>
+          {showTeamEditorModal && editingTeam
+            ? createPortal(
+            <div className="AdminPanel__modal" onClick={closeTeamEditor} role="presentation">
+              <div
+                className="AdminPanel__modalContent"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+              >
                 <h3 className="AdminPanel__modalTitle">Edit team and members</h3>
                 <div className="AdminPanel__formRow">
                   <div className="AdminPanel__formGroup" style={{ flex: 2 }}>
@@ -1759,8 +1910,10 @@ const CompetitionManagement = () => {
                   </>
                 )}
               </div>
-            </div>
-          ) : null}
+            </div>,
+            document.body
+          )
+          : null}
         </div>
       ) : null}
       {activeTab === 'announcements' && isEditMode && loadedComp ? (
@@ -1879,7 +2032,7 @@ const CompetitionManagement = () => {
             </div>
 
             <h4 style={{ marginTop: '24px', marginBottom: '12px' }}>
-              Announcements ({announcementsList?.length || 0})
+              Announcements ({announcementsPagination?.total ?? announcementsList?.length ?? 0})
             </h4>
             {announcementsLoading ? (
               <div className="AdminPanel__emptyState">Loading announcements...</div>
@@ -1932,10 +2085,15 @@ const CompetitionManagement = () => {
                 ))}
               </div>
             )}
+            <Pagination
+              pagination={announcementsPagination}
+              onPageChange={(p) => { setAnnouncementsPage(p); }}
+            />
           </div>
         </div>
       ) : null}
     </section>
+    </AdminShell>
   );
 };
 export default CompetitionManagement;

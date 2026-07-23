@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import SiteLayout from './layoutpages/SiteLayout';
 import ScrollToTop from './components/ScrollToTop';
 import AndroidBackButtonSetup from './components/AndroidBackButtonSetup';
@@ -13,7 +13,6 @@ const Login = lazy(() => import('./pages/Login'));
 const Exercises = lazy(() => import('./pages/Exercises'));
 const Events = lazy(() => import('./pages/Events'));
 const EventDetails = lazy(() => import('./pages/EventDetails'));
-const CreateEvent = lazy(() => import('./pages/CreateEvent'));
 const Competitions = lazy(() => import('./pages/Competitions'));
 const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
 const CompetitionTimeslotPage = lazy(() => import('./pages/CompetitionTimeslotPage'));
@@ -27,7 +26,6 @@ const AcceptTeamInvitation = lazy(() => import('./pages/AcceptTeamInvitation'));
 const Suggestions = lazy(() => import('./pages/Suggestions'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const Sponsors = lazy(() => import('./pages/Sponsors'));
-const FormAdmin = lazy(() => import('./pages/FormAdmin'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AccountActivation = lazy(() => import('./pages/account-activation'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
@@ -166,7 +164,7 @@ const AppRouter = () => {
           <Route path="/login" element={<SiteLayout><Login /></SiteLayout>} />
           <Route path="/exercises" element={<SiteLayout><Exercises /></SiteLayout>} />
           <Route path="/events" element={<SiteLayout><Events /></SiteLayout>} />
-          <Route path="/events/create" element={<SiteLayout><CreateEvent /></SiteLayout>} />
+          <Route path="/events/create" element={<Navigate to="/admin/events" replace />} />
           <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
           <Route path="/competitions" element={<SiteLayout><Competitions /></SiteLayout>} />
           <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
@@ -182,7 +180,7 @@ const AppRouter = () => {
           <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
           <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
           <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
-          <Route path="/registration-admin" element={<SiteLayout><FormAdmin /></SiteLayout>} />
+          <Route path="/registration-admin" element={<Navigate to="/admin/registrations" replace />} />
           <Route path="/profile" element={<SiteLayout><Profile /></SiteLayout>} />
           <Route path="/account-activation" element={<AccountActivation />} />
           <Route path="/reset-password" element={<ResetPassword />} />

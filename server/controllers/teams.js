@@ -2,6 +2,7 @@ const db = require('../config/db');
 const crypto = require('crypto');
 const path = require('path');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 // Import email templates
 const {
@@ -736,6 +737,16 @@ const getTeamById = async (req, res) => {
 const getCompetitionTeams = async (req, res) => {
     try {
         const { competitionId } = req.params;
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM teams WHERE competition_id = ?`,
+            {
+                replacements: [competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
 
         const teams = await db.query(
             `SELECT t.team_id, t.team_name, t.is_locked, t.created_at,
@@ -746,16 +757,19 @@ const getCompetitionTeams = async (req, res) => {
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE t.competition_id = ?
              GROUP BY t.team_id
-             ORDER BY t.created_at DESC`,
+             ORDER BY t.created_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [competitionId],
+                replacements: [competitionId, limit, offset],
                 type: db.QueryTypes.SELECT
             }
         );
 
         res.status(200).json({
             success: true,
-            data: teams
+            data: teams,
+            count: teams.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {

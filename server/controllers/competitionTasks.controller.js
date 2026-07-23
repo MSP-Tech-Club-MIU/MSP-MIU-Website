@@ -2,6 +2,7 @@ const path = require('path');
 const multer = require('multer');
 const { Competition, CompetitionTask, Quiz } = require('../models');
 const { uploadToR2 } = require('../config/cloud');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
 const ASSETS_URL_MAX_LEN = 2048;
@@ -95,7 +96,13 @@ async function getCompetitionTasksPublic(req, res) {
       return res.status(404).json({ success: false, error: 'Competition not found' });
     }
     if (competition.type !== 'task_quiz') {
-      return res.status(200).json({ success: true, data: [] });
+      const { page, limit } = parsePagination(req.query);
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
+      });
     }
 
     // Task quiz access rule: allow only after quiz unlocks
@@ -111,9 +118,12 @@ async function getCompetitionTasksPublic(req, res) {
       return res.status(403).json({ success: false, error: 'Task quiz is not open yet.' });
     }
 
-    const tasks = await CompetitionTask.findAll({
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows: tasks, count: total } = await CompetitionTask.findAndCountAll({
       where: { competition_id: competition.competition_id },
-      order: [['position', 'ASC'], ['task_id', 'ASC']]
+      order: [['position', 'ASC'], ['task_id', 'ASC']],
+      limit,
+      offset
     });
     return res.status(200).json({
       success: true,
@@ -124,7 +134,9 @@ async function getCompetitionTasksPublic(req, res) {
         description: t.description,
         position: num(t.position, 0),
         assets_url: t.assets_url || null
-      }))
+      })),
+      count: tasks.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
     console.error('getCompetitionTasksPublic:', err);
@@ -143,13 +155,22 @@ async function getAdminCompetitionTasks(req, res) {
       return res.status(404).json({ success: false, error: 'Competition not found' });
     }
     if (competition.type !== 'task_quiz') {
-      return res.status(200).json({ success: true, data: [] });
+      const { page, limit } = parsePagination(req.query);
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
+      });
     }
 
     // Admin endpoint: no unlock gate, return all tasks
-    const tasks = await CompetitionTask.findAll({
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows: tasks, count: total } = await CompetitionTask.findAndCountAll({
       where: { competition_id: competition.competition_id },
-      order: [['position', 'ASC'], ['task_id', 'ASC']]
+      order: [['position', 'ASC'], ['task_id', 'ASC']],
+      limit,
+      offset
     });
     return res.status(200).json({
       success: true,
@@ -160,7 +181,9 @@ async function getAdminCompetitionTasks(req, res) {
         description: t.description,
         position: num(t.position, 0),
         assets_url: t.assets_url || null
-      }))
+      })),
+      count: tasks.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
     console.error('getAdminCompetitionTasks:', err);

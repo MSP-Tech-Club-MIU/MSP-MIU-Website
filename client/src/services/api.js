@@ -24,6 +24,16 @@ function getApiBaseUrl() {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/** Append page/limit query params when present on options. */
+function appendPaginationParams(queryParams, options = {}) {
+  if (options.page != null && options.page !== '') {
+    queryParams.append('page', String(options.page));
+  }
+  if (options.limit != null && options.limit !== '') {
+    queryParams.append('limit', String(options.limit));
+  }
+}
+
 // Simple cache implementation
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
@@ -445,6 +455,7 @@ class ApiService {
       if (filters.faculty) queryParams.append('faculty', filters.faculty);
       if (filters.year) queryParams.append('year', filters.year);
       if (filters.search) queryParams.append('search', filters.search);
+      appendPaginationParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/applications${queryString ? `?${queryString}` : ''}`;
@@ -558,6 +569,7 @@ class ApiService {
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
       if (filters.past) queryParams.append('past', filters.past);
+      appendPaginationParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/events${queryString ? `?${queryString}` : ''}`;
@@ -581,21 +593,22 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch events');
       }
 
-      const data = result.data || result;
-
-      // Cache the result
-      setCachedData(cacheKey, data);
-      return data;
+      // Cache the full paginated result
+      setCachedData(cacheKey, result);
+      return result;
     } catch (error) {
       console.error('Error fetching events:', error);
       throw error;
     }
   }
 
-  static async getSponsors() {
+  static async getSponsors(filters = {}) {
     try {
-      const url = `${API_BASE_URL}/sponsors`;
-      const cacheKey = getCacheKey(url);
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/sponsors${queryString ? `?${queryString}` : ''}`;
+      const cacheKey = getCacheKey(url, filters);
       const cachedData = getCachedData(cacheKey);
 
       if (cachedData) {
@@ -613,13 +626,249 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch sponsors');
       }
 
-      const data = result.data || result;
-      setCachedData(cacheKey, data);
-      return data;
+      setCachedData(cacheKey, result);
+      return result;
     } catch (error) {
       console.error('Error fetching sponsors:', error);
       throw error;
     }
+  }
+
+  static async createSponsor(payload) {
+    const response = await fetch(`${API_BASE_URL}/sponsors`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create sponsor');
+    this.clearCache('sponsors');
+    return result;
+  }
+
+  static async updateSponsor(id, payload) {
+    const response = await fetch(`${API_BASE_URL}/sponsors/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update sponsor');
+    this.clearCache('sponsors');
+    return result;
+  }
+
+  static async deleteSponsor(id) {
+    const response = await fetch(`${API_BASE_URL}/sponsors/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete sponsor');
+    this.clearCache('sponsors');
+    return result;
+  }
+
+  static async getBoard(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendPaginationParams(queryParams, filters);
+    if (filters.includeHidden) queryParams.set('includeHidden', 'true');
+    const qs = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/board${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      headers: this.getHeaders(filters.includeHidden),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch board');
+    return result;
+  }
+
+  static async createBoardMember(payload) {
+    const response = await fetch(`${API_BASE_URL}/board`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create board member');
+    return result;
+  }
+
+  static async updateBoardMember(id, payload) {
+    const response = await fetch(`${API_BASE_URL}/board/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update board member');
+    return result;
+  }
+
+  static async deleteBoardMember(id) {
+    const response = await fetch(`${API_BASE_URL}/board/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete board member');
+    return result;
+  }
+
+  static async getDepartments(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendPaginationParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/departments${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch departments');
+    return result;
+  }
+
+  static async createDepartment(payload) {
+    const response = await fetch(`${API_BASE_URL}/departments`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create department');
+    return result;
+  }
+
+  static async updateDepartment(id, payload) {
+    const response = await fetch(`${API_BASE_URL}/departments/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update department');
+    return result;
+  }
+
+  static async deleteDepartment(id) {
+    const response = await fetch(`${API_BASE_URL}/departments/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete department');
+    return result;
+  }
+
+  static async getSiteContent(keys) {
+    const query = keys?.length ? `?keys=${keys.join(',')}` : '';
+    const response = await fetch(`${API_BASE_URL}/site-content${query}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch site content');
+    return result;
+  }
+
+  static async getSiteContentKey(key) {
+    const response = await fetch(`${API_BASE_URL}/site-content/${key}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch site content');
+    return result;
+  }
+
+  static async updateSiteContent(key, value) {
+    const response = await fetch(`${API_BASE_URL}/site-content/${key}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ value }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update site content');
+    return result;
+  }
+
+  static async resetSiteContent(key) {
+    const response = await fetch(`${API_BASE_URL}/site-content/${key}/reset`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to reset site content');
+    return result;
+  }
+
+  static async deleteCloudObject(key) {
+    const response = await fetch(`${API_BASE_URL}/cloud/object`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ key }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete media');
+    return result;
+  }
+
+  /**
+   * Replace an existing cloud object in-place (same R2 key).
+   * @param {string} key - Existing object key (e.g. Images/foo.jpg)
+   * @param {File} file - Replacement file (same extension required)
+   */
+  static async replaceCloudObject(key, file) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('key', key);
+    const response = await fetch(`${API_BASE_URL}/cloud/object`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to replace media');
+    return result;
+  }
+
+  static async getMembers(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendPaginationParams(queryParams, filters);
+    if (filters.search) queryParams.set('search', filters.search);
+    if (filters.department_id) queryParams.set('department_id', filters.department_id);
+    if (filters.faculty) queryParams.set('faculty', filters.faculty);
+    const qs = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/members${qs ? `?${qs}` : ''}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch members');
+    return result;
+  }
+
+  static async updateMember(id, payload) {
+    const response = await fetch(`${API_BASE_URL}/members/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update member');
+    return result;
+  }
+
+  static async deleteMember(id) {
+    const response = await fetch(`${API_BASE_URL}/members/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete member');
+    return result;
   }
 
   // Get event by ID
@@ -658,15 +907,22 @@ class ApiService {
   // ========== Announcements API Methods ==========
 
   // Get all announcements
-  static async getAnnouncements(includeInactive = false) {
+  // options: { includeInactive?: boolean, page?: number, limit?: number }
+  static async getAnnouncements(includeInactiveOrOptions = false) {
     try {
+      const options =
+        typeof includeInactiveOrOptions === 'object' && includeInactiveOrOptions !== null
+          ? includeInactiveOrOptions
+          : { includeInactive: !!includeInactiveOrOptions };
+
       const queryParams = new URLSearchParams();
-      if (includeInactive) queryParams.append('includeInactive', 'true');
+      if (options.includeInactive) queryParams.append('includeInactive', 'true');
+      appendPaginationParams(queryParams, options);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/announcements${queryString ? `?${queryString}` : ''}`;
 
-      const cacheKey = getCacheKey(url);
+      const cacheKey = getCacheKey(url, options);
       const cachedData = getCachedData(cacheKey);
 
       if (cachedData) {
@@ -693,11 +949,9 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch announcements');
       }
 
-      const data = result.data || result;
-
-      // Cache the result
-      setCachedData(cacheKey, data);
-      return data;
+      // Cache the full paginated result
+      setCachedData(cacheKey, result);
+      return result;
     } catch (error) {
       console.error('Error fetching announcements:', error);
       throw error;
@@ -913,16 +1167,20 @@ class ApiService {
   // ========== Event Feedback API Methods ==========
 
   // Get all feedback for an event
-  static async getEventFeedback(eventId) {
+  static async getEventFeedback(eventId, filters = {}) {
     try {
-      const cacheKey = getCacheKey(`${API_BASE_URL}/events/${eventId}/feedback`);
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/events/${eventId}/feedback${queryString ? `?${queryString}` : ''}`;
+      const cacheKey = getCacheKey(url, filters);
       const cachedData = getCachedData(cacheKey);
 
       if (cachedData) {
         return cachedData;
       }
 
-      const response = await fetch(`${API_BASE_URL}/events/${eventId}/feedback`, {
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -933,11 +1191,8 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch feedback');
       }
 
-      const data = result.data || result;
-
-      // Cache the result
-      setCachedData(cacheKey, data);
-      return data;
+      setCachedData(cacheKey, result);
+      return result;
     } catch (error) {
       console.error('Error fetching event feedback:', error);
       throw error;
@@ -1024,6 +1279,7 @@ class ApiService {
       if (filters.event_id) queryParams.append('event_id', filters.event_id);
       if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
       if (filters.search) queryParams.append('search', filters.search);
+      appendPaginationParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/attendance${queryString ? `?${queryString}` : ''}`;
@@ -1039,7 +1295,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch attendance requests');
       }
 
-      return result.data || result;
+      return result;
     } catch (error) {
       console.error('Error fetching attendance requests:', error);
       throw error;
@@ -1147,9 +1403,14 @@ class ApiService {
   }
 
   // Get all images from cloud storage
-  static async getImages() {
+  static async getImages(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cloud/images`, {
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/cloud/images${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -1160,7 +1421,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch images');
       }
 
-      return result.images || [];
+      return result;
     } catch (error) {
       console.error('Error fetching images:', error);
       throw error;
@@ -1170,11 +1431,17 @@ class ApiService {
   /**
    * Generic method to get assets by type from cloud storage
    * @param {string} assetType - Type of asset: 'slides', 'videos', 'codes', 'assets', 'event-thumbnails', 'documents'
-   * @returns {Promise<Array>} Array of asset objects
+   * @param {Object} filters - Optional page/limit
+   * @returns {Promise<Object>} Paginated result with type array + pagination
    */
-  static async getAssets(assetType = 'assets') {
+  static async getAssets(assetType = 'assets', filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/cloud/assets/${assetType}`, {
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const queryString = queryParams.toString();
+      const url = `${API_BASE_URL}/cloud/assets/${assetType}${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });
@@ -1185,7 +1452,7 @@ class ApiService {
         throw new Error(result.error || `Failed to fetch ${assetType}`);
       }
 
-      return result[assetType] || [];
+      return result;
     } catch (error) {
       console.error(`Error fetching ${assetType}:`, error);
       throw error;
@@ -1265,6 +1532,7 @@ class ApiService {
       if (filters.status) {
         queryParams.append('status', filters.status);
       }
+      appendPaginationParams(queryParams, filters);
 
       const url = `${API_BASE_URL}/competitions${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
 
@@ -1279,7 +1547,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch competitions');
       }
 
-      return result.data || result;
+      return result;
     } catch (error) {
       console.error('Error fetching competitions:', error);
       throw error;
@@ -1312,25 +1580,37 @@ class ApiService {
   }
 
   /** Public task list for task_quiz competitions (empty array for other types). */
-  static async getCompetitionTasks(competitionId) {
-    const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/tasks`, {
-      method: 'GET',
-      headers: this.getHeaders(false),
-    });
+  static async getCompetitionTasks(competitionId, filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendPaginationParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/competitions/${competitionId}/tasks${qs ? `?${qs}` : ''}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(false),
+      }
+    );
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to fetch tasks');
-    return result.data || [];
+    return result;
   }
 
   /** Admin task list for task_quiz competitions (no unlock gate, requires auth). */
-  static async getAdminCompetitionTasks(competitionId) {
-    const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/tasks`, {
-      method: 'GET',
-      headers: this.getHeaders(true),
-    });
+  static async getAdminCompetitionTasks(competitionId, filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendPaginationParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/admin/competitions/${competitionId}/tasks${qs ? `?${qs}` : ''}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      }
+    );
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Failed to fetch tasks');
-    return result.data || [];
+    return result;
   }
 
   // =====================
@@ -1594,12 +1874,18 @@ class ApiService {
    * @param {number} competitionId - Competition ID
    * @returns {Promise<Array>}
    */
-  static async getCompetitionTeams(competitionId) {
+  static async getCompetitionTeams(competitionId, filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/teams`, {
-        method: 'GET',
-        headers: this.getHeaders(false),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/competitions/${competitionId}/teams${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(false),
+        }
+      );
 
       const result = await response.json();
 
@@ -1607,7 +1893,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch teams');
       }
 
-      return result.data || result;
+      return result;
     } catch (error) {
       console.error(`Error fetching teams for competition ${competitionId}:`, error);
       throw error;
@@ -1850,17 +2136,24 @@ class ApiService {
    * @param {number} competitionId - Competition ID
    * @returns {Promise<Array>}
    */
-  static async getCompetitionSubmissions(competitionId) {
+  static async getCompetitionSubmissions(competitionId, filters = {}) {
     try {
       const token = this.getAuthToken();
       if (!token) {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(`${API_BASE_URL}/submissions/competitions/${competitionId}`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+
+      const response = await fetch(
+        `${API_BASE_URL}/submissions/competitions/${competitionId}${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
 
       const result = await response.json();
 
@@ -1868,7 +2161,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch submissions');
       }
 
-      return result.data || result;
+      return result;
     } catch (error) {
       console.error(`Error fetching submissions for competition ${competitionId}:`, error);
       throw error;
@@ -2022,12 +2315,18 @@ class ApiService {
   /**
    * Get all competitions (admin)
    */
-  static async getAdminCompetitions() {
+  static async getAdminCompetitions(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/competitions`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/competitions${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
 
       const result = await response.json();
 
@@ -2035,7 +2334,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch competitions');
       }
 
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin competitions:', error);
       throw error;
@@ -2259,8 +2558,12 @@ class ApiService {
     try {
       const queryParams = new URLSearchParams();
       if (filters.event_id) queryParams.append('event_id', filters.event_id);
-      if (filters.attended !== undefined) queryParams.append('attended', filters.attended);
+      if (filters.attended !== undefined && filters.attended !== '') {
+        queryParams.append('attended', filters.attended);
+      }
+      if (filters.search) queryParams.append('search', filters.search);
       if (filters.date) queryParams.append('date', filters.date);
+      appendPaginationParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/admin/attendance${queryString ? `?${queryString}` : ''}`;
@@ -2276,7 +2579,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch attendance');
       }
 
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin attendance:', error);
       throw error;
@@ -2315,6 +2618,7 @@ class ApiService {
       const queryParams = new URLSearchParams();
       if (filters.status) queryParams.append('status', filters.status);
       if (filters.search) queryParams.append('search', filters.search);
+      appendPaginationParams(queryParams, filters);
 
       const queryString = queryParams.toString();
       const url = `${API_BASE_URL}/admin/registrations${queryString ? `?${queryString}` : ''}`;
@@ -2330,7 +2634,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch registrations');
       }
 
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin registrations:', error);
       throw error;
@@ -2365,15 +2669,22 @@ class ApiService {
    * Get admin notifications (actions on competitions, attendance, registrations)
    * Only accessible for President, Vice President, and Head of Software Development
    */
-  static async getAdminNotifications(limit = 50) {
+  static async getAdminNotifications(filtersOrLimit = 50) {
     try {
-      const queryParams = new URLSearchParams();
-      if (limit) {
-        queryParams.append('limit', String(limit));
-      }
+      const filters =
+        typeof filtersOrLimit === 'object' && filtersOrLimit !== null
+          ? filtersOrLimit
+          : { limit: filtersOrLimit, page: 1 };
 
-      const url = `${API_BASE_URL}/admin/notifications${queryParams.toString() ? `?${queryParams.toString()}` : ''
-        }`;
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, {
+        page: filters.page ?? 1,
+        limit: filters.limit ?? 50
+      });
+
+      const url = `${API_BASE_URL}/admin/notifications${
+        queryParams.toString() ? `?${queryParams.toString()}` : ''
+      }`;
 
       const response = await fetch(url, {
         method: 'GET',
@@ -2386,7 +2697,7 @@ class ApiService {
         throw new Error(result.error || 'Failed to fetch admin notifications');
       }
 
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin notifications:', error);
       throw error;
@@ -2396,33 +2707,65 @@ class ApiService {
   /**
    * Get all suggestions (admin)
    */
-  static async getAdminSuggestions() {
+  static async getAdminSuggestions(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/suggestions`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/suggestions${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch suggestions');
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin suggestions:', error);
       throw error;
     }
   }
 
+  static async deleteAdminSuggestion(id) {
+    const response = await fetch(`${API_BASE_URL}/admin/suggestions/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete suggestion');
+    return result;
+  }
+
+  static async deleteAdminFeedback(id) {
+    const response = await fetch(`${API_BASE_URL}/admin/feedback/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete feedback');
+    return result;
+  }
+
   /**
    * Get all event feedback (admin)
    */
-  static async getAdminFeedback() {
+  static async getAdminFeedback(filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/feedback`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/feedback${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch feedback');
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin feedback:', error);
       throw error;
@@ -2435,15 +2778,21 @@ class ApiService {
   /**
    * Get all teams for a specific competition (admin)
    */
-  static async getAdminCompetitionTeams(competitionId) {
+  static async getAdminCompetitionTeams(competitionId, filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/teams`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/competitions/${competitionId}/teams${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch teams');
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Error fetching admin competition teams:', error);
       throw error;
@@ -2620,15 +2969,22 @@ class ApiService {
   /**
    * Get all announcements for a specific competition
    */
-  static async getCompetitionAnnouncements(competitionId) {
+  static async getCompetitionAnnouncements(competitionId, filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/competitions/${competitionId}/announcements`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      if (filters.includeInactive) queryParams.append('includeInactive', 'true');
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/competitions/${competitionId}/announcements${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch competition announcements');
-      return result.data || result;
+      return result;
     } catch (error) {
       console.error('Error fetching competition announcements:', error);
       throw error;
@@ -2712,12 +3068,18 @@ class ApiService {
   /**
    * Get competition timeslots for admin management.
    */
-  static async getAdminCompetitionTimeslots(competitionId) {
+  static async getAdminCompetitionTimeslots(competitionId, filters = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/competitions/${competitionId}/timeslots`, {
-        method: 'GET',
-        headers: this.getHeaders(true),
-      });
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/competitions/${competitionId}/timeslots${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to fetch competition timeslots');
       return result;

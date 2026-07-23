@@ -5,6 +5,7 @@ import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import Pagination from '../components/Pagination';
 import './Competitions.css';
 import { 
   FiCalendar, 
@@ -23,6 +24,8 @@ const Competitions = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, open, locked, judging, finished (+ draft for board/admin)
   const [sort, setSort] = useState('desc'); // desc, asc
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
@@ -62,19 +65,26 @@ const Competitions = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await ApiService.getCompetitions();
-        setCompetitions(Array.isArray(data) ? data : []);
+        const filters = { page, limit: 20 };
+        if (filter !== 'all') {
+          filters.status = filter;
+        }
+        const result = await ApiService.getCompetitions(filters);
+        const list = Array.isArray(result) ? result : (result.data || []);
+        setCompetitions(list);
+        setPagination(Array.isArray(result) ? null : (result.pagination || null));
       } catch (err) {
         console.error('Error fetching competitions:', err);
         setError(err.message || 'Failed to load competitions');
         setCompetitions([]);
+        setPagination(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchCompetitions();
-  }, []);
+  }, [page, filter]);
 
   const canAccessAdminFeatures = userRole === 'board' || userRole === 'admin';
   const availableStatuses = canAccessAdminFeatures
@@ -115,26 +125,29 @@ const Competitions = () => {
   };
 
   const filteredCompetitions = useMemo(() => {
+    // Status filtering is handled server-side; hide drafts for non-admins if any slip through
     let filtered = canAccessAdminFeatures
       ? competitions
       : competitions.filter((comp) => comp.status !== 'draft');
     
-    if (filter !== 'all') {
-      filtered = filtered.filter((comp) => comp.status === filter);
-    }
-    
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const dateA = new Date(a.start_at);
       const dateB = new Date(b.start_at);
       return sort === 'desc' ? dateB - dateA : dateA - dateB;
     });
-  }, [competitions, filter, sort, canAccessAdminFeatures]);
+  }, [competitions, sort, canAccessAdminFeatures]);
 
   useEffect(() => {
     if (!availableStatuses.includes(filter)) {
       setFilter('all');
+      setPage(1);
     }
   }, [availableStatuses, filter]);
+
+  const handleFilterChange = (status) => {
+    setFilter(status);
+    setPage(1);
+  };
 
   const handleCompetitionClick = (competitionId) => {
     navigate(`/competitions/${competitionId}`);
@@ -180,7 +193,7 @@ const Competitions = () => {
                   <button
                     key={status}
                     className={`CompetitionsPage__filterBtn ${filter === status ? 'active' : ''}`}
-                    onClick={() => setFilter(status)}
+                    onClick={() => handleFilterChange(status)}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
@@ -207,65 +220,68 @@ const Competitions = () => {
                 <p>Check back soon for upcoming competitions!</p>
               </div>
             ) : (
-              <div className="CompetitionsPage__grid">
-                <AnimatePresence mode="wait">
-                  {filteredCompetitions.map((competition, index) => (
-                    <motion.div
-                      key={competition.competition_id}
-                      className="CompetitionCard"
-                      variants={animationVariants}
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
-                      onClick={() => handleCompetitionClick(competition.competition_id)}
-                    >
-                      <div className="CompetitionCard__header">
-                        <h3 className="CompetitionCard__title">{competition.title}</h3>
-                        {getStatusBadge(competition.status)}
-                      </div>
+              <>
+                <div className="CompetitionsPage__grid">
+                  <AnimatePresence mode="wait">
+                    {filteredCompetitions.map((competition, index) => (
+                      <motion.div
+                        key={competition.competition_id}
+                        className="CompetitionCard"
+                        variants={animationVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                        onClick={() => handleCompetitionClick(competition.competition_id)}
+                      >
+                        <div className="CompetitionCard__header">
+                          <h3 className="CompetitionCard__title">{competition.title}</h3>
+                          {getStatusBadge(competition.status)}
+                        </div>
 
-                      <p className="CompetitionCard__description">
-                        {competition.description}
-                      </p>
+                        <p className="CompetitionCard__description">
+                          {competition.description}
+                        </p>
 
-                      <div className="CompetitionCard__details">
-                        <div className="CompetitionCard__detail">
-                          <FiCalendar size={16} />
-                          <span>
-                            <strong>Start:</strong> {formatDateTime(competition.start_at)}
-                          </span>
+                        <div className="CompetitionCard__details">
+                          <div className="CompetitionCard__detail">
+                            <FiCalendar size={16} />
+                            <span>
+                              <strong>Start:</strong> {formatDateTime(competition.start_at)}
+                            </span>
+                          </div>
+                          <div className="CompetitionCard__detail">
+                            <FiClock size={16} />
+                            <span>
+                              <strong>End:</strong> {formatDateTime(competition.end_at)}
+                            </span>
+                          </div>
+                          <div className="CompetitionCard__detail">
+                            <FiMapPin size={16} />
+                            <span>
+                              <strong>{competition.location_type === 'on-campus' ? 'On-Campus' : 'Online'}:</strong>{' '}
+                              {competition.location_details || 'TBA'}
+                            </span>
+                          </div>
+                          <div className="CompetitionCard__detail">
+                            <FiUsers size={16} />
+                            <span>
+                              <strong>Team Size:</strong> {competition.min_team_size}-{competition.max_team_size} members
+                            </span>
+                          </div>
                         </div>
-                        <div className="CompetitionCard__detail">
-                          <FiClock size={16} />
-                          <span>
-                            <strong>End:</strong> {formatDateTime(competition.end_at)}
-                          </span>
-                        </div>
-                        <div className="CompetitionCard__detail">
-                          <FiMapPin size={16} />
-                          <span>
-                            <strong>{competition.location_type === 'on-campus' ? 'On-Campus' : 'Online'}:</strong>{' '}
-                            {competition.location_details || 'TBA'}
-                          </span>
-                        </div>
-                        <div className="CompetitionCard__detail">
-                          <FiUsers size={16} />
-                          <span>
-                            <strong>Team Size:</strong> {competition.min_team_size}-{competition.max_team_size} members
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="CompetitionCard__footer">
-                        <button className="CompetitionCard__btn">
-                          View Details
-                        </button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
+                        <div className="CompetitionCard__footer">
+                          <button className="CompetitionCard__btn">
+                            View Details
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+                <Pagination pagination={pagination} onPageChange={setPage} />
+              </>
             )}
           </>
         )}

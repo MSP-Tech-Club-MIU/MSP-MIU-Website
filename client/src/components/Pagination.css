@@ -1,0 +1,56 @@
+.Pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 2rem 0 0.5rem;
+  padding: 0.75rem 0;
+}
+
+.Pagination__btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #C5DAE9;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.Pagination__btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0077CC, #03A9F4);
+  border-color: rgba(3, 169, 244, 0.5);
+  color: #fff;
+  box-shadow: 0 4px 20px -8px rgba(3, 169, 244, 0.6);
+  transform: translateY(-2px);
+}
+
+.Pagination__btn:focus-visible {
+  outline: none;
+  border-color: #03A9F4;
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.25);
+}
+
+.Pagination__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.Pagination__meta {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #8AA3C6;
+  min-width: 8rem;
+  text-align: center;
+  letter-spacing: 0.2px;
+}

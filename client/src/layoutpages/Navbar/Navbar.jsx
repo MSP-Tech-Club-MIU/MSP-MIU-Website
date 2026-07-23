@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
 import { MdGroups, MdEmojiEvents } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
@@ -216,9 +216,6 @@ const Navbar = memo(() => {
     if (!isAuthenticated) {
       extended.push({ to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> });
     }
-    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board' || user.department_id === 5)) {
-      extended.push({ to: '/registration-admin', label: 'Registration Admin', icon: <FaUserCog /> });
-    }
     const account = [];
     if (isAuthenticated) {
       account.push({ to: '/profile', label: 'Profile', icon: <FaUser />, isProfile: true });
@@ -226,7 +223,7 @@ const Navbar = memo(() => {
       account.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
     }
     return { primary, extended, account };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
   const extendedHasActive = useMemo(
     () => navSections.extended.some((l) => pathMatchesNavTarget(location.pathname, l.to)),

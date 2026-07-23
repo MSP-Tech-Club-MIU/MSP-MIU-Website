@@ -8,16 +8,12 @@ const Department = sequelize.define('Department', {
     autoIncrement: true
   },
   name: {
-    type: DataTypes.ENUM(
-      'Software Development',
-      'Technical Training',
-      'Media & Content Creation',
-      'Public Relations',
-      'Human Resources',
-      'Event Planning'
-    ),
+    type: DataTypes.STRING(100),
     allowNull: false,
-    unique: true
+    unique: true,
+    validate: {
+      notEmpty: true
+    }
   }
 }, {
   tableName: 'departments',

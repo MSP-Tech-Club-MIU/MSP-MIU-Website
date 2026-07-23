@@ -4,6 +4,7 @@ const { Submission, Team, Evaluation, JudgeScore } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
@@ -54,15 +55,7 @@ const getAllCompetitions = async (req, res) => {
     try {
         const { status } = req.query;
         const userRole = req.user?.role; // From JWT if authenticated
-
-        let whereClause = {};
-
-        // If user is not admin/board, only show non-draft competitions
-        if (userRole !== 'admin' && userRole !== 'board') {
-            whereClause.status = {
-                [Op.ne]: 'draft'
-            };
-        }
+        const { page, limit, offset } = parsePagination(req.query);
 
         // Apply status filter if provided
         if (status) {
@@ -73,7 +66,6 @@ const getAllCompetitions = async (req, res) => {
                     error: `Status must be one of: ${validStatuses.join(', ')}`
                 });
             }
-            whereClause.status = status;
         }
 
         // Build WHERE clause for SQL
@@ -87,6 +79,15 @@ const getAllCompetitions = async (req, res) => {
             sqlWhere = 'status = ?';
             replacements.push(status);
         }
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM competitions WHERE ${sqlWhere}`,
+            {
+                replacements: replacements,
+                type: db.QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
 
         const competitions = await db.query(
             `SELECT 
@@ -110,9 +111,10 @@ const getAllCompetitions = async (req, res) => {
                 created_at
             FROM competitions
             WHERE ${sqlWhere}
-            ORDER BY start_at DESC`,
+            ORDER BY start_at DESC
+            LIMIT ? OFFSET ?`,
             {
-                replacements: replacements,
+                replacements: [...replacements, limit, offset],
                 type: db.QueryTypes.SELECT
             }
         );
@@ -120,7 +122,9 @@ const getAllCompetitions = async (req, res) => {
         const normalizedCompetitions = competitions.map(parseCompetitionConfig);
         res.status(200).json({
             success: true,
-            data: normalizedCompetitions
+            data: normalizedCompetitions,
+            count: normalizedCompetitions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
@@ -795,6 +799,18 @@ const getCompetitionLeaderboard = async (req, res) => {
         }
 
         const competition = existing[0];
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const respondPaged = (fullData) => {
+            const { rows, total } = paginateArray(fullData, { page, limit, offset });
+            return res.status(200).json({
+                success: true,
+                data: rows,
+                count: rows.length,
+                pagination: paginationMeta({ page, limit, total })
+            });
+        };
+
         if (competition.type === 'quiz') {
             const quizRows = await db.query(
                 `SELECT
@@ -818,7 +834,7 @@ const getCompetitionLeaderboard = async (req, res) => {
                 participant_name: row.participant_name,
                 final_score: row.final_score != null ? parseFloat(row.final_score) : null
             }));
-            return res.status(200).json({ success: true, data });
+            return respondPaged(data);
         }
 
         if (competition.type === 'task_quiz') {
@@ -846,7 +862,7 @@ const getCompetitionLeaderboard = async (req, res) => {
                 team_name: row.team_name,
                 final_score: row.final_score != null ? parseFloat(row.final_score) : 0
             }));
-            return res.status(200).json({ success: true, data });
+            return respondPaged(data);
         }
 
         const rows = await db.query(
@@ -943,9 +959,12 @@ const getCompetitionLeaderboard = async (req, res) => {
             row.rank = i + 1;
         });
 
+        const { rows: pageRows, total } = paginateArray(leaderboard, { page, limit, offset });
         res.status(200).json({
             success: true,
-            data: leaderboard
+            data: pageRows,
+            count: pageRows.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
         console.error('Error fetching competition leaderboard:', error);

@@ -22,14 +22,31 @@ body.admin-panel-active .SiteLayout__main {
 
 /* ── Root Layout ── */
 .AdminPanel {
+    --admin-bg: linear-gradient(135deg, #060e1a 0%, #091a2c 40%, #0c2240 100%);
+    --admin-surface: rgba(15, 42, 69, 0.55);
+    --admin-surface-solid: #0a1a2e;
+    --admin-border: rgba(255, 255, 255, 0.08);
+    --admin-accent: #4aa6ff;
+    --admin-accent-strong: #0d7bd8;
+    --admin-text: #eaf2ff;
+    --admin-text-muted: rgba(197, 218, 233, 0.65);
+    --admin-success: #81C784;
+    --admin-danger: #E57373;
+    --admin-sidebar-width: 220px;
+    --admin-sidebar-collapsed-width: 72px;
+
     position: fixed;
     inset: 0;
     display: flex;
-    background: linear-gradient(135deg, #060e1a 0%, #091a2c 40%, #0c2240 100%);
+    background: var(--admin-bg);
     overflow: hidden;
     font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    color: #eaf2ff;
+    color: var(--admin-text);
     z-index: 10;
+}
+
+.AdminPanel--sidebarCollapsed {
+    --admin-sidebar-width: var(--admin-sidebar-collapsed-width);
 }
 
 /* ── Particle Canvas Background ── */
@@ -40,78 +57,169 @@ body.admin-panel-active .SiteLayout__main {
     pointer-events: none;
 }
 
-/* ── Sidebar ── */
+/* ── Sidebar (labeled) ── */
 .AdminPanel__sidebar {
-    width: 72px;
+    width: var(--admin-sidebar-width);
     min-height: 100vh;
-    background: linear-gradient(180deg, rgba(15, 42, 69, 0.85), rgba(9, 26, 44, 0.95));
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(15, 42, 69, 0.92), rgba(9, 26, 44, 0.98));
+    border-right: 1px solid var(--admin-border);
     backdrop-filter: blur(20px);
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 20px 0;
+    align-items: stretch;
+    padding: 18px 12px;
     z-index: 2;
     position: relative;
     flex-shrink: 0;
+    box-sizing: border-box;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.AdminPanel__sidebarBrand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 8px 12px;
+    overflow: hidden;
 }
 
 .AdminPanel__sidebarLogo {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
     object-fit: contain;
-    margin-bottom: 32px;
     filter: drop-shadow(0 4px 12px rgba(74, 166, 255, 0.3));
     cursor: pointer;
     transition: transform 0.3s ease;
+    flex-shrink: 0;
 }
 
 .AdminPanel__sidebarLogo:hover {
-    transform: scale(1.08);
+    transform: scale(1.06);
+}
+
+.AdminPanel__sidebarBrandText {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--admin-text);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+.AdminPanel__sidebarCollapseBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 36px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: 1px solid var(--admin-border);
+    background: rgba(74, 166, 255, 0.06);
+    color: rgba(197, 218, 233, 0.7);
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.AdminPanel__sidebarCollapseBtn:hover {
+    background: rgba(74, 166, 255, 0.14);
+    color: var(--admin-accent);
+    border-color: rgba(74, 166, 255, 0.3);
 }
 
 .AdminPanel__sidebarNav {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
+    align-items: stretch;
+    gap: 4px;
     flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 166, 255, 0.25) transparent;
+}
+
+.AdminPanel__sidebarNav::-webkit-scrollbar {
+    width: 4px;
+}
+
+.AdminPanel__sidebarNav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.AdminPanel__sidebarNav::-webkit-scrollbar-thumb {
+    background: rgba(74, 166, 255, 0.22);
+    border-radius: 4px;
+}
+
+.AdminPanel__sidebarNav::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.4);
+}
+
+.AdminPanel__sidebarNav::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
 }
 
 .AdminPanel__navItem {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
+    width: 100%;
+    min-height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(197, 218, 233, 0.55);
+    font-size: 0.88rem;
+    font-weight: 600;
+    position: relative;
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.AdminPanel__navIcon {
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: none;
-    background: transparent;
-    color: rgba(197, 218, 233, 0.5);
-    font-size: 1.35rem;
-    position: relative;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    width: 24px;
+}
+
+.AdminPanel__navLabel {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.15s ease;
 }
 
 .AdminPanel__navItem:hover {
     background: rgba(74, 166, 255, 0.1);
-    color: rgba(197, 218, 233, 0.85);
-    transform: scale(1.05);
+    color: rgba(197, 218, 233, 0.9);
 }
 
 .AdminPanel__navItem.active {
-    background: linear-gradient(135deg, rgba(13, 123, 216, 0.3), rgba(74, 166, 255, 0.15));
-    color: #4aa6ff;
-    box-shadow: 0 0 20px -4px rgba(74, 166, 255, 0.3);
-    border: 1px solid rgba(74, 166, 255, 0.2);
+    background: linear-gradient(135deg, rgba(13, 123, 216, 0.3), rgba(74, 166, 255, 0.12));
+    color: var(--admin-accent);
+    box-shadow: 0 0 20px -4px rgba(74, 166, 255, 0.25);
+    border-color: rgba(74, 166, 255, 0.22);
 }
 
 .AdminPanel__navItem.active::before {
     content: '';
     position: absolute;
-    left: -13px;
+    left: -12px;
     top: 50%;
     transform: translateY(-50%);
     width: 3px;
@@ -122,84 +230,101 @@ body.admin-panel-active .SiteLayout__main {
 }
 
 .AdminPanel__navTooltip {
+    display: none;
     position: absolute;
-    left: 62px;
+    left: calc(100% + 12px);
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(15, 42, 69, 0.95);
-    border: 1px solid rgba(74, 166, 255, 0.2);
+    padding: 6px 10px;
     border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 0.75rem;
+    background: rgba(9, 26, 44, 0.96);
+    border: 1px solid rgba(74, 166, 255, 0.25);
+    color: var(--admin-text);
+    font-size: 0.8rem;
     font-weight: 600;
-    color: #bfe0ff;
     white-space: nowrap;
     pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 100;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    z-index: 40;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.AdminPanel__navItem:hover .AdminPanel__navTooltip {
-    opacity: 1;
+.AdminPanel__sidebar--collapsed {
+    padding: 18px 10px;
+    align-items: center;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__sidebarBrand {
+    justify-content: center;
+    padding: 4px 0 12px;
+    gap: 0;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__sidebarBrandText,
+.AdminPanel__sidebar--collapsed .AdminPanel__navLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__navItem {
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__navItem.active::before {
+    left: -10px;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__navItem:hover .AdminPanel__navTooltip {
+    display: block;
 }
 
 .AdminPanel__sidebarBottom {
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding-top: 16px;
+    gap: 4px;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-border);
+    width: 100%;
 }
 
-.AdminPanel__homeBtn {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    margin-bottom: 1000px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    background: transparent;
-    color: rgba(197, 218, 233, 0.5);
-    font-size: 1.15rem;
+.AdminPanel__navItem--bottom {
+    color: rgba(197, 218, 233, 0.45);
 }
 
-.AdminPanel__homeBtn:hover {
-    background: rgba(74, 166, 255, 0.1);
-    border: 1px solid rgba(74, 166, 255, 0.2);
-    backdrop-filter: blur(20px);
-    color: rgba(197, 218, 233, 0.85);
-    transform: scale(1.05);
-}
-
+.AdminPanel__homeBtn,
 .AdminPanel__profileBtn {
-    width: 42px;
-    height: 42px;
+    width: 100%;
+    min-height: 44px;
     border-radius: 12px;
-    margin-bottom: 1000px;
+    margin-bottom: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 12px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
     background: transparent;
     color: rgba(197, 218, 233, 0.5);
-    font-size: 1.15rem;
+    font-size: 0.88rem;
 }
 
+.AdminPanel__homeBtn:hover,
 .AdminPanel__profileBtn:hover {
     background: rgba(74, 166, 255, 0.1);
-    border: 1px solid rgba(74, 166, 255, 0.2);
-    backdrop-filter: blur(20px);
+    border-color: rgba(74, 166, 255, 0.2);
     color: rgba(197, 218, 233, 0.85);
-    transform: scale(1.05);
 }
 
 /* ── Main Content ── */
@@ -298,6 +423,7 @@ body.admin-panel-active .SiteLayout__main {
     display: flex;
     align-items: center;
     gap: 12px;
+    position: relative;
 }
 
 .AdminPanel__topBtn {
@@ -417,8 +543,22 @@ body.admin-panel-active .SiteLayout__main {
 .AdminPanel__content {
     flex: 1;
     overflow-y: auto;
-    padding: 28px 32px;
+    padding: 22px 28px;
     scroll-behavior: smooth;
+}
+
+.AdminPanel__tableWrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+}
+
+.AdminPanel__table th:first-child,
+.AdminPanel__table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--admin-surface-solid, #0a1a2e);
 }
 
 .AdminPanel__content::-webkit-scrollbar {
@@ -751,20 +891,21 @@ body.admin-panel-active .SiteLayout__main {
     background: rgba(244, 67, 54, 0.22);
 }
 
-/* ── Modal ── */
+/* ── Modal ──
+   Portaled to document.body so framer-motion transforms on tab
+   wrappers do not become the containing block for position:fixed. */
 .AdminPanel__modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 12000;
     padding: 20px;
+    box-sizing: border-box;
+    overflow: auto;
 }
 
 .AdminPanel__modalContent {
@@ -774,8 +915,10 @@ body.admin-panel-active .SiteLayout__main {
     padding: 32px;
     width: 100%;
     max-width: 600px;
-    max-height: 80vh;
+    max-height: 86vh;
     overflow-y: auto;
+    margin: auto;
+    flex-shrink: 0;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
 }
 
@@ -845,8 +988,10 @@ body.admin-panel-active .SiteLayout__main {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 12000;
     padding: 20px;
+    box-sizing: border-box;
+    overflow: auto;
 }
 
 /* ══ MODAL CONTENT ══ */
@@ -859,6 +1004,8 @@ body.admin-panel-active .SiteLayout__main {
     max-width: 600px;
     max-height: 86vh;
     overflow-y: auto;
+    margin: auto;
+    flex-shrink: 0;
     box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
 }
 
@@ -999,6 +1146,141 @@ body.admin-panel-active .SiteLayout__main {
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* ── Attendance tab (mirrors /attendance-review layout) ── */
+.AttendanceAdmin {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.AttendanceAdmin__toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.AttendanceAdmin__subtitle {
+    margin: 0;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+    font-size: 0.88rem;
+    line-height: 1.45;
+    max-width: 640px;
+}
+
+.AttendanceAdmin__exportBtn {
+    background: linear-gradient(135deg, #1e7a45, #27ae60) !important;
+}
+
+.AttendanceAdmin__exportBtn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.AttendanceAdmin__stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+}
+
+.AttendanceAdmin__stat {
+    text-align: center;
+    min-width: 110px;
+}
+
+.AttendanceAdmin__statValue {
+    display: block;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #8EC2F0;
+    margin-bottom: 4px;
+}
+
+.AttendanceAdmin__statValue--ok {
+    color: #81C784;
+}
+
+.AttendanceAdmin__statValue--warn {
+    color: #FFD54F;
+}
+
+.AttendanceAdmin__statLabel {
+    font-size: 0.78rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+}
+
+.AttendanceAdmin__filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.AttendanceAdmin__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.AttendanceAdmin__field span {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.7));
+}
+
+.AttendanceAdmin__field .AdminPanel__filterInput,
+.AttendanceAdmin__field .AdminPanel__filterSelect {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.AttendanceAdmin__clearBtn {
+    white-space: nowrap;
+    height: fit-content;
+}
+
+.AttendanceAdmin__filteringHint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.55));
+}
+
+.AttendanceAdmin__mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.85rem;
+}
+
+.AttendanceAdmin__statusSelect {
+    min-width: 140px;
+    padding: 8px 12px;
+}
+
+@media (max-width: 900px) {
+    .AttendanceAdmin__filters {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .AttendanceAdmin__field--search {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 560px) {
+    .AttendanceAdmin__filters {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ── Filters ── */
 .AdminPanel__filters {
     display: flex;
@@ -1092,10 +1374,14 @@ body.admin-panel-active .SiteLayout__main {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
     gap: 16px;
     color: #c5dae9;
     background: linear-gradient(135deg, #060e1a, #091a2c);
+    text-align: center;
 }
 
 .AdminPanel__spinner {
@@ -1125,7 +1411,10 @@ body.admin-panel-active .SiteLayout__main {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
 }
 
 .AdminPanel__accessDenied h2 {
@@ -1262,17 +1551,61 @@ body.admin-panel-active .SiteLayout__main {
 }
 
 @media (max-width: 768px) {
-    .AdminPanel__sidebar {
+    .AdminPanel,
+    .AdminPanel--sidebarCollapsed {
+        --admin-sidebar-width: 220px;
+    }
+
+    .AdminPanel__sidebar,
+    .AdminPanel__sidebar--collapsed {
         position: fixed;
-        left: -72px;
+        left: calc(-1 * var(--admin-sidebar-width));
         top: 0;
         bottom: 0;
         z-index: 30;
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        width: var(--admin-sidebar-width);
+        padding: 18px 12px;
+        align-items: stretch;
     }
 
-    .AdminPanel__sidebar.open {
+    .AdminPanel__sidebar.open,
+    .AdminPanel__sidebar--collapsed.open {
         left: 0;
+    }
+
+    .AdminPanel__sidebarCollapseBtn {
+        display: none;
+    }
+
+    .AdminPanel__sidebar--collapsed .AdminPanel__sidebarBrand {
+        justify-content: flex-start;
+        padding: 4px 8px 12px;
+        gap: 12px;
+    }
+
+    .AdminPanel__sidebar--collapsed .AdminPanel__sidebarBrandText,
+    .AdminPanel__sidebar--collapsed .AdminPanel__navLabel {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+        clip: auto;
+        white-space: nowrap;
+        border: 0;
+        opacity: 1;
+    }
+
+    .AdminPanel__sidebar--collapsed .AdminPanel__navItem {
+        justify-content: flex-start;
+        padding: 0 12px;
+        gap: 12px;
+    }
+
+    .AdminPanel__sidebar--collapsed .AdminPanel__navItem:hover .AdminPanel__navTooltip {
+        display: none;
     }
 
     .AdminPanel__mobileToggle {
@@ -1509,4 +1842,547 @@ body.admin-panel-active .SiteLayout__main {
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
+}
+
+/* CMS admin extras */
+.AdminPanel__formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+.AdminPanel__formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--admin-text-muted, rgba(197, 218, 233, 0.75));
+}
+.AdminPanel__formGrid input,
+.AdminPanel__formGrid select,
+.AdminPanel__formGrid textarea {
+  border-radius: 8px;
+  border: 1px solid rgba(74, 166, 255, 0.25);
+  background: rgba(8, 20, 36, 0.65);
+  color: inherit;
+  padding: 8px 10px;
+  font: inherit;
+}
+.AdminPanel__fullWidth { grid-column: 1 / -1; }
+.AdminPanel__checkboxLabel {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 8px !important;
+}
+.AdminPanel__modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.AdminPanel__jsonEditor {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 166, 255, 0.25);
+  background: rgba(8, 20, 36, 0.7);
+  color: inherit;
+  padding: 14px;
+  resize: vertical;
+}
+.AdminPanel__mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.AdminPanel__mediaCard {
+  border: 1px solid rgba(74, 166, 255, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(8, 20, 36, 0.45);
+}
+.AdminPanel__mediaCard img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+}
+.AdminPanel__mediaPlaceholder {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.AdminPanel__mediaMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  font-size: 0.75rem;
+}
+.AdminPanel__mediaMeta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.AdminPanel__mediaEvent {
+  color: #64B5F6;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.AdminPanel__mediaEvent--unlinked {
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+.AdminPanel__mediaActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.AdminPanel__mediaActions .AdminPanel__actionBtn {
+  margin-right: 0;
+  padding: 5px 10px;
+  font-size: 0.72rem;
+}
+
+.MediaAdminTab__destHint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  font-size: 0.75rem;
+  color: rgba(138, 163, 198, 0.85);
+}
+.MediaAdminTab__destHint code {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(74, 166, 255, 0.1);
+  color: #64B5F6;
+  border: 1px solid rgba(74, 166, 255, 0.2);
+}
+
+.MediaUploadModal__lead {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgba(197, 218, 233, 0.85);
+}
+.MediaUploadModal__dest,
+.MediaUploadModal__current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(74, 166, 255, 0.08);
+  border: 1px solid rgba(74, 166, 255, 0.18);
+}
+.MediaUploadModal__destLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(138, 163, 198, 0.9);
+}
+.MediaUploadModal__destPath {
+  font-size: 0.82rem;
+  color: #64B5F6;
+  background: rgba(8, 20, 36, 0.45);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.MediaUploadModal__destType {
+  font-size: 0.8rem;
+  color: #eaf2ff;
+  opacity: 0.9;
+}
+.MediaUploadModal__current strong {
+  font-size: 0.85rem;
+  color: #eaf2ff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.MediaUploadModal__currentEvent {
+  width: 100%;
+  font-size: 0.75rem;
+  color: rgba(197, 218, 233, 0.8);
+}
+.MediaUploadModal__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 140px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px dashed rgba(74, 166, 255, 0.35);
+  background: rgba(8, 20, 36, 0.35);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.MediaUploadModal__drop:hover {
+  border-color: rgba(74, 166, 255, 0.55);
+  background: rgba(74, 166, 255, 0.06);
+}
+.MediaUploadModal__drop--hasFile {
+  border-style: solid;
+  border-color: rgba(74, 166, 255, 0.4);
+}
+.MediaUploadModal__drop input {
+  display: none;
+}
+.MediaUploadModal__dropIcon {
+  font-size: 2rem;
+  color: #64B5F6;
+  opacity: 0.9;
+}
+.MediaUploadModal__dropText {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #eaf2ff;
+  word-break: break-word;
+}
+.MediaUploadModal__dropHint {
+  font-size: 0.75rem;
+  color: rgba(138, 163, 198, 0.85);
+}
+.MediaUploadModal__preview {
+  width: 100%;
+  max-height: 140px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.MediaUploadModal__eventNote {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgba(197, 218, 233, 0.8);
+}
+.MediaUploadModal__error {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: #E57373;
+}
+
+@media (max-width: 720px) {
+  .AdminPanel__formGrid { grid-template-columns: 1fr; }
+  .MediaAdminTab__destHint {
+    display: block;
+    margin: 8px 0 0;
+  }
+}
+
+/* ── Sponsors admin tab ── */
+.SponsorsAdmin__sectionSub {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  color: var(--admin-text-muted);
+  max-width: 42ch;
+  line-height: 1.45;
+}
+
+.SponsorsAdmin__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 20px;
+  color: var(--admin-text-muted);
+}
+
+.SponsorsAdmin__empty > svg {
+  font-size: 2rem;
+  opacity: 0.55;
+}
+
+.SponsorsAdmin__table td {
+  vertical-align: middle;
+}
+
+.SponsorsAdmin__rowIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.SponsorsAdmin__rowLogo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: rgba(197, 218, 233, 0.45);
+  font-size: 1.2rem;
+}
+
+.SponsorsAdmin__rowLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  display: block;
+}
+
+.SponsorsAdmin__rowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.SponsorsAdmin__rowName {
+  font-weight: 650;
+  color: #eaf2ff;
+}
+
+.SponsorsAdmin__rowTagline {
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.SponsorsAdmin__tier {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  color: #9fd0ff;
+  background: rgba(74, 166, 255, 0.12);
+  border: 1px solid rgba(74, 166, 255, 0.22);
+}
+
+.SponsorsAdmin__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--admin-accent);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.SponsorsAdmin__link:hover {
+  text-decoration: underline;
+}
+
+.SponsorsAdmin__rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.SponsorsAdmin__overlay {
+  z-index: 12000;
+}
+
+.SponsorsAdmin__modal {
+  max-width: 820px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: min(90vh, 760px);
+}
+
+.SponsorsAdmin__modalHeader {
+  margin: 0;
+  padding: 22px 24px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: linear-gradient(145deg, rgba(15, 42, 69, 0.98), rgba(9, 26, 44, 0.98));
+}
+
+.SponsorsAdmin__modalHeader h3 {
+  margin: 0;
+}
+
+.SponsorsAdmin__modalSub {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: var(--admin-text-muted);
+  line-height: 1.4;
+}
+
+.SponsorsAdmin__body {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 22px;
+  padding: 8px 24px 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.SponsorsAdmin__logoPane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.SponsorsAdmin__logoPreview {
+  aspect-ratio: 1;
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)),
+    repeating-conic-gradient(rgba(255, 255, 255, 0.03) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.SponsorsAdmin__logoPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 16px;
+  display: block;
+}
+
+.SponsorsAdmin__logoPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: rgba(197, 218, 233, 0.45);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.SponsorsAdmin__logoPlaceholder svg {
+  font-size: 1.6rem;
+}
+
+.SponsorsAdmin__fileBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(74, 166, 255, 0.35);
+  background: rgba(74, 166, 255, 0.08);
+  color: #9fd0ff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.SponsorsAdmin__fileBtn:hover {
+  background: rgba(74, 166, 255, 0.14);
+  border-color: rgba(74, 166, 255, 0.5);
+}
+
+.SponsorsAdmin__fileBtn input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.SponsorsAdmin__hint {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(197, 218, 233, 0.5);
+}
+
+.SponsorsAdmin__formPane {
+  min-width: 0;
+}
+
+.SponsorsAdmin__formGrid {
+  margin: 0;
+  gap: 14px;
+}
+
+.SponsorsAdmin__formGrid input,
+.SponsorsAdmin__formGrid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.SponsorsAdmin__formGrid input:focus,
+.SponsorsAdmin__formGrid textarea:focus {
+  outline: none;
+  border-color: rgba(74, 166, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.12);
+}
+
+.SponsorsAdmin__formGrid .AdminPanel__jsonEditor {
+  margin: 0;
+}
+
+.SponsorsAdmin__actions {
+  margin: 0;
+  padding: 16px 24px 22px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(145deg, rgba(15, 42, 69, 0.98), rgba(9, 26, 44, 0.98));
+  position: sticky;
+  bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .SponsorsAdmin__body {
+    grid-template-columns: 1fr;
+  }
+
+  .SponsorsAdmin__logoPreview {
+    max-width: 180px;
+    margin: 0 auto;
+  }
+
+  .SponsorsAdmin__fileBtn {
+    max-width: 180px;
+    margin: 0 auto;
+  }
+
+  .SponsorsAdmin__hint {
+    text-align: center;
+  }
+
+  .SponsorsAdmin__rowTagline {
+    max-width: 160px;
+  }
 }

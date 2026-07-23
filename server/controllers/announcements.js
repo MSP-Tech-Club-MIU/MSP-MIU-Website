@@ -1,5 +1,6 @@
 const { Announcement, User } = require('../models');
 const { Op } = require('sequelize');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Notify all users by email.
@@ -42,6 +43,7 @@ async function broadcastNewAnnouncementEmails(announcement) {
 const getAllAnnouncements = async (req, res) => {
   try {
     const { includeInactive } = req.query;
+    const { page, limit, offset } = parsePagination(req.query);
     
     const whereClause = {};
     
@@ -50,7 +52,7 @@ const getAllAnnouncements = async (req, res) => {
       whereClause.is_active = true;
     }
 
-    const announcements = await Announcement.findAll({
+    const { rows: announcements, count: total } = await Announcement.findAndCountAll({
       where: whereClause,
       include: [{
         model: User,
@@ -61,12 +63,17 @@ const getAllAnnouncements = async (req, res) => {
         ['priority', 'DESC'],
         ['announcement_date', 'DESC'],
         ['created_at', 'DESC']
-      ]
+      ],
+      limit,
+      offset,
+      distinct: true
     });
 
     return res.json({
       success: true,
-      data: announcements
+      data: announcements,
+      count: announcements.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     console.error('Error fetching announcements:', error);

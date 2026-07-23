@@ -3,6 +3,7 @@ const { Competition, Event, Attendance, Application, Member, Board, User, Depart
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
 const { Op } = require('sequelize');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Helper: Log an admin notification
@@ -103,13 +104,18 @@ const getDashboardStats = async (req, res) => {
  */
 const getCompetitions = async (req, res) => {
     try {
-        const competitions = await Competition.findAll({
-            order: [['created_at', 'DESC']]
+        const { page, limit, offset } = parsePagination(req.query);
+        const { rows: competitions, count: total } = await Competition.findAndCountAll({
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
         });
 
         res.json({
             success: true,
-            data: competitions
+            data: competitions,
+            count: competitions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
         console.error('Error fetching competitions:', error);
@@ -133,6 +139,8 @@ const createCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            max_teams,
+            registration_deadline,
             status,
             location_type,
             location_details,
@@ -181,6 +189,14 @@ const createCompetition = async (req, res) => {
             end_at,
             max_team_size: maxSize,
             min_team_size: minSize,
+            max_teams:
+                max_teams === '' || max_teams == null
+                    ? null
+                    : Number(max_teams),
+            registration_deadline:
+                registration_deadline === '' || registration_deadline == null
+                    ? null
+                    : registration_deadline,
             status: status || 'draft',
             location_type: location_type || 'on-campus',
             location_details: location_details || null,
@@ -239,6 +255,8 @@ const updateCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            max_teams,
+            registration_deadline,
             status,
             location_type,
             location_details,
@@ -256,6 +274,16 @@ const updateCompetition = async (req, res) => {
         if (description !== undefined) updates.description = description;
         if (start_at !== undefined) updates.start_at = start_at;
         if (end_at !== undefined) updates.end_at = end_at;
+        if (max_teams !== undefined) {
+            updates.max_teams =
+                max_teams === '' || max_teams == null ? null : Number(max_teams);
+        }
+        if (registration_deadline !== undefined) {
+            updates.registration_deadline =
+                registration_deadline === '' || registration_deadline == null
+                    ? null
+                    : registration_deadline;
+        }
         if (status !== undefined) updates.status = status;
         if (location_type !== undefined) updates.location_type = location_type;
         if (location_details !== undefined) updates.location_details = location_details;
@@ -506,11 +534,14 @@ const updateCompetitionJudges = async (req, res) => {
  */
 const getAttendanceRequests = async (req, res) => {
     try {
-        const { event_id, attended, date } = req.query;
+        const { event_id, attended, date, search } = req.query;
+        const { page, limit, offset } = parsePagination(req.query);
         const where = {};
 
         if (event_id) where.event_id = event_id;
-        if (attended !== undefined) where.attended = attended === 'true';
+        if (attended !== undefined && attended !== '') {
+            where.attended = attended === 'true' || attended === true;
+        }
         if (date) {
             where.created_at = {
                 [Op.gte]: new Date(date),
@@ -518,14 +549,41 @@ const getAttendanceRequests = async (req, res) => {
             };
         }
 
-        const requests = await Attendance.findAll({
+        if (search) {
+            let sanitizedSearch = String(search).trim();
+            if (sanitizedSearch.length > 100) {
+                sanitizedSearch = sanitizedSearch.substring(0, 100);
+            }
+            sanitizedSearch = sanitizedSearch.replace(/[%_\\]/g, (match) => {
+                if (match === '\\') return '\\\\';
+                return `\\${match}`;
+            });
+            where[Op.or] = [
+                { full_name: { [Op.like]: `%${sanitizedSearch}%` } },
+                { university_id: { [Op.like]: `%${sanitizedSearch}%` } },
+                { phone_number: { [Op.like]: `%${sanitizedSearch}%` } },
+                { course_code: { [Op.like]: `%${sanitizedSearch}%` } }
+            ];
+        }
+
+        const { rows: requests, count: total } = await Attendance.findAndCountAll({
             where,
-            order: [['created_at', 'DESC']]
+            include: [{
+                model: Event,
+                as: 'event',
+                attributes: ['event_id', 'name', 'event_date']
+            }],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
         res.json({
             success: true,
-            data: requests
+            data: requests,
+            count: requests.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
         console.error('Error fetching attendance requests:', error);
@@ -561,7 +619,7 @@ const updateAttendanceStatus = async (req, res) => {
             `${attended ? 'Confirmed' : 'Revoked'} attendance for ${request.full_name || 'a member'}`,
             req,
             'attendance',
-            request.attendance_id
+            request.request_id
         );
 
         res.json({
@@ -583,6 +641,7 @@ const updateAttendanceStatus = async (req, res) => {
 const getRegistrations = async (req, res) => {
     try {
         const { status, search } = req.query;
+        const { page, limit, offset } = parsePagination(req.query);
         const where = {};
 
         if (status) where.status = status;
@@ -594,14 +653,18 @@ const getRegistrations = async (req, res) => {
             ];
         }
 
-        const applications = await Application.findAll({
+        const { rows: applications, count: total } = await Application.findAndCountAll({
             where,
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
         });
 
         res.json({
             success: true,
-            data: applications
+            data: applications,
+            count: applications.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
         console.error('Error fetching registrations:', error);
@@ -658,16 +721,19 @@ const updateRegistrationStatus = async (req, res) => {
  */
 const getNotifications = async (req, res) => {
     try {
-        const { limit = 50 } = req.query;
+        const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50 });
 
-        const notifications = await AdminNotification.findAll({
+        const { rows: notifications, count: total } = await AdminNotification.findAndCountAll({
             order: [['created_at', 'DESC']],
-            limit: parseInt(limit)
+            limit,
+            offset
         });
 
         res.json({
             success: true,
-            data: notifications
+            data: notifications,
+            count: notifications.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
         console.error('Error fetching notifications:', error);
@@ -683,11 +749,20 @@ const getNotifications = async (req, res) => {
  */
 const getSuggestions = async (req, res) => {
     try {
-        const suggestions = await Suggestion.findAll({
+        const { page, limit, offset } = parsePagination(req.query);
+        const { rows: suggestions, count: total } = await Suggestion.findAndCountAll({
             include: [{ model: Member, as: 'member', attributes: ['member_id', 'full_name', 'email', 'university_id'] }],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
-        res.json({ success: true, data: suggestions });
+        res.json({
+            success: true,
+            data: suggestions,
+            count: suggestions.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
         console.error('Error fetching suggestions:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch suggestions' });
@@ -699,14 +774,67 @@ const getSuggestions = async (req, res) => {
  */
 const getEventFeedbackAll = async (req, res) => {
     try {
-        const feedbacks = await EventFeedback.findAll({
+        const { page, limit, offset } = parsePagination(req.query);
+        const { rows: feedbacks, count: total } = await EventFeedback.findAndCountAll({
             include: [{ model: Event, as: 'event', attributes: ['event_id', 'name', 'event_date'] }],
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
-        res.json({ success: true, data: feedbacks });
+        res.json({
+            success: true,
+            data: feedbacks,
+            count: feedbacks.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
         console.error('Error fetching feedback:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedback' });
+    }
+};
+
+const deleteSuggestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const suggestion = await Suggestion.findByPk(id);
+        if (!suggestion) {
+            return res.status(404).json({ success: false, error: 'Suggestion not found' });
+        }
+        await suggestion.destroy();
+        await logAdminAction(
+            'suggestion_deleted',
+            `Deleted suggestion #${id}`,
+            req,
+            'suggestion',
+            id
+        );
+        res.json({ success: true, message: 'Suggestion deleted' });
+    } catch (error) {
+        console.error('Error deleting suggestion:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete suggestion' });
+    }
+};
+
+const deleteAdminFeedback = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const feedback = await EventFeedback.findByPk(id);
+        if (!feedback) {
+            return res.status(404).json({ success: false, error: 'Feedback not found' });
+        }
+        await feedback.destroy();
+        await logAdminAction(
+            'feedback_deleted',
+            `Deleted event feedback #${id}`,
+            req,
+            'feedback',
+            id
+        );
+        res.json({ success: true, message: 'Feedback deleted' });
+    } catch (error) {
+        console.error('Error deleting feedback:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete feedback' });
     }
 };
 
@@ -720,6 +848,17 @@ const getEventFeedbackAll = async (req, res) => {
 const getCompetitionTeams = async (req, res) => {
     try {
         const { id } = req.params;
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await sequelize.query(
+            `SELECT COUNT(*) AS total FROM teams WHERE competition_id = ?`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
+
         const rows = await sequelize.query(
             `SELECT t.team_id,
                     t.competition_id,
@@ -737,9 +876,10 @@ const getCompetitionTeams = async (req, res) => {
              FROM teams t
              LEFT JOIN users u ON t.created_by_user_id = u.user_id
              WHERE t.competition_id = ?
-             ORDER BY t.created_at DESC`,
+             ORDER BY t.created_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [id],
+                replacements: [id, limit, offset],
                 type: QueryTypes.SELECT
             }
         );
@@ -801,7 +941,12 @@ const getCompetitionTeams = async (req, res) => {
             members: teamMembersByTeamId[row.team_id] || []
         }));
 
-        res.json({ success: true, data: teams });
+        res.json({
+            success: true,
+            data: teams,
+            count: teams.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
         console.error('Error fetching teams:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch teams' });
@@ -1175,6 +1320,8 @@ module.exports = {
     getNotifications,
     getSuggestions,
     getEventFeedbackAll,
+    deleteSuggestion,
+    deleteAdminFeedback,
     getCompetitionTeams,
     getCompetitionJudges,
     createAdminTeam,

@@ -1,3 +1,6 @@
+// Board leadership labels used only for display on the Board page — not real joinable departments
+export const BOARD_POSITION_NAMES = ['Vice President', 'President', 'Founder'];
+
 // Department mapping for the application - matches database ENUM
 export const departments = [
   { id: 1, name: 'Software Development' },
@@ -10,6 +13,16 @@ export const departments = [
   { id: 8, name: 'President' },
   { id: 9, name: 'Founder' },
 ];
+
+/** Departments members can actually choose (excludes Founder / President / VP display roles). */
+export const memberDepartments = departments.filter(
+  (dept) => !BOARD_POSITION_NAMES.includes(dept.name)
+);
+
+export const isBoardPosition = (nameOrDept) => {
+  const name = typeof nameOrDept === 'string' ? nameOrDept : nameOrDept?.name;
+  return BOARD_POSITION_NAMES.includes(name);
+};
 
 // Helper functions
 export const getDepartmentById = (id) => {

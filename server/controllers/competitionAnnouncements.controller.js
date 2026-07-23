@@ -1,6 +1,7 @@
 const { CompetitionAnnouncement, Competition, User } = require('../models');
 const { broadcastCompetitionAnnouncementEmails } = require('../services/competitionAnnouncementBroadcast');
 const { Op } = require('sequelize');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
 
 /**
  * Get all announcements for a specific competition
@@ -27,7 +28,9 @@ const getCompetitionAnnouncements = async (req, res) => {
       whereClause.is_active = true;
     }
 
-    const announcements = await CompetitionAnnouncement.findAll({
+    const { page, limit, offset } = parsePagination(req.query);
+
+    const { rows: announcements, count: total } = await CompetitionAnnouncement.findAndCountAll({
       where: whereClause,
       include: [{
         model: User,
@@ -35,12 +38,17 @@ const getCompetitionAnnouncements = async (req, res) => {
         attributes: ['user_id', 'full_name', 'email'],
         required: false
       }],
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+      distinct: true
     });
 
     return res.json({
       success: true,
-      data: announcements
+      data: announcements,
+      count: announcements.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     console.error('Error fetching competition announcements:', error);

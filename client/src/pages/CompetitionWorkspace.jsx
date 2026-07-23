@@ -115,8 +115,8 @@ const CompetitionWorkspace = () => {
           setSelectedTaskId(null);
           setSubmission(null);
         } else {
-          const taskList = await ApiService.getCompetitionTasks(competitionId).catch(() => []);
-          const list = Array.isArray(taskList) ? taskList : [];
+          const taskResult = await ApiService.getCompetitionTasks(competitionId, { limit: 100, page: 1 }).catch(() => ({ data: [] }));
+          const list = Array.isArray(taskResult) ? taskResult : (taskResult.data || []);
           const map = {};
           await Promise.all(
             list.map(async (t) => {
