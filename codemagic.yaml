@@ -1,13 +1,12 @@
-# Codemagic CI for MSP MIU Capacitor iOS IPA builds.
+# Codemagic CI for MSP MIU Capacitor iOS IPA builds (ad hoc).
 #
-# Setup (one-time in Codemagic):
-# 1. Connect this GitHub repository to your Codemagic app.
-# 2. Team settings → Integrations → App Store Connect: add an API key.
-# 3. Replace `app_store_connect` below with your integration name.
-# 4. App Store Connect → create app with bundle ID `tech.mspmiu`.
-# 5. Start the workflow; download the IPA from Artifacts when the build finishes.
+# Prerequisites:
+# 1. Register bundle ID: tech.mspmiu (Apple Developer → Identifiers).
+# 2. Register test devices in Apple Developer → Devices (ad hoc installs require this).
+# 3. App Store Connect API key in Codemagic → Team integrations → Developer Portal.
+# 4. Replace `app_store_connect` below with your integration name.
 #
-# Docs: https://docs.codemagic.io/yaml-quick-start/building-an-ionic-app/
+# The IPA can be downloaded from Codemagic Artifacts and sideloaded onto registered devices.
 
 workflows:
   msp-miu-ios-ipa:
@@ -16,13 +15,10 @@ workflows:
     instance_type: mac_mini_m2
 
     integrations:
-      # Replace with the App Store Connect API key name from Codemagic Team integrations.
+      # Replace with your App Store Connect API key name from Codemagic Team integrations.
       app_store_connect: codemagic
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: tech.mspmiu
       vars:
         BUNDLE_ID: tech.mspmiu
         XCODE_WORKSPACE: App.xcworkspace
@@ -61,9 +57,26 @@ workflows:
           cd client/ios/App
           pod install
 
+      - name: Set up keychain
+        script: |
+          keychain initialize
+
+      - name: Fetch ad hoc code signing files from App Store Connect
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_ADHOC \
+            --create
+
+      - name: Add signing certificates to keychain
+        script: |
+          keychain add-certificates
+
       - name: Set up code signing on Xcode project
         script: |
-          xcode-project use-profiles
+          cd "$CM_BUILD_DIR/client/ios/App"
+          xcode-project use-profiles \
+            --project App.xcodeproj \
+            --code-signing-setup-verbose-logging
 
       - name: Set iOS marketing and build numbers
         script: |
@@ -71,26 +84,15 @@ workflows:
           agvtool new-marketing-version "$MARKETING_VERSION"
           agvtool new-version -all "$BUILD_NUMBER"
 
-      - name: Build signed IPA
+      - name: Build signed ad hoc IPA
         script: |
           cd "$CM_BUILD_DIR/client/ios/App"
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags="-destination 'generic/platform=iOS'"
 
     artifacts:
       - client/ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
-
-    # Optional publishing (uncomment when ready):
-    # publishing:
-    #   email:
-    #     recipients:
-    #       - you@example.com
-    #     notify:
-    #       success: true
-    #       failure: true
-    #   app_store_connect:
-    #     auth: integration
-    #     submit_to_testflight: true
