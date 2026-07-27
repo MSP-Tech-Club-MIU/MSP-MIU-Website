@@ -32,6 +32,14 @@ const TeamInvitation = sequelize.define('TeamInvitation', {
     },
     onDelete: 'SET NULL'
   },
+  invited_name: {
+    type: DataTypes.STRING(150),
+    allowNull: true
+  },
+  invited_university_id: {
+    type: DataTypes.STRING(50),
+    allowNull: true
+  },
   token: {
     type: DataTypes.STRING(255),
     allowNull: false,
