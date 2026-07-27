@@ -1,0 +1,2500 @@
+openapi: 3.0.3
+info:
+  title: MSP-MIU Website API
+  description: |
+    REST API for the MSP Tech Club MIU platform (members, events, CMS, competitions, quizzes).
+
+    Authenticate with `POST /auth/login`, then use **Authorize** with a Bearer JWT.
+  version: 1.0.0
+  contact:
+    name: MSP Tech Club MIU
+    url: https://msp-miu.tech
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://msp-miu.tech/api
+    description: Production
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Applications
+  - name: Announcements
+  - name: Board
+  - name: Sponsors
+  - name: Departments
+  - name: SiteContent
+  - name: Members
+  - name: Attendance
+  - name: Events
+  - name: Competitions
+  - name: CompetitionAnnouncements
+  - name: Teams
+  - name: Submissions
+  - name: Quizzes
+  - name: QuizAttempts
+  - name: Evaluation
+  - name: Cloud
+  - name: Upload
+  - name: Admin
+  - name: Suggestions
+  - name: Seasons
+  - name: EmailTemplates
+  - name: AndroidApp
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    SeasonId:
+      name: season_id
+      in: query
+      schema:
+        oneOf:
+          - type: integer
+          - type: string
+            enum: [current, all]
+      description: Season filter — omit/current, numeric id, or all
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+    LoginRequest:
+      type: object
+      required: [university_id, password]
+      properties:
+        university_id:
+          type: string
+        password:
+          type: string
+          format: password
+    SuccessMessage:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+security: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: JWT and user payload
+        '401':
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register account
+      responses:
+        '201':
+          description: Registered
+
+  /auth/activate:
+    post:
+      tags: [Auth]
+      summary: Activate account with token and password
+      responses:
+        '200':
+          description: Activated
+
+  /auth/verify-activation-token:
+    post:
+      tags: [Auth]
+      summary: Verify activation token
+      responses:
+        '200':
+          description: Token validity
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset email
+      responses:
+        '200':
+          description: Email sent if account exists
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      responses:
+        '200':
+          description: Password updated
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /users/register:
+    post:
+      tags: [Users]
+      summary: Register (legacy/alternate)
+      responses:
+        '201':
+          description: Registered
+
+  /users/login:
+    post:
+      tags: [Users]
+      summary: Login (legacy/alternate)
+      responses:
+        '200':
+          description: JWT issued
+
+  /users/logout:
+    post:
+      tags: [Users]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+
+  /users/profile:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile
+    put:
+      tags: [Users]
+      summary: Update profile (multipart optional)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Updated
+
+  /users/score:
+    post:
+      tags: [Users]
+      summary: Add score (admin role)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Score added
+        '403':
+          description: Forbidden
+
+  /applications:
+    post:
+      tags: [Applications]
+      summary: Submit membership application
+      responses:
+        '201':
+          description: Created
+    get:
+      tags: [Applications]
+      summary: List applications (board/admin or dept 5)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: Application list
+
+  /applications/{id}/status:
+    put:
+      tags: [Applications]
+      summary: Update application status (board)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /applications/{id}/comment:
+    put:
+      tags: [Applications]
+      summary: Update application comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /applications/{id}:
+    delete:
+      tags: [Applications]
+      summary: Delete application
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /announcements:
+    get:
+      tags: [Announcements]
+      summary: List announcements
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Announcements]
+      summary: Create announcement
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /announcements/{id}:
+    get:
+      tags: [Announcements]
+      summary: Get announcement
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Announcement
+    put:
+      tags: [Announcements]
+      summary: Update announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Announcements]
+      summary: Delete announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /board:
+    get:
+      tags: [Board]
+      summary: List board members
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: Board list
+    post:
+      tags: [Board]
+      summary: Create board member
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /board/{id}:
+    put:
+      tags: [Board]
+      summary: Update board member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Board]
+      summary: Delete board member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /sponsors:
+    get:
+      tags: [Sponsors]
+      summary: List sponsors
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Sponsors]
+      summary: Create sponsor
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /sponsors/{id}:
+    put:
+      tags: [Sponsors]
+      summary: Update sponsor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Sponsors]
+      summary: Delete sponsor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List departments
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Departments]
+      summary: Create department
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /departments/{id}:
+    put:
+      tags: [Departments]
+      summary: Update department
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Departments]
+      summary: Delete department
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /site-content:
+    get:
+      tags: [SiteContent]
+      summary: Get all CMS keys (merged with defaults)
+      responses:
+        '200':
+          description: Content map
+
+  /site-content/{key}:
+    get:
+      tags: [SiteContent]
+      summary: Get one CMS key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [hero, about, footer, seo, imagine_cup, gallery, android_app, lookups]
+      responses:
+        '200':
+          description: Content
+    put:
+      tags: [SiteContent]
+      summary: Update CMS key
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+
+  /site-content/{key}/reset:
+    post:
+      tags: [SiteContent]
+      summary: Reset CMS key to defaults
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reset
+
+  /members:
+    get:
+      tags: [Members]
+      summary: List members
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Members]
+      summary: Create member
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /members/export/csv:
+    get:
+      tags: [Members]
+      summary: Export members CSV
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CSV file
+
+  /members/send-activation-emails:
+    post:
+      tags: [Members]
+      summary: Bulk send activation emails
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sent
+
+  /members/{id}/send-activation-email:
+    post:
+      tags: [Members]
+      summary: Send activation email for one member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sent
+
+  /members/{id}:
+    get:
+      tags: [Members]
+      summary: Get member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Member
+    put:
+      tags: [Members]
+      summary: Update member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Members]
+      summary: Delete member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /attendance:
+    post:
+      tags: [Attendance]
+      summary: Create attendance request (public)
+      responses:
+        '201':
+          description: Created
+    get:
+      tags: [Attendance]
+      summary: List attendance requests (admin/board or dept 6)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /attendance/export/csv:
+    get:
+      tags: [Attendance]
+      summary: Export attendance CSV
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CSV file
+
+  /attendance/{id}:
+    get:
+      tags: [Attendance]
+      summary: Get attendance request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Request
+    put:
+      tags: [Attendance]
+      summary: Update attendance request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Attendance]
+      summary: Delete attendance request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /events:
+    get:
+      tags: [Events]
+      summary: List events
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Events]
+      summary: Create event
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /events/{id}:
+    get:
+      tags: [Events]
+      summary: Get event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Event
+    put:
+      tags: [Events]
+      summary: Update event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Events]
+      summary: Delete event
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /events/{id}/download:
+    get:
+      tags: [Events]
+      summary: Download event content
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: File download
+
+  /events/{id}/feedback:
+    get:
+      tags: [Events]
+      summary: List event feedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Feedback list
+    post:
+      tags: [Events]
+      summary: Add event feedback
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /events/{eventId}/feedback/{feedbackId}:
+    delete:
+      tags: [Events]
+      summary: Delete feedback
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: feedbackId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /competitions:
+    get:
+      tags: [Competitions]
+      summary: List competitions
+      parameters:
+        - $ref: '#/components/parameters/SeasonId'
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Competitions]
+      summary: Create competition
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /competitions/{id}:
+    get:
+      tags: [Competitions]
+      summary: Get competition
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Competition
+    put:
+      tags: [Competitions]
+      summary: Update competition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Competitions]
+      summary: Delete competition (admin role)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /competitions/{id}/leaderboard:
+    get:
+      tags: [Competitions]
+      summary: Competition leaderboard
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Leaderboard
+
+  /competitions/{id}/tasks:
+    get:
+      tags: [Competitions]
+      summary: Public competition tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tasks
+
+  /competitions/{id}/timeslots/selection:
+    get:
+      tags: [Competitions]
+      summary: Timeslot selection view (public link)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Selection payload
+    post:
+      tags: [Competitions]
+      summary: Submit timeslot selection (public link)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Selected
+
+  /competitions/{id}/team/{teamId}/timeslots:
+    get:
+      tags: [Competitions]
+      summary: Workspace timeslot view
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Timeslots
+    post:
+      tags: [Competitions]
+      summary: Workspace timeslot selection
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Selected
+
+  /competitions/{competitionId}/teams:
+    get:
+      tags: [Competitions]
+      summary: List teams for competition
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Teams
+
+  /competitions/{id}/my-team:
+    get:
+      tags: [Competitions]
+      summary: Current user team for competition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Team or null
+
+  /competitions/{competitionId}/announcements:
+    get:
+      tags: [CompetitionAnnouncements]
+      summary: List competition announcements
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [CompetitionAnnouncements]
+      summary: Create competition announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /competitions/{competitionId}/announcements/{announcementId}:
+    get:
+      tags: [CompetitionAnnouncements]
+      summary: Get competition announcement
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Announcement
+    put:
+      tags: [CompetitionAnnouncements]
+      summary: Update competition announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [CompetitionAnnouncements]
+      summary: Delete competition announcement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /competitions/{competitionId}/announcements/{announcementId}/resend-emails:
+    post:
+      tags: [CompetitionAnnouncements]
+      summary: Resend announcement emails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: announcementId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Resent
+
+  /teams:
+    post:
+      tags: [Teams]
+      summary: Create team
+      security:
+        - bearerAuth: []
+      description: Optional auth — token attached if present
+      responses:
+        '201':
+          description: Created
+
+  /teams/verify-invitation:
+    get:
+      tags: [Teams]
+      summary: Verify invitation token
+      parameters:
+        - name: token
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation details
+
+  /teams/accept-invitation-new-user:
+    post:
+      tags: [Teams]
+      summary: Accept invitation as new user
+      responses:
+        '200':
+          description: Accepted
+
+  /teams/accept-invitation:
+    post:
+      tags: [Teams]
+      summary: Accept invitation (authenticated)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Accepted
+
+  /teams/decline-invitation:
+    post:
+      tags: [Teams]
+      summary: Decline invitation
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Declined
+
+  /teams/invitations/{token}/accept:
+    post:
+      tags: [Teams]
+      summary: Accept invitation by token path
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Accepted
+
+  /teams/invitations/{token}/decline:
+    post:
+      tags: [Teams]
+      summary: Decline invitation by token path
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Declined
+
+  /teams/{id}:
+    get:
+      tags: [Teams]
+      summary: Get team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Team
+
+  /teams/{id}/invite:
+    post:
+      tags: [Teams]
+      summary: Invite member to team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invited
+
+  /submissions:
+    post:
+      tags: [Submissions]
+      summary: Upload submission
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Created
+
+  /submissions/competitions/{competitionId}/teams/{teamId}:
+    get:
+      tags: [Submissions]
+      summary: Get team submission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Submission
+
+  /submissions/competitions/{competitionId}:
+    get:
+      tags: [Submissions]
+      summary: List competition submissions (judging)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Submissions
+
+  /submissions/{id}/grade:
+    put:
+      tags: [Submissions]
+      summary: Grade submission (judging)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Graded
+
+  /quizzes/{id}:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Quiz
+
+  /quizzes/{quizId}/attempts/{userId}:
+    get:
+      tags: [Quizzes]
+      summary: Get quiz attempt for user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: quizId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attempt
+
+  /quiz_attempts:
+    post:
+      tags: [QuizAttempts]
+      summary: Start quiz attempt
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Attempt created
+
+  /quiz_attempts/{attemptId}/answers:
+    post:
+      tags: [QuizAttempts]
+      summary: Save answer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Saved
+
+  /quiz_attempts/{attemptId}:
+    patch:
+      tags: [QuizAttempts]
+      summary: Submit quiz attempt
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Submitted
+
+  /evaluation/run/{submissionId}:
+    post:
+      tags: [Evaluation]
+      summary: Run automated evaluation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Evaluation result
+
+  /evaluation/judge/{submissionId}:
+    post:
+      tags: [Evaluation]
+      summary: Submit judge score
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Score saved
+
+  /evaluation/task-quiz/{competitionId}/team/{teamId}:
+    get:
+      tags: [Evaluation]
+      summary: Task-quiz evaluation (judges)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marks
+
+  /evaluation/my-task-quiz/{competitionId}/team/{teamId}:
+    get:
+      tags: [Evaluation]
+      summary: Task-quiz marks for own team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: competitionId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Marks
+
+  /evaluation/{submissionId}:
+    get:
+      tags: [Evaluation]
+      summary: Get evaluation for submission
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: submissionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Evaluation
+
+  /cloud/images:
+    get:
+      tags: [Cloud]
+      summary: List images
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/slides:
+    get:
+      tags: [Cloud]
+      summary: List slides
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/videos:
+    get:
+      tags: [Cloud]
+      summary: List videos
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/codes:
+    get:
+      tags: [Cloud]
+      summary: List codes
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/assets:
+    get:
+      tags: [Cloud]
+      summary: List assets
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/event-thumbnails:
+    get:
+      tags: [Cloud]
+      summary: List event thumbnails
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/documents:
+    get:
+      tags: [Cloud]
+      summary: List documents
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/assets/{type}:
+    get:
+      tags: [Cloud]
+      summary: List assets by type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Objects
+
+  /cloud/object:
+    delete:
+      tags: [Cloud]
+      summary: Delete cloud object
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Deleted
+    put:
+      tags: [Cloud]
+      summary: Replace cloud object
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Replaced
+
+  /upload/{type}:
+    post:
+      tags: [Upload]
+      summary: Upload file by type
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Uploaded
+
+  /suggestions:
+    post:
+      tags: [Suggestions]
+      summary: Create suggestion (optional auth)
+      responses:
+        '201':
+          description: Created
+
+  /seasons:
+    get:
+      tags: [Seasons]
+      summary: List seasons
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Seasons]
+      summary: Create season (adminAuth)
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /seasons/current:
+    get:
+      tags: [Seasons]
+      summary: Get current/default season
+      responses:
+        '200':
+          description: Season
+
+  /seasons/{id}:
+    put:
+      tags: [Seasons]
+      summary: Update season (adminAuth)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /seasons/{id}/set-default:
+    post:
+      tags: [Seasons]
+      summary: Set default season (adminAuth)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Default set
+
+  /email-templates:
+    get:
+      tags: [EmailTemplates]
+      summary: List email templates
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Templates
+
+  /email-templates/departments/whatsapp:
+    get:
+      tags: [EmailTemplates]
+      summary: List department WhatsApp links
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Links
+
+  /email-templates/departments/{id}/whatsapp:
+    put:
+      tags: [EmailTemplates]
+      summary: Update department WhatsApp
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /email-templates/send/member-activation:
+    post:
+      tags: [EmailTemplates]
+      summary: Send member activation emails
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sent
+
+  /email-templates/send/board-activation:
+    post:
+      tags: [EmailTemplates]
+      summary: Send board activation emails
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sent
+
+  /email-templates/send/member-acceptance:
+    post:
+      tags: [EmailTemplates]
+      summary: Send member acceptance emails
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Sent
+
+  /email-templates/{key}:
+    get:
+      tags: [EmailTemplates]
+      summary: Get email template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template
+    put:
+      tags: [EmailTemplates]
+      summary: Update email template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+
+  /email-templates/{key}/reset:
+    post:
+      tags: [EmailTemplates]
+      summary: Reset email template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reset
+
+  /email-templates/{key}/test:
+    post:
+      tags: [EmailTemplates]
+      summary: Send test email for template
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sent
+
+  /android-app:
+    get:
+      tags: [AndroidApp]
+      summary: Get Android app metadata
+      responses:
+        '200':
+          description: Metadata
+
+  /android-app/publish:
+    post:
+      tags: [AndroidApp]
+      summary: Publish APK (adminAuth)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Published
+
+  /android-app/notify:
+    post:
+      tags: [AndroidApp]
+      summary: Notify users of Android update (adminAuth)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Notified
+
+  /admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Dashboard stats (adminAuth)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Stats
+        '403':
+          description: Not authorized for admin panel
+
+  /admin/competitions:
+    get:
+      tags: [Admin]
+      summary: Admin list competitions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [Admin]
+      summary: Admin create competition
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Created
+
+  /admin/competitions/{id}:
+    put:
+      tags: [Admin]
+      summary: Admin update competition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Admin delete competition
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/competitions/{id}/quiz:
+    get:
+      tags: [Admin]
+      summary: Get competition quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Quiz
+    patch:
+      tags: [Admin]
+      summary: Patch competition quiz
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/competitions/{id}/quiz/questions:
+    post:
+      tags: [Admin]
+      summary: Add quiz question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /admin/quiz/questions/{questionId}:
+    put:
+      tags: [Admin]
+      summary: Update quiz question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete quiz question
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/quiz/questions/{questionId}/options:
+    post:
+      tags: [Admin]
+      summary: Add quiz option
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /admin/quiz/options/{optionId}:
+    put:
+      tags: [Admin]
+      summary: Update quiz option
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: optionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete quiz option
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: optionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/competitions/{id}/tasks:
+    get:
+      tags: [Admin]
+      summary: List competition tasks
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tasks
+    post:
+      tags: [Admin]
+      summary: Create competition task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /admin/competition-tasks/{taskId}:
+    put:
+      tags: [Admin]
+      summary: Update competition task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete competition task
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/competition-tasks/{taskId}/asset:
+    post:
+      tags: [Admin]
+      summary: Upload task asset
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Uploaded
+
+  /admin/attendance:
+    get:
+      tags: [Admin]
+      summary: List attendance (admin panel)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /admin/attendance/{id}:
+    put:
+      tags: [Admin]
+      summary: Update attendance status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/registrations:
+    get:
+      tags: [Admin]
+      summary: List registrations/applications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /admin/registrations/{id}:
+    put:
+      tags: [Admin]
+      summary: Update registration status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/notifications:
+    get:
+      tags: [Admin]
+      summary: List admin notifications
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /admin/suggestions:
+    get:
+      tags: [Admin]
+      summary: List suggestions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /admin/suggestions/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete suggestion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/feedback:
+    get:
+      tags: [Admin]
+      summary: List all event feedback
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+
+  /admin/feedback/{id}:
+    delete:
+      tags: [Admin]
+      summary: Delete feedback
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/competitions/{id}/teams:
+    get:
+      tags: [Admin]
+      summary: Admin list teams
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Teams
+    post:
+      tags: [Admin]
+      summary: Admin create team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /admin/competitions/{id}/judges:
+    get:
+      tags: [Admin]
+      summary: Get competition judges config
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Judges
+    put:
+      tags: [Admin]
+      summary: Update competition judges
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /admin/teams/{id}:
+    put:
+      tags: [Admin]
+      summary: Update team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/teams/{id}/details:
+    get:
+      tags: [Admin]
+      summary: Team details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Details
+
+  /admin/teams/{teamId}/members/{teamMemberId}:
+    put:
+      tags: [Admin]
+      summary: Update team member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamMemberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Remove team member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: teamMemberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Removed
+
+  /admin/teams/{teamId}/invitations/{invitationId}:
+    delete:
+      tags: [Admin]
+      summary: Cancel team invitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cancelled
+
+  /admin/competitions/{id}/timeslots:
+    get:
+      tags: [Admin]
+      summary: List timeslots
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Timeslots
+    post:
+      tags: [Admin]
+      summary: Create timeslot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Created
+
+  /admin/competitions/{id}/timeslots/{timeslotId}:
+    put:
+      tags: [Admin]
+      summary: Update timeslot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Admin]
+      summary: Delete timeslot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/competitions/{id}/timeslots/publish-selection-links:
+    post:
+      tags: [Admin]
+      summary: Publish timeslot selection links
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Published
+
+  /admin/competitions/{id}/timeslots/{timeslotId}/assign:
+    post:
+      tags: [Admin]
+      summary: Assign timeslot to team
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Assigned
+
+  /admin/competitions/{id}/timeslots/{timeslotId}/unassign:
+    post:
+      tags: [Admin]
+      summary: Unassign timeslot
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: timeslotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Unassigned

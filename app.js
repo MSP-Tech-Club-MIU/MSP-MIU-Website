@@ -29,6 +29,22 @@ app.use(express.urlencoded({ extended: true }));
 // Import API routes from server
 const apiRoutes = require("./server/server");
 
+// OpenAPI / Swagger UI (canonical spec: docs/openapi.yaml)
+const swaggerUi = require("swagger-ui-express");
+const YAML = require("yamljs");
+const swaggerDocument = YAML.load(path.join(__dirname, "docs/openapi.yaml"));
+app.get("/api/docs.json", (req, res) => {
+  res.json(swaggerDocument);
+});
+app.use(
+  "/api/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, {
+    customSiteTitle: "MSP-MIU API Docs",
+    swaggerOptions: { persistAuthorization: true },
+  })
+);
+
 // API routes
 app.use("/api", apiRoutes);
 
