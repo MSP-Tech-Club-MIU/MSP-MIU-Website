@@ -11,9 +11,9 @@ Canonical source: [`../openapi.yaml`](../openapi.yaml).
 
 ## Base URL
 
-The OpenAPI spec uses relative server `/api`, so Swagger targets **whatever host** is serving the docs (e.g. `https://msp-miu.tech/api` in production).
+Swagger uses production: `https://msp-miu.tech/api`.
 
-Paths are relative to that base (e.g. `/auth/login`).
+Paths are relative to that base — e.g. login is **`POST https://msp-miu.tech/api/auth/login`** (note the `/api` prefix).
 
 ## Authentication
 

@@ -11,8 +11,8 @@ info:
     url: https://msp-miu.tech
 
 servers:
-  - url: /api
-    description: This server
+  - url: https://msp-miu.tech/api
+    description: Production
 
 
 tags:
