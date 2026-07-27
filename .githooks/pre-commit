@@ -1,0 +1,12 @@
+#!/bin/sh
+# Regenerate OpenAPI from Express routes and stage the result.
+set -e
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
+if [ -z "$ROOT" ]; then
+  echo "pre-commit: not inside a git work tree" >&2
+  exit 1
+fi
+cd "$ROOT"
+
+node server/scripts/generateOpenApi.js
+git add docs/openapi.yaml

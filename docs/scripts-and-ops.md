@@ -8,6 +8,7 @@ One-off and maintenance tools live under [`server/scripts/`](../server/scripts/)
 |--------|--------|
 | `patch:season-schema` | `node server/scripts/patchSeasonSchema.js` |
 | `cleanup:users-indexes` | `node server/scripts/cleanupUsersIndexes.js` |
+| `docs:openapi` | Regenerate `docs/openapi.yaml` from routes |
 
 Run other scripts with `node` / `node --experimental-modules` as appropriate for `.mjs` files (from repo root, with `.env` loaded by the script or exported in the shell).
 
@@ -47,6 +48,15 @@ Admin UI also sends many of these via `/api/email-templates` and member endpoint
 | `simulateCompetitionLifecycle.mjs` | End-to-end competition simulation |
 
 Competition test scripts read `CREATE_TEAM_TEST_*` env vars — see [Environment](./environment.md).
+
+## OpenAPI generation
+
+| Command | Action |
+|---------|--------|
+| `npm run docs:openapi` | Regenerate `docs/openapi.yaml` from Express routes |
+| `node scripts/install-git-hooks.js` | Install `.githooks/pre-commit` into `.git/hooks` |
+
+The pre-commit hook runs the generator and `git add docs/openapi.yaml` so Swagger stays aligned with route changes on every commit.
 
 ## DB sync guidance
 

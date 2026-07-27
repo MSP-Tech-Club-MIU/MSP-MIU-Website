@@ -21,7 +21,9 @@
     "test": "cd client && npm test",
     "lint": "cd client && npm run lint",
     "patch:season-schema": "node server/scripts/patchSeasonSchema.js",
-    "cleanup:users-indexes": "node server/scripts/cleanupUsersIndexes.js"
+    "cleanup:users-indexes": "node server/scripts/cleanupUsersIndexes.js",
+    "docs:openapi": "node server/scripts/generateOpenApi.js",
+    "prepare": "node scripts/install-git-hooks.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

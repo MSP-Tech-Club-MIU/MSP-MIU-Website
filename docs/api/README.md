@@ -39,8 +39,20 @@ Mount map: [`server/server.js`](../../server/server.js).
 
 ## Updating the spec
 
-When adding or changing routes:
+On every **git commit**, a pre-commit hook runs `npm run docs:openapi`, which regenerates [`docs/openapi.yaml`](../openapi.yaml) from Express mounts in `server/server.js` and `server/routes/*`, then stages the file.
 
-1. Update the corresponding router under `server/routes/`.
-2. Mirror the change in `docs/openapi.yaml` (method, path, summary, security, main params).
-3. Restart the server and confirm `/api/docs`.
+Manually:
+
+```bash
+npm run docs:openapi
+```
+
+Install hooks after clone (also runs via `npm prepare`):
+
+```bash
+node scripts/install-git-hooks.js
+```
+
+Existing operation summaries, descriptions, request bodies, and responses are **preserved** when the same path+method still exists. New routes get stub summaries; removed routes are dropped from the spec.
+
+When changing routes, commit as usual — OpenAPI updates with the commit. Restart the server (or redeploy) so `/api/docs` serves the new file.
