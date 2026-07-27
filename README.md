@@ -1,4 +1,4 @@
-# MSP-MIU-Website “Forked from the official MSP-MIU site"
+# MSP-MIU-Website
 
 Official **MSP Tech Club MIU** platform: public website, season-scoped CMS, membership/applications, events, competitions & quizzes, admin dashboard, and Capacitor Android/iOS apps.
 
