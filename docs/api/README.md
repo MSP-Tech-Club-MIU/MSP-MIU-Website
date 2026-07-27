@@ -11,25 +11,17 @@ Canonical source: [`../openapi.yaml`](../openapi.yaml).
 
 ## Base URL
 
-| Environment | Base |
-|-------------|------|
-| Local | `http://localhost:3000/api` |
-| Production | `https://msp-miu.tech/api` |
+The OpenAPI spec uses relative server `/api`, so Swagger targets **whatever host** is serving the docs (e.g. `https://msp-miu.tech/api` in production).
 
-Paths in the OpenAPI file are relative to that base (e.g. `/auth/login`).
+Paths are relative to that base (e.g. `/auth/login`).
 
 ## Authentication
 
-1. `POST /auth/login` with `university_id` and `password`.
-2. Copy the returned JWT.
-3. In Swagger UI, click **Authorize** and enter `Bearer <token>` or just the token (UI may add Bearer).
-4. Call protected endpoints.
+1. In Swagger UI, run `POST /auth/login` with `university_id` and `password`.
+2. On success, the JWT is applied to **Authorize** automatically (also persisted across refresh).
+3. Call protected endpoints — the `Authorization: Bearer …` header is sent for you.
 
-Header format used by the app:
-
-```http
-Authorization: Bearer eyJhbGciOi...
-```
+You can still open **Authorize** manually if needed. Login via `/users/login` is captured the same way.
 
 ## Conventions
 

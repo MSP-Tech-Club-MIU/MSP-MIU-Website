@@ -42,6 +42,67 @@ app.use(
   swaggerUi.setup(swaggerDocument, {
     customSiteTitle: "MSP-MIU API Docs",
     swaggerOptions: { persistAuthorization: true },
+    // Auto-authorize after successful login (functions cannot go in swaggerOptions JSON)
+    customJsStr: `
+(function () {
+  function authorize(token) {
+    if (!token || !window.ui) return;
+    try {
+      window.ui.preauthorizeApiKey("bearerAuth", token);
+    } catch (e) {}
+    try {
+      window.ui.authActions.authorize({
+        bearerAuth: {
+          name: "bearerAuth",
+          schema: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+          value: token
+        }
+      });
+    } catch (e2) {}
+  }
+  function tokenFromBody(text) {
+    try {
+      var data = JSON.parse(text);
+      return data.token || (data.data && data.data.token) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function maybeCapture(url, status, text) {
+    if (status < 200 || status >= 300) return;
+    if (!/\\/(auth|users)\\/login/i.test(String(url || ""))) return;
+    authorize(tokenFromBody(text));
+  }
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function () {
+      var input = arguments[0];
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      return origFetch.apply(this, arguments).then(function (response) {
+        if (/\\/(auth|users)\\/login/i.test(url) && response.ok) {
+          response.clone().text().then(function (text) { maybeCapture(url, response.status, text); });
+        }
+        return response;
+      });
+    };
+  }
+  var OrigXHR = window.XMLHttpRequest;
+  if (OrigXHR) {
+    window.XMLHttpRequest = function () {
+      var xhr = new OrigXHR();
+      var open = xhr.open;
+      xhr.open = function (method, url) {
+        xhr.__swaggerUrl = url;
+        return open.apply(xhr, arguments);
+      };
+      xhr.addEventListener("load", function () {
+        maybeCapture(xhr.__swaggerUrl, xhr.status, xhr.responseText);
+      });
+      return xhr;
+    };
+  }
+})();
+`,
   })
 );
 

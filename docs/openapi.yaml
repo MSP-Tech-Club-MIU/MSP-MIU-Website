@@ -4,17 +4,16 @@ info:
   description: |
     REST API for the MSP Tech Club MIU platform (members, events, CMS, competitions, quizzes).
 
-    Authenticate with `POST /auth/login`, then use **Authorize** with a Bearer JWT.
+    Call `POST /auth/login` (or `/users/login`) — the JWT is applied to **Authorize** automatically.
   version: 1.0.0
   contact:
     name: MSP Tech Club MIU
     url: https://msp-miu.tech
 
 servers:
-  - url: http://localhost:3000/api
-    description: Local development
-  - url: https://msp-miu.tech/api
-    description: Production
+  - url: /api
+    description: This server
+
 
 tags:
   - name: Auth
