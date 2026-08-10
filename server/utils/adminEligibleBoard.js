@@ -32,10 +32,14 @@ function normalizeBoardMemberInput(raw = {}, seasonYear) {
   const user_id =
     raw.user_id != null && raw.user_id !== '' ? Number(raw.user_id) : null;
   const email = raw.email != null && String(raw.email).trim() ? String(raw.email).trim() : null;
-  const year =
+  let year =
     raw.year != null && String(raw.year).trim()
       ? String(raw.year).trim()
       : seasonYear || null;
+  // Normalize 2026-2027 → 2026/2027 to match existing board rows
+  if (year && /^\d{4}-\d{4}$/.test(year)) {
+    year = year.replace('-', '/');
+  }
 
   return {
     full_name,
@@ -44,7 +48,10 @@ function normalizeBoardMemberInput(raw = {}, seasonYear) {
     user_id: Number.isFinite(user_id) && user_id > 0 ? user_id : null,
     email,
     year,
-    university_id: raw.university_id || null,
+    university_id:
+      raw.university_id != null && String(raw.university_id).trim()
+        ? String(raw.university_id).trim()
+        : null,
     faculty: raw.faculty != null && String(raw.faculty).trim() ? String(raw.faculty).trim() : null,
     photo_url: raw.photo_url || null,
     linkedin_url: raw.linkedin_url || null,
@@ -80,6 +87,12 @@ function validateInitialBoardMembers(rawList, seasonYear) {
     }
     if (!member.year) {
       return { ok: false, error: `Board member #${i + 1}: year is required` };
+    }
+    if (member.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(member.email)) {
+      return {
+        ok: false,
+        error: `Board member #${i + 1}: email looks invalid (${member.email})`
+      };
     }
     if (
       (member.position === 'Head' || member.position === 'Co-Head') &&
