@@ -198,10 +198,17 @@
 }
 
 .SeasonsAdmin__boardCard {
+  position: relative;
+  z-index: 1;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   background: rgba(8, 24, 44, 0.55);
+  overflow: visible;
+}
+
+.SeasonsAdmin__boardCard:focus-within {
+  z-index: 5;
 }
 
 .SeasonsAdmin__boardCard--ok {

@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Board, Member, User, Season } = require('../models');
+const { Board, Member, User, Season, Department } = require('../models');
 
 function likeClause(q) {
   return { [Op.like]: `%${q}%` };
@@ -11,6 +11,13 @@ function dedupeKey(row) {
   if (row.email) return `e:${String(row.email).trim().toLowerCase()}`;
   return `n:${String(row.full_name || '').trim().toLowerCase()}`;
 }
+
+const departmentInclude = {
+  model: Department,
+  as: 'department',
+  attributes: ['department_id', 'name'],
+  required: false
+};
 
 /**
  * GET /admin/people-search?q=
@@ -52,7 +59,8 @@ const searchPeople = async (req, res) => {
             as: 'season',
             attributes: ['season_id', 'label'],
             required: false
-          }
+          },
+          departmentInclude
         ],
         order: [['board_id', 'DESC']],
         limit: 25
@@ -74,7 +82,8 @@ const searchPeople = async (req, res) => {
             as: 'season',
             attributes: ['season_id', 'label'],
             required: false
-          }
+          },
+          departmentInclude
         ],
         order: [['member_id', 'DESC']],
         limit: 25
@@ -93,7 +102,6 @@ const searchPeople = async (req, res) => {
       })
     ]);
 
-    // Resolve missing user_ids via User lookup by email / university_id
     const emails = new Set();
     const uniIds = new Set();
     for (const row of [...boardRows, ...memberRows]) {
@@ -161,6 +169,7 @@ const searchPeople = async (req, res) => {
         user_id: resolveUserId(json),
         position: json.position || null,
         department_id: json.department_id ?? null,
+        department_name: json.department?.name || null,
         season_id: json.season_id ?? null,
         season_label: json.season?.label || null
       });
@@ -179,6 +188,7 @@ const searchPeople = async (req, res) => {
         user_id: resolveUserId(json),
         position: null,
         department_id: json.department_id ?? null,
+        department_name: json.department?.name || null,
         season_id: json.season_id ?? null,
         season_label: json.season?.label || null
       });
@@ -195,12 +205,12 @@ const searchPeople = async (req, res) => {
         user_id: Number(json.user_id),
         position: null,
         department_id: json.department_id ?? null,
+        department_name: null,
         season_id: null,
         season_label: null
       });
     }
 
-    // Prefer rows that already have a linked user_id
     results.sort((a, b) => {
       const au = a.user_id ? 1 : 0;
       const bu = b.user_id ? 1 : 0;

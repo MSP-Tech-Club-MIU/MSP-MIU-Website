@@ -145,6 +145,16 @@ export default function BoardAdminTab({ onAlert }) {
       onAlert?.({ type: 'error', message: 'Name is required' });
       return;
     }
+    if (
+      (form.position === 'Head' || form.position === 'Co-Head') &&
+      (form.department_id === '' || form.department_id == null)
+    ) {
+      onAlert?.({
+        type: 'error',
+        message: `Department is required for ${form.position} so Meet the Board can place them in the hierarchy.`
+      });
+      return;
+    }
     try {
       setSaving(true);
       const payload = {
@@ -270,8 +280,14 @@ export default function BoardAdminTab({ onAlert }) {
                   </label>
                   <label>Department
                     <select value={form.department_id} onChange={(e) => setForm({ ...form, department_id: e.target.value })}>
-                      <option value="">None / Leadership</option>
-                      {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      <option value="">
+                        {form.position === 'Head' || form.position === 'Co-Head'
+                          ? 'Select department (required)'
+                          : 'None / Leadership'}
+                      </option>
+                      {depts
+                        .filter((d) => ![7, 8, 9].includes(Number(d.id)))
+                        .map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                     </select>
                   </label>
                   <label>Faculty

@@ -10,6 +10,14 @@ import './SeasonsAdminTab.css';
 const ADMIN_POSITIONS = ['President', 'Vice President', 'Head'];
 const ALL_POSITIONS = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
 const ADMIN_DEPT_IDS = new Set([1, 2]);
+const DEPT_REQUIRED_POSITIONS = new Set(['Head', 'Co-Head']);
+/** Real joinable departments — exclude President/VP/Founder display ids */
+const BOARD_DEPT_OPTIONS = (depts) =>
+  (depts || []).filter((d) => ![7, 8, 9].includes(Number(d.id)));
+
+function needsDepartment(position) {
+  return DEPT_REQUIRED_POSITIONS.has(position);
+}
 
 /** Next label after the latest season, e.g. 25/26 → 26/27 */
 function computeNextSeasonLabel(seasons) {
@@ -208,8 +216,10 @@ const SeasonsAdminTab = () => {
         setModalError(`Board member #${i + 1}: name is required.`);
         return;
       }
-      if (m.position === 'Head' && (m.department_id === '' || m.department_id == null)) {
-        setModalError(`Board member #${i + 1}: department is required for Head.`);
+      if (needsDepartment(m.position) && (m.department_id === '' || m.department_id == null)) {
+        setModalError(
+          `Board member #${i + 1}: department is required for ${m.position} (used on Meet the Board).`
+        );
         return;
       }
     }
@@ -435,12 +445,20 @@ const SeasonsAdminTab = () => {
                                 placeholder="Search board, members, or users…"
                                 onChange={(full_name) => updateDraft(row.key, { full_name })}
                                 onSelectPerson={(person) => {
-                                  updateDraft(row.key, {
+                                  const patch = {
                                     full_name: person.full_name || '',
                                     user_id: person.user_id ? String(person.user_id) : '',
                                     university_id: person.university_id || '',
                                     email: person.email || ''
-                                  });
+                                  };
+                                  if (
+                                    needsDepartment(row.position) &&
+                                    person.department_id != null &&
+                                    ![7, 8, 9].includes(Number(person.department_id))
+                                  ) {
+                                    patch.department_id = String(person.department_id);
+                                  }
+                                  updateDraft(row.key, patch);
                                 }}
                               />
                             </label>
@@ -451,8 +469,11 @@ const SeasonsAdminTab = () => {
                                 onChange={(e) => {
                                   const position = e.target.value;
                                   const patch = { position };
-                                  if (position !== 'Head') patch.department_id = '';
-                                  else if (!row.department_id) patch.department_id = '1';
+                                  if (!needsDepartment(position)) {
+                                    patch.department_id = '';
+                                  } else if (!row.department_id) {
+                                    patch.department_id = '1';
+                                  }
                                   updateDraft(row.key, patch);
                                 }}
                                 disabled={saving}
@@ -460,7 +481,7 @@ const SeasonsAdminTab = () => {
                                 {ALL_POSITIONS.map((p) => (
                                   <option key={p} value={p}>
                                     {p}
-                                    {ADMIN_POSITIONS.includes(p) ? '' : ' (display only)'}
+                                    {p === 'Founder' ? ' (display only)' : ''}
                                   </option>
                                 ))}
                               </select>
@@ -472,16 +493,20 @@ const SeasonsAdminTab = () => {
                                 onChange={(e) =>
                                   updateDraft(row.key, { department_id: e.target.value })
                                 }
-                                disabled={saving || row.position !== 'Head'}
-                                required={row.position === 'Head'}
+                                disabled={saving || !needsDepartment(row.position)}
+                                required={needsDepartment(row.position)}
                               >
                                 <option value="">
-                                  {row.position === 'Head' ? 'Select department' : 'None / Leadership'}
+                                  {needsDepartment(row.position)
+                                    ? 'Select department'
+                                    : 'None / Leadership'}
                                 </option>
-                                {depts.map((d) => (
+                                {BOARD_DEPT_OPTIONS(depts).map((d) => (
                                   <option key={d.id} value={d.id}>
                                     {d.name}
-                                    {ADMIN_DEPT_IDS.has(Number(d.id)) ? ' (admin if Head)' : ''}
+                                    {ADMIN_DEPT_IDS.has(Number(d.id)) && row.position === 'Head'
+                                      ? ' (admin if Head)'
+                                      : ''}
                                   </option>
                                 ))}
                               </select>
