@@ -28,7 +28,7 @@ Browse and manage R2/cloud objects (images, slides, videos, documents, event thu
 
 **Path:** `/admin/sponsors`
 
-CRUD sponsors for the current season; they appear on the public sponsors page and home sections.
+CRUD sponsors for the current season; they appear on the public sponsors page and home sections. Use **Add from previous sponsors** to copy selected partners from another season into the season currently selected in the admin season filter.
 
 ## Board
 
