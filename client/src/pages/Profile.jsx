@@ -440,6 +440,12 @@ const Profile = () => {
                 </motion.div>
               )}
               <h2 className="profile-name">{displayedName || 'No Name'}</h2>
+              {boardMembership && (
+                <p className="profile-picture-separation-note">
+                  This is your regular profile picture only. It does not appear on Meet the Board —
+                  use the Meet the Board Photo section below for that.
+                </p>
+              )}
             </div>
 
             <div className="role-badge-container">
@@ -619,9 +625,10 @@ const Profile = () => {
                     <div className="detail-content">
                       <label className="detail-label">Meet the Board Photo</label>
                       <p className="board-photo-hint">
-                        This photo is separate from your profile picture and appears on the public
-                        Meet the Board page. Use a clear / transparent background (PNG preferred)
-                        so your portrait displays cleanly on the card.
+                        Separate from your regular profile picture above — changing one does not
+                        change the other. This image appears only on the public Meet the Board page.
+                        Use a clear / transparent background (PNG preferred) so your portrait
+                        displays cleanly on the card.
                       </p>
                       <div className="board-photo-row">
                         <div className="board-photo-preview">

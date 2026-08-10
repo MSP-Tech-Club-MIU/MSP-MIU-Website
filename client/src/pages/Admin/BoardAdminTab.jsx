@@ -300,7 +300,8 @@ export default function BoardAdminTab({ onAlert }) {
                       onChange={(e) => handlePhotoUpload(e.target.files?.[0])}
                     />
                     <span className="AdminPanel__fieldHint">
-                      Separate from the member&apos;s profile picture. Use a clear / transparent
+                      This is not the member&apos;s regular profile picture — profile avatars and
+                      Meet the Board photos are stored separately. Use a clear / transparent
                       background (PNG preferred) so the portrait displays cleanly on the public
                       Meet the Board cards.
                     </span>
