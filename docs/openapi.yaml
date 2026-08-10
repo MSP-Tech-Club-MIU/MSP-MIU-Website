@@ -1279,6 +1279,28 @@ paths:
       responses:
         '200':
           description: Deleted
+  /board/me:
+    get:
+      summary: 'Get /board/me'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Board
+      security:
+        -
+          bearerAuth: []
+  /board/me/photo:
+    put:
+      summary: 'Update /board/me/photo'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Board
+      security:
+        -
+          bearerAuth: []
   /cloud/assets:
     get:
       tags:

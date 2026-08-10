@@ -43,6 +43,7 @@ function emptyBoardDraft(overrides = {}) {
     position: 'President',
     department_id: '',
     user_id: '',
+    university_id: '',
     email: '',
     ...overrides
   };
@@ -130,6 +131,7 @@ const SeasonsAdminTab = () => {
           full_name: profile.full_name || profile.name || '',
           email: profile.email || '',
           user_id: String(profile.user_id),
+          university_id: profile.university_id || '',
           position: 'President'
         });
       }
@@ -176,6 +178,7 @@ const SeasonsAdminTab = () => {
             position: ALL_POSITIONS.includes(row.position) ? row.position : 'Head',
             department_id: row.department_id != null ? String(row.department_id) : '',
             user_id: row.user_id != null ? String(row.user_id) : '',
+            university_id: row.university_id || '',
             email: row.email || ''
           })
         )
@@ -221,6 +224,7 @@ const SeasonsAdminTab = () => {
           position: m.position,
           department_id: m.department_id === '' ? null : Number(m.department_id),
           user_id: m.user_id === '' ? null : Number(m.user_id),
+          university_id: m.university_id ? String(m.university_id).trim() : null,
           email: m.email || null,
           year: nextYearRange || undefined
         }))
@@ -482,6 +486,17 @@ const SeasonsAdminTab = () => {
                                 onChange={(e) => updateDraft(row.key, { user_id: e.target.value })}
                                 disabled={saving}
                                 placeholder="Required for admin access"
+                              />
+                            </label>
+                            <label>
+                              University ID
+                              <input
+                                value={row.university_id}
+                                onChange={(e) =>
+                                  updateDraft(row.key, { university_id: e.target.value })
+                                }
+                                disabled={saving}
+                                placeholder="xxxx/xxxxx (optional)"
                               />
                             </label>
                             <label>

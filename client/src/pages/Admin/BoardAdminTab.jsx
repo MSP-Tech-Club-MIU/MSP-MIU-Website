@@ -285,10 +285,31 @@ export default function BoardAdminTab({ onAlert }) {
                   <label>University ID<input value={form.university_id} onChange={(e) => setForm({ ...form, university_id: e.target.value })} /></label>
                   <label>Linked user ID<input type="number" value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} /></label>
                   <label>Sort order<input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></label>
-                  <label>Photo URL<input value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} /></label>
-                  <label>Upload photo
-                    <input type="file" accept="image/*" disabled={uploading} onChange={(e) => handlePhotoUpload(e.target.files?.[0])} />
+                  <label className="AdminPanel__fullWidth">Meet the Board photo URL
+                    <input
+                      value={form.photo_url}
+                      onChange={(e) => setForm({ ...form, photo_url: e.target.value })}
+                      placeholder="https://… or upload below"
+                    />
                   </label>
+                  <label className="AdminPanel__fullWidth">Upload Meet the Board photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={uploading}
+                      onChange={(e) => handlePhotoUpload(e.target.files?.[0])}
+                    />
+                    <span className="AdminPanel__fieldHint">
+                      Separate from the member&apos;s profile picture. Use a clear / transparent
+                      background (PNG preferred) so the portrait displays cleanly on the public
+                      Meet the Board cards.
+                    </span>
+                  </label>
+                  {form.photo_url ? (
+                    <div className="AdminPanel__fullWidth AdminPanel__boardPhotoPreview">
+                      <img src={form.photo_url} alt="Meet the Board preview" />
+                    </div>
+                  ) : null}
                   <label>LinkedIn URL<input value={form.linkedin_url} onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })} /></label>
                   <label>GitHub URL<input value={form.github_url} onChange={(e) => setForm({ ...form, github_url: e.target.value })} /></label>
                   <label className="AdminPanel__checkboxLabel">
