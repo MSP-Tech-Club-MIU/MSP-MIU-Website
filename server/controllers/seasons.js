@@ -1,5 +1,8 @@
 const Season = require('../models/Season');
 const Board = require('../models/Board');
+const User = require('../models/User');
+const Department = require('../models/Department');
+const { Op } = require('sequelize');
 const {
   parseSeasonLabel,
   serializeSeason,
@@ -94,7 +97,7 @@ const createSeason = async (req, res) => {
       return res.status(409).json({ success: false, error: 'Season already exists' });
     }
 
-    const seasonYear = `${parsed.start_year}-${parsed.end_year}`;
+    const seasonYear = `${parsed.start_year}/${parsed.end_year}`;
     const boardValidation = validateInitialBoardMembers(
       req.body?.board_members,
       seasonYear
@@ -102,6 +105,70 @@ const createSeason = async (req, res) => {
     if (!boardValidation.ok) {
       await transaction.rollback();
       return res.status(400).json({ success: false, error: boardValidation.error });
+    }
+
+    // Pre-check FKs so we fail with a clear 400 instead of a MySQL 500
+    const userIds = [
+      ...new Set(
+        boardValidation.members
+          .map((m) => m.user_id)
+          .filter((id) => Number.isFinite(id) && id > 0)
+      )
+    ];
+    if (userIds.length) {
+      const users = await User.findAll({
+        where: { user_id: { [Op.in]: userIds } },
+        attributes: ['user_id'],
+        transaction
+      });
+      const found = new Set(users.map((u) => u.user_id));
+      const missing = userIds.filter((id) => !found.has(id));
+      if (missing.length) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: `Unknown user_id(s): ${missing.join(', ')}. Search and select the person again so the linked user is valid.`
+        });
+      }
+    }
+
+    const deptIds = [
+      ...new Set(
+        boardValidation.members
+          .map((m) => m.department_id)
+          .filter((id) => Number.isFinite(id) && id > 0)
+      )
+    ];
+    if (deptIds.length) {
+      const depts = await Department.findAll({
+        where: { department_id: { [Op.in]: deptIds } },
+        attributes: ['department_id'],
+        transaction
+      });
+      const found = new Set(depts.map((d) => d.department_id));
+      const missing = deptIds.filter((id) => !found.has(id));
+      if (missing.length) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: `Unknown department_id(s): ${missing.join(', ')}. Pick a department from the list.`
+        });
+      }
+    }
+
+    // Reject leadership placeholder departments for Head / Co-Head
+    for (let i = 0; i < boardValidation.members.length; i += 1) {
+      const m = boardValidation.members[i];
+      if (
+        (m.position === 'Head' || m.position === 'Co-Head') &&
+        [7, 8, 9].includes(Number(m.department_id))
+      ) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: `Board member #${i + 1}: ${m.position} must use a real department (not President/VP/Founder).`
+        });
+      }
     }
 
     const makeDefault = !!req.body?.is_default;
@@ -139,15 +206,53 @@ const createSeason = async (req, res) => {
 
     const createdBoard = [];
     for (const member of boardValidation.members) {
-      const row = await Board.create(
-        {
-          ...member,
-          season_id: season.season_id,
-          year: member.year || seasonYear
-        },
-        { transaction }
-      );
-      createdBoard.push(row);
+      try {
+        const row = await Board.create(
+          {
+            full_name: member.full_name,
+            position: member.position,
+            department_id: member.department_id,
+            year: member.year || seasonYear,
+            season_id: season.season_id,
+            email: member.email,
+            university_id: member.university_id || null,
+            faculty: member.faculty || null,
+            user_id: member.user_id,
+            photo_url: member.photo_url || null,
+            linkedin_url: member.linkedin_url || null,
+            github_url: member.github_url || null,
+            sort_order: member.sort_order || 0,
+            is_visible: member.is_visible !== false
+          },
+          { transaction }
+        );
+        createdBoard.push(row);
+      } catch (memberErr) {
+        const sqlMessage =
+          memberErr.parent?.sqlMessage ||
+          memberErr.original?.sqlMessage ||
+          memberErr.message;
+        const dup =
+          memberErr.name === 'SequelizeUniqueConstraintError' ||
+          /Duplicate entry/i.test(String(sqlMessage || ''));
+        if (dup) {
+          const err = new Error(
+            `Could not add "${member.full_name}": board identity must be unique per season only. ` +
+              `The database may still have a unique index on university ID / user ID. ` +
+              `Run: npm run patch:board-multi-season — then try again. (${sqlMessage})`
+          );
+          err.name = 'SequelizeUniqueConstraintError';
+          throw err;
+        }
+        const err = new Error(
+          `Could not add board member "${member.full_name}": ${sqlMessage}`
+        );
+        err.name = memberErr.name;
+        err.parent = memberErr.parent;
+        err.original = memberErr.original;
+        err.errors = memberErr.errors;
+        throw err;
+      }
     }
 
     await transaction.commit();
@@ -159,9 +264,27 @@ const createSeason = async (req, res) => {
       message: 'Season created with initial board members'
     });
   } catch (error) {
-    await transaction.rollback();
+    try {
+      await transaction.rollback();
+    } catch (_) {
+      /* already finished */
+    }
     console.error('createSeason error:', error);
-    return res.status(500).json({ success: false, error: 'Failed to create season' });
+    const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
+    const validationErrors = Array.isArray(error.errors)
+      ? error.errors.map((e) => e.message).join('; ')
+      : null;
+    const detail = validationErrors || sqlMessage || error.message || 'Failed to create season';
+
+    if (
+      error.name === 'SequelizeValidationError' ||
+      error.name === 'SequelizeUniqueConstraintError' ||
+      error.name === 'SequelizeForeignKeyConstraintError'
+    ) {
+      return res.status(400).json({ success: false, error: detail });
+    }
+
+    return res.status(500).json({ success: false, error: detail });
   }
 };
 

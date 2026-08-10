@@ -137,7 +137,7 @@ const createBoardMember = async (req, res) => {
     const season = await Season.findByPk(season_id);
     let yearValue = year != null && String(year).trim() ? String(year).trim() : null;
     if (!yearValue && season) {
-      yearValue = `${season.start_year}-${season.end_year}`;
+      yearValue = `${season.start_year}/${season.end_year}`;
     }
     if (!yearValue) {
       return res.status(400).json({ success: false, error: 'year is required (e.g. 2025-2026)' });

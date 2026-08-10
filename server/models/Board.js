@@ -30,7 +30,7 @@ const Board = sequelize.define('Board', {
     }
   },
   year: {
-    type: DataTypes.STRING(9),
+    type: DataTypes.STRING(20),
     allowNull: false,
     validate: {
       notEmpty: true
