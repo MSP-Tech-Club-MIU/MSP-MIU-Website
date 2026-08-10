@@ -4,6 +4,7 @@ import ApiService from '../../services/api';
 import { useSeason } from '../../context/SeasonContext';
 import SeasonBadge from '../../components/SeasonBadge';
 import { departments as fallbackDepts } from '../../data/departments';
+import PersonNameSearch from './PersonNameSearch';
 import './SeasonsAdminTab.css';
 
 const ADMIN_POSITIONS = ['President', 'Vice President', 'Head'];
@@ -387,11 +388,11 @@ const SeasonsAdminTab = () => {
                   Create season {nextLabel}
                 </h3>
                 <p className="SeasonsAdmin__modalHint">
-                  Add one or more board members for this season. At least one must be{' '}
-                  <strong>President</strong>, <strong>Vice President</strong>, or{' '}
-                  <strong>Head</strong> of Software Development / Technical Training, with a{' '}
-                  <strong>linked User ID</strong> — otherwise you will lose Admin Panel access
-                  when this season becomes default.
+                  Search an existing <strong>board member</strong>, <strong>club member</strong>, or{' '}
+                  <strong>user</strong> by name — selecting a match fills User ID, University ID, and
+                  email. At least one must be <strong>President</strong>, <strong>Vice President</strong>,
+                  or <strong>Head</strong> of Software Development / Technical Training with a linked
+                  User ID so Admin Panel access is preserved.
                 </p>
 
                 {modalError && (
@@ -428,11 +429,19 @@ const SeasonsAdminTab = () => {
                           <div className="AdminPanel__formGrid">
                             <label>
                               Full name
-                              <input
-                                required
+                              <PersonNameSearch
                                 value={row.full_name}
-                                onChange={(e) => updateDraft(row.key, { full_name: e.target.value })}
                                 disabled={saving}
+                                placeholder="Search board, members, or users…"
+                                onChange={(full_name) => updateDraft(row.key, { full_name })}
+                                onSelectPerson={(person) => {
+                                  updateDraft(row.key, {
+                                    full_name: person.full_name || '',
+                                    user_id: person.user_id ? String(person.user_id) : '',
+                                    university_id: person.university_id || '',
+                                    email: person.email || ''
+                                  });
+                                }}
                               />
                             </label>
                             <label>
