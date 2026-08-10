@@ -19,7 +19,11 @@
     "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs",
     "patch:season-schema": "node scripts/patchSeasonSchema.js",
     "patch:email-schema": "node scripts/patchEmailSchema.js",
-    "patch:board-faculty": "node scripts/patchBoardFaculty.js"
+    "patch:board-faculty": "node scripts/patchBoardFaculty.js",
+    "patch:board-multi-season": "node scripts/patchBoardMultiSeason.js",
+    "patch:members-multi-season": "node scripts/patchMembersApplicationsMultiSeason.js",
+    "insert-approved-members": "node scripts/MemberInsertion.js",
+    "check:season-separation": "node scripts/checkSeasonSeparation.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",

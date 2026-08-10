@@ -69,7 +69,9 @@ async function resolveSeasonFilter(query = {}) {
 
   const season = await getDefaultSeason();
   if (!season) {
-    return { where: {}, includeSeason: false, season: null, mode: 'current' };
+    const err = new Error('No default season configured');
+    err.status = 500;
+    throw err;
   }
   return {
     where: { season_id: season.season_id },

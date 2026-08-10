@@ -1,6 +1,7 @@
 const { Application } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { enrollFromApplication } = require('../utils/memberEnrollment');
 
 function buildFieldCounts(rows, field) {
     const counts = {};
@@ -41,21 +42,21 @@ const createApplication = async (req, res) => {
             });
         }
 
-        // Check if university_id already exists
+        // Note: Application.year is the student's academic year (INT), not the MSP season
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
+        // One application per student per season — prior seasons do not block re-enrollment
         const existing = await Application.findOne({
-            where: { university_id }
+            where: { university_id, season_id }
         });
 
         if (existing) {
             return res.status(409).json({
                 success: false,
-                error: 'Application with this university ID already exists'
+                error: 'You already have an application for the current season'
             });
         }
 
-        // Create new application
-        // Note: Application.year is the student's academic year (INT), not the MSP season
-        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
         const application = await Application.create({
             university_id,
             full_name,
@@ -264,17 +265,52 @@ const updateApplicationStatus = async (req, res) => {
 
         await application.update({ status });
 
+        let enrollment = null;
+        if (status === 'approved') {
+            // Upsert season member + move existing account to new department/season (no duplicate user)
+            const departmentId =
+                req.body.department_id != null && req.body.department_id !== ''
+                    ? Number(req.body.department_id)
+                    : application.first_choice;
+            enrollment = await enrollFromApplication(application, { departmentId });
+        }
+
         res.json({
             success: true,
             message: `Application ${status} successfully`,
-            data: { application_id: id, status }
+            data: {
+                application_id: id,
+                status,
+                ...(enrollment
+                    ? {
+                          member_id: enrollment.member.member_id,
+                          department_id: enrollment.member.department_id,
+                          season_id: enrollment.member.season_id,
+                          user_id: enrollment.user?.user_id || enrollment.member.user_id || null,
+                          created_member: enrollment.createdMember,
+                          updated_existing_account: enrollment.updatedUser
+                      }
+                    : {})
+            }
         });
 
     } catch (error) {
         console.error('Error updating application status:', error);
+        const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
+        const dup =
+            error.name === 'SequelizeUniqueConstraintError' ||
+            /Duplicate entry/i.test(String(sqlMessage || ''));
+        if (dup) {
+            return res.status(409).json({
+                success: false,
+                error:
+                    'Could not enroll member for this season. The database may still have a global unique index on university ID. ' +
+                    'Run: npm run patch:members-multi-season — then try again.'
+            });
+        }
         res.status(500).json({
             success: false,
-            error: 'Internal server error'
+            error: error.message || 'Internal server error'
         });
     }
 };

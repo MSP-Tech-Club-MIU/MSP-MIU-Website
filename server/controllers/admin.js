@@ -72,7 +72,21 @@ const getDashboardStats = async (req, res) => {
             Member.count({ where: seasonWhere }),
             Competition.count({ where: seasonWhere }),
             Event.count({ where: seasonWhere }),
-            Attendance.count({ where: { attended: false } }),
+            Attendance.count({
+                where: { attended: false },
+                include: [
+                    {
+                        model: Event,
+                        as: 'event',
+                        required: true,
+                        attributes: [],
+                        ...(seasonWhere.season_id != null
+                            ? { where: { season_id: seasonWhere.season_id } }
+                            : {})
+                    }
+                ],
+                distinct: true
+            }),
             Application.count({ where: seasonWhere }),
             Application.count({ where: { ...seasonWhere, status: 'pending' } })
         ]);
@@ -439,15 +453,20 @@ const getCompetitionJudges = async (req, res) => {
     try {
         const { id } = req.params;
         const competition = await Competition.findByPk(id, {
-            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config', 'season_id']
         });
         if (!competition) {
             return res.status(404).json({ success: false, error: 'Competition not found' });
         }
 
+        const boardWhere = { user_id: { [Op.ne]: null } };
+        if (competition.season_id != null) {
+            boardWhere.season_id = competition.season_id;
+        }
+
         const boardRows = await Board.findAll({
-            where: { user_id: { [Op.ne]: null } },
-            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email'],
+            where: boardWhere,
+            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email', 'season_id'],
             order: [['position', 'ASC'], ['full_name', 'ASC']]
         });
 
@@ -491,7 +510,7 @@ const updateCompetitionJudges = async (req, res) => {
         const { assigned_board_user_ids } = req.body || {};
 
         const competition = await Competition.findByPk(id, {
-            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config', 'season_id']
         });
         if (!competition) {
             return res.status(404).json({ success: false, error: 'Competition not found' });
@@ -522,10 +541,14 @@ const updateCompetitionJudges = async (req, res) => {
         )];
 
         if (normalizedIds.length > 0) {
+            const boardMatchWhere = {
+                user_id: { [Op.in]: normalizedIds }
+            };
+            if (competition.season_id != null) {
+                boardMatchWhere.season_id = competition.season_id;
+            }
             const boardMatches = await Board.findAll({
-                where: {
-                    user_id: { [Op.in]: normalizedIds }
-                },
+                where: boardMatchWhere,
                 attributes: ['user_id']
             });
             const validBoardUserIds = new Set(boardMatches.map((x) => Number(x.user_id)));
@@ -533,7 +556,7 @@ const updateCompetitionJudges = async (req, res) => {
             if (invalid.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    error: `Some users are not board members: ${invalid.join(', ')}`
+                    error: `Some users are not board members for this competition's season: ${invalid.join(', ')}`
                 });
             }
         }
@@ -808,13 +831,21 @@ const getNotifications = async (req, res) => {
 const getSuggestions = async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const memberInclude = {
+            model: Member,
+            as: 'member',
+            attributes: ['member_id', 'full_name', 'email', 'university_id', 'season_id'],
+            required: false
+        };
+        // When a specific season is selected, only show suggestions tied to that season's members
+        // (guest/anonymous with no member stay visible under season_id=all only).
+        if (seasonFilter.where.season_id != null) {
+            memberInclude.required = true;
+            memberInclude.where = { season_id: seasonFilter.where.season_id };
+        }
         const { rows: suggestions, count: total } = await Suggestion.findAndCountAll({
-            include: [{
-                model: Member,
-                as: 'member',
-                attributes: ['member_id', 'full_name', 'email', 'university_id'],
-                required: false
-            }],
+            include: [memberInclude],
             order: [['created_at', 'DESC']],
             limit,
             offset,
@@ -827,6 +858,9 @@ const getSuggestions = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching suggestions:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch suggestions' });
     }
@@ -838,8 +872,18 @@ const getSuggestions = async (req, res) => {
 const getEventFeedbackAll = async (req, res) => {
     try {
         const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const eventInclude = {
+            model: Event,
+            as: 'event',
+            attributes: ['event_id', 'name', 'event_date', 'season_id'],
+            required: true
+        };
+        if (seasonFilter.where.season_id != null) {
+            eventInclude.where = { season_id: seasonFilter.where.season_id };
+        }
         const { rows: feedbacks, count: total } = await EventFeedback.findAndCountAll({
-            include: [{ model: Event, as: 'event', attributes: ['event_id', 'name', 'event_date'] }],
+            include: [eventInclude],
             order: [['created_at', 'DESC']],
             limit,
             offset,
@@ -852,6 +896,9 @@ const getEventFeedbackAll = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
         console.error('Error fetching feedback:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedback' });
     }

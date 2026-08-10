@@ -12,6 +12,7 @@ import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import AdminShell from './AdminShell';
 import './AdminPanel.css';
 import './CompetitionManagement.css';
+import { useSeason } from '../../context/SeasonContext';
 
 const TAB_KEYS = ['details', 'quiz', 'tasks', 'timeslots', 'teams', 'announcements'];
 const LIST_LIMIT = 20;
@@ -115,6 +116,7 @@ const CompetitionManagement = () => {
   const { competitionId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const isEditMode = Boolean(competitionId && /^\d+$/.test(String(competitionId)));
+  const { selectedSeasonId } = useSeason();
 
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -602,6 +604,9 @@ const CompetitionManagement = () => {
       return;
     }
     const data = buildSavePayload(compForm);
+    if (!isEditMode && typeof selectedSeasonId === 'number') {
+      data.season_id = selectedSeasonId;
+    }
     setSaving(true);
     setAlert(null);
     try {

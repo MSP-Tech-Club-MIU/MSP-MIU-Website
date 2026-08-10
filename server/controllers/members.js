@@ -7,6 +7,10 @@ const {
   sendActivationEmailForMember,
   sendActivationEmailsToMembers
 } = require('../utils/activationEmail');
+const {
+  findExistingUserForEnrollment,
+  syncUserFromMember
+} = require('../utils/memberEnrollment');
 
 function hasActiveAccount(user) {
   return Boolean(user && (user.is_active || user.password_hash));
@@ -172,24 +176,59 @@ const createMember = async (req, res) => {
     }
 
     const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+    const uniId = String(university_id).trim();
+    const emailTrimmed = String(email).trim();
+
+    const existingForSeason = await Member.findOne({
+      where: { university_id: uniId, season_id }
+    });
+    if (existingForSeason) {
+      return res.status(409).json({
+        success: false,
+        error: 'A member with this university ID already exists for this season'
+      });
+    }
+
+    const linkedUser =
+      user_id != null && user_id !== ''
+        ? await User.findByPk(Number(user_id))
+        : await findExistingUserForEnrollment({
+            university_id: uniId,
+            email: emailTrimmed
+          });
 
     const member = await Member.create({
       full_name: String(full_name).trim(),
-      email: String(email).trim(),
+      email: emailTrimmed,
       faculty: String(faculty).trim(),
       year: Number(year),
       phone_number: String(phone_number).trim(),
       department_id: Number(department_id),
-      university_id: String(university_id).trim(),
+      university_id: uniId,
       schedule: schedule || null,
-      user_id: user_id != null && user_id !== '' ? Number(user_id) : null,
+      user_id: linkedUser?.user_id || null,
       season_id
     });
+
+    if (linkedUser) {
+      await syncUserFromMember(member);
+    }
 
     res.status(201).json({ success: true, data: member });
   } catch (error) {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
+    }
+    const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
+    const dup =
+      error.name === 'SequelizeUniqueConstraintError' ||
+      /Duplicate entry/i.test(String(sqlMessage || ''));
+    if (dup) {
+      return res.status(409).json({
+        success: false,
+        error:
+          'Could not create member for this season. Run: npm run patch:members-multi-season if the DB still has a global unique university ID.'
+      });
     }
     console.error('Error creating member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create member' });
@@ -227,6 +266,7 @@ const updateMember = async (req, res) => {
 
     await member.update(updates);
     await member.reload();
+    await syncUserFromMember(member);
     res.json({ success: true, data: member });
   } catch (error) {
     if (error.status) {

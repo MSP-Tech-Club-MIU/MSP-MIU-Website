@@ -13,6 +13,16 @@ Changing the default season changes:
 - What “current” public lists show by default
 - Which board row `adminAuth` checks for panel access
 
+### Verify season isolation
+
+From `server/`:
+
+```bash
+npm run check:season-separation
+```
+
+This checks DB uniqueness, null `season_id` rows, controller/UI wiring, list isolation, and returning-member enrollment (no duplicate accounts across seasons).
+
 ## Email templates
 
 **Path:** `/admin/emails`

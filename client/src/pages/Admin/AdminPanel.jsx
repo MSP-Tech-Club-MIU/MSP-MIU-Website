@@ -358,8 +358,8 @@ const AdminPanel = () => {
         setFeedbackError(null);
         try {
             const [sug, fb] = await Promise.all([
-                ApiService.getAdminSuggestions({ page: suggestionsPage, limit: LIST_LIMIT }),
-                ApiService.getAdminFeedback({ page: feedbackPage, limit: LIST_LIMIT })
+                ApiService.getAdminSuggestions({ page: suggestionsPage, limit: LIST_LIMIT, ...seasonFilters }),
+                ApiService.getAdminFeedback({ page: feedbackPage, limit: LIST_LIMIT, ...seasonFilters })
             ]);
             setSuggestions(Array.isArray(sug?.data) ? sug.data : []);
             setSuggestionsPagination(sug?.pagination || null);
@@ -375,7 +375,7 @@ const AdminPanel = () => {
             setSuggestionsLoading(false);
             setFeedbackLoading(false);
         }
-    }, [suggestionsPage, feedbackPage]);
+    }, [suggestionsPage, feedbackPage, seasonFilters]);
 
     // Reset list page when switching tabs
     useEffect(() => {

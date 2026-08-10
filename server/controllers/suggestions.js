@@ -1,4 +1,5 @@
 const { Suggestion, Member } = require('../models');
+const { getDefaultSeasonId } = require('../utils/seasonFilter');
 
 const MAX_LENGTH = 2000;
 
@@ -29,10 +30,21 @@ const createSuggestion = async (req, res) => {
 
     let memberId = null;
     if (req.user?.user_id) {
-      const member = await Member.findOne({
-        where: { user_id: req.user.user_id },
-        attributes: ['member_id', 'full_name', 'email']
-      });
+      const defaultSeasonId = await getDefaultSeasonId();
+      let member = null;
+      if (defaultSeasonId != null) {
+        member = await Member.findOne({
+          where: { user_id: req.user.user_id, season_id: defaultSeasonId },
+          attributes: ['member_id', 'full_name', 'email']
+        });
+      }
+      if (!member) {
+        member = await Member.findOne({
+          where: { user_id: req.user.user_id },
+          attributes: ['member_id', 'full_name', 'email'],
+          order: [['joined_at', 'DESC'], ['member_id', 'DESC']]
+        });
+      }
       if (member) {
         memberId = member.member_id;
         if (!anonymous) {
