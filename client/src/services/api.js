@@ -716,6 +716,43 @@ class ApiService {
     return result;
   }
 
+  static async getMyBoardMembership() {
+    const response = await fetch(`${API_BASE_URL}/board/me`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch board membership');
+    return result;
+  }
+
+  static async updateMyBoardPhoto(photoUrlOrFile) {
+    const token = this.getAuthToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    let body;
+    const headers = { Authorization: `Bearer ${token}` };
+
+    if (photoUrlOrFile instanceof File || photoUrlOrFile instanceof Blob) {
+      body = new FormData();
+      body.append('photo', photoUrlOrFile);
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({ photo_url: photoUrlOrFile });
+    }
+
+    const response = await fetch(`${API_BASE_URL}/board/me/photo`, {
+      method: 'PUT',
+      headers,
+      body,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update Meet the Board photo');
+    return result;
+  }
+
   static async deleteBoardMember(id) {
     const response = await fetch(`${API_BASE_URL}/board/${id}`, {
       method: 'DELETE',

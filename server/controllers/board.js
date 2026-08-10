@@ -1,8 +1,42 @@
+const path = require('path');
 const { Board, Department, Season } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
-const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const {
+  resolveSeasonFilter,
+  seasonInclude,
+  resolveSeasonIdForWrite,
+  getDefaultSeasonId
+} = require('../utils/seasonFilter');
+const { r2, PutObjectCommand } = require('../config/cloud');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
+
+async function findBoardMembershipForUser(userId) {
+  const members = await Board.findAll({
+    where: { user_id: userId },
+    include: [
+      {
+        model: Department,
+        as: 'department',
+        attributes: ['department_id', 'name'],
+        required: false
+      },
+      seasonInclude()
+    ],
+    order: [
+      ['board_id', 'DESC']
+    ]
+  });
+
+  if (!members.length) return null;
+
+  const defaultSeasonId = await getDefaultSeasonId();
+  if (defaultSeasonId != null) {
+    const current = members.find((m) => m.season_id === defaultSeasonId);
+    if (current) return current;
+  }
+  return members[0];
+}
 
 const getBoard = async (req, res) => {
   try {
@@ -234,9 +268,101 @@ const deleteBoardMember = async (req, res) => {
   }
 };
 
+const getMyBoardMembership = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const member = await findBoardMembershipForUser(userId);
+    if (!member) {
+      return res.json({ success: true, data: null });
+    }
+
+    res.json({ success: true, data: member });
+  } catch (error) {
+    console.error('Error fetching own board membership:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch board membership' });
+  }
+};
+
+const updateMyBoardPhoto = async (req, res) => {
+  try {
+    const userId = req.user?.user_id;
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    const member = await findBoardMembershipForUser(userId);
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        error: 'No board membership linked to your account'
+      });
+    }
+
+    const photoFile = req.file || null;
+    let photo_url = null;
+
+    if (photoFile) {
+      if (!photoFile.mimetype?.startsWith('image/')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Meet the Board photo must be an image file'
+        });
+      }
+
+      const ext = path.extname(photoFile.originalname) || '.png';
+      const unique = `${Date.now()}_${Math.random().toString(36).substring(2)}${ext}`;
+      const key = `Images/board_${userId}_${unique}`;
+
+      await r2.send(
+        new PutObjectCommand({
+          Bucket: process.env.R2_BUCKET,
+          Key: key,
+          Body: photoFile.buffer,
+          ContentType: photoFile.mimetype
+        })
+      );
+
+      photo_url = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
+    } else if (req.body.photo_url !== undefined) {
+      photo_url =
+        req.body.photo_url === null || req.body.photo_url === ''
+          ? null
+          : String(req.body.photo_url).trim();
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Provide a photo file or photo_url'
+      });
+    }
+
+    await member.update({ photo_url });
+    await member.reload({
+      include: [
+        {
+          model: Department,
+          as: 'department',
+          attributes: ['department_id', 'name'],
+          required: false
+        },
+        seasonInclude()
+      ]
+    });
+    res.json({ success: true, data: member });
+  } catch (error) {
+    console.error('Error updating own board photo:', error);
+    res.status(500).json({ success: false, error: 'Failed to update Meet the Board photo' });
+  }
+};
+
 module.exports = {
   getBoard,
   createBoardMember,
   updateBoardMember,
-  deleteBoardMember
+  deleteBoardMember,
+  getMyBoardMembership,
+  updateMyBoardPhoto
 };

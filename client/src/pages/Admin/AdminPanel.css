@@ -1943,6 +1943,33 @@ body.admin-panel-active .SiteLayout__main {
   font: inherit;
 }
 .AdminPanel__fullWidth { grid-column: 1 / -1; }
+.AdminPanel__fieldHint {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgba(197, 218, 233, 0.72);
+}
+.AdminPanel__boardPhotoPreview {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+.AdminPanel__boardPhotoPreview img {
+  width: 112px;
+  height: 140px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 166, 255, 0.28);
+  background:
+    linear-gradient(45deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.08) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.08) 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+  background-color: rgba(8, 20, 36, 0.65);
+}
 .AdminPanel__checkboxLabel {
   flex-direction: row !important;
   align-items: center;
