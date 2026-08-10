@@ -7,7 +7,7 @@ import {
     MdNotifications, MdHome, MdAdd,
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
-    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -19,6 +19,7 @@ import AdminShell, { ParticleBackground } from './AdminShell';
 import RegistrationsTab from './RegistrationsTab';
 import SponsorsAdminTab from './SponsorsAdminTab';
 import BoardAdminTab from './BoardAdminTab';
+import DepartmentsAdminTab from './DepartmentsAdminTab';
 import MediaAdminTab from './MediaAdminTab';
 import SiteContentAdminTab from './SiteContentAdminTab';
 import MembersAdminTab from './MembersAdminTab';
@@ -43,6 +44,7 @@ const ADMIN_TAB_TO_ROUTE = {
     suggestions: 'suggestions',
     sponsors: 'sponsors',
     board: 'board',
+    departments: 'departments',
     media: 'media',
     content: 'content',
     members: 'members',
@@ -62,6 +64,7 @@ const ADMIN_ROUTE_TO_TAB = {
     suggestions: 'suggestions',
     sponsors: 'sponsors',
     board: 'board',
+    departments: 'departments',
     media: 'media',
     content: 'content',
     members: 'members',
@@ -176,6 +179,7 @@ const AdminPanel = () => {
         { key: 'members', label: 'Members', icon: <MdPeople /> },
         { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness /> },
         { key: 'board', label: 'Board', icon: <MdGroups /> },
+        { key: 'departments', label: 'Departments', icon: <MdAccountTree /> },
         { key: 'seasons', label: 'Season', icon: <MdCalendarMonth /> },
         { key: 'media', label: 'Media', icon: <MdPermMedia /> },
         { key: 'content', label: 'Site content', icon: <MdArticle /> },
@@ -883,6 +887,12 @@ const AdminPanel = () => {
                     {accessLevel === 'full' && activeTab === 'board' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <BoardAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'departments' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <DepartmentsAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 
