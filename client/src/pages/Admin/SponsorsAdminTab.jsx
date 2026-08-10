@@ -1,6 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MdAdd, MdBusiness, MdClose, MdCloudUpload, MdLink, MdOpenInNew } from 'react-icons/md';
+import {
+  MdAdd,
+  MdBusiness,
+  MdClose,
+  MdCloudUpload,
+  MdHistory,
+  MdLink,
+  MdOpenInNew
+} from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
@@ -18,9 +26,30 @@ const emptyForm = () => ({
 });
 
 const LIST_LIMIT = 20;
+const IMPORT_LIMIT = 100;
+
+const normalizeName = (name) => String(name || '').trim().toLowerCase();
+
+const toCreatePayload = (row, seasonId) => {
+  let socialLinks = row.social_links ?? null;
+  if (socialLinks && typeof socialLinks === 'object') {
+    socialLinks = JSON.stringify(socialLinks);
+  }
+  return {
+    name: String(row.name || '').trim(),
+    tagline: row.tagline || null,
+    description: row.description || null,
+    logo_url: row.logo_url || null,
+    website_url: row.website_url || null,
+    tier: row.tier || null,
+    sort_order: Number.isFinite(Number(row.sort_order)) ? Number(row.sort_order) : 0,
+    social_links: socialLinks,
+    season_id: seasonId
+  };
+};
 
 export default function SponsorsAdminTab({ onAlert }) {
-  const { seasonFilters, isAll, selectedSeasonId } = useSeason();
+  const { seasonFilters, isAll, selectedSeasonId, seasons, defaultSeasonId } = useSeason();
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
@@ -30,6 +59,37 @@ export default function SponsorsAdminTab({ onAlert }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importSourceId, setImportSourceId] = useState(null);
+  const [importCandidates, setImportCandidates] = useState([]);
+  const [importSelected, setImportSelected] = useState(() => new Set());
+  const [importExistingNames, setImportExistingNames] = useState(() => new Set());
+  const [importLoading, setImportLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+
+  const targetSeasonId = useMemo(() => {
+    if (isAll) return null;
+    if (selectedSeasonId === 'current') return defaultSeasonId ?? null;
+    if (typeof selectedSeasonId === 'number') return selectedSeasonId;
+    const parsed = parseInt(selectedSeasonId, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  }, [isAll, selectedSeasonId, defaultSeasonId]);
+
+  const canImport = targetSeasonId != null;
+
+  const sourceSeasons = useMemo(
+    () =>
+      (Array.isArray(seasons) ? seasons : [])
+        .filter((s) => Number(s.season_id) !== Number(targetSeasonId))
+        .slice()
+        .sort((a, b) => {
+          const yearDiff = (Number(b.start_year) || 0) - (Number(a.start_year) || 0);
+          if (yearDiff !== 0) return yearDiff;
+          return (Number(b.season_id) || 0) - (Number(a.season_id) || 0);
+        }),
+    [seasons, targetSeasonId]
+  );
 
   const load = useCallback(async () => {
     try {
@@ -50,9 +110,11 @@ export default function SponsorsAdminTab({ onAlert }) {
   }, [load]);
 
   useEffect(() => {
-    if (!modalOpen) return undefined;
+    if (!modalOpen && !importOpen) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') setModalOpen(false);
+      if (e.key !== 'Escape') return;
+      if (importOpen && !importing) setImportOpen(false);
+      else if (modalOpen && !saving && !uploading) setModalOpen(false);
     };
     document.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
@@ -61,7 +123,136 @@ export default function SponsorsAdminTab({ onAlert }) {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
-  }, [modalOpen]);
+  }, [modalOpen, importOpen, saving, uploading, importing]);
+
+  const loadImportCandidates = useCallback(
+    async (sourceId) => {
+      if (!sourceId || targetSeasonId == null) {
+        setImportCandidates([]);
+        setImportSelected(new Set());
+        return;
+      }
+      try {
+        setImportLoading(true);
+        const [sourceResult, targetResult] = await Promise.all([
+          ApiService.getSponsors({ page: 1, limit: IMPORT_LIMIT, season_id: sourceId }),
+          ApiService.getSponsors({ page: 1, limit: IMPORT_LIMIT, season_id: targetSeasonId })
+        ]);
+        const candidates = Array.isArray(sourceResult?.data) ? sourceResult.data : [];
+        const existing = new Set(
+          (Array.isArray(targetResult?.data) ? targetResult.data : []).map((row) =>
+            normalizeName(row.name)
+          )
+        );
+        setImportCandidates(candidates);
+        setImportExistingNames(existing);
+        setImportSelected(
+          new Set(
+            candidates
+              .filter((row) => !existing.has(normalizeName(row.name)))
+              .map((row) => row.sponsor_id)
+          )
+        );
+      } catch (err) {
+        onAlert?.({ type: 'error', message: err.message || 'Failed to load previous sponsors' });
+        setImportCandidates([]);
+        setImportSelected(new Set());
+        setImportExistingNames(new Set());
+      } finally {
+        setImportLoading(false);
+      }
+    },
+    [targetSeasonId, onAlert]
+  );
+
+  const openImport = () => {
+    if (!canImport) {
+      onAlert?.({
+        type: 'error',
+        message: 'Select a specific season (not All) to copy sponsors into.'
+      });
+      return;
+    }
+    if (!sourceSeasons.length) {
+      onAlert?.({ type: 'error', message: 'No other seasons available to copy from.' });
+      return;
+    }
+    const initialSource = sourceSeasons[0]?.season_id ?? null;
+    setImportSourceId(initialSource);
+    setImportOpen(true);
+    loadImportCandidates(initialSource);
+  };
+
+  const closeImport = () => {
+    if (importing) return;
+    setImportOpen(false);
+  };
+
+  const handleImportSourceChange = (e) => {
+    const nextId = parseInt(e.target.value, 10);
+    setImportSourceId(Number.isFinite(nextId) ? nextId : null);
+    loadImportCandidates(Number.isFinite(nextId) ? nextId : null);
+  };
+
+  const selectableCandidates = useMemo(
+    () => importCandidates.filter((row) => !importExistingNames.has(normalizeName(row.name))),
+    [importCandidates, importExistingNames]
+  );
+
+  const allSelectableChecked =
+    selectableCandidates.length > 0 &&
+    selectableCandidates.every((row) => importSelected.has(row.sponsor_id));
+
+  const toggleSelectAll = () => {
+    if (allSelectableChecked) {
+      setImportSelected(new Set());
+      return;
+    }
+    setImportSelected(new Set(selectableCandidates.map((row) => row.sponsor_id)));
+  };
+
+  const toggleCandidate = (sponsorId, disabled) => {
+    if (disabled) return;
+    setImportSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(sponsorId)) next.delete(sponsorId);
+      else next.add(sponsorId);
+      return next;
+    });
+  };
+
+  const confirmImport = async () => {
+    if (targetSeasonId == null) return;
+    const toCopy = importCandidates.filter(
+      (row) =>
+        importSelected.has(row.sponsor_id) && !importExistingNames.has(normalizeName(row.name))
+    );
+    if (!toCopy.length) {
+      onAlert?.({ type: 'error', message: 'Select at least one sponsor to copy.' });
+      return;
+    }
+    try {
+      setImporting(true);
+      let created = 0;
+      for (const row of toCopy) {
+        await ApiService.createSponsor(toCreatePayload(row, targetSeasonId));
+        created += 1;
+      }
+      onAlert?.({
+        type: 'success',
+        message:
+          created === 1
+            ? 'Copied 1 sponsor into this season.'
+            : `Copied ${created} sponsors into this season.`
+      });
+      setImportOpen(false);
+      await load();
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to copy sponsors' });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -125,8 +316,8 @@ export default function SponsorsAdminTab({ onAlert }) {
         sort_order: Number(form.sort_order) || 0,
         social_links: form.social_links?.trim() || null
       };
-      if (!editing && typeof selectedSeasonId === 'number') {
-        payload.season_id = selectedSeasonId;
+      if (!editing && targetSeasonId != null) {
+        payload.season_id = targetSeasonId;
       }
       if (editing) {
         await ApiService.updateSponsor(editing.sponsor_id, payload);
@@ -156,6 +347,24 @@ export default function SponsorsAdminTab({ onAlert }) {
   };
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const headerActions = (
+    <div className="SponsorsAdmin__headerActions">
+      <button
+        type="button"
+        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+        onClick={openImport}
+        disabled={!canImport}
+        title={canImport ? undefined : 'Select a specific season to copy into'}
+      >
+        <MdHistory style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+        Add from previous sponsors
+      </button>
+      <button type="button" className="AdminPanel__addBtn" onClick={openCreate}>
+        <MdAdd /> Add Sponsor
+      </button>
+    </div>
+  );
 
   const modal = modalOpen
     ? createPortal(
@@ -312,6 +521,142 @@ export default function SponsorsAdminTab({ onAlert }) {
       )
     : null;
 
+  const importModal = importOpen
+    ? createPortal(
+        <div
+          className="AdminPanel__modalOverlay SponsorsAdmin__overlay"
+          onClick={closeImport}
+          role="presentation"
+        >
+          <div
+            className="AdminPanel__modalContent AdminPanel__modalContent--large SponsorsAdmin__modal SponsorsAdmin__importModal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sponsors-import-title"
+          >
+            <div className="AdminPanel__modalHeader SponsorsAdmin__modalHeader">
+              <div>
+                <h3 id="sponsors-import-title">Add from previous sponsors</h3>
+                <p className="SponsorsAdmin__modalSub">
+                  Copy selected partners into the currently selected season.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="AdminPanel__modalClose"
+                onClick={closeImport}
+                aria-label="Close"
+                disabled={importing}
+              >
+                <MdClose />
+              </button>
+            </div>
+
+            <div className="SponsorsAdmin__importBody">
+              <label className="SponsorsAdmin__importSeason">
+                Source season
+                <select
+                  value={importSourceId ?? ''}
+                  onChange={handleImportSourceChange}
+                  disabled={importing || importLoading}
+                >
+                  {sourceSeasons.map((season) => (
+                    <option key={season.season_id} value={season.season_id}>
+                      {season.label || `${season.start_year}/${season.end_year}`}
+                      {season.is_default ? ' (current)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {importLoading ? (
+                <p className="SponsorsAdmin__importHint">Loading sponsors…</p>
+              ) : importCandidates.length === 0 ? (
+                <p className="SponsorsAdmin__importHint">No sponsors in this season.</p>
+              ) : (
+                <>
+                  <div className="SponsorsAdmin__importToolbar">
+                    <label className="SponsorsAdmin__importSelectAll">
+                      <input
+                        type="checkbox"
+                        checked={allSelectableChecked}
+                        onChange={toggleSelectAll}
+                        disabled={importing || selectableCandidates.length === 0}
+                      />
+                      Select all available
+                    </label>
+                    <span className="SponsorsAdmin__importCount">
+                      {importSelected.size} selected
+                    </span>
+                  </div>
+                  <ul className="SponsorsAdmin__importList">
+                    {importCandidates.map((row) => {
+                      const already = importExistingNames.has(normalizeName(row.name));
+                      const checked = importSelected.has(row.sponsor_id);
+                      return (
+                        <li
+                          key={row.sponsor_id}
+                          className={`SponsorsAdmin__importRow${already ? ' is-disabled' : ''}`}
+                        >
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={checked && !already}
+                              disabled={already || importing}
+                              onChange={() => toggleCandidate(row.sponsor_id, already)}
+                            />
+                            <span className="SponsorsAdmin__rowLogo">
+                              {row.logo_url ? <img src={row.logo_url} alt="" /> : <MdBusiness />}
+                            </span>
+                            <span className="SponsorsAdmin__rowText">
+                              <span className="SponsorsAdmin__rowName">{row.name}</span>
+                              {row.tier ? (
+                                <span className="SponsorsAdmin__rowTagline">{row.tier}</span>
+                              ) : null}
+                              {already ? (
+                                <span className="SponsorsAdmin__importAlready">
+                                  Already in this season
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
+            </div>
+
+            <div className="AdminPanel__modalActions SponsorsAdmin__actions">
+              <button
+                type="button"
+                className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                onClick={closeImport}
+                disabled={importing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+                disabled={importing || importLoading || importSelected.size === 0}
+                onClick={confirmImport}
+              >
+                {importing
+                  ? 'Copying…'
+                  : importSelected.size
+                    ? `Copy ${importSelected.size} sponsor${importSelected.size === 1 ? '' : 's'}`
+                    : 'Copy sponsors'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="AdminPanel__section SponsorsAdmin">
       <div className="AdminPanel__sectionHeader">
@@ -323,9 +668,7 @@ export default function SponsorsAdminTab({ onAlert }) {
             Manage partner logos and details shown on the public sponsors page.
           </p>
         </div>
-        <button type="button" className="AdminPanel__addBtn" onClick={openCreate}>
-          <MdAdd /> Add Sponsor
-        </button>
+        {headerActions}
       </div>
 
       {loading ? (
@@ -334,9 +677,21 @@ export default function SponsorsAdminTab({ onAlert }) {
         <div className="AdminPanel__empty SponsorsAdmin__empty">
           <MdBusiness />
           <p>No sponsors yet.</p>
-          <button type="button" className="AdminPanel__addBtn" onClick={openCreate}>
-            <MdAdd /> Add your first sponsor
-          </button>
+          <div className="SponsorsAdmin__emptyActions">
+            <button type="button" className="AdminPanel__addBtn" onClick={openCreate}>
+              <MdAdd /> Add your first sponsor
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={openImport}
+              disabled={!canImport}
+              title={canImport ? undefined : 'Select a specific season to copy into'}
+            >
+              <MdHistory style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+              Add from previous sponsors
+            </button>
+          </div>
         </div>
       ) : (
         <div className="AdminPanel__tableWrap">
@@ -423,6 +778,7 @@ export default function SponsorsAdminTab({ onAlert }) {
       )}
       <Pagination pagination={pagination} onPageChange={setPage} />
       {modal}
+      {importModal}
     </div>
   );
 }

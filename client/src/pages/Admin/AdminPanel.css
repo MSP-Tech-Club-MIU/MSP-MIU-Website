@@ -2216,6 +2216,114 @@ body.admin-panel-active .SiteLayout__main {
   opacity: 0.55;
 }
 
+.SponsorsAdmin__headerActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.SponsorsAdmin__emptyActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.SponsorsAdmin__importBody {
+  padding: 8px 24px 16px;
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.SponsorsAdmin__importSeason {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: #eaf2ff;
+}
+
+.SponsorsAdmin__importSeason select {
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eaf2ff;
+}
+
+.SponsorsAdmin__importHint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--admin-text-muted);
+}
+
+.SponsorsAdmin__importToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.SponsorsAdmin__importSelectAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #c5dae9;
+  cursor: pointer;
+}
+
+.SponsorsAdmin__importCount {
+  font-size: 0.78rem;
+  color: var(--admin-text-muted);
+}
+
+.SponsorsAdmin__importList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(48vh, 420px);
+  overflow-y: auto;
+}
+
+.SponsorsAdmin__importRow label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.SponsorsAdmin__importRow.is-disabled label {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.SponsorsAdmin__importRow input[type='checkbox'] {
+  flex-shrink: 0;
+}
+
+.SponsorsAdmin__importAlready {
+  font-size: 0.72rem;
+  color: rgba(255, 196, 120, 0.9);
+}
+
 .SponsorsAdmin__table td {
   vertical-align: middle;
 }
