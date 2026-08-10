@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ApiService from '../../services/api';
 import './PersonNameSearch.css';
@@ -30,21 +30,29 @@ export default function PersonNameSearch({
     setQuery(value || '');
   }, [value]);
 
-  const updateCoords = () => {
+  const updateCoords = useCallback(() => {
     const el = inputRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    if (!rect.width && !rect.height) return;
     const width = Math.max(rect.width, 280);
     let left = rect.left;
     if (left + width > window.innerWidth - 8) {
       left = Math.max(8, window.innerWidth - width - 8);
     }
-    setCoords({
-      top: rect.bottom + 6,
-      left,
-      width
+    const top = rect.bottom + 6;
+    setCoords((prev) => {
+      if (
+        prev &&
+        prev.top === top &&
+        prev.left === left &&
+        prev.width === width
+      ) {
+        return prev;
+      }
+      return { top, left, width };
     });
-  };
+  }, []);
 
   useLayoutEffect(() => {
     if (!open) return undefined;
@@ -56,7 +64,7 @@ export default function PersonNameSearch({
       window.removeEventListener('resize', onReposition);
       window.removeEventListener('scroll', onReposition, true);
     };
-  }, [open, results, loading]);
+  }, [open, results, loading, updateCoords]);
 
   useEffect(() => {
     const onDoc = (e) => {
@@ -78,6 +86,7 @@ export default function PersonNameSearch({
 
     const id = ++reqId.current;
     setLoading(true);
+    setOpen(true);
     const t = setTimeout(async () => {
       try {
         const result = await ApiService.searchAdminPeople(q);
@@ -85,16 +94,19 @@ export default function PersonNameSearch({
         setResults(Array.isArray(result?.data) ? result.data : []);
         setOpen(true);
         setHighlight(0);
-      } catch {
+        requestAnimationFrame(() => updateCoords());
+      } catch (err) {
+        console.error('Person search failed:', err);
         if (reqId.current !== id) return;
         setResults([]);
+        setOpen(true);
       } finally {
         if (reqId.current === id) setLoading(false);
       }
     }, 280);
 
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, updateCoords]);
 
   const pick = (person) => {
     onChange?.(person.full_name || '');
@@ -130,6 +142,7 @@ export default function PersonNameSearch({
         id={inputId}
         type="text"
         autoComplete="off"
+        spellCheck={false}
         value={query}
         disabled={disabled}
         placeholder={placeholder}
@@ -137,9 +150,13 @@ export default function PersonNameSearch({
           setQuery(e.target.value);
           onChange?.(e.target.value);
           setOpen(true);
+          requestAnimationFrame(() => updateCoords());
         }}
         onFocus={() => {
-          if (results.length || String(query).trim().length >= 2) setOpen(true);
+          if (results.length || String(query).trim().length >= 2) {
+            setOpen(true);
+            requestAnimationFrame(() => updateCoords());
+          }
         }}
         onKeyDown={onKeyDown}
         aria-autocomplete="list"

@@ -10,7 +10,7 @@
 
 .PersonNameSearch__list {
   position: fixed;
-  z-index: 10050;
+  z-index: 13000;
   margin: 0;
   padding: 8px;
   list-style: none;
