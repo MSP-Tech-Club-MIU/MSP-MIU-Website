@@ -621,6 +621,17 @@ paths:
       responses:
         '200':
           description: List
+  /admin/people-search:
+    get:
+      summary: 'Get /admin/people-search'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
   '/admin/quiz/options/{optionId}':
     put:
       tags:

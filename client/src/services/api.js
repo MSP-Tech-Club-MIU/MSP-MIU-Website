@@ -2551,6 +2551,26 @@ class ApiService {
   }
 
   /**
+   * Search board, members, and users for linking season board rows.
+   * @param {string} q
+   */
+  static async searchAdminPeople(q) {
+    const queryParams = new URLSearchParams();
+    if (q) queryParams.set('q', q);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/admin/people-search${qs ? `?${qs}` : ''}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to search people');
+    return result;
+  }
+
+  /**
    * Get admin dashboard statistics
    */
   static async getAdminDashboard(filters = {}) {

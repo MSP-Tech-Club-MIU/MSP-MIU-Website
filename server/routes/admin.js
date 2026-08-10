@@ -55,6 +55,7 @@ const {
     assignCompetitionTimeslotByAdmin,
     unassignCompetitionTimeslotByAdmin
 } = require('../controllers/competitionTimeslots.controller');
+const { searchPeople } = require('../controllers/adminPeopleSearch');
 
 // All admin routes require authentication + admin authorization
 router.use(authenticateToken);
@@ -62,6 +63,9 @@ router.use(adminAuth);
 
 // Dashboard
 router.get('/dashboard', getDashboardStats);
+
+// People search (board + members + users) for linking board rows
+router.get('/people-search', searchPeople);
 
 // Competitions CRUD
 router.get('/competitions', getCompetitions);

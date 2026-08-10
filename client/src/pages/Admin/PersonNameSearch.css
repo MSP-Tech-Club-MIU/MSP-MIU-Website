@@ -1,0 +1,69 @@
+.PersonNameSearch {
+  position: relative;
+  width: 100%;
+}
+
+.PersonNameSearch input {
+  width: 100%;
+}
+
+.PersonNameSearch__list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  max-height: 240px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(74, 166, 255, 0.35);
+  background: #0b1f35;
+  box-shadow: 0 12px 28px -12px rgba(0, 0, 0, 0.65);
+}
+
+.PersonNameSearch__empty {
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  color: rgba(197, 218, 233, 0.65);
+}
+
+.PersonNameSearch__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.PersonNameSearch__option:hover,
+.PersonNameSearch__option.is-active {
+  background: rgba(13, 123, 216, 0.28);
+}
+
+.PersonNameSearch__name {
+  font-weight: 650;
+  color: #e8f3ff;
+  font-size: 0.9rem;
+}
+
+.PersonNameSearch__meta {
+  font-size: 0.75rem;
+  color: #9fd0ff;
+}
+
+.PersonNameSearch__ids {
+  font-size: 0.72rem;
+  color: rgba(197, 218, 233, 0.7);
+}
