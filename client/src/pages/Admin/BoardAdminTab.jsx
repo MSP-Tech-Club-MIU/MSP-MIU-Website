@@ -6,6 +6,7 @@ import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
 import { departments as fallbackDepts } from '../../data/departments';
+import PersonNameSearch from './PersonNameSearch';
 
 const POSITIONS = ['Founder', 'President', 'Vice President', 'Head', 'Co-Head'];
 const FACULTIES = [
@@ -272,7 +273,35 @@ export default function BoardAdminTab({ onAlert }) {
               >
                 <h3 className="AdminPanel__modalTitle">{editing ? 'Edit board member' : 'Add board member'}</h3>
                 <div className="AdminPanel__formGrid">
-                  <label>Full name<input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></label>
+                  <label>
+                    Full name
+                    <PersonNameSearch
+                      value={form.full_name}
+                      disabled={saving}
+                      placeholder="Search board, members, or users…"
+                      onChange={(full_name) => setForm((f) => ({ ...f, full_name }))}
+                      onSelectPerson={(person) => {
+                        setForm((f) => {
+                          const patch = {
+                            ...f,
+                            full_name: person.full_name || f.full_name,
+                            user_id: person.user_id ? String(person.user_id) : f.user_id,
+                            university_id: person.university_id || f.university_id,
+                            email: person.email || f.email
+                          };
+                          const needsDept = f.position === 'Head' || f.position === 'Co-Head';
+                          if (
+                            needsDept &&
+                            person.department_id != null &&
+                            ![7, 8, 9].includes(Number(person.department_id))
+                          ) {
+                            patch.department_id = String(person.department_id);
+                          }
+                          return patch;
+                        });
+                      }}
+                    />
+                  </label>
                   <label>Position
                     <select value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })}>
                       {POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}

@@ -3,6 +3,7 @@ const { User, Member, Board, PasswordToken } = require('../models');
 const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
 const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
 const { resolveSeasonIdForWrite, getDefaultSeasonId } = require('../utils/seasonFilter');
+const { findMemberByEmailPreferCurrentSeason } = require('../utils/memberEnrollment');
 
 /**
  * Login user
@@ -690,8 +691,12 @@ const activateAccount = async (req, res) => {
                 }
             } else if (decoded.type === 'member_activation' || decoded.type === 'activation') {
                 activationEmail = decoded.email;
-                // Find member by email
-                member = await Member.findOne({ where: { email: activationEmail } });
+                if (decoded.member_id) {
+                    member = await Member.findByPk(decoded.member_id);
+                }
+                if (!member) {
+                    member = await findMemberByEmailPreferCurrentSeason(activationEmail);
+                }
                 
                 if (!member) {
                     logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
@@ -708,8 +713,8 @@ const activateAccount = async (req, res) => {
                 // Legacy token format - just has email
                 activationEmail = decoded.email;
                 
-                // Look up member or board member by email
-                member = await Member.findOne({ where: { email: activationEmail } });
+                // Look up member or board member by email (prefer current season)
+                member = await findMemberByEmailPreferCurrentSeason(activationEmail);
                 
                 if (!member) {
                     // If not a member, check if it's a board member
@@ -743,8 +748,8 @@ const activateAccount = async (req, res) => {
             activationEmail = email;
 
             // Find member or board member by email
-            // First check if it's a member
-            member = await Member.findOne({ where: { email: activationEmail } });
+            // Prefer the current/default season when multiple member rows exist
+            member = await findMemberByEmailPreferCurrentSeason(activationEmail);
 
             // If not a member, check if it's a board member
             if (!member) {

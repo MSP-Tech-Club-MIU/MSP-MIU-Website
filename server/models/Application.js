@@ -10,7 +10,6 @@ const Application = sequelize.define('Application', {
   university_id: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    unique: true,
     validate: {
       notEmpty: true
     }
@@ -107,7 +106,14 @@ const Application = sequelize.define('Application', {
   tableName: 'applications',
   timestamps: true,
   createdAt: 'created_at',
-  updatedAt: false
+  updatedAt: false,
+  indexes: [
+    {
+      unique: true,
+      fields: ['university_id', 'season_id'],
+      name: 'uniq_applications_university_season'
+    }
+  ]
 });
 
 module.exports = Application;
