@@ -76,7 +76,8 @@ const SeasonsAdminTab = () => {
     if (!/^\d{2}\/\d{2}$/.test(nextLabel)) return '';
     const [a] = nextLabel.split('/').map((x) => parseInt(x, 10));
     const start = 2000 + a;
-    return `${start}-${start + 1}`;
+    // Match existing board.year format (e.g. 2025/2026)
+    return `${start}/${start + 1}`;
   }, [nextLabel]);
 
   const hasAdminEligible = useMemo(
