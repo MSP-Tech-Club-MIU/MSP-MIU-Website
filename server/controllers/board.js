@@ -123,6 +123,16 @@ const createBoardMember = async (req, res) => {
       });
     }
 
+    if (
+      (position === 'Head' || position === 'Co-Head') &&
+      (department_id == null || department_id === '')
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: `department_id is required for ${position} (Meet the Board hierarchy)`
+      });
+    }
+
     const season_id = await resolveSeasonIdForWrite(req.body, req.query);
     const season = await Season.findByPk(season_id);
     let yearValue = year != null && String(year).trim() ? String(year).trim() : null;

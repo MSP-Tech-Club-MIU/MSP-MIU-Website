@@ -81,10 +81,13 @@ function validateInitialBoardMembers(rawList, seasonYear) {
     if (!member.year) {
       return { ok: false, error: `Board member #${i + 1}: year is required` };
     }
-    if (member.position === 'Head' && member.department_id == null) {
+    if (
+      (member.position === 'Head' || member.position === 'Co-Head') &&
+      member.department_id == null
+    ) {
       return {
         ok: false,
-        error: `Board member #${i + 1}: department is required for Head`
+        error: `Board member #${i + 1}: department is required for ${member.position} (Meet the Board hierarchy)`
       };
     }
     members.push(member);
