@@ -15,6 +15,7 @@ const Events = lazy(() => import('./pages/Events'));
 const EventDetails = lazy(() => import('./pages/EventDetails'));
 const Courses = lazy(() => import('./pages/Courses'));
 const CourseDetails = lazy(() => import('./pages/CourseDetails'));
+const CourseLearn = lazy(() => import('./pages/CourseLearn'));
 const Competitions = lazy(() => import('./pages/Competitions'));
 const CompetitionDetails = lazy(() => import('./pages/CompetitionDetails'));
 const CompetitionTimeslotPage = lazy(() => import('./pages/CompetitionTimeslotPage'));
@@ -170,6 +171,7 @@ const AppRouter = () => {
           <Route path="/events/:id" element={<SiteLayout><EventDetails /></SiteLayout>} />
           <Route path="/courses" element={<SiteLayout><Courses /></SiteLayout>} />
           <Route path="/courses/:id" element={<SiteLayout><CourseDetails /></SiteLayout>} />
+          <Route path="/courses/:id/learn" element={<SiteLayout><CourseLearn /></SiteLayout>} />
           <Route path="/competitions" element={<SiteLayout><Competitions /></SiteLayout>} />
           <Route path="/competitions/:id" element={<SiteLayout><CompetitionDetails /></SiteLayout>} />
           <Route path="/competitions/:id/timeslots" element={<SiteLayout><CompetitionTimeslotPage /></SiteLayout>} />
