@@ -109,6 +109,24 @@ app.use(
 // API routes
 app.use("/api", apiRoutes);
 
+const { sendOgImage, buildRobotsTxt, buildSitemapXml } = require("./server/utils/seo");
+const { sendSeoSpa } = require("./server/middlewares/spaSeo");
+
+// Stable social/SEO assets (crawlers do not execute JavaScript)
+app.get(["/og-image.png", "/og-image.jpg", "/og-image", "/msp-miu-logo.png"], sendOgImage);
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(buildRobotsTxt());
+});
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    const xml = await buildSitemapXml();
+    res.type("application/xml").set("Cache-Control", "public, max-age=1800").send(xml);
+  } catch (err) {
+    console.error("[seo] sitemap failed:", err);
+    res.status(500).type("text/plain").send("Failed to build sitemap");
+  }
+});
+
 // Serve uploaded files (profile pictures, etc.)
 app.use("/uploads", express.static(path.join(__dirname, "server/uploads")));
 
@@ -133,7 +151,7 @@ app.get("*", (req, res) => {
   if (/\.(js|mjs|cjs|css|map|json|woff2?|ttf|ico|png|jpe?g|gif|svg|webp|webmanifest)$/i.test(req.path)) {
     return res.status(404).type('text/plain').send('Not found');
   }
-  res.sendFile(path.join(__dirname, "client/public/index.html"));
+  return sendSeoSpa(req, res);
 });
 
 const { runAutoSubmitExpiredAttempts } = require("./server/services/quizAttemptLifecycle");

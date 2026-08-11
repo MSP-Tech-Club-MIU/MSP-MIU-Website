@@ -651,7 +651,7 @@ const AdminPanel = () => {
 
     return (
         <AdminShell
-            seo={<SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" />}
+            seo={<SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" noindex />}
             navItems={navItems}
             bottomItems={bottomItems}
             activeKey={activeTab}

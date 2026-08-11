@@ -323,6 +323,7 @@ const CompetitionDetails = () => {
         title={competition.title}
         description={competition.description}
         keywords={`MSP competition, ${competition.title}, tech challenge, MIU`}
+        url={`/competitions/${competition.competition_id}`}
       />
 
       <div className="CompetitionDetailsPage__container">

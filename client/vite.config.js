@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync, writeFileSync } from 'fs'
+import { copyFileSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
 // Plugin to transform manifest.json with R2 domain
@@ -67,6 +67,14 @@ function manifestPlugin() {
         writeFileSync(outputManifestPath, JSON.stringify(transformed, null, 2))
       } catch (error) {
         console.warn('Could not transform manifest.json:', error.message)
+      }
+      try {
+        copyFileSync(
+          join(__dirname, '..', 'server', 'seo', 'msp-miu-logo.png'),
+          join(__dirname, 'public', 'og-image.png')
+        )
+      } catch (error) {
+        console.warn('Could not copy og-image.png into build:', error.message)
       }
     }
   }
