@@ -10,7 +10,7 @@ import SeasonBadge from '../components/SeasonBadge';
 import SeasonSelector from '../components/SeasonSelector';
 import ApiService from '../services/api';
 import { useSeason } from '../context/SeasonContext';
-import { getDepartmentNameById } from '../data/departments';
+import { departments as FALLBACK_DEPARTMENTS, getDepartmentNameById } from '../data/departments';
 import './Board/Board.css';
 
 import img5 from '../assets/Images/card.jpg';
@@ -51,9 +51,14 @@ const FALLBACK_BOARD = [
 ];
 
 const ROLE_ORDER = { Founder: 1, President: 2, 'Vice President': 3 };
-const DEPT_ORDER = { 9: 1, 8: 2, 7: 3 };
+const LEADERSHIP_NAMES = ['Founder', 'President', 'Vice President', 'Competitor'];
 
-function mapApiMember(row) {
+function findDeptId(depts, name, fallbackId) {
+  const match = depts.find((d) => d.name === name);
+  return match ? match.id : fallbackId;
+}
+
+function mapApiMember(row, leadershipIds) {
   const position = row.position || '';
   const deptName = row.department?.name || getDepartmentNameById(row.department_id);
   let role = position;
@@ -64,9 +69,9 @@ function mapApiMember(row) {
   }
 
   let department = row.department_id;
-  if (position === 'Founder') department = 9;
-  else if (position === 'President') department = 8;
-  else if (position === 'Vice President') department = 7;
+  if (position === 'Founder') department = leadershipIds.founder;
+  else if (position === 'President') department = leadershipIds.president;
+  else if (position === 'Vice President') department = leadershipIds.vicePresident;
 
   return {
     id: row.board_id,
@@ -85,9 +90,55 @@ function mapApiMember(row) {
 
 const Board = memo(() => {
   const { seasonFilters, isAll } = useSeason();
-  const [selectedDepartment, setSelectedDepartment] = useState(1);
+  const [departments, setDepartments] = useState(FALLBACK_DEPARTMENTS);
+  const [selectedDepartment, setSelectedDepartment] = useState(
+    () => FALLBACK_DEPARTMENTS.find((d) => !LEADERSHIP_NAMES.includes(d.name))?.id ?? 1
+  );
   const [boardMembers, setBoardMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const leadershipIds = useMemo(
+    () => ({
+      founder: findDeptId(departments, 'Founder', 9),
+      president: findDeptId(departments, 'President', 8),
+      vicePresident: findDeptId(departments, 'Vice President', 7),
+    }),
+    [departments]
+  );
+
+  const deptOrder = useMemo(
+    () => ({
+      [leadershipIds.founder]: 1,
+      [leadershipIds.president]: 2,
+      [leadershipIds.vicePresident]: 3,
+    }),
+    [leadershipIds]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await ApiService.getDepartments({ limit: 100, page: 1 });
+        const rows = Array.isArray(result?.data) ? result.data : [];
+        if (!cancelled && rows.length) {
+          const mapped = rows.map((d) => ({ id: d.department_id, name: d.name }));
+          setDepartments(mapped);
+
+          // Keep current selection if it still exists; otherwise pick first operational dept
+          setSelectedDepartment((prev) => {
+            if (mapped.some((d) => d.id === prev) || prev === 'president-vp') return prev;
+            return mapped.find((d) => !LEADERSHIP_NAMES.includes(d.name))?.id ?? mapped[0]?.id ?? prev;
+          });
+        }
+      } catch {
+        /* keep fallback departments */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -96,7 +147,7 @@ const Board = memo(() => {
         setLoading(true);
         const result = await ApiService.getBoard({ limit: 100, page: 1, ...seasonFilters });
         const rows = Array.isArray(result?.data) ? result.data : [];
-        const mapped = rows.map(mapApiMember);
+        const mapped = rows.map((row) => mapApiMember(row, leadershipIds));
         if (!cancelled) {
           setBoardMembers(mapped.length > 0 ? mapped : FALLBACK_BOARD);
         }
@@ -109,13 +160,17 @@ const Board = memo(() => {
     return () => {
       cancelled = true;
     };
-  }, [seasonFilters]);
+  }, [seasonFilters, leadershipIds]);
 
   const groupedMembers = useMemo(() => {
     let members = boardMembers;
     if (selectedDepartment !== null) {
       if (selectedDepartment === 'president-vp') {
-        members = boardMembers.filter((m) => m.department === 7 || m.department === 8);
+        members = boardMembers.filter(
+          (m) =>
+            m.department === leadershipIds.president ||
+            m.department === leadershipIds.vicePresident
+        );
       } else {
         members = boardMembers.filter((m) => m.department === selectedDepartment);
       }
@@ -142,11 +197,11 @@ const Board = memo(() => {
     });
 
     return groups;
-  }, [selectedDepartment, boardMembers]);
+  }, [selectedDepartment, boardMembers, leadershipIds]);
 
   const sortedDepartments = Object.entries(groupedMembers).sort(([a], [b]) => {
-    const orderA = DEPT_ORDER[a] || 999;
-    const orderB = DEPT_ORDER[b] || 999;
+    const orderA = deptOrder[a] || 999;
+    const orderB = deptOrder[b] || 999;
     return orderA !== 999 && orderB !== 999
       ? orderA - orderB
       : orderA !== 999
@@ -181,6 +236,7 @@ const Board = memo(() => {
       <BackButton to="/" label="Back to Home" />
       <BoardHeader />
       <DepartmentMenu
+        departments={departments}
         selectedDepartment={selectedDepartment}
         onSelectDepartment={setSelectedDepartment}
       />

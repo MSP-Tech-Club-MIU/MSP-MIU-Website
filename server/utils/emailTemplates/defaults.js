@@ -817,6 +817,47 @@ MSP MIU Team`,
 </html>`,
     ['studentName', 'courseName', 'feedbackFormUrl', 'linkedInPostUrl', 'githubCopilotUrl'],
     { courseName: 'Front-End Course' }
+  ),
+
+  course_available: def(
+    'course_available',
+    'Course available',
+    'system',
+    '{{courseTitle}} is now available - MSP Tech Club',
+    `Hi {{studentName}},
+
+Good news — {{courseTitle}} is now available!
+
+Open the course: {{courseUrl}}
+
+You're among the first to know because you registered your interest.
+
+Best regards,
+MSP MIU Team`,
+    `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{courseTitle}} is now available</title></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;background:#f4f4f4;">
+    <tr><td align="center" style="padding:20px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;background:#ffffff;border-radius:8px;">
+        <tr><td style="padding:30px 40px;background:linear-gradient(135deg,#031C35,#1D4F82);border-radius:8px 8px 0 0;">
+          <h1 style="margin:0;color:#fff;font-size:24px;">MSP Tech Club</h1>
+        </td></tr>
+        <tr><td style="padding:40px;">
+          <p style="color:#333;font-size:16px;line-height:1.6;">Hi {{studentName}},</p>
+          <p style="color:#333;font-size:16px;line-height:1.6;"><strong>{{courseTitle}}</strong> is now available. You're among the first to know because you registered your interest.</p>
+          <p style="text-align:center;margin:28px 0;"><a href="{{courseUrl}}" style="display:inline-block;padding:12px 24px;background:#0d7bd8;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Open course</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;background:#f9f9f9;border-radius:0 0 8px 8px;">
+          <p style="margin:0;color:#666;font-size:14px;">Best regards,<br><strong>MSP MIU Team</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    ['studentName', 'courseTitle', 'courseUrl']
   )
 };
 

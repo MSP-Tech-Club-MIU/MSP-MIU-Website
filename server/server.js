@@ -22,6 +22,7 @@ router.use("/site-content", require("./routes/siteContent"));
 router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));
 router.use("/events", require("./routes/events"));
+router.use("/courses", require("./routes/courses"));
 router.use("/competitions", require("./routes/competitions"));
 router.use("/teams", require("./routes/teams"));
 router.use("/submissions", require("./routes/submissions"));

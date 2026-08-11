@@ -1,27 +1,25 @@
 import React, { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { departments } from '../../data/departments';
+import { BOARD_POSITION_NAMES } from '../../data/departments';
 import './Board.css';
 
-const DepartmentMenu = memo(({ selectedDepartment, onSelectDepartment }) => {
+const HIDDEN_FROM_BOARD_MENU = new Set([...BOARD_POSITION_NAMES, 'Competitor']);
+
+const DepartmentMenu = memo(({ departments = [], selectedDepartment, onSelectDepartment }) => {
   const allDepartments = useMemo(() => {
-    // Get the specific departments for Founder, President and VP
-    const founder = departments.find(d => d.id === 9);
-
-    // Combine President (8) and VP (7) into one button
+    const founder = departments.find((d) => d.name === 'Founder');
     const presidentAndVp = { id: 'president-vp', name: 'President & VP' };
+    const otherDepartments = departments.filter((d) => !HIDDEN_FROM_BOARD_MENU.has(d.name));
 
-    // Filter out these three from the main list and add them at the beginning
-    const otherDepartments = departments.filter(d => ![7, 8, 9].includes(d.id));
-
-    // Build the menu: Founder, President & VP first, then others
     const menuItems = [];
     if (founder) menuItems.push(founder);
-    menuItems.push(presidentAndVp);
+    if (departments.some((d) => d.name === 'President' || d.name === 'Vice President')) {
+      menuItems.push(presidentAndVp);
+    }
     menuItems.push(...otherDepartments);
 
     return menuItems;
-  }, []);
+  }, [departments]);
 
   return (
     <motion.div
@@ -32,7 +30,6 @@ const DepartmentMenu = memo(({ selectedDepartment, onSelectDepartment }) => {
     >
       <div className="DepartmentMenu__container">
         {allDepartments.map((dept) => {
-          // Check if button should be active
           const isActive = selectedDepartment === dept.id;
 
           return (
@@ -52,4 +49,3 @@ const DepartmentMenu = memo(({ selectedDepartment, onSelectDepartment }) => {
 
 DepartmentMenu.displayName = 'DepartmentMenu';
 export default DepartmentMenu;
-

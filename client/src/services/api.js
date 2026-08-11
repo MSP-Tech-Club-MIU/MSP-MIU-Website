@@ -1743,10 +1743,11 @@ class ApiService {
   /**
    * Upload a file to R2 storage
    * @param {File} file - The file to upload
-   * @param {string} type - The upload type (assets, codes, events, images, mobile, slides)
+   * @param {string} type - The upload type (assets, codes, events, images, mobile, slides, courses)
+   * @param {Record<string, string|number>} [query] - Optional query (course_id, lesson_id, kind)
    * @returns {Promise<{success: boolean, url: string, key: string}>}
    */
-  static async uploadFile(file, type) {
+  static async uploadFile(file, type, query = {}) {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -1756,11 +1757,17 @@ class ApiService {
         throw new Error('Authentication required for file upload');
       }
 
-      const response = await fetch(`${API_BASE_URL}/upload/${type}`, {
+      const params = new URLSearchParams();
+      Object.entries(query || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') params.append(k, String(v));
+      });
+      const qs = params.toString();
+      const url = `${API_BASE_URL}/upload/${type}${qs ? `?${qs}` : ''}`;
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type - browser will set it with boundary for FormData
         },
         body: formData,
       });
@@ -1776,6 +1783,265 @@ class ApiService {
       console.error('Upload error:', error);
       throw error;
     }
+  }
+
+  // ===== COURSES API =====
+
+  static async getCourses(filters = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') queryParams.append(k, String(v));
+    });
+    const queryString = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/courses${queryString ? `?${queryString}` : ''}`, {
+      headers: this.getHeaders()
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch courses');
+    return result;
+  }
+
+  static async getAdminCourses(filters = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') queryParams.append(k, String(v));
+    });
+    const queryString = queryParams.toString();
+    const response = await fetch(`${API_BASE_URL}/courses/admin/list${queryString ? `?${queryString}` : ''}`, {
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch courses');
+    return result;
+  }
+
+  static async getCourseById(id, { admin = false } = {}) {
+    const url = admin
+      ? `${API_BASE_URL}/courses/${id}/admin`
+      : `${API_BASE_URL}/courses/${id}`;
+    const response = await fetch(url, { headers: this.getHeaders(admin) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch course');
+    return result.data || result;
+  }
+
+  static async createCourse(data) {
+    const response = await fetch(`${API_BASE_URL}/courses`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create course');
+    return result.data || result;
+  }
+
+  static async updateCourse(id, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update course');
+    return result.data || result;
+  }
+
+  static async updateCourseStatus(id, status) {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}/status`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ status })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update status');
+    return result;
+  }
+
+  static async deleteCourse(id) {
+    const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete course');
+    return result;
+  }
+
+  static async createCourseLesson(courseId, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create lesson');
+    return result.data || result;
+  }
+
+  static async updateCourseLesson(courseId, lessonId, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update lesson');
+    return result.data || result;
+  }
+
+  static async deleteCourseLesson(courseId, lessonId) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete lesson');
+    return result;
+  }
+
+  static async reorderCourseLessons(courseId, order) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons/reorder`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ order })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to reorder lessons');
+    return result;
+  }
+
+  static async createCourseMaterial(courseId, lessonId, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/materials`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create material');
+    return result.data || result;
+  }
+
+  static async updateCourseMaterial(courseId, lessonId, materialId, data) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/materials/${materialId}`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update material');
+    return result.data || result;
+  }
+
+  static async deleteCourseMaterial(courseId, lessonId, materialId) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/materials/${materialId}`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders(true)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete material');
+    return result;
+  }
+
+  static async enrollInCourse(courseId, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enroll`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      const err = new Error(result.error || 'Failed to enroll');
+      err.status = response.status;
+      err.data = result.data;
+      throw err;
+    }
+    return result;
+  }
+
+  static async markCourseLessonComplete(courseId, { token, lesson_id }) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/progress`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ token, lesson_id })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to mark complete');
+    return result.data || result;
+  }
+
+  static async getCourseMyProgress(courseId, token) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/my-progress?token=${encodeURIComponent(token)}`,
+      { headers: this.getHeaders() }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to get progress');
+    return result.data || result;
+  }
+
+  static async getCourseEnrollments(filters = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && k !== 'course_id') {
+        queryParams.append(k, String(v));
+      }
+    });
+    const qs = queryParams.toString();
+    const base = filters.course_id
+      ? `${API_BASE_URL}/courses/${filters.course_id}/enrollments`
+      : `${API_BASE_URL}/courses/admin/enrollments`;
+    const response = await fetch(`${base}${qs ? `?${qs}` : ''}`, {
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch enrollments');
+    return result;
+  }
+
+  static async updateCourseEnrollment(enrollmentId, data, courseId) {
+    const url = courseId
+      ? `${API_BASE_URL}/courses/${courseId}/enrollments/${enrollmentId}`
+      : `${API_BASE_URL}/courses/admin/enrollments/${enrollmentId}`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update enrollment');
+    return result.data || result;
+  }
+
+  static async deleteCourseEnrollment(enrollmentId, courseId) {
+    const url = courseId
+      ? `${API_BASE_URL}/courses/${courseId}/enrollments/${enrollmentId}`
+      : `${API_BASE_URL}/courses/admin/enrollments/${enrollmentId}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete enrollment');
+    return result;
+  }
+
+  static async exportCourseEnrollmentsCsv(courseId) {
+    const url = courseId
+      ? `${API_BASE_URL}/courses/${courseId}/enrollments/export`
+      : `${API_BASE_URL}/courses/admin/enrollments/export`;
+    const response = await fetch(url, { headers: this.getHeaders(true) });
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({}));
+      throw new Error(result.error || 'Failed to export CSV');
+    }
+    return response.blob();
   }
 
   // ===== COMPETITIONS API =====
