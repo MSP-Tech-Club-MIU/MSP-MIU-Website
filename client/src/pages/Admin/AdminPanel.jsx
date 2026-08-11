@@ -7,7 +7,7 @@ import {
     MdNotifications, MdHome, MdAdd,
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
-    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -24,6 +24,7 @@ import MediaAdminTab from './MediaAdminTab';
 import SiteContentAdminTab from './SiteContentAdminTab';
 import MembersAdminTab from './MembersAdminTab';
 import EventsAdminTab from './EventsAdminTab';
+import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
@@ -37,6 +38,7 @@ const ANNOUNCEMENT_DESC_MAX = 220;
 const ADMIN_TAB_TO_ROUTE = {
     dashboard: 'dashboard',
     events: 'events',
+    courses: 'courses',
     competitions: 'competitions',
     registrations: 'registrations',
     notifications: 'notifications',
@@ -56,6 +58,7 @@ const ADMIN_TAB_TO_ROUTE = {
 const ADMIN_ROUTE_TO_TAB = {
     dashboard: 'dashboard',
     events: 'events',
+    courses: 'courses',
     competitions: 'competitions',
     attendance: 'events',
     registrations: 'registrations',
@@ -174,6 +177,7 @@ const AdminPanel = () => {
     const fullNavItems = useMemo(() => [
         { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
         { key: 'events', label: 'Events', icon: <MdEvent /> },
+        { key: 'courses', label: 'Courses', icon: <MdMenuBook /> },
         { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
         { key: 'members', label: 'Members', icon: <MdPeople /> },
@@ -771,6 +775,13 @@ const AdminPanel = () => {
                     {accessLevel === 'full' && activeTab === 'events' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <EventsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {/* === COURSES === */}
+                    {accessLevel === 'full' && activeTab === 'courses' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <CoursesAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 

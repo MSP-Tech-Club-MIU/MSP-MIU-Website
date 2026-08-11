@@ -34,6 +34,11 @@ const AdminNotification = require('./AdminNotification');
 const SiteContent = require('./SiteContent');
 const Season = require('./Season');
 const EmailTemplate = require('./EmailTemplate');
+const Course = require('./Course');
+const CourseLesson = require('./CourseLesson');
+const CourseLessonMaterial = require('./CourseLessonMaterial');
+const CourseEnrollment = require('./CourseEnrollment');
+const CourseLessonProgress = require('./CourseLessonProgress');
 
 // Initialize models
 const models = {
@@ -69,7 +74,12 @@ const models = {
   AdminNotification,
   SiteContent,
   Season,
-  EmailTemplate
+  EmailTemplate,
+  Course,
+  CourseLesson,
+  CourseLessonMaterial,
+  CourseEnrollment,
+  CourseLessonProgress
 };
 
 // Set up associations
@@ -492,6 +502,57 @@ User.hasMany(AdminNotification, {
   as: 'adminNotifications'
 });
 
+// Course associations
+Course.hasMany(CourseLesson, {
+  foreignKey: 'course_id',
+  as: 'lessons',
+  onDelete: 'CASCADE'
+});
+CourseLesson.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseLesson.hasMany(CourseLessonMaterial, {
+  foreignKey: 'lesson_id',
+  as: 'materials',
+  onDelete: 'CASCADE'
+});
+CourseLessonMaterial.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
+Course.hasMany(CourseEnrollment, {
+  foreignKey: 'course_id',
+  as: 'enrollments',
+  onDelete: 'CASCADE'
+});
+CourseEnrollment.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseEnrollment.hasMany(CourseLessonProgress, {
+  foreignKey: 'enrollment_id',
+  as: 'lessonProgress',
+  onDelete: 'CASCADE'
+});
+CourseLessonProgress.belongsTo(CourseEnrollment, {
+  foreignKey: 'enrollment_id',
+  as: 'enrollment'
+});
+
+CourseLesson.hasMany(CourseLessonProgress, {
+  foreignKey: 'lesson_id',
+  as: 'progressEntries',
+  onDelete: 'CASCADE'
+});
+CourseLessonProgress.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
 // Season associations
 const seasonScoped = [
   { model: Board, as: 'boardMembers' },
@@ -502,7 +563,8 @@ const seasonScoped = [
   { model: Application, as: 'applications' },
   { model: Member, as: 'members' },
   { model: AdminNotification, as: 'adminNotificationsBySeason' },
-  { model: User, as: 'users' }
+  { model: User, as: 'users' },
+  { model: Course, as: 'courses' }
 ];
 
 seasonScoped.forEach(({ model, as }) => {

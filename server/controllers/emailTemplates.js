@@ -224,6 +224,11 @@ const SAMPLE_VARS = {
     feedbackFormUrl: 'https://forms.gle/sample',
     linkedInPostUrl: 'https://www.linkedin.com/feed/',
     githubCopilotUrl: 'https://learn.microsoft.com/training/paths/copilot/'
+  },
+  course_available: {
+    studentName: 'Sample Student',
+    courseTitle: 'Sample Course',
+    courseUrl: 'https://msp-miu.tech/courses/1?token=sample'
   }
 };
 

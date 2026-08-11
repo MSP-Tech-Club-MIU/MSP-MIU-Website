@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
-import { MdGroups, MdEmojiEvents, MdFeedback } from 'react-icons/md';
+import { MdGroups, MdEmojiEvents, MdFeedback, MdMenuBook } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
@@ -203,6 +203,7 @@ const Navbar = memo(() => {
     const primary = [
       { to: '/', label: 'Home', icon: <FaHome /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
+      { to: '/courses', label: 'Courses', icon: <MdMenuBook /> },
       { to: '/competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
     ];
     const extended = [

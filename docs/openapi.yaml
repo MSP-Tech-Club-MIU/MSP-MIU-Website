@@ -63,6 +63,8 @@ tags:
     name: AndroidApp
   -
     name: CompetitionAnnouncements
+  -
+    name: courses
 components:
   securitySchemes:
     bearerAuth:
@@ -1745,6 +1747,471 @@ paths:
       responses:
         '200':
           description: Selected
+  /courses:
+    get:
+      summary: 'Get /courses'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+    post:
+      summary: 'Create/submit /courses'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}':
+    get:
+      summary: 'Get /courses/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: 'Update /courses/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/admin':
+    get:
+      summary: 'Get /courses/{id}/admin'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/enroll':
+    post:
+      summary: 'Create/submit /courses/{id}/enroll'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/courses/{id}/enrollments':
+    get:
+      summary: 'Get /courses/{id}/enrollments'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/enrollments/{enrollmentId}':
+    put:
+      summary: 'Update /courses/{id}/enrollments/{enrollmentId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/{id}/enrollments/{enrollmentId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/enrollments/export':
+    get:
+      summary: 'Get /courses/{id}/enrollments/export'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons':
+    post:
+      summary: 'Create/submit /courses/{id}/lessons'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/{lessonId}':
+    put:
+      summary: 'Update /courses/{id}/lessons/{lessonId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/{id}/lessons/{lessonId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/{lessonId}/materials':
+    post:
+      summary: 'Create/submit /courses/{id}/lessons/{lessonId}/materials'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/{lessonId}/materials/{materialId}':
+    put:
+      summary: 'Update /courses/{id}/lessons/{lessonId}/materials/{materialId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/{id}/lessons/{lessonId}/materials/{materialId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: materialId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/reorder':
+    put:
+      summary: 'Update /courses/{id}/lessons/reorder'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/my-progress':
+    get:
+      summary: 'Get /courses/{id}/my-progress'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/courses/{id}/progress':
+    post:
+      summary: 'Create/submit /courses/{id}/progress'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+  '/courses/{id}/status':
+    put:
+      summary: 'Update /courses/{id}/status'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  /courses/admin/enrollments:
+    get:
+      summary: 'Get /courses/admin/enrollments'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      security:
+        -
+          bearerAuth: []
+  '/courses/admin/enrollments/{enrollmentId}':
+    put:
+      summary: 'Update /courses/admin/enrollments/{enrollmentId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/admin/enrollments/{enrollmentId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  /courses/admin/enrollments/export:
+    get:
+      summary: 'Get /courses/admin/enrollments/export'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      security:
+        -
+          bearerAuth: []
+  /courses/admin/list:
+    get:
+      summary: 'Get /courses/admin/list'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      security:
+        -
+          bearerAuth: []
   /departments:
     get:
       tags:

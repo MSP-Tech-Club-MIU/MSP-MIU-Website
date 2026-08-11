@@ -8,6 +8,7 @@ const { parsePagination, paginationMeta, paginateArray } = require('../utils/pag
 const CLOUD_DIRECTORY_PREFIXES = [
   'Assets/',
   'Codes/',
+  'Courses/',
   'Events_Thumbnails/',
   'Images/',
   'Mobile Application/',
