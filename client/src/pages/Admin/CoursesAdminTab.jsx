@@ -419,77 +419,136 @@ export default function CoursesAdminTab({ onAlert }) {
     }
   };
 
+  const busy = saving || uploadingImage;
+  const previewThumb = form.thumbnail_url?.trim() || mspLogo;
+
   const modal = modalOpen
     ? createPortal(
-        <div className="AdminPanel__modalOverlay" onClick={closeModal}>
-          <div className="AdminPanel__modal" onClick={(e) => e.stopPropagation()}>
-            <div className="AdminPanel__modalHeader">
-              <h3>{editing ? 'Edit course' : 'New course'}</h3>
-              <button type="button" className="AdminPanel__modalClose" onClick={closeModal}>
+        <div
+          className="AdminPanel__modalOverlay SponsorsAdmin__overlay"
+          onClick={closeModal}
+          role="presentation"
+        >
+          <div
+            className="AdminPanel__modalContent AdminPanel__modalContent--large SponsorsAdmin__modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="courses-modal-title"
+          >
+            <div className="AdminPanel__modalHeader SponsorsAdmin__modalHeader">
+              <div>
+                <h3 id="courses-modal-title">{editing ? 'Edit course' : 'New course'}</h3>
+                <p className="SponsorsAdmin__modalSub">
+                  {editing
+                    ? `Updating ${editing.title}`
+                    : 'Create a course, then add lessons and materials from the content editor'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="AdminPanel__modalClose"
+                onClick={closeModal}
+                aria-label="Close"
+                disabled={busy}
+              >
                 <MdClose />
               </button>
             </div>
-            <div className="AdminPanel__modalBody">
-              <label className="AdminPanel__field">
-                <span>Title</span>
-                <input
-                  value={form.title}
-                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-                />
-              </label>
-              <label className="AdminPanel__field">
-                <span>Description</span>
-                <textarea
-                  rows={4}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </label>
-              <label className="AdminPanel__field">
-                <span>Status</span>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                >
-                  {STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-              </label>
-              <div className="AdminPanel__field">
-                <span>Thumbnail</span>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div className="SponsorsAdmin__rowLogo" style={{ width: 72, height: 72 }}>
-                    {form.thumbnail_url ? (
-                      <img src={form.thumbnail_url} alt="" />
-                    ) : (
-                      <MdImage />
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={uploadingImage || saving}
-                  >
-                    <MdCloudUpload style={{ marginRight: 4 }} />
-                    {uploadingImage ? 'Uploading…' : 'Upload'}
-                  </button>
+
+            <div className="SponsorsAdmin__body">
+              <div className="SponsorsAdmin__logoPane">
+                <div className="SponsorsAdmin__logoPreview">
+                  {form.thumbnail_url ? (
+                    <img src={previewThumb} alt="" />
+                  ) : (
+                    <div className="SponsorsAdmin__logoPlaceholder">
+                      <MdImage size={32} />
+                      <span>No thumbnail</span>
+                    </div>
+                  )}
+                </div>
+                <label className="SponsorsAdmin__fileBtn">
+                  <MdCloudUpload />
+                  {uploadingImage ? 'Uploading…' : 'Upload thumbnail'}
                   <input
                     ref={imageInputRef}
                     type="file"
                     accept="image/*"
-                    hidden
+                    disabled={busy}
                     onChange={onThumbPick}
                   />
+                </label>
+                {form.thumbnail_url ? (
+                  <button
+                    type="button"
+                    className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                    style={{ width: '100%', marginTop: '0.5rem' }}
+                    disabled={busy}
+                    onClick={() => setForm((f) => ({ ...f, thumbnail_url: '' }))}
+                  >
+                    Remove thumbnail
+                  </button>
+                ) : (
+                  <p className="SponsorsAdmin__hint">
+                    Optional. Upload after setting a title (creates the course first if needed).
+                  </p>
+                )}
+              </div>
+
+              <div className="SponsorsAdmin__formPane">
+                <div className="AdminPanel__formGrid SponsorsAdmin__formGrid">
+                  <label className="AdminPanel__fullWidth">
+                    Title *
+                    <input
+                      value={form.title}
+                      onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                      placeholder="e.g. Intro to Web Development"
+                      autoFocus
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className="AdminPanel__fullWidth">
+                    Description
+                    <textarea
+                      rows={4}
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="What students will learn…"
+                      disabled={busy}
+                    />
+                  </label>
+                  <label className="AdminPanel__fullWidth">
+                    Status
+                    <select
+                      value={form.status}
+                      onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
+                      disabled={busy}
+                    >
+                      {STATUS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="AdminPanel__fullWidth">
+                    Thumbnail URL
+                    <input
+                      value={form.thumbnail_url}
+                      onChange={(e) => setForm((f) => ({ ...f, thumbnail_url: e.target.value }))}
+                      placeholder="https://…/thumbnail.jpg"
+                      disabled={busy}
+                    />
+                  </label>
                 </div>
               </div>
             </div>
-            <div className="AdminPanel__modalFooter">
+
+            <div className="AdminPanel__modalActions SponsorsAdmin__actions">
               <button
                 type="button"
                 className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
                 onClick={closeModal}
+                disabled={busy}
               >
                 Cancel
               </button>
@@ -497,7 +556,7 @@ export default function CoursesAdminTab({ onAlert }) {
                 type="button"
                 className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
                 onClick={saveCourse}
-                disabled={saving}
+                disabled={busy}
               >
                 {saving ? 'Saving…' : editing ? 'Save changes' : 'Create course'}
               </button>
@@ -658,161 +717,191 @@ export default function CoursesAdminTab({ onAlert }) {
           <div className="AdminPanel__empty"><p>Loading…</p></div>
         ) : (
           <>
-            <p style={{ color: 'rgba(255,255,255,.7)', marginBottom: 16 }}>
+            <p className="SponsorsAdmin__sectionSub" style={{ marginBottom: 16 }}>
               Status: <strong>{courseDetail.status}</strong>
               {courseDetail.notify_sent_at
                 ? ` · Notify sent ${new Date(courseDetail.notify_sent_at).toLocaleString()}`
                 : ''}
             </p>
 
-            <div style={{ display: 'grid', gap: 12, marginBottom: 24, maxWidth: 520 }}>
-              <h3 style={{ margin: 0, color: '#E8F4FC' }}>Add lesson</h3>
-              <input
-                placeholder="Lesson title"
-                value={lessonForm.title}
-                onChange={(e) => setLessonForm((f) => ({ ...f, title: e.target.value }))}
-                className="AdminPanel__input"
-                style={{ padding: 10, borderRadius: 8 }}
-              />
-              <textarea
-                placeholder="Description (optional)"
-                rows={2}
-                value={lessonForm.description}
-                onChange={(e) => setLessonForm((f) => ({ ...f, description: e.target.value }))}
-                style={{ padding: 10, borderRadius: 8 }}
-              />
-              <button type="button" className="AdminPanel__addBtn" onClick={addLesson} style={{ width: 'fit-content' }}>
-                <MdAdd /> Add lesson
-              </button>
+            <div className="AdminPanel__teamForm">
+              <h4>Add lesson</h4>
+              <div className="AdminPanel__formGrid SponsorsAdmin__formGrid">
+                <label className="AdminPanel__fullWidth">
+                  Lesson title *
+                  <input
+                    placeholder="e.g. Welcome & Overview"
+                    value={lessonForm.title}
+                    onChange={(e) => setLessonForm((f) => ({ ...f, title: e.target.value }))}
+                  />
+                </label>
+                <label className="AdminPanel__fullWidth">
+                  Description
+                  <textarea
+                    rows={2}
+                    placeholder="Optional short description"
+                    value={lessonForm.description}
+                    onChange={(e) => setLessonForm((f) => ({ ...f, description: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="AdminPanel__modalActions" style={{ justifyContent: 'flex-start', marginTop: 4 }}>
+                <button type="button" className="AdminPanel__addBtn" onClick={addLesson}>
+                  <MdAdd /> Add lesson
+                </button>
+              </div>
             </div>
 
-            {(courseDetail.lessons || []).map((lesson) => (
-              <div
-                key={lesson.lesson_id}
-                style={{
-                  border: '1px solid rgba(255,255,255,.12)',
-                  borderRadius: 12,
-                  padding: 16,
-                  marginBottom: 16
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div>
-                    <strong style={{ color: '#E8F4FC' }}>{lesson.title}</strong>
-                    <div style={{ opacity: 0.7, fontSize: '.85rem' }}>
-                      lesson-{lesson.lesson_id} · {lesson.is_published ? 'published' : 'hidden'}
+            {(courseDetail.lessons || []).map((lesson) => {
+              const isActiveLesson = materialForm.lesson_id === lesson.lesson_id;
+              const matType = isActiveLesson ? materialForm.material_type : 'youtube';
+              return (
+                <div key={lesson.lesson_id} className="AdminPanel__teamForm">
+                  <div className="AdminPanel__sectionHeader" style={{ marginBottom: 12, paddingBottom: 0 }}>
+                    <div>
+                      <h4 style={{ margin: 0 }}>{lesson.title}</h4>
+                      <p className="SponsorsAdmin__modalSub">
+                        lesson-{lesson.lesson_id} · {lesson.is_published ? 'published' : 'hidden'}
+                      </p>
                     </div>
+                    <button
+                      type="button"
+                      className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                      onClick={() => removeLesson(lesson)}
+                    >
+                      <MdDelete /> Delete lesson
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                    onClick={() => removeLesson(lesson)}
-                  >
-                    <MdDelete /> Delete lesson
-                  </button>
-                </div>
 
-                <ul style={{ margin: '12px 0', paddingLeft: 18, color: '#C5DAE9' }}>
-                  {(lesson.materials || []).map((m) => (
-                    <li key={m.material_id} style={{ marginBottom: 6 }}>
-                      [{m.material_type}] {m.title}
-                      {m.youtube_url ? ` — ${m.youtube_url}` : ''}
-                      {m.file_url ? (
-                        <>
-                          {' '}
-                          <a href={m.file_url} target="_blank" rel="noreferrer">file</a>
-                        </>
-                      ) : null}
-                      {' '}
-                      <button
-                        type="button"
-                        onClick={() => removeMaterial(lesson.lesson_id, m)}
-                        style={{ marginLeft: 8, cursor: 'pointer' }}
-                      >
-                        remove
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-
-                <div style={{ display: 'grid', gap: 8, maxWidth: 560 }}>
-                  <strong style={{ color: '#8EC2F0', fontSize: '.85rem' }}>Add material to this lesson</strong>
-                  <select
-                    value={materialForm.lesson_id === lesson.lesson_id ? materialForm.material_type : 'youtube'}
-                    onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
-                    onChange={(e) =>
-                      setMaterialForm((f) => ({
-                        ...f,
-                        lesson_id: lesson.lesson_id,
-                        material_type: e.target.value
-                      }))
-                    }
-                    style={{ padding: 8, borderRadius: 8 }}
-                  >
-                    {MATERIAL_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  <input
-                    placeholder="Title"
-                    value={materialForm.lesson_id === lesson.lesson_id ? materialForm.title : ''}
-                    onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
-                    onChange={(e) =>
-                      setMaterialForm((f) => ({
-                        ...f,
-                        lesson_id: lesson.lesson_id,
-                        title: e.target.value
-                      }))
-                    }
-                    style={{ padding: 8, borderRadius: 8 }}
-                  />
-                  {(materialForm.lesson_id === lesson.lesson_id
-                    ? materialForm.material_type
-                    : 'youtube') === 'youtube' ? (
-                    <input
-                      placeholder="YouTube URL"
-                      value={materialForm.lesson_id === lesson.lesson_id ? materialForm.youtube_url : ''}
-                      onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
-                      onChange={(e) =>
-                        setMaterialForm((f) => ({
-                          ...f,
-                          lesson_id: lesson.lesson_id,
-                          youtube_url: e.target.value,
-                          material_type: 'youtube'
-                        }))
-                      }
-                      style={{ padding: 8, borderRadius: 8 }}
-                    />
-                  ) : (
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => {
-                          setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }));
-                          materialFileRef.current?.click();
-                        }}
-                      >
-                        <MdAttachFile /> Upload file
-                      </button>
-                      {materialForm.lesson_id === lesson.lesson_id && materialForm.file_url ? (
-                        <span style={{ fontSize: '.85rem', color: '#8EC2F0' }}>
-                          Ready: {materialForm.file_name || 'file'}
-                        </span>
-                      ) : null}
+                  {(lesson.materials || []).length > 0 ? (
+                    <div className="AdminPanel__tableWrap" style={{ marginBottom: 14 }}>
+                      <table className="AdminPanel__table SponsorsAdmin__table">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Title</th>
+                            <th>Source</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(lesson.materials || []).map((m) => (
+                            <tr key={m.material_id}>
+                              <td>{m.material_type}</td>
+                              <td>{m.title}</td>
+                              <td>
+                                {m.youtube_url ? (
+                                  <span className="SponsorsAdmin__rowTagline">{m.youtube_url}</span>
+                                ) : m.file_url ? (
+                                  <a href={m.file_url} target="_blank" rel="noreferrer">Open file</a>
+                                ) : (
+                                  '—'
+                                )}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                                  onClick={() => removeMaterial(lesson.lesson_id, m)}
+                                >
+                                  <MdDelete /> Remove
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
+                  ) : (
+                    <p className="SponsorsAdmin__hint" style={{ marginBottom: 12 }}>No materials yet.</p>
                   )}
-                  <button
-                    type="button"
-                    className="AdminPanel__addBtn"
-                    style={{ width: 'fit-content' }}
-                    onClick={() => addMaterial(lesson.lesson_id)}
-                  >
-                    <MdAdd /> Add material
-                  </button>
+
+                  <h4 style={{ marginBottom: 8 }}>Add material</h4>
+                  <div className="AdminPanel__formGrid SponsorsAdmin__formGrid">
+                    <label>
+                      Type
+                      <select
+                        value={matType}
+                        onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
+                        onChange={(e) =>
+                          setMaterialForm((f) => ({
+                            ...f,
+                            lesson_id: lesson.lesson_id,
+                            material_type: e.target.value
+                          }))
+                        }
+                      >
+                        {MATERIAL_TYPES.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Title *
+                      <input
+                        placeholder="Material title"
+                        value={isActiveLesson ? materialForm.title : ''}
+                        onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
+                        onChange={(e) =>
+                          setMaterialForm((f) => ({
+                            ...f,
+                            lesson_id: lesson.lesson_id,
+                            title: e.target.value
+                          }))
+                        }
+                      />
+                    </label>
+                    {matType === 'youtube' ? (
+                      <label className="AdminPanel__fullWidth">
+                        YouTube URL
+                        <input
+                          placeholder="https://www.youtube.com/watch?v=…"
+                          value={isActiveLesson ? materialForm.youtube_url : ''}
+                          onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
+                          onChange={(e) =>
+                            setMaterialForm((f) => ({
+                              ...f,
+                              lesson_id: lesson.lesson_id,
+                              youtube_url: e.target.value,
+                              material_type: 'youtube'
+                            }))
+                          }
+                        />
+                      </label>
+                    ) : (
+                      <div className="AdminPanel__fullWidth" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                          onClick={() => {
+                            setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }));
+                            materialFileRef.current?.click();
+                          }}
+                        >
+                          <MdAttachFile /> Upload file
+                        </button>
+                        {isActiveLesson && materialForm.file_url ? (
+                          <span className="SponsorsAdmin__hint">
+                            Ready: {materialForm.file_name || 'file'}
+                          </span>
+                        ) : (
+                          <span className="SponsorsAdmin__hint">PDF, zip, code, docs…</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="AdminPanel__modalActions" style={{ justifyContent: 'flex-start' }}>
+                    <button
+                      type="button"
+                      className="AdminPanel__addBtn"
+                      onClick={() => addMaterial(lesson.lesson_id)}
+                    >
+                      <MdAdd /> Add material
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             <input
               ref={materialFileRef}
