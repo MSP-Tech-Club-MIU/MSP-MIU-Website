@@ -50,7 +50,7 @@ const DEFAULTS = {
   seo: {
     siteUrl: 'https://msp-miu.tech',
     twitterHandle: '@mspmiu',
-    defaultOgImage: ''
+    defaultOgImage: 'https://msp-miu.tech/og-image.png'
   },
   imagine_cup: {
     enabled: true,

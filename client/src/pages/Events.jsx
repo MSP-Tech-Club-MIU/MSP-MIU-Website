@@ -191,7 +191,7 @@ const Events = () => {
         title="Events & Sessions"
         description="Discover upcoming MSP Tech Club events, workshops, sessions, and hackathons at MIU. Join us for tech talks, hands-on workshops, networking events, and more."
         keywords="MSP events, tech workshops, hackathons, MIU events, technology sessions, student tech events, Microsoft workshops"
-        url="https://msp-miu.tech/events"
+        url="/events"
         structuredData={structuredData}
       />
       <div className="EventsPage__container">

@@ -76,6 +76,7 @@ export default function Courses() {
       <SEO
         title="Courses | MSP Tech Club"
         description="Browse MSP Tech Club courses — lessons, videos, and materials."
+        url="/courses"
       />
       <div className="CoursesPage__container">
         <BackButton />

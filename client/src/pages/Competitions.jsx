@@ -174,7 +174,8 @@ const Competitions = () => {
         title="Competitions"
         description="Participate in MSP Tech Club competitions and challenges. Showcase your skills, compete with peers, and win prizes."
         keywords="MSP competitions, tech challenges, coding competitions, hackathons, MIU competitions"
-        structuredData={JSON.stringify(structuredData)}
+        url="/competitions"
+        structuredData={structuredData}
       />
 
       <div className="CompetitionsPage__container">

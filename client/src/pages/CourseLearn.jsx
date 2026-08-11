@@ -171,7 +171,7 @@ export default function CourseLearn() {
 
   return (
     <div className="CourseDetails CourseLearn">
-      <SEO title={`${course.title} — Lessons | MSP Courses`} description={course.description || ''} />
+      <SEO title={`${course.title} — Lessons | MSP Courses`} description={course.description || ''} noindex />
       <div className="CourseDetails__container">
         <BackButton to={`/courses/${courseId}`} label="Course info" />
         <header className="CourseLearn__header">

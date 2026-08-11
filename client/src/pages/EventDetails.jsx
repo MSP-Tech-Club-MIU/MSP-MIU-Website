@@ -20,6 +20,7 @@ import {
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import SEO from '../components/SEO';
 
 import mspLogo from '../assets/Images/msp-logo.png';
 
@@ -242,9 +243,48 @@ const EventDetails = () => {
   }
 
   const imageSrc = getImageSrc(event.image_url);
+  const absoluteImage =
+    imageSrc && (imageSrc.startsWith('http://') || imageSrc.startsWith('https://'))
+      ? imageSrc
+      : imageSrc
+        ? `https://msp-miu.tech${imageSrc.startsWith('/') ? imageSrc : `/${imageSrc}`}`
+        : undefined;
+  const eventStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: event.name,
+    description: event.description || `Join ${event.name} with MSP Tech Club at MIU.`,
+    startDate: event.event_date,
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    eventStatus: 'https://schema.org/EventScheduled',
+    image: absoluteImage ? [absoluteImage] : undefined,
+    location: {
+      '@type': 'Place',
+      name: event.place || 'Misr International University',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Cairo',
+        addressCountry: 'EG'
+      }
+    },
+    organizer: {
+      '@type': 'Organization',
+      name: 'MSP Tech Club — MIU',
+      url: 'https://msp-miu.tech'
+    }
+  };
 
   return (
     <section className="EventDetailsPage">
+      <SEO
+        title={event.name}
+        description={event.description || `Join ${event.name} with MSP Tech Club at Misr International University.`}
+        keywords={`MSP event, ${event.name}, ${event.category || 'event'}, MIU`}
+        url={`/events/${event.event_id}`}
+        image={absoluteImage}
+        type="article"
+        structuredData={eventStructuredData}
+      />
       <div className="EventDetailsPage__container">
         <BackButton to="/events" label="Back to Events" />
 

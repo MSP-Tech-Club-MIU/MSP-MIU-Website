@@ -223,7 +223,7 @@ function QuizTakeFlow({ quizId, userId, stepParam }) {
 
   return (
     <section className="QuizTake">
-      <SEO title={`${quiz?.title || 'Quiz'} — Question ${currentStep}`} description="Take the quiz" />
+      <SEO title={`${quiz?.title || 'Quiz'} — Question ${currentStep}`} description="Take the quiz" noindex />
       <div className="QuizTake__container">
         <div className="QuizTake__top">
           <button type="button" className="QuizTake__back" onClick={goBackSummary}>

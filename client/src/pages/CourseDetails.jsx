@@ -178,7 +178,14 @@ export default function CourseDetails() {
 
   return (
     <div className="CourseDetails">
-      <SEO title={`${course.title} | MSP Courses`} description={course.description || ''} />
+      <SEO
+        title={`${course.title} | MSP Courses`}
+        description={course.description || `Learn ${course.title} with MSP Tech Club at MIU.`}
+        keywords={`MSP course, ${course.title}, MIU`}
+        url={`/courses/${course.course_id || courseId}`}
+        image={course.thumbnail_url || undefined}
+        type="article"
+      />
       <div className="CourseDetails__container">
         <BackButton to="/courses" />
 
