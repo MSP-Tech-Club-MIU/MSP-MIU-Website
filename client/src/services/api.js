@@ -1965,6 +1965,21 @@ class ApiService {
     return result;
   }
 
+  static async enrollInCourseWithAccount(courseId) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enroll/me`, {
+      method: 'POST',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      const err = new Error(result.error || 'Failed to enroll with account');
+      err.status = response.status;
+      err.data = result.data;
+      throw err;
+    }
+    return result;
+  }
+
   static async markCourseLessonComplete(courseId, { token, lesson_id }) {
     const response = await fetch(`${API_BASE_URL}/courses/${courseId}/progress`, {
       method: 'POST',

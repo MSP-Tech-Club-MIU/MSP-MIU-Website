@@ -582,6 +582,103 @@ const enrollInCourse = async (req, res) => {
 };
 
 /**
+ * POST /courses/:id/enroll/me — enroll using the logged-in MSP account profile.
+ */
+const enrollWithAccount = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    if (!['coming_soon', 'published'].includes(course.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Registration is not open for this course'
+      });
+    }
+
+    const { User, Member } = require('../models');
+    const user = await User.findByPk(req.user.user_id, {
+      attributes: ['user_id', 'full_name', 'email', 'university_id']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const email = String(user.email || '').trim().toLowerCase();
+    const university_id = String(user.university_id || '').trim();
+    const full_name = String(user.full_name || '').trim() || university_id || email;
+
+    if (!email || !university_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Your MSP account is missing email or university ID. Update your profile and try again.'
+      });
+    }
+
+    const existing = await CourseEnrollment.findOne({
+      where: {
+        course_id: course.course_id,
+        [Op.or]: [{ university_id }, { email }]
+      }
+    });
+    if (existing) {
+      return res.json({
+        success: true,
+        message: 'Already registered with your MSP account',
+        data: {
+          enrollment_id: existing.enrollment_id,
+          access_token: existing.access_token,
+          status: existing.status,
+          from_account: true
+        }
+      });
+    }
+
+    let phone_number = 'MSP-account';
+    try {
+      const member = await Member.findOne({
+        where: { user_id: user.user_id },
+        attributes: ['phone_number'],
+        order: [['member_id', 'DESC']]
+      });
+      if (member?.phone_number) phone_number = String(member.phone_number).trim();
+    } catch {
+      /* optional */
+    }
+
+    const enrollment = await CourseEnrollment.create({
+      course_id: course.course_id,
+      full_name,
+      email,
+      phone_number,
+      university_id,
+      status: course.status === 'published' ? 'enrolled' : 'preordered',
+      access_token: makeAccessToken(),
+      attended: false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: course.status === 'coming_soon'
+        ? 'You will be notified when the course is available.'
+        : 'Enrolled with your MSP account',
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        access_token: enrollment.access_token,
+        status: enrollment.status,
+        from_account: true
+      }
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ success: false, error: 'Already registered for this course' });
+    }
+    console.error('enrollWithAccount:', error);
+    res.status(500).json({ success: false, error: 'Failed to enroll with account' });
+  }
+};
+
+/**
  * POST /courses/:id/progress  body: { token, lesson_id }
  */
 const markLessonComplete = async (req, res) => {
@@ -863,6 +960,7 @@ module.exports = {
   updateMaterial,
   deleteMaterial,
   enrollInCourse,
+  enrollWithAccount,
   markLessonComplete,
   getMyProgress,
   listEnrollments,

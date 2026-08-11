@@ -2543,20 +2543,29 @@ body.admin-panel-active .SiteLayout__main {
 }
 
 .SponsorsAdmin__formGrid input,
+.SponsorsAdmin__formGrid select,
 .SponsorsAdmin__formGrid textarea {
   width: 100%;
   box-sizing: border-box;
   border-radius: 10px;
   padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(8, 20, 36, 0.65);
+  color: inherit;
+  font: inherit;
 }
 
 .SponsorsAdmin__formGrid input:focus,
+.SponsorsAdmin__formGrid select:focus,
 .SponsorsAdmin__formGrid textarea:focus {
   outline: none;
   border-color: rgba(74, 166, 255, 0.45);
   box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.12);
+}
+
+.SponsorsAdmin__formGrid select option {
+  background-color: #091a2c;
+  color: #eaf2ff;
 }
 
 .SponsorsAdmin__formGrid .AdminPanel__jsonEditor {

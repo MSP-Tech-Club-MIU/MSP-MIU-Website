@@ -18,6 +18,7 @@ const {
   updateMaterial,
   deleteMaterial,
   enrollInCourse,
+  enrollWithAccount,
   markLessonComplete,
   getMyProgress,
   listEnrollments,
@@ -31,6 +32,7 @@ const admin = [authenticateToken, verifyRole('admin', 'board')];
 // Public
 router.get('/', listCourses);
 router.get('/:id/my-progress', getMyProgress);
+router.post('/:id/enroll/me', authenticateToken, enrollWithAccount);
 router.post('/:id/enroll', enrollInCourse);
 router.post('/:id/progress', markLessonComplete);
 

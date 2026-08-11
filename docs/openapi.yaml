@@ -1847,6 +1847,24 @@ paths:
           required: true
           schema:
             type: string
+  '/courses/{id}/enroll/me':
+    post:
+      summary: 'Create/submit /courses/{id}/enroll/me'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/courses/{id}/enrollments':
     get:
       summary: 'Get /courses/{id}/enrollments'

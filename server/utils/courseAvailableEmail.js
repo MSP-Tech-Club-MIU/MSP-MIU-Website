@@ -9,7 +9,7 @@ function frontendBaseUrl() {
  * @returns {Promise<{ success: boolean, error?: string }>}
  */
 async function sendCourseAvailableEmail(enrollment, course, sendEmail) {
-  const courseUrl = `${frontendBaseUrl()}/courses/${course.course_id}?token=${encodeURIComponent(enrollment.access_token)}`;
+  const courseUrl = `${frontendBaseUrl()}/courses/${course.course_id}/learn?token=${encodeURIComponent(enrollment.access_token)}`;
   const rendered = await renderTemplate('course_available', {
     studentName: enrollment.full_name || 'there',
     courseTitle: course.title || 'Course',

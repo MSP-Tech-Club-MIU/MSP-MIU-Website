@@ -203,18 +203,100 @@
   font-size: 1.05rem;
 }
 
-.CourseDetails__formGrid {
-  display: grid;
-  gap: 10px;
+.CourseDetails__formLead {
+  margin: 0 0 14px;
+  color: #A8C2D6;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.CourseDetails__loginHint {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(3, 169, 244, 0.1);
+  border: 1px solid rgba(3, 169, 244, 0.28);
+  color: #C5DAE9;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.CourseDetails__loginHint a {
+  color: #8EC2F0;
+  font-weight: 600;
+}
+
+.CourseDetails__accountBox .CourseDetails__viewBtn {
+  margin-top: 4px;
+}
+
+.CourseDetails__formGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(197, 218, 233, 0.75);
 }
 
 .CourseDetails__formGrid input {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, .15);
-  background: rgba(0, 0, 0, .25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.25);
   color: #E8F4FC;
+  font: inherit;
+}
+
+.CourseDetails__formGrid input:focus {
+  outline: none;
+  border-color: rgba(3, 169, 244, 0.45);
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.12);
+}
+
+.CourseDetails__viewWrap {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.CourseDetails__viewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1D4F82, #03A9F4);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 28px rgba(3, 169, 244, 0.25);
+}
+
+.CourseDetails__viewBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(3, 169, 244, 0.35);
+}
+
+.CourseLearn__header {
+  margin-bottom: 24px;
+}
+
+.CourseLearn__header h1 {
+  margin: 0 0 8px;
+  color: #E8F4FC;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.CourseLearn__header p {
+  margin: 0;
+  color: #A8C2D6;
 }
 
 .CourseDetails__form button {
