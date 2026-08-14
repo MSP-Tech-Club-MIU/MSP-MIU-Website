@@ -34,6 +34,8 @@ Defined in [`AppRouter.jsx`](../client/src/AppRouter.jsx) (lazy-loaded; most wra
 | `/become-member` | Applications |
 | `/events`, `/events/:id` | Events |
 | `/sponsors` | Sponsors |
+| `/privacy` | Privacy Policy (CMS: `privacy_policy`) |
+| `/faqs` | FAQs (CMS: `faqs`; editable in Admin → Site content) |
 | `/suggestions` | Suggestions |
 | `/leaderboard` | Leaderboard |
 | `/exercises` | Exercises |

@@ -15,8 +15,10 @@ Edit JSON sections that power the public site:
 | Imagine Cup | Home Imagine Cup block |
 | Gallery | Gallery titles |
 | Lookups | Faculties / form dropdowns on Become Member |
+| Privacy Policy | Public `/privacy` page (structured form editor) |
+| FAQs | Public `/faqs` page — add, edit, reorder, or delete Q&A items |
 
-Use **Reset** on a key only if you want factory defaults from the server.
+Privacy Policy and FAQs open a **form editor** by default (with optional Raw JSON). Use **Reset** on a key only if you want factory defaults from the server.
 
 ## Media
 

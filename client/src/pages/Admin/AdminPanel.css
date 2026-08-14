@@ -135,13 +135,35 @@ body.admin-panel-active .SiteLayout__main {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 4px;
+    gap: 12px;
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(74, 166, 255, 0.25) transparent;
+}
+
+.AdminPanel__navGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-width: 0;
+}
+
+.AdminPanel__navCategory {
+    margin: 0;
+    padding: 4px 12px 2px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(197, 218, 233, 0.38);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
 }
 
 .AdminPanel__sidebarNav::-webkit-scrollbar {
@@ -260,7 +282,8 @@ body.admin-panel-active .SiteLayout__main {
 }
 
 .AdminPanel__sidebar--collapsed .AdminPanel__sidebarBrandText,
-.AdminPanel__sidebar--collapsed .AdminPanel__navLabel {
+.AdminPanel__sidebar--collapsed .AdminPanel__navLabel,
+.AdminPanel__sidebar--collapsed .AdminPanel__navCategory {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -271,6 +294,14 @@ body.admin-panel-active .SiteLayout__main {
     white-space: nowrap;
     border: 0;
     opacity: 0;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__sidebarNav {
+    gap: 8px;
+}
+
+.AdminPanel__sidebar--collapsed .AdminPanel__navGroup {
+    gap: 4px;
 }
 
 .AdminPanel__sidebar--collapsed .AdminPanel__navItem {
@@ -1672,6 +1703,23 @@ body.admin-panel-active .SiteLayout__main {
         opacity: 1;
     }
 
+    .AdminPanel__sidebar--collapsed .AdminPanel__navCategory {
+        position: static;
+        width: auto;
+        height: auto;
+        padding: 4px 12px 2px;
+        margin: 0;
+        overflow: hidden;
+        clip: auto;
+        white-space: nowrap;
+        border: 0;
+        opacity: 1;
+    }
+
+    .AdminPanel__sidebar--collapsed .AdminPanel__sidebarNav {
+        gap: 12px;
+    }
+
     .AdminPanel__sidebar--collapsed .AdminPanel__navItem {
         justify-content: flex-start;
         padding: 0 12px;
@@ -1992,6 +2040,64 @@ body.admin-panel-active .SiteLayout__main {
   color: inherit;
   padding: 14px;
   resize: vertical;
+}
+
+.SiteContentStructured {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.SiteContentStructured__listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.SiteContentStructured__listTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.SiteContentStructured__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.SiteContentStructured__card {
+  border: 1px solid rgba(74, 166, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(8, 20, 36, 0.45);
+  padding: 14px;
+}
+
+.SiteContentStructured__cardToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.SiteContentStructured__cardIndex {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.SiteContentStructured__cardActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.AdminPanel__actionBtn--danger {
+  color: #ff8f8f;
+  border-color: rgba(231, 76, 60, 0.35);
 }
 .AdminPanel__mediaGrid {
   display: grid;

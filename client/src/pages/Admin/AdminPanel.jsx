@@ -173,29 +173,29 @@ const AdminPanel = () => {
     // Admin profile for avatar
     const [adminProfile, setAdminProfile] = useState(null);
 
-    // Navigation items
+    // Navigation items (category groups the admin sidebar)
     const fullNavItems = useMemo(() => [
-        { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
-        { key: 'events', label: 'Events', icon: <MdEvent /> },
-        { key: 'courses', label: 'Courses', icon: <MdMenuBook /> },
-        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
-        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
-        { key: 'members', label: 'Members', icon: <MdPeople /> },
-        { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness /> },
-        { key: 'board', label: 'Board', icon: <MdGroups /> },
-        { key: 'departments', label: 'Departments', icon: <MdAccountTree /> },
-        { key: 'seasons', label: 'Season', icon: <MdCalendarMonth /> },
-        { key: 'media', label: 'Media', icon: <MdPermMedia /> },
-        { key: 'content', label: 'Site content', icon: <MdArticle /> },
-        { key: 'android', label: 'Android app', icon: <MdPhoneAndroid /> },
-        { key: 'emails', label: 'Email management', icon: <MdEmail /> },
-        { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
-        { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
-        { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+        { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
+        { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+        { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+        { key: 'members', label: 'Members', icon: <MdPeople />, category: 'Organization' },
+        { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness />, category: 'Organization' },
+        { key: 'board', label: 'Board', icon: <MdGroups />, category: 'Organization' },
+        { key: 'departments', label: 'Departments', icon: <MdAccountTree />, category: 'Organization' },
+        { key: 'seasons', label: 'Season', icon: <MdCalendarMonth />, category: 'Organization' },
+        { key: 'media', label: 'Media', icon: <MdPermMedia />, category: 'Content' },
+        { key: 'content', label: 'Site content', icon: <MdArticle />, category: 'Content' },
+        { key: 'android', label: 'Android app', icon: <MdPhoneAndroid />, category: 'Content' },
+        { key: 'emails', label: 'Email management', icon: <MdEmail />, category: 'Communications' },
+        { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
+        { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
+        { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
     ], []);
 
     const registrationsOnlyNav = useMemo(() => [
-        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
     ], []);
 
     const navItems = accessLevel === 'registrations' ? registrationsOnlyNav : fullNavItems;

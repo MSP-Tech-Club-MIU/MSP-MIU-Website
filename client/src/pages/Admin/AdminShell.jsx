@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MdClose, MdMenu, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import mspLogo from '../../assets/Images/msp-logo.png';
@@ -6,6 +6,21 @@ import SeasonSelector from '../../components/SeasonSelector';
 import './AdminPanel.css';
 
 const SIDEBAR_COLLAPSED_KEY = 'msp-admin-sidebar-collapsed';
+
+/** Group consecutive nav items that share the same category label. */
+function groupNavItems(items) {
+    const groups = [];
+    for (const item of items) {
+        const category = item.category || null;
+        const last = groups[groups.length - 1];
+        if (!last || last.category !== category) {
+            groups.push({ category, items: [item] });
+        } else {
+            last.items.push(item);
+        }
+    }
+    return groups;
+}
 
 /* Soft particle background — fewer particles, lower opacity for work screens */
 const ParticleBackground = () => {
@@ -128,6 +143,8 @@ const AdminShell = ({
         });
     };
 
+    const navGroups = useMemo(() => groupNavItems(navItems), [navItems]);
+
     const handleItemClick = (item) => {
         if (item.onClick) {
             item.onClick();
@@ -192,7 +209,19 @@ const AdminShell = ({
                 </button>
 
                 <nav className="AdminPanel__sidebarNav" aria-label="Admin navigation">
-                    {navItems.map((item) => renderNavButton(item))}
+                    {navGroups.map((group, groupIndex) => (
+                        <div
+                            key={group.category || `uncategorized-${groupIndex}`}
+                            className="AdminPanel__navGroup"
+                            role="group"
+                            aria-label={group.category || undefined}
+                        >
+                            {group.category && (
+                                <p className="AdminPanel__navCategory">{group.category}</p>
+                            )}
+                            {group.items.map((item) => renderNavButton(item))}
+                        </div>
+                    ))}
                 </nav>
 
                 {bottomItems.length > 0 && (

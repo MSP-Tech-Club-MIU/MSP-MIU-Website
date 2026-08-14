@@ -187,18 +187,18 @@ const CompetitionManagement = () => {
   }, [alert]);
 
   const shellNavItems = useMemo(() => [
-    { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
-    { key: 'events', label: 'Events', icon: <MdEvent /> },
-    { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
-    { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
-    { key: 'members', label: 'Members', icon: <MdPerson /> },
-    { key: 'sponsors', label: 'Sponsors', icon: <MdEmojiEvents /> },
-    { key: 'board', label: 'Board', icon: <MdPerson /> },
-    { key: 'media', label: 'Media', icon: <MdDashboard /> },
-    { key: 'content', label: 'Site content', icon: <MdCampaign /> },
-    { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
-    { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
-    { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+    { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
+    { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+    { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+    { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+    { key: 'members', label: 'Members', icon: <MdPerson />, category: 'Organization' },
+    { key: 'sponsors', label: 'Sponsors', icon: <MdEmojiEvents />, category: 'Organization' },
+    { key: 'board', label: 'Board', icon: <MdPerson />, category: 'Organization' },
+    { key: 'media', label: 'Media', icon: <MdDashboard />, category: 'Content' },
+    { key: 'content', label: 'Site content', icon: <MdCampaign />, category: 'Content' },
+    { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
+    { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
+    { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
   ], []);
 
   const shellBottomItems = useMemo(() => [
