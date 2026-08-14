@@ -117,6 +117,152 @@ const DEFAULTS = {
       { id: 8, name: 'President' },
       { id: 9, name: 'Founder' }
     ]
+  },
+  privacy_policy: {
+    pageTitle: 'Privacy Policy',
+    subtitle:
+      'How MSP Tech Club at Misr International University collects, uses, and protects your information.',
+    lastUpdated: '2026-08-14',
+    intro:
+      'This Privacy Policy explains how MSP Tech Club — MIU ("we", "us", or "the Club") handles personal information when you use our website, Android app, and related services (collectively, the "Services"). By using the Services, you agree to the practices described here.',
+    sections: [
+      {
+        heading: 'Who we are',
+        body:
+          'MSP Tech Club is a student-led community at Misr International University, connected with the Microsoft Learn Student Ambassadors program. We organize events, courses, competitions, and community activities for students. For privacy questions, contact us through the channels listed on our website or via club leadership.'
+      },
+      {
+        heading: 'Information we collect',
+        body:
+          'Depending on how you use the Services, we may collect: account details (name, email, faculty, academic year, and similar profile fields you submit); membership and registration data; competition team and submission information; attendance and participation records; suggestions or feedback you send us; device and usage data needed to run the site or app (such as basic logs, session tokens, and app version); and technical identifiers stored locally (for example login tokens) so you stay signed in.'
+      },
+      {
+        heading: 'How we use your information',
+        body:
+          'We use your information to operate and improve the Services; manage memberships, events, courses, and competitions; communicate about club activities, account status, and important updates; support learning and judging workflows; keep the platform secure and prevent abuse; and meet operational or legal obligations that apply to a student organization running digital services.'
+      },
+      {
+        heading: 'Legal basis and consent',
+        body:
+          'We process information you provide when you create an account, apply for membership, register for activities, or otherwise interact with the Services. Where consent is required, you can withdraw it by closing your account or contacting club leadership, subject to data we must retain for security, academic integrity, or operational records.'
+      },
+      {
+        heading: 'Sharing of information',
+        body:
+          'We do not sell your personal information. We may share limited data with: board members and authorized staff who need it to run club activities; service providers that host our infrastructure (for example database, file storage, and email delivery); Microsoft or competition partners when you choose to participate in linked programs; and authorities if required by law or to protect the safety of our community. Public-facing content you choose to publish (such as leaderboard names in competitions) may be visible to other users.'
+      },
+      {
+        heading: 'Cookies, local storage, and similar technologies',
+        body:
+          'We use essential storage (such as authentication tokens and preferences) so the website and app can function. These are not used for third-party advertising. You can clear local storage or app data in your browser or device settings; doing so may sign you out.'
+      },
+      {
+        heading: 'Data retention',
+        body:
+          'We keep account and activity records for as long as needed to provide the Services, support ongoing seasons and competitions, resolve disputes, and maintain community integrity. When information is no longer needed, we delete or anonymize it where reasonably possible.'
+      },
+      {
+        heading: 'Security',
+        body:
+          'We apply reasonable technical and organizational measures to protect personal data, including access controls and encrypted transport (HTTPS). No online service is completely secure; please use a strong password and keep your login details private.'
+      },
+      {
+        heading: 'Your choices and rights',
+        body:
+          'Subject to applicable law and club operations, you may request access to or correction of your profile information, ask questions about how we use your data, or request deletion of your account where feasible. Some records (for example competition results or attendance used for club integrity) may need to be retained. Use your profile settings where available, or contact club leadership.'
+      },
+      {
+        heading: 'Children and students',
+        body:
+          'Our Services are intended for university students and community members who can form a membership relationship with the Club. If you believe we have collected information from someone who should not use the Services, contact us so we can review and take appropriate action.'
+      },
+      {
+        heading: 'Third-party links and services',
+        body:
+          'The Services may link to third-party sites or forms (for example external registration forms or social media). Their privacy practices are governed by their own policies. We encourage you to review those policies before sharing information with them.'
+      },
+      {
+        heading: 'Android application',
+        body:
+          'Our official Android app uses the same account and club data as the website. It may also store app version metadata and local session data needed for offline-friendly navigation. App updates may request permissions required for core features; we do not request unnecessary access to personal device content.'
+      },
+      {
+        heading: 'Changes to this policy',
+        body:
+          'We may update this Privacy Policy from time to time. The "Last updated" date at the top of the page will change when we do. Continued use of the Services after an update means you acknowledge the revised policy.'
+      },
+      {
+        heading: 'Contact',
+        body:
+          'For privacy-related requests or questions about MSP Tech Club — MIU, reach out through our official social channels listed on the website, or contact current club leadership (President / Vice President / relevant department heads).'
+      }
+    ]
+  },
+  faqs: {
+    pageTitle: 'Frequently Asked Questions',
+    subtitle: 'Quick answers about MSP Tech Club at MIU — membership, events, courses, and competitions.',
+    items: [
+      {
+        id: 'what-is-msp',
+        question: 'What is MSP Tech Club?',
+        answer:
+          'MSP Tech Club at Misr International University is a student-led innovation community connected with Microsoft Learn Student Ambassadors. We run workshops, courses, competitions, and community events to help students grow technical and leadership skills.'
+      },
+      {
+        id: 'who-can-join',
+        question: 'Who can join the club?',
+        answer:
+          'Membership is open to MIU students who want to learn, build, and contribute. Apply through the Become a Member page when applications are open. Acceptance may depend on the current season and capacity.'
+      },
+      {
+        id: 'how-to-apply',
+        question: 'How do I apply to become a member?',
+        answer:
+          'Go to Become a Member, fill in your details, and submit the form. You will receive updates by email about your application status. Make sure you use an email you check regularly.'
+      },
+      {
+        id: 'events',
+        question: 'How can I attend events and sessions?',
+        answer:
+          'Browse upcoming events on the Events page. Some sessions may require registration or membership. Follow our social channels and announcements for last-minute updates and seating limits.'
+      },
+      {
+        id: 'courses',
+        question: 'Are courses free?',
+        answer:
+          'Club courses and learning materials are generally provided for members and participants as part of our community programs. Specific courses may have enrollment rules — check each course page for details.'
+      },
+      {
+        id: 'competitions',
+        question: 'How do competitions work?',
+        answer:
+          'Open a competition from the Competitions page to see rules, timelines, and team requirements. You may need to create or join a team, submit deliverables, and follow judging guidelines published for that competition.'
+      },
+      {
+        id: 'android-app',
+        question: 'Is there an official Android app?',
+        answer:
+          'Yes. You can download the official MSP Tech Club Android app from the Download App page on the website. The app helps you stay connected to events, courses, and community updates.'
+      },
+      {
+        id: 'account-issues',
+        question: 'I cannot log in or activate my account. What should I do?',
+        answer:
+          'Use the login page links to resend activation or reset your password if available. Check your spam folder for club emails. If the problem continues, contact club leadership or submit a note on the Suggestions page with the email tied to your account.'
+      },
+      {
+        id: 'suggestions',
+        question: 'How can I share feedback or ideas?',
+        answer:
+          'Use the Suggestions page to send feedback anonymously or with your name. We review suggestions to improve events, courses, and the platform.'
+      },
+      {
+        id: 'privacy',
+        question: 'How is my personal data handled?',
+        answer:
+          'We only collect information needed to run membership, events, courses, and competitions. See our Privacy Policy for details on collection, use, retention, and your choices.'
+      }
+    ]
   }
 };
 

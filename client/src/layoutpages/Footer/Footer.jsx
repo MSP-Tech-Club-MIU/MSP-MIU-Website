@@ -1,4 +1,5 @@
 import React, { useMemo, memo } from 'react';
+import { Link } from 'react-router-dom';
 import './Footer.css';
 import useSiteContent from '../../hooks/useSiteContent';
 
@@ -88,6 +89,10 @@ export const Footer = memo(() => {
         </section>
         <section className="Footer__meta" aria-labelledby="footer-meta-heading">
           <h3 id="footer-meta-heading" className="Footer__heading">Info</h3>
+          <nav className="Footer__legal" aria-label="Legal and help">
+            <Link to="/privacy" className="Footer__legalLink">Privacy Policy</Link>
+            <Link to="/faqs" className="Footer__legalLink">FAQs</Link>
+          </nav>
           <p className="Footer__copy">&copy; {year} MSP Tech Club MIU. All rights reserved.</p>
           <a
             href={footer.developerUrl || 'https://ahmedmostafa-swe.tech'}

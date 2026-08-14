@@ -62,6 +62,18 @@ const STATIC_PAGES = {
     description: 'Share ideas and feedback with MSP Tech Club at MIU.',
     keywords: 'MSP suggestions, feedback'
   },
+  '/privacy': {
+    title: 'Privacy Policy | MSP Tech Club — MIU',
+    description:
+      'Privacy Policy for MSP Tech Club at Misr International University — how we collect, use, and protect your information on our website and Android app.',
+    keywords: 'MSP privacy policy, MIU tech club privacy, data protection'
+  },
+  '/faqs': {
+    title: 'FAQs | MSP Tech Club — MIU',
+    description:
+      'Frequently asked questions about MSP Tech Club at MIU — membership, events, courses, competitions, and the Android app.',
+    keywords: 'MSP FAQ, MIU tech club questions, MSP membership'
+  },
   '/leaderboard': {
     title: 'Leaderboard | MSP Tech Club — MIU',
     description: 'See how members rank across MSP Tech Club activities at MIU.',
@@ -450,7 +462,9 @@ async function buildSitemapXml() {
     { loc: `${siteUrl}/competitions`, changefreq: 'weekly', priority: '0.8' },
     { loc: `${siteUrl}/sponsors`, changefreq: 'monthly', priority: '0.6' },
     { loc: `${siteUrl}/become-member`, changefreq: 'monthly', priority: '0.7' },
-    { loc: `${siteUrl}/download-android`, changefreq: 'monthly', priority: '0.5' }
+    { loc: `${siteUrl}/download-android`, changefreq: 'monthly', priority: '0.5' },
+    { loc: `${siteUrl}/privacy`, changefreq: 'yearly', priority: '0.4' },
+    { loc: `${siteUrl}/faqs`, changefreq: 'monthly', priority: '0.6' }
   ];
 
   try {

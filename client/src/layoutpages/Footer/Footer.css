@@ -133,6 +133,26 @@
     letter-spacing: .4px;
 }
 
+.Footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin: 0 0 14px;
+}
+
+.Footer__legalLink {
+    color: var(--blue-300, #8EC2F0);
+    text-decoration: none;
+    font-size: .9rem;
+    font-weight: 500;
+    letter-spacing: .2px;
+}
+
+.Footer__legalLink:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
 .Footer__developer {
     margin-top: 14px;
     display: inline-flex;

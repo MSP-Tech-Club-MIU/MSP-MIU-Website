@@ -1,0 +1,227 @@
+.ContentPage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  padding-bottom: 120px;
+  color: #eaf2ff;
+}
+
+.ContentPage__hero {
+  position: relative;
+  padding: 140px 0 72px;
+  overflow: hidden;
+}
+
+.ContentPage__heroBg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 28%, rgba(0, 160, 255, 0.22), transparent 55%),
+    radial-gradient(circle at 82% 68%, rgba(0, 119, 204, 0.16), transparent 60%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+
+.ContentPage__heroInner {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 56px;
+  text-align: center;
+}
+
+.ContentPage__title {
+  margin: 0 0 18px;
+  font-size: clamp(2.1rem, 4.5vw, 3.2rem);
+  font-weight: 650;
+  letter-spacing: 0.4px;
+  background: linear-gradient(135deg, #8ec2f0, #03a9f4);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ContentPage__subtitle {
+  margin: 0 auto;
+  max-width: 720px;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #c5dae9;
+  opacity: 0.92;
+}
+
+.ContentPage__meta {
+  margin: 18px 0 0;
+  font-size: 0.9rem;
+  color: #5aa0e6;
+  letter-spacing: 0.3px;
+}
+
+.ContentPage__body {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 56px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ContentPage__prose {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.ContentPage__intro {
+  margin: 0;
+  padding: 22px 24px;
+  line-height: 1.65;
+  color: #d7e8f6;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+
+.ContentPage__section {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ContentPage__section:last-child {
+  border-bottom: none;
+}
+
+.ContentPage__sectionTitle {
+  margin: 0 0 10px;
+  font-size: 1.2rem;
+  font-weight: 650;
+  color: #8ec2f0;
+  letter-spacing: 0.2px;
+}
+
+.ContentPage__sectionBody {
+  margin: 0;
+  line-height: 1.7;
+  color: #c5dae9;
+  white-space: pre-wrap;
+}
+
+.ContentPage__loading,
+.ContentPage__empty {
+  margin: 0;
+  text-align: center;
+  color: #8ec2f0;
+  opacity: 0.85;
+}
+
+.ContentPage__footnote {
+  margin: 36px 0 0;
+  text-align: center;
+  color: #8ec2f0;
+  font-size: 0.95rem;
+}
+
+.ContentPage__link {
+  color: #03a9f4;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ContentPage__link:hover {
+  text-decoration: underline;
+}
+
+/* FAQ accordion */
+.FaqList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.FaqItem {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.FaqItem--open {
+  border-color: rgba(3, 169, 244, 0.35);
+  background: linear-gradient(145deg, rgba(3, 169, 244, 0.1), rgba(255, 255, 255, 0.03));
+}
+
+.FaqItem__heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.FaqItem__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.FaqItem__trigger:focus-visible {
+  outline: 2px solid #03a9f4;
+  outline-offset: -2px;
+}
+
+.FaqItem__question {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #eaf2ff;
+  line-height: 1.4;
+}
+
+.FaqItem__chevron {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  color: #03a9f4;
+  transition: transform 0.25s ease;
+}
+
+.FaqItem--open .FaqItem__chevron {
+  transform: rotate(180deg);
+}
+
+.FaqItem__panel {
+  overflow: hidden;
+}
+
+.FaqItem__answer {
+  margin: 0;
+  padding: 0 20px 18px;
+  line-height: 1.65;
+  color: #c5dae9;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 720px) {
+  .ContentPage__hero {
+    padding: 120px 0 56px;
+  }
+
+  .ContentPage__heroInner,
+  .ContentPage__body {
+    padding: 0 20px;
+  }
+
+  .FaqItem__trigger {
+    padding: 16px;
+  }
+
+  .FaqItem__answer {
+    padding: 0 16px 16px;
+  }
+}

@@ -16,6 +16,8 @@ Defaults and allowlist: [`server/utils/siteContentDefaults.js`](../server/utils/
 | `gallery` | Gallery title/subtitle | `Dome` |
 | `lookups` | Faculties and similar form lists | `BecomeMember` |
 | `android_app` | APK metadata (version, key, notes) | `/api/android-app` (not `useSiteContent`) |
+| `privacy_policy` | Privacy Policy page title, intro, sections | `/privacy` via `useSiteContent`; structured editor in Admin → Site content |
+| `faqs` | FAQ page title and Q&A items | `/faqs` via `useSiteContent`; add/edit/reorder/delete in Admin → Site content |
 
 ## API
 
