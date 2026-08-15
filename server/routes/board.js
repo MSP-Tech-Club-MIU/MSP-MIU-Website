@@ -7,7 +7,8 @@ const {
   updateBoardMember,
   deleteBoardMember,
   getMyBoardMembership,
-  updateMyBoardPhoto
+  updateMyBoardPhoto,
+  sendBoardActivationEmail
 } = require('../controllers/board');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
@@ -32,6 +33,12 @@ router.put(
   updateMyBoardPhoto
 );
 router.post('/', authenticateToken, verifyRole('admin', 'board'), createBoardMember);
+router.post(
+  '/:id/send-activation-email',
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  sendBoardActivationEmail
+);
 router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateBoardMember);
 router.delete('/:id', authenticateToken, verifyRole('admin', 'board'), deleteBoardMember);
 

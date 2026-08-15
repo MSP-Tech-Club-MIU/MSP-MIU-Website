@@ -1292,6 +1292,24 @@ paths:
       responses:
         '200':
           description: Deleted
+  '/board/{id}/send-activation-email':
+    post:
+      summary: 'Create/submit /board/{id}/send-activation-email'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Board
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   /board/me:
     get:
       summary: 'Get /board/me'

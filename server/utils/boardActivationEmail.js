@@ -42,6 +42,25 @@ async function sendBoardActivationEmailForMember(boardMember, sendEmail) {
     };
   }
 
+  if (boardMember.user_id) {
+    const linkedUser = await User.findByPk(boardMember.user_id, {
+      attributes: ['user_id', 'email', 'is_active', 'password_hash']
+    });
+    if (linkedUser && (linkedUser.is_active || linkedUser.password_hash)) {
+      return {
+        success: false,
+        skipped: true,
+        boardId: boardMember.board_id,
+        name: boardMemberName,
+        position,
+        email,
+        reason: linkedUser.is_active
+          ? 'Linked account is already active'
+          : 'Linked account already has a password'
+      };
+    }
+  }
+
   const tokenResult = generateToken({
     email,
     type: 'board_activation',
