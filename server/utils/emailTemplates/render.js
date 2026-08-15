@@ -1,5 +1,6 @@
 const EmailTemplate = require('../../models/EmailTemplate');
 const { getDefaultTemplate, listDefaultTemplates } = require('./defaults');
+const logger = require('../logger');
 
 function interpolate(str, vars = {}) {
   if (str == null) return '';
@@ -56,7 +57,7 @@ async function getTemplate(key) {
     row = await EmailTemplate.findByPk(key);
   } catch (err) {
     // Table may not exist yet — use defaults
-    console.warn(`[emailTemplates] getTemplate(${key}):`, err.message);
+    logger.warn(`[emailTemplates] getTemplate(${key}):`, { message: err.message });
   }
   return mergeTemplate(key, row ? row.toJSON() : null);
 }
@@ -67,7 +68,7 @@ async function listTemplates() {
   try {
     rows = await EmailTemplate.findAll();
   } catch (err) {
-    console.warn('[emailTemplates] listTemplates:', err.message);
+    logger.warn('[emailTemplates] listTemplates:', { message: err.message });
   }
   const byKey = Object.fromEntries(rows.map((r) => [r.template_key, r.toJSON()]));
   return defaults.map((d) => mergeTemplate(d.template_key, byKey[d.template_key] || null));

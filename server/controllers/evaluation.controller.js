@@ -13,16 +13,14 @@ const {
   computeFinalScore,
   normalizeTo100
 } = require('../utils/scoreCalculator');
-const { logAuditEvent, logError } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAuditEvent, logError } = logger;
 
 /** Local DBs may omit `score` / `feedback` on `submissions`; exclude so Sequelize does not SELECT them. */
 const submissionAttributesNoScore = { exclude: ['score', 'feedback'] };
 
 function evalLog(message, data) {
-  console.log(
-    '[EVALUATION]',
-    JSON.stringify({ message, ...data, t: new Date().toISOString() })
-  );
+  logger.info('[EVALUATION]', { message, ...data, t: new Date().toISOString() });
 }
 
 /**

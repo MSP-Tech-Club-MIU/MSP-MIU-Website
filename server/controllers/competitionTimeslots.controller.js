@@ -14,6 +14,7 @@ const {
   getTeamMemberEmails,
   formatDateForEmail
 } = require('../services/competitionTimeslotService');
+const logger = require('../utils/logger');
 
 function toCompetitionModeContext(competition) {
   if (!competition) return null;
@@ -35,7 +36,7 @@ function handleTimeslotError(res, error, fallback = 'Timeslot operation failed')
     });
   }
 
-  console.error(fallback, error);
+  logger.error(fallback, error);
   return res.status(500).json({
     success: false,
     error: fallback
@@ -244,7 +245,7 @@ const assignCompetitionTimeslotByAdmin = async (req, res) => {
         isAdminAssignment: true
       });
     } catch (mailErr) {
-      console.error('Timeslot assignment email failed:', mailErr);
+      logger.error('Timeslot assignment email failed:', mailErr);
     }
 
     return res.json({
@@ -333,7 +334,7 @@ const submitCompetitionTimeslotSelection = async (req, res) => {
         isAdminAssignment: false
       });
     } catch (mailErr) {
-      console.error('Timeslot confirmation email failed:', mailErr);
+      logger.error('Timeslot confirmation email failed:', mailErr);
     }
 
     return res.json({
@@ -410,7 +411,7 @@ const submitCompetitionWorkspaceTimeslotSelection = async (req, res) => {
         isAdminAssignment: false
       });
     } catch (mailErr) {
-      console.error('Workspace timeslot confirmation email failed:', mailErr);
+      logger.error('Workspace timeslot confirmation email failed:', mailErr);
     }
 
     return res.json({

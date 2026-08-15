@@ -3,6 +3,7 @@ const { uploadToR2 } = require('../config/cloud');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /**
  * Submit team work (ZIP file and/or links)
@@ -232,7 +233,7 @@ const createSubmission = async (req, res) => {
                     const uploadResult = await uploadToR2(req.file.buffer, fileName, req.file.mimetype || 'application/zip');
                     r2Key = uploadResult.key;
                 } catch (uploadError) {
-                    console.error('Error uploading file to R2:', uploadError);
+                    logger.error('Error uploading file to R2:', uploadError);
                     return res.status(500).json({
                         success: false,
                         error: 'Failed to upload file'
@@ -273,7 +274,7 @@ const createSubmission = async (req, res) => {
                 updatedRow.r2_key
             ) {
                 runEvaluationForSubmission(existingSubmissions[0].submission_id).catch((err) => {
-                    console.error('Auto evaluation failed:', err.message);
+                    logger.error('Auto evaluation failed:', err);
                 });
             }
 
@@ -313,7 +314,7 @@ const createSubmission = async (req, res) => {
 
         const submissionId = normalizeInsertId(result);
         if (!Number.isFinite(submissionId)) {
-            console.error('Failed to resolve submission insert id:', result);
+            logger.error('Failed to resolve submission insert id:', result);
             return res.status(500).json({
                 success: false,
                 error: 'Failed to resolve created submission id'
@@ -332,7 +333,7 @@ const createSubmission = async (req, res) => {
                     }
                 );
             } catch (uploadError) {
-                console.error('Error uploading file to R2:', uploadError);
+                logger.error('Error uploading file to R2:', uploadError);
                 return res.status(500).json({
                     success: false,
                     error: 'Failed to upload file'
@@ -354,7 +355,7 @@ const createSubmission = async (req, res) => {
             createdRow.r2_key
         ) {
             runEvaluationForSubmission(submissionId).catch((err) => {
-                console.error('Auto evaluation failed:', err.message);
+                logger.error('Auto evaluation failed:', err);
             });
         }
 
@@ -365,7 +366,7 @@ const createSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating submission:', error);
+        logger.error('Error creating submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create submission',
@@ -505,7 +506,7 @@ const getTeamSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching submission:', error);
+        logger.error('Error fetching submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch submission'
@@ -585,7 +586,7 @@ const getCompetitionSubmissions = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching submissions:', error);
+        logger.error('Error fetching submissions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch submissions'
@@ -677,7 +678,7 @@ const gradeSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error grading submission:', error);
+        logger.error('Error grading submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to grade submission'

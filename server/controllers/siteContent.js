@@ -1,5 +1,6 @@
 const { SiteContent } = require('../models');
 const { ALLOWED_KEYS, getDefault } = require('../utils/siteContentDefaults');
+const logger = require('../utils/logger');
 
 async function ensureKey(key) {
   let row = await SiteContent.findByPk(key);
@@ -33,14 +34,14 @@ const getAllSiteContent = async (req, res) => {
         data[key] = row.content_value;
       } catch (err) {
         // Table may not exist yet — serve defaults so the public site still loads
-        console.warn(`site-content fallback for ${key}:`, err.message);
+        logger.warn(`site-content fallback for ${key}:`, err);
         data[key] = getDefault(key);
       }
     }
 
     return res.json({ success: true, data });
   } catch (error) {
-    console.error('Error fetching site content:', error);
+    logger.error('Error fetching site content:', error);
     // Last resort: all defaults
     const data = {};
     const keys = req.query.keys
@@ -66,7 +67,7 @@ const getSiteContentByKey = async (req, res) => {
       data: { key, value: row.content_value, updated_at: row.updated_at }
     });
   } catch (error) {
-    console.error('Error fetching site content key:', error);
+    logger.error('Error fetching site content key:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch site content' });
   }
 };
@@ -103,7 +104,7 @@ const updateSiteContent = async (req, res) => {
       data: { key, value: fresh.content_value, updated_at: fresh.updated_at }
     });
   } catch (error) {
-    console.error('Error updating site content:', error);
+    logger.error('Error updating site content:', error);
     return res.status(500).json({ success: false, error: error.message || 'Failed to update site content' });
   }
 };
@@ -125,7 +126,7 @@ const resetSiteContent = async (req, res) => {
     });
     return res.json({ success: true, data: { key, value } });
   } catch (error) {
-    console.error('Error resetting site content:', error);
+    logger.error('Error resetting site content:', error);
     return res.status(500).json({ success: false, error: 'Failed to reset site content' });
   }
 };

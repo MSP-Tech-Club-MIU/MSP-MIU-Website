@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 
 const DEFAULT_SITE_URL = 'https://msp-miu.tech';
 const DEFAULT_TITLE = 'MSP Tech Club — MIU';
@@ -380,7 +381,7 @@ async function resolveDynamicSeo(pathname) {
       };
     }
   } catch (err) {
-    console.error('[seo] Failed to resolve dynamic preview:', err.message);
+    logger.error('[seo] Failed to resolve dynamic preview:', { message: err.message });
   }
 
   return null;
@@ -511,7 +512,7 @@ async function buildSitemapXml() {
       });
     });
   } catch (err) {
-    console.error('[seo] Sitemap dynamic URLs skipped:', err.message);
+    logger.error('[seo] Sitemap dynamic URLs skipped:', { message: err.message });
   }
 
   const body = urls

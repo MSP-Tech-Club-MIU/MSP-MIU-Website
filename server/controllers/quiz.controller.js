@@ -7,6 +7,7 @@ const {
   getEffectiveDeadlineDate,
   // kept for quizAttemptLifecycle utilities (unused here after unlock gating change)
 } = require('../services/quizAttemptLifecycle');
+const logger = require('../utils/logger');
 
 /** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
 function num(v, fallback = 0) {
@@ -141,7 +142,7 @@ async function getQuizById(req, res) {
       }
     });
   } catch (error) {
-    console.error('Error fetching quiz:', error);
+    logger.error('Error fetching quiz:', error);
     const expose =
       process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1';
     return res.status(500).json({
@@ -266,7 +267,7 @@ async function getQuizAttemptByUser(req, res) {
       }
     });
   } catch (error) {
-    console.error('Error fetching attempt:', error);
+    logger.error('Error fetching attempt:', error);
     return res.status(500).json({ success: false, error: 'Failed to fetch attempt' });
   }
 }
@@ -351,7 +352,7 @@ async function createQuizAttempt(req, res) {
 
     return res.status(201).json({ success: true, data: attempt });
   } catch (error) {
-    console.error('Error creating attempt:', error);
+    logger.error('Error creating attempt:', error);
     return res.status(500).json({ success: false, error: 'Failed to create attempt' });
   }
 }
@@ -459,7 +460,7 @@ async function saveQuizAnswer(req, res) {
       }
     });
   } catch (error) {
-    console.error('Error saving answer:', error);
+    logger.error('Error saving answer:', error);
     return res.status(500).json({ success: false, error: 'Failed to save answer' });
   }
 }
@@ -493,7 +494,7 @@ async function submitQuizAttempt(req, res) {
     }
     return res.status(200).json({ success: true, data: result.attempt });
   } catch (error) {
-    console.error('Error submitting attempt:', error);
+    logger.error('Error submitting attempt:', error);
     return res.status(500).json({ success: false, error: 'Failed to submit attempt' });
   }
 }

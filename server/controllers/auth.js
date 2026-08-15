@@ -1,7 +1,8 @@
 const bcrypt = require('bcrypt');
 const { User, Member, Board, PasswordToken } = require('../models');
 const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
-const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAuditEvent, logError, logSecurityEvent } = logger;
 const { resolveSeasonIdForWrite, getDefaultSeasonId } = require('../utils/seasonFilter');
 const { findMemberByEmailPreferCurrentSeason } = require('../utils/memberEnrollment');
 
@@ -893,7 +894,7 @@ const activateAccount = async (req, res) => {
                         }
                     } catch (appError) {
                         // If Application model doesn't exist or query fails, just continue with null university_id
-                        console.warn('Could not fetch university_id from Application:', appError.message);
+                        logger.warn('Could not fetch university_id from Application:', appError);
                     }
                 }
                 

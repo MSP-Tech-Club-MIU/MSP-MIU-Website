@@ -1,0 +1,239 @@
+.LogsAdmin__hint {
+  margin: 0 0 1rem;
+  color: var(--admin-muted, #6b7280);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.LogsAdmin__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.LogsAdmin__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-end;
+}
+
+.LogsAdmin__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--admin-muted, #6b7280);
+}
+
+.LogsAdmin__field select,
+.LogsAdmin__settingsRow select,
+.LogsAdmin__search input {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  color: inherit;
+}
+
+.LogsAdmin__search {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: min(100%, 18rem);
+}
+
+.LogsAdmin__search svg {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.LogsAdmin__search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.LogsAdmin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.LogsAdmin__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.LogsAdmin__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.LogsAdmin__btn--primary {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+.LogsAdmin__btn--danger {
+  color: #b91c1c;
+  border-color: rgba(185, 28, 28, 0.35);
+}
+
+.LogsAdmin__btn--active {
+  background: #ecfdf5;
+  border-color: #0f766e;
+  color: #0f766e;
+}
+
+.LogsAdmin__settings {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.04);
+}
+
+.LogsAdmin__settingsTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  margin-bottom: 0.55rem;
+  font-size: 0.92rem;
+}
+
+.LogsAdmin__settingsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.LogsAdmin__metaText {
+  font-size: 0.82rem;
+  color: var(--admin-muted, #6b7280);
+}
+
+.LogsAdmin__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--admin-muted, #6b7280);
+}
+
+.LogsAdmin__chip {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  background: #f3f4f6;
+}
+
+.LogsAdmin__chip--debug { background: #f3f4f6; color: #4b5563; }
+.LogsAdmin__chip--info { background: #e0f2fe; color: #0369a1; }
+.LogsAdmin__chip--warn { background: #fef3c7; color: #b45309; }
+.LogsAdmin__chip--error { background: #fee2e2; color: #b91c1c; }
+.LogsAdmin__chip--fatal { background: #7f1d1d; color: #fff; }
+
+.LogsAdmin__list {
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.LogsAdmin__row {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid transparent;
+}
+
+.LogsAdmin__row--debug { border-left-color: #9ca3af; }
+.LogsAdmin__row--info { border-left-color: #38bdf8; }
+.LogsAdmin__row--warn { border-left-color: #fbbf24; }
+.LogsAdmin__row--error { border-left-color: #f87171; }
+.LogsAdmin__row--fatal { border-left-color: #ef4444; background: rgba(127, 29, 29, 0.25); }
+
+.LogsAdmin__rowTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  opacity: 0.85;
+  font-size: 0.72rem;
+}
+
+.LogsAdmin__level {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.LogsAdmin__level--debug { color: #d1d5db; }
+.LogsAdmin__level--info { color: #7dd3fc; }
+.LogsAdmin__level--warn { color: #fcd34d; }
+.LogsAdmin__level--error { color: #fca5a5; }
+.LogsAdmin__level--fatal { color: #fecaca; }
+
+.LogsAdmin__type {
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.LogsAdmin__id {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+.LogsAdmin__msg {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.LogsAdmin__meta {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  overflow: auto;
+  max-height: 12rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .LogsAdmin__search {
+    width: 100%;
+  }
+
+  .LogsAdmin__actions {
+    width: 100%;
+  }
+}

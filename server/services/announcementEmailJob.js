@@ -3,6 +3,7 @@
  * Suitable for single-instance Node deploys (e.g. one Render web service).
  */
 const { randomUUID } = require('crypto');
+const logger = require('../utils/logger');
 
 const jobs = new Map();
 const JOB_TTL_MS = 60 * 60 * 1000;
@@ -83,7 +84,7 @@ async function runAnnouncementEmailJob(jobId, announcement) {
     if (emails.length === 0) {
       job.status = 'completed';
       job.finishedAt = Date.now();
-      console.log(`Announcement email job ${jobId}: no recipients`);
+      logger.info(`Announcement email job ${jobId}: no recipients`);
       return;
     }
 
@@ -96,7 +97,7 @@ async function runAnnouncementEmailJob(jobId, announcement) {
     if (dryRun) {
       sendEmail = async ({ to }) => {
         await new Promise((r) => setTimeout(r, 80));
-        console.log(`[dry-run] announcement email → ${to}`);
+        logger.info(`[dry-run] announcement email → ${to}`);
         return { messageId: `dry-${Date.now()}` };
       };
       subject = announcement?.title || 'Announcement';
@@ -122,7 +123,7 @@ async function runAnnouncementEmailJob(jobId, announcement) {
         job.sent += 1;
       } catch (err) {
         job.failed += 1;
-        console.error(`Announcement email job ${jobId}: failed for ${to}:`, err.message || err);
+        logger.error(`Announcement email job ${jobId}: failed for ${to}:`, err);
       }
     }
 
@@ -131,14 +132,14 @@ async function runAnnouncementEmailJob(jobId, announcement) {
       job.error = 'All email sends failed';
     }
     job.finishedAt = Date.now();
-    console.log(
+    logger.info(
       `Announcement email job ${jobId}: done sent=${job.sent} failed=${job.failed} total=${job.total}`
     );
   } catch (err) {
     job.status = 'failed';
     job.error = err.message || 'Email broadcast failed';
     job.finishedAt = Date.now();
-    console.error(`Announcement email job ${jobId} failed:`, err);
+    logger.error(`Announcement email job ${jobId} failed:`, err);
   }
 }
 
@@ -153,7 +154,7 @@ function startAnnouncementEmailBroadcast(announcement) {
   });
   setImmediate(() => {
     runAnnouncementEmailJob(job.id, plain).catch((err) => {
-      console.error('Unhandled announcement email job error:', err);
+      logger.error('Unhandled announcement email job error:', err);
     });
   });
   return publicJobView(job);

@@ -1,6 +1,7 @@
 const { r2, PutObjectCommand } = require('../config/cloud');
 const { SiteContent, User } = require('../models');
 const { getDefault } = require('../utils/siteContentDefaults');
+const logger = require('../utils/logger');
 
 const CONTENT_KEY = 'android_app';
 const APK_KEY = 'Mobile Application/MSP-MIU.apk';
@@ -62,7 +63,7 @@ async function broadcastAndroidAppUpdateEmails(release) {
   const users = await User.findAll({ attributes: ['email'] });
   const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
   if (emails.length === 0) {
-    console.log('Android app update email: no recipients');
+    logger.info('Android app update email: no recipients');
     return { sent: 0 };
   }
 
@@ -88,7 +89,7 @@ async function broadcastAndroidAppUpdateEmails(release) {
     });
   }
 
-  console.log(`Android app update emails sent to ${emails.length} recipient(s)`);
+  logger.info(`Android app update emails sent to ${emails.length} recipient(s)`);
   return { sent: emails.length };
 }
 
@@ -103,7 +104,7 @@ const getAndroidApp = async (req, res) => {
       data: toPublicPayload(release)
     });
   } catch (error) {
-    console.error('Error fetching Android app info:', error);
+    logger.error('Error fetching Android app info:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch Android app info'
@@ -186,7 +187,7 @@ const publishAndroidAppUpdate = async (req, res) => {
       emails: emailResult
     });
   } catch (error) {
-    console.error('Error publishing Android app update:', error);
+    logger.error('Error publishing Android app update:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to publish Android app update'
@@ -215,7 +216,7 @@ const notifyAndroidAppUpdate = async (req, res) => {
       emails: emailResult
     });
   } catch (error) {
-    console.error('Error notifying Android app update:', error);
+    logger.error('Error notifying Android app update:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to send Android app update emails'

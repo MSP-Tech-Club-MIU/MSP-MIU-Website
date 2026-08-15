@@ -2,6 +2,7 @@ const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 /**
  * Helper function to convert registration_enabled to boolean
@@ -80,8 +81,8 @@ const addEvent = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error creating event:', error);
-        console.error('Error details:', {
+        logger.error('Error creating event:', error);
+        logger.error('Error details:', {
             name: error.name,
             message: error.message,
             stack: error.stack
@@ -98,7 +99,7 @@ const addEvent = async (req, res) => {
 
         // Handle Sequelize database errors
         if (error.name === 'SequelizeDatabaseError') {
-            console.error('Database error:', error.original);
+            logger.error('Database error:', error.original);
             return res.status(500).json({
                 success: false,
                 error: 'Database error occurred',
@@ -168,7 +169,7 @@ const getAllEvents = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching events:', error);
+        logger.error('Error fetching events:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch events'
@@ -199,7 +200,7 @@ const getEventById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching event:', error);
+        logger.error('Error fetching event:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch event'
@@ -322,8 +323,8 @@ const updateEvent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating event:', error);
-        console.error('Error details:', {
+        logger.error('Error updating event:', error);
+        logger.error('Error details:', {
             name: error.name,
             message: error.message,
             stack: error.stack
@@ -340,7 +341,7 @@ const updateEvent = async (req, res) => {
 
         // Handle Sequelize database errors
         if (error.name === 'SequelizeDatabaseError') {
-            console.error('Database error:', error.original);
+            logger.error('Database error:', error.original);
             return res.status(500).json({
                 success: false,
                 error: 'Database error occurred',
@@ -381,7 +382,7 @@ const deleteEvent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting event:', error);
+        logger.error('Error deleting event:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete event'
@@ -435,7 +436,7 @@ const addFeedback = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error adding feedback:', error);
+        logger.error('Error adding feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to submit feedback',
@@ -480,7 +481,7 @@ const getEventFeedback = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching feedback:', error);
+        logger.error('Error fetching feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch feedback'
@@ -523,7 +524,7 @@ const deleteFeedback = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting feedback:', error);
+        logger.error('Error deleting feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete feedback'

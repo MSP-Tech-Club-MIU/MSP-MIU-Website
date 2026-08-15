@@ -3,6 +3,10 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const logger = require('./logger');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // App often runs with cwd = server/; dotenv default misses Back-End/.env. Load known locations first.
@@ -44,7 +48,7 @@ export async function sendEmail(mailOptions) {
     const fromEmail = process.env.MAIL_FROM_ADDRESS || mailOptions.from || 'noreply@msp-miu.tech';
     
     if (!process.env.MAIL_FROM_ADDRESS && !mailOptions.from) {
-      console.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
+      logger.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
     }
     
     // Extract domain from email address for proper Message-ID
@@ -87,10 +91,10 @@ export async function sendEmail(mailOptions) {
     };
 
     const info = await transporter.sendMail(emailData);
-    console.log('Email sent successfully:', info.messageId);
+    logger.info('Email sent successfully:', { messageId: info.messageId });
     return info;
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', error);
     throw error;
   }
 }
@@ -102,10 +106,10 @@ export async function sendEmail(mailOptions) {
 export async function verifyEmailConfig() {
   try {
     await transporter.verify();
-    console.log('Email transporter is ready to send emails');
+    logger.info('Email transporter is ready to send emails');
     return true;
   } catch (error) {
-    console.error('Email transporter verification failed:', error);
+    logger.error('Email transporter verification failed:', error);
     return false;
   }
 }

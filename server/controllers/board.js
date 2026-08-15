@@ -14,6 +14,7 @@ const {
   syncUserFromBoard,
   demoteUserIfNoCurrentBoard
 } = require('../utils/boardUserSync');
+const logger = require('../utils/logger');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
 
@@ -149,7 +150,7 @@ const getBoard = async (req, res) => {
     if (err.status) {
       return res.status(err.status).json({ success: false, error: err.message });
     }
-    console.error(err);
+    logger.error('Error fetching board members:', err);
     res.status(500).json({ success: false, error: 'Database error' });
   }
 };
@@ -222,7 +223,7 @@ const createBoardMember = async (req, res) => {
     try {
       await syncUserFromBoard(member);
     } catch (syncErr) {
-      console.error('Board user sync failed after create:', syncErr);
+      logger.error('Board user sync failed after create:', syncErr);
     }
 
     let activationEmail = null;
@@ -232,7 +233,7 @@ const createBoardMember = async (req, res) => {
         const result = await sendBoardActivationEmailForMember(member, sendEmail);
         activationEmail = result;
       } catch (emailErr) {
-        console.error('Board activation email failed:', emailErr);
+        logger.error('Board activation email failed:', emailErr);
         activationEmail = {
           success: false,
           error: emailErr.message || 'Failed to send activation email'
@@ -252,7 +253,7 @@ const createBoardMember = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error creating board member:', error);
+    logger.error('Error creating board member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create board member' });
   }
 };
@@ -338,7 +339,7 @@ const updateBoardMember = async (req, res) => {
         await demoteUserIfNoCurrentBoard(previousUserId);
       }
     } catch (syncErr) {
-      console.error('Board user sync failed after update:', syncErr);
+      logger.error('Board user sync failed after update:', syncErr);
     }
 
     res.json({ success: true, data: member });
@@ -346,7 +347,7 @@ const updateBoardMember = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error updating board member:', error);
+    logger.error('Error updating board member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update board member' });
   }
 };
@@ -365,11 +366,11 @@ const deleteBoardMember = async (req, res) => {
         await demoteUserIfNoCurrentBoard(userId);
       }
     } catch (syncErr) {
-      console.error('Board user demote failed after delete:', syncErr);
+      logger.error('Board user demote failed after delete:', syncErr);
     }
     res.json({ success: true, message: 'Board member deleted' });
   } catch (error) {
-    console.error('Error deleting board member:', error);
+    logger.error('Error deleting board member:', error);
     res.status(500).json({ success: false, error: 'Failed to delete board member' });
   }
 };
@@ -388,7 +389,7 @@ const getMyBoardMembership = async (req, res) => {
 
     res.json({ success: true, data: member });
   } catch (error) {
-    console.error('Error fetching own board membership:', error);
+    logger.error('Error fetching own board membership:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch board membership' });
   }
 };
@@ -459,7 +460,7 @@ const updateMyBoardPhoto = async (req, res) => {
     });
     res.json({ success: true, data: member });
   } catch (error) {
-    console.error('Error updating own board photo:', error);
+    logger.error('Error updating own board photo:', error);
     res.status(500).json({ success: false, error: 'Failed to update Meet the Board photo' });
   }
 };
@@ -500,7 +501,7 @@ const sendBoardActivationEmail = async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error sending board activation email:', error);
+    logger.error('Error sending board activation email:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to send board activation email'

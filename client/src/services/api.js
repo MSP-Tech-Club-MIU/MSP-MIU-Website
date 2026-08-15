@@ -2880,6 +2880,71 @@ class ApiService {
   }
 
   /**
+   * Fetch recent in-memory server logs (full admin only).
+   * @param {{ level?: string, type?: string, q?: string, limit?: number, sinceId?: number }} [filters]
+   */
+  static async getAdminLogs(filters = {}) {
+    const queryParams = new URLSearchParams();
+    if (filters.level) queryParams.set('level', filters.level);
+    if (filters.type) queryParams.set('type', filters.type);
+    if (filters.q) queryParams.set('q', filters.q);
+    if (filters.limit) queryParams.set('limit', String(filters.limit));
+    if (filters.sinceId != null) queryParams.set('sinceId', String(filters.sinceId));
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/admin/logs${qs ? `?${qs}` : ''}`,
+      {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch logs');
+    return result;
+  }
+
+  /**
+   * Get current log level / buffer meta (full admin only).
+   */
+  static async getAdminLogsMeta() {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/meta`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch log settings');
+    return result;
+  }
+
+  /**
+   * Set runtime log level (full admin only).
+   * @param {string} level
+   */
+  static async setAdminLogLevel(level) {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/level`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ level }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update log level');
+    return result;
+  }
+
+  /**
+   * Clear in-memory log buffer (full admin only).
+   */
+  static async clearAdminLogs() {
+    const response = await fetch(`${API_BASE_URL}/admin/logs`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to clear logs');
+    return result;
+  }
+
+  /**
    * Get admin dashboard statistics
    */
   static async getAdminDashboard(filters = {}) {

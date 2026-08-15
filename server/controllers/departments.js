@@ -1,6 +1,7 @@
 const { Department } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { departmentHasWhatsApp } = require('../utils/emailTemplates/defaults');
+const logger = require('../utils/logger');
 
 const normalizeWhatsAppUrl = (value) => {
   if (value == null) return null;
@@ -30,7 +31,7 @@ const createDepartment = async (req, res) => {
     const dept = await Department.create(payload);
     res.status(201).json({ success: true, data: dept });
   } catch (error) {
-    console.error('Error creating department:', error);
+    logger.error('Error creating department:', error);
     if (error?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ success: false, error: 'Department name already exists' });
     }
@@ -53,7 +54,7 @@ const getDepartments = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error('Error fetching departments:', error);
+    logger.error('Error fetching departments:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch departments' });
   }
 };
@@ -88,7 +89,7 @@ const updateDepartment = async (req, res) => {
     await dept.update(updates);
     res.json({ success: true, data: dept });
   } catch (error) {
-    console.error('Error updating department:', error);
+    logger.error('Error updating department:', error);
     if (error?.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ success: false, error: 'Department name already exists' });
     }
@@ -106,7 +107,7 @@ const deleteDepartment = async (req, res) => {
     await dept.destroy();
     res.json({ success: true, message: 'Department deleted' });
   } catch (error) {
-    console.error('Error deleting department:', error);
+    logger.error('Error deleting department:', error);
     if (error?.name === 'SequelizeForeignKeyConstraintError') {
       return res.status(409).json({
         success: false,

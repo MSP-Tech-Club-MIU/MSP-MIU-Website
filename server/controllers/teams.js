@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 // Import email templates
 const {
@@ -370,10 +371,10 @@ const createTeam = async (req, res) => {
                             text: guestEmail.text,
                             html: guestEmail.html
                         });
-                        console.log(`✅ Guest leader team-created email sent to ${leaderEmail}`);
+                        logger.info(`✅ Guest leader team-created email sent to ${leaderEmail}`);
                     }
                 } catch (emailErr) {
-                    console.error('Failed to send guest leader team-created email:', emailErr);
+                    logger.error('Failed to send guest leader team-created email:', emailErr);
                 }
             }
         } else {
@@ -434,12 +435,12 @@ const createTeam = async (req, res) => {
                         html: inviteEmail.html
                     });
 
-                    console.log(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
+                    logger.info(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
                 } else {
-                    console.warn('sendEmail unavailable: leader invitation not sent');
+                    logger.warn('sendEmail unavailable: leader invitation not sent');
                 }
             } catch (emailError) {
-                console.error('Failed to send leader invitation email:', emailError);
+                logger.error('Failed to send leader invitation email:', emailError);
             }
         }
 
@@ -537,7 +538,7 @@ const createTeam = async (req, res) => {
                                 html: existingInvite.html
                             });
                     } catch (emailErr) {
-                        console.error('Failed to send member notification email (existing user):', emailErr);
+                        logger.error('Failed to send member notification email (existing user):', emailErr);
                     }
                 } else {
                     const token = crypto.randomBytes(32).toString('hex');
@@ -592,7 +593,7 @@ const createTeam = async (req, res) => {
                                 html: newInvite.html
                             });
                     } catch (emailErr) {
-                        console.error('Failed to send member invitation email (new user):', emailErr);
+                        logger.error('Failed to send member invitation email (new user):', emailErr);
                     }
                 }
             }
@@ -621,7 +622,7 @@ const createTeam = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating team:', error);
+        logger.error('Error creating team:', error);
 
         // Convert common DB constraint issues into user-friendly responses.
         const sqlCode = error?.original?.code || error?.parent?.code;
@@ -718,7 +719,7 @@ const getTeamById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching team:', error);
+        logger.error('Error fetching team:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch team'
@@ -770,7 +771,7 @@ const getCompetitionTeams = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch teams'
@@ -1013,12 +1014,12 @@ const inviteToTeam = async (req, res) => {
                     html: invitePayload.html
                 });
 
-                console.log(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);
+                logger.info(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);
             } else {
-                console.warn('⚠️  sendEmail not available, email not sent');
+                logger.warn('⚠️  sendEmail not available, email not sent');
             }
         } catch (emailError) {
-            console.error('Failed to send invitation email:', emailError);
+            logger.error('Failed to send invitation email:', emailError);
             // Don't fail the whole operation if email sending fails
         }
 
@@ -1035,7 +1036,7 @@ const inviteToTeam = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error sending invitation:', error);
+        logger.error('Error sending invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to send invitation',
@@ -1195,7 +1196,7 @@ const acceptInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error accepting invitation:', error);
+        logger.error('Error accepting invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to accept invitation',
@@ -1261,7 +1262,7 @@ const declineInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error declining invitation:', error);
+        logger.error('Error declining invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to decline invitation'
@@ -1362,7 +1363,7 @@ const verifyInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error verifying invitation:', error);
+        logger.error('Error verifying invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to verify invitation'
@@ -1582,7 +1583,7 @@ const acceptInvitationNewUser = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error accepting invitation (new user):', error);
+        logger.error('Error accepting invitation (new user):', error);
         const sqlCode = error?.original?.code || error?.parent?.code;
         if (sqlCode === 'ER_DUP_ENTRY' || error?.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({

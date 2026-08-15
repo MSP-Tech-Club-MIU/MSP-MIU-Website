@@ -8,6 +8,7 @@ const {
 } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { cairoLocalInputToUtc } = require('../utils/cairoQuizTime');
+const logger = require('../utils/logger');
 
 const QUIZ_STATUSES = ['draft', 'published', 'active', 'closed'];
 
@@ -128,7 +129,7 @@ async function getAdminQuiz(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('getAdminQuiz:', err);
+    logger.error('getAdminQuiz:', err);
     return res.status(500).json({ success: false, error: 'Failed to load quiz' });
   }
 }
@@ -159,7 +160,7 @@ async function patchAdminQuiz(req, res) {
         );
       } catch (sqlErr) {
         const sqlMsg = sqlErr?.parent?.sqlMessage || sqlErr?.message || '';
-        console.error('patchAdminQuiz SQL:', sqlMsg, sqlErr);
+        logger.error('patchAdminQuiz SQL:', sqlErr, { sqlMsg });
         const enumHint =
           /Data truncated|Incorrect|ENUM|invalid/i.test(sqlMsg) ||
           sqlErr?.name === 'SequelizeDatabaseError';
@@ -256,7 +257,7 @@ async function patchAdminQuiz(req, res) {
       data: formatAdminQuizPayload(quizFresh, questions, byQuestion)
     });
   } catch (err) {
-    console.error('patchAdminQuiz:', err);
+    logger.error('patchAdminQuiz:', err);
     const expose =
       process.env.NODE_ENV === 'development' || process.env.QUIZ_DEBUG === '1';
     const sqlMsg = err?.parent?.sqlMessage || err?.message;
@@ -334,7 +335,7 @@ async function postAdminQuizQuestion(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('postAdminQuizQuestion:', err);
+    logger.error('postAdminQuizQuestion:', err);
     return res.status(500).json({ success: false, error: 'Failed to create question' });
   }
 }
@@ -401,7 +402,7 @@ async function putAdminQuizQuestion(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('putAdminQuizQuestion:', err);
+    logger.error('putAdminQuizQuestion:', err);
     return res.status(500).json({ success: false, error: 'Failed to update question' });
   }
 }
@@ -439,7 +440,7 @@ async function deleteAdminQuizQuestion(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('deleteAdminQuizQuestion:', err);
+    logger.error('deleteAdminQuizQuestion:', err);
     return res.status(500).json({ success: false, error: 'Failed to delete question' });
   }
 }
@@ -550,7 +551,7 @@ async function postAdminQuizOption(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('postAdminQuizOption:', err);
+    logger.error('postAdminQuizOption:', err);
     return res.status(500).json({ success: false, error: 'Failed to create option' });
   }
 }
@@ -631,7 +632,7 @@ async function putAdminQuizOption(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('putAdminQuizOption:', err);
+    logger.error('putAdminQuizOption:', err);
     return res.status(500).json({ success: false, error: 'Failed to update option' });
   }
 }
@@ -669,7 +670,7 @@ async function deleteAdminQuizOption(req, res) {
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
     });
   } catch (err) {
-    console.error('deleteAdminQuizOption:', err);
+    logger.error('deleteAdminQuizOption:', err);
     return res.status(500).json({ success: false, error: 'Failed to delete option' });
   }
 }

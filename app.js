@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const logger = require("./server/utils/logger");
+const requestLogger = require("./server/middlewares/requestLogger");
 const PORT = process.env.PORT;
 
 // Suppress util._extend deprecation warning from dependencies
@@ -25,6 +27,7 @@ app.use(cors());
 // Use Express built-in JSON parser instead of body-parser (removes util._extend deprecation warning)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 // Import API routes from server
 const apiRoutes = require("./server/server");
@@ -122,7 +125,7 @@ app.get("/sitemap.xml", async (req, res) => {
     const xml = await buildSitemapXml();
     res.type("application/xml").set("Cache-Control", "public, max-age=1800").send(xml);
   } catch (err) {
-    console.error("[seo] sitemap failed:", err);
+    logger.error("[seo] sitemap failed", err);
     res.status(500).type("text/plain").send("Failed to build sitemap");
   }
 });
@@ -162,19 +165,19 @@ const { syncModels } = require("./server/models");
   try {
     await syncModels();
   } catch (err) {
-    console.error("Database sync failed:", err);
+    logger.error("Database sync failed", err);
   }
 
   app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+    logger.info("Server listening", { port: PORT });
     setInterval(() => {
       runAutoSubmitExpiredAttempts().catch((err) =>
-        console.error("[quiz-auto-submit]", err)
+        logger.error("[quiz-auto-submit]", err)
       );
     }, 60_000);
     setTimeout(() => {
       runAutoSubmitExpiredAttempts().catch((err) =>
-        console.error("[quiz-auto-submit]", err)
+        logger.error("[quiz-auto-submit]", err)
       );
     }, 10_000);
   });
