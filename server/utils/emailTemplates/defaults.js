@@ -365,7 +365,7 @@ This is an automated email, please do not reply.`,
     '{{title}}',
     `{{title}}
 
-{{description}}
+{{departmentLine}}{{dateLine}}{{description}}
 
 —
 MSP MIU · {{frontendUrl}}`,
@@ -374,41 +374,42 @@ MSP MIU · {{frontendUrl}}`,
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>{{title}}</title>
 </head>
-<body style="margin:0;padding:0;background:#091a2c;-webkit-text-size-adjust:100%;">
-  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#091a2c;opacity:0;">{{preheader}}</div>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#091a2c;">
+<body style="margin:0;padding:0;background-color:#f4f4f4;-webkit-text-size-adjust:100%;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f4f4f4;opacity:0;">{{preheader}}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background-color:#f4f4f4;">
     <tr>
-      <td align="center" style="padding:28px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0e2744;border:1px solid #1e3a52;border-radius:18px;overflow:hidden;">
-          <tr><td style="height:4px;line-height:4px;font-size:0;background:#03A9F4;">&nbsp;</td></tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
-            <td style="background:#031c35;padding:20px 26px 18px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <p style="margin:0;font-family:Inter,system-ui,sans-serif;font-size:20px;font-weight:700;letter-spacing:0.5px;line-height:1.2;">
-                <span style="color:#8EC2F0;">MSP</span><span style="color:#eaf2ff;"> · MIU</span>
-              </p>
-              <p style="margin:8px 0 0;font-family:Inter,system-ui,sans-serif;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#5AA0E6;font-weight:600;">Announcement</p>
+            <td style="padding:28px 36px;background:linear-gradient(135deg,#031C35 0%,#0D3159 50%,#1D4F82 100%);">
+              <p style="margin:0;font-size:22px;font-weight:600;letter-spacing:0.3px;line-height:1.2;color:#ffffff;">MSP MIU</p>
+              <p style="margin:10px 0 0;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8EC2F0;font-weight:600;">Announcement</p>
             </td>
           </tr>
           {{testBannerHtml}}
           <tr>
-            <td style="padding:22px 26px 8px;font-family:Inter,system-ui,sans-serif;">
-              <h1 style="margin:0;font-size:19px;font-weight:600;letter-spacing:0.4px;color:#ffffff;line-height:1.35;">{{titleHtml}}</h1>
+            <td style="padding:32px 36px 8px;">
+              <h1 style="margin:0;font-size:22px;font-weight:600;color:#031C35;line-height:1.35;">{{titleHtml}}</h1>
+              {{metaHtml}}
             </td>
           </tr>
           <tr>
-            <td style="padding:10px 26px 26px;font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.55;color:#8EC2F0;">{{descriptionHtml}}</td>
-          </tr>
-          <tr>
-            <td style="padding:0 26px 28px;font-family:Inter,system-ui,sans-serif;" align="center">
-              <a href="{{frontendUrl}}" style="display:inline-block;padding:12px 26px;background:#03A9F4;color:#ffffff;text-decoration:none;border-radius:12px;font-weight:600;font-size:13px;letter-spacing:0.35px;">Visit MSP MIU</a>
+            <td style="padding:12px 36px 28px;">
+              <div style="padding:18px 20px;background-color:#eaf2ff;border-radius:6px;border-left:4px solid #03A9F4;font-size:15px;line-height:1.65;color:#333333;">{{descriptionHtml}}</div>
             </td>
           </tr>
           <tr>
-            <td style="padding:20px 26px 24px;border-top:1px solid rgba(255,255,255,0.08);font-family:Inter,system-ui,sans-serif;font-size:12px;line-height:1.55;color:#8a8a8a;text-align:center;">
-              <p style="margin:0 0 10px;"><a href="{{frontendUrl}}" style="color:#03A9F4;text-decoration:none;font-weight:600;">{{frontendUrl}}</a></p>
-              <p style="margin:0;color:#8a8a8a;">You receive these messages because you have an account with MSP MIU.</p>
+            <td style="padding:0 36px 32px;text-align:center;">
+              <a href="{{frontendUrl}}" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#0d7bd8 0%,#03A9F4 100%);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;box-shadow:0 4px 8px rgba(13,123,216,0.3);">View on MSP MIU</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:18px 36px 22px;background-color:#f9f9f9;border-top:1px solid #eeeeee;font-size:13px;line-height:1.55;color:#666666;text-align:center;">
+              <p style="margin:0 0 8px;"><a href="{{frontendUrl}}" style="color:#0d7bd8;text-decoration:none;font-weight:600;">{{frontendUrl}}</a></p>
+              <p style="margin:0;">You receive these messages because you have an account with MSP MIU.</p>
             </td>
           </tr>
         </table>
@@ -417,7 +418,7 @@ MSP MIU · {{frontendUrl}}`,
   </table>
 </body>
 </html>`,
-    ['title', 'description', 'frontendUrl', 'titleHtml', 'descriptionHtml', 'preheader', 'testBannerHtml']
+    ['title', 'description', 'frontendUrl', 'titleHtml', 'descriptionHtml', 'preheader', 'testBannerHtml', 'metaHtml', 'departmentLine', 'dateLine']
   ),
 
   android_app_update: def(
@@ -511,22 +512,25 @@ This is an automated message from MSP MIU Competition Management System.`,
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px;">
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 5px 5px 0 0; text-align: center;">
-      <h1 style="margin: 0; font-size: 24px;">📢 New Competition Announcement</h1>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 24px 12px;">
+    <div style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+    <div style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+      <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
+      <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Competition Announcement</p>
     </div>
-    <div style="padding: 20px; background-color: white;">
-      <p>Hi Competitor,</p>
-      <p>You have received a new announcement for the competition:</p>
-      <div style="color: #667eea; font-size: 18px; font-weight: bold; margin-bottom: 10px;">{{competitionTitleHtml}}</div>
-      <div style="font-size: 16px; font-weight: bold; color: #333; margin-top: 15px; margin-bottom: 10px;">{{announcementTitleHtml}}</div>
-      <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #667eea; margin: 15px 0; white-space: pre-wrap; word-wrap: break-word;">{{announcementMessageHtml}}</div>
-      <a href="{{competitionLink}}" style="display: inline-block; background-color: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 15px; font-weight: bold;">View Competition</a>
-      <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; text-align: center;">
-        <p>This is an automated message from MSP MIU Competition Management System.</p>
-        <p>Please do not reply to this email.</p>
+    <div style="padding: 28px 36px; background-color: white;">
+      <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{competitionTitleHtml}}</p>
+      <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
+      <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; white-space: pre-wrap; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+      <div style="text-align: center;">
+        <a href="{{competitionLink}}" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">View Competition</a>
       </div>
+      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+        <p style="margin: 0 0 8px;">This is an automated message from MSP MIU Competition Management.</p>
+        <p style="margin: 0;">Please do not reply to this email.</p>
+      </div>
+    </div>
     </div>
   </div>
 </body>

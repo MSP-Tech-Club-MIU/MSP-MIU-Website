@@ -137,7 +137,7 @@ const getAnnouncementById = async (req, res) => {
  */
 const addAnnouncement = async (req, res) => {
   try {
-    const { title, description, department, announcement_date, priority } = req.body;
+    const { title, description, department, announcement_date, priority, send_email } = req.body;
     const userId = req.user.user_id;
 
     // Validation
@@ -157,12 +157,15 @@ const addAnnouncement = async (req, res) => {
       });
     }
 
+    const shouldSendEmail = send_email === true || send_email === 'true' || send_email === 1;
+
     const announcement = await Announcement.create({
       title,
       description,
       department,
       announcement_date: announcement_date,
       priority: priority === true || priority === 'true' || priority === 1,
+      send_email: shouldSendEmail,
       created_by: userId,
       is_active: true,
       season_id: await resolveSeasonIdForWrite(req.body, req.query)
@@ -176,11 +179,15 @@ const addAnnouncement = async (req, res) => {
       }]
     });
 
-    await broadcastNewAnnouncementEmails(createdAnnouncement);
+    if (createdAnnouncement.send_email) {
+      await broadcastNewAnnouncementEmails(createdAnnouncement);
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Announcement created successfully and emails sent',
+      message: createdAnnouncement.send_email
+        ? 'Announcement created successfully and emails sent'
+        : 'Announcement created successfully (website only)',
       data: createdAnnouncement
     });
   } catch (error) {

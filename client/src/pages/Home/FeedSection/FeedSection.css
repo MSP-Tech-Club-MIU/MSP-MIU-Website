@@ -270,6 +270,17 @@
     cursor: pointer;
 }
 
+.Feed__formHint {
+    margin: 0;
+    padding: 10px 14px;
+    background: rgba(3, 169, 244, 0.12);
+    border: 1px solid rgba(3, 169, 244, 0.28);
+    border-radius: 10px;
+    color: #8EC2F0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
 .Feed__formError {
     padding: 12px 16px;
     background: rgba(255, 87, 87, .15);
