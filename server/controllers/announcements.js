@@ -159,6 +159,21 @@ const addAnnouncement = async (req, res) => {
 
     const shouldSendEmail = send_email === true || send_email === 'true' || send_email === 1;
 
+    const titleMax = shouldSendEmail ? 120 : 50;
+    const descMax = shouldSendEmail ? 2000 : 220;
+    if (String(title).trim().length > titleMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Title must be at most ${titleMax} characters for ${shouldSendEmail ? 'email' : 'website'} announcements`
+      });
+    }
+    if (String(description).trim().length > descMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Description must be at most ${descMax} characters for ${shouldSendEmail ? 'email' : 'website'} announcements`
+      });
+    }
+
     const announcement = await Announcement.create({
       title,
       description,
@@ -240,6 +255,21 @@ const updateAnnouncement = async (req, res) => {
     }
     if (is_active !== undefined) {
       announcement.is_active = is_active === true || is_active === 'true' || is_active === 1;
+    }
+
+    const titleMax = announcement.send_email ? 120 : 50;
+    const descMax = announcement.send_email ? 2000 : 220;
+    if (String(announcement.title || '').trim().length > titleMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Title must be at most ${titleMax} characters for this announcement type`
+      });
+    }
+    if (String(announcement.description || '').trim().length > descMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Description must be at most ${descMax} characters for this announcement type`
+      });
     }
 
     await announcement.save();

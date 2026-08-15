@@ -793,6 +793,13 @@ body.admin-panel-active .SiteLayout__main {
     gap: 14px;
 }
 
+.AdminPanel__headerActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
 .AdminPanel__sectionTitle {
     margin: 0;
     font-size: 1.2rem;
@@ -823,6 +830,19 @@ body.admin-panel-active .SiteLayout__main {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px -6px rgba(13, 123, 216, 0.45);
     filter: brightness(1.08);
+}
+
+.AdminPanel__addBtn--secondary {
+    background: transparent;
+    border: 1px solid rgba(142, 194, 240, 0.35);
+    color: #8EC2F0;
+}
+
+.AdminPanel__addBtn--secondary:hover {
+    background: rgba(3, 169, 244, 0.12);
+    border-color: rgba(3, 169, 244, 0.45);
+    box-shadow: none;
+    filter: none;
 }
 
 /* ── Table ── */
