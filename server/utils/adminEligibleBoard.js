@@ -4,8 +4,9 @@ const sequelize = require('../config/db');
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
 
 /**
- * Admin panel access: President, Vice President, or Head of SoftDev (1) / Tech Training (2),
+ * Full admin panel access: President, Vice President, or Head of SoftDev (1),
  * with a linked user account.
+ * Technical Training Head is not full-admin (same Programs access as Co-Head).
  */
 function isAdminEligibleBoardMember(member = {}) {
   const userId = member.user_id != null && member.user_id !== ''
@@ -17,7 +18,7 @@ function isAdminEligibleBoardMember(member = {}) {
   if (position === 'President' || position === 'Vice President') return true;
 
   const departmentId = Number(member.department_id);
-  if (position === 'Head' && (departmentId === 1 || departmentId === 2)) return true;
+  if (position === 'Head' && departmentId === 1) return true;
 
   return false;
 }
@@ -69,7 +70,7 @@ function validateInitialBoardMembers(rawList, seasonYear) {
     return {
       ok: false,
       error:
-        'Add at least one board member with an admin-eligible role (President, Vice President, or Head of Software Development / Technical Training) linked to a user account.'
+        'Add at least one board member with an admin-eligible role (President, Vice President, or Head of Software Development) linked to a user account.'
     };
   }
 
@@ -110,7 +111,7 @@ function validateInitialBoardMembers(rawList, seasonYear) {
     return {
       ok: false,
       error:
-        'At least one board member must be President, Vice President, or Head of Software Development / Technical Training, and must be linked to a user_id so they can open the Admin Panel.'
+        'At least one board member must be President, Vice President, or Head of Software Development, and must be linked to a user_id so they can open the Admin Panel.'
     };
   }
 
@@ -128,7 +129,7 @@ async function seasonHasAdminEligibleBoard(seasonId, { transaction } = {}) {
        AND user_id IS NOT NULL
        AND (
          position IN ('President', 'Vice President')
-         OR (position = 'Head' AND department_id IN (1, 2))
+         OR (position = 'Head' AND department_id = 1)
        )
      LIMIT 1`,
     {

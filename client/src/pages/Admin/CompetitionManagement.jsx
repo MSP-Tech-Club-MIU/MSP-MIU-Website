@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard, FiClock } from 'react-icons/fi';
-import { MdQuiz, MdCampaign, MdEmojiEvents, MdEvent, MdDashboard, MdAppRegistration, MdNotifications, MdFeedback, MdPerson, MdHome } from 'react-icons/md';
+import { MdQuiz, MdCampaign, MdEmojiEvents, MdEvent, MdDashboard, MdAppRegistration, MdNotifications, MdFeedback, MdPerson, MdHome, MdMenuBook } from 'react-icons/md';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import PageLoader from '../../components/PageLoader';
@@ -13,6 +13,7 @@ import AdminShell from './AdminShell';
 import './AdminPanel.css';
 import './CompetitionManagement.css';
 import { useSeason } from '../../context/SeasonContext';
+import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 
 const TAB_KEYS = ['details', 'quiz', 'tasks', 'timeslots', 'teams', 'announcements'];
 const LIST_LIMIT = 20;
@@ -120,6 +121,7 @@ const CompetitionManagement = () => {
 
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [accessLevel, setAccessLevel] = useState('full');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
@@ -186,20 +188,27 @@ const CompetitionManagement = () => {
     return () => clearTimeout(t);
   }, [alert]);
 
-  const shellNavItems = useMemo(() => [
-    { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
-    { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
-    { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
-    { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
-    { key: 'members', label: 'Members', icon: <MdPerson />, category: 'Organization' },
-    { key: 'sponsors', label: 'Sponsors', icon: <MdEmojiEvents />, category: 'Organization' },
-    { key: 'board', label: 'Board', icon: <MdPerson />, category: 'Organization' },
-    { key: 'media', label: 'Media', icon: <MdDashboard />, category: 'Content' },
-    { key: 'content', label: 'Site content', icon: <MdCampaign />, category: 'Content' },
-    { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
-    { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
-    { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
-  ], []);
+  const shellNavItems = useMemo(() => {
+    const full = [
+      { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
+      { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+      { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+      { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+      { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+      { key: 'members', label: 'Members', icon: <MdPerson />, category: 'Organization' },
+      { key: 'sponsors', label: 'Sponsors', icon: <MdEmojiEvents />, category: 'Organization' },
+      { key: 'board', label: 'Board', icon: <MdPerson />, category: 'Organization' },
+      { key: 'media', label: 'Media', icon: <MdDashboard />, category: 'Content' },
+      { key: 'content', label: 'Site content', icon: <MdCampaign />, category: 'Content' },
+      { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
+      { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
+      { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
+    ];
+    if (accessLevel === 'programs') {
+      return full.filter((item) => PROGRAMS_TAB_KEYS.includes(item.key));
+    }
+    return full;
+  }, [accessLevel]);
 
   const shellBottomItems = useMemo(() => [
     { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
@@ -253,14 +262,33 @@ const CompetitionManagement = () => {
           return;
         }
         const result = await ApiService.checkAdminAccess();
-        if (!result.success) {
+        let allowed = result.success;
+        let level = 'full';
+        if (!allowed) {
+          try {
+            const [profile, boardResult] = await Promise.all([
+              ApiService.getProfile().catch(() => null),
+              ApiService.getMyBoardMembership()
+            ]);
+            allowed =
+              profile?.role === 'board' &&
+              isProgramsEligibleDepartment(boardResult?.data?.department_id);
+            if (allowed) level = 'programs';
+          } catch (_) {
+            allowed = false;
+          }
+        }
+        if (!allowed) {
           if (!cancelled) {
             setHasAccess(false);
             setLoading(false);
           }
           return;
         }
-        if (!cancelled) setHasAccess(true);
+        if (!cancelled) {
+          setAccessLevel(level);
+          setHasAccess(true);
+        }
 
         if (isEditMode) {
           await loadCompetition();

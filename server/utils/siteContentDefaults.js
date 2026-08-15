@@ -115,7 +115,9 @@ const DEFAULTS = {
       { id: 6, name: 'Event Planning' },
       { id: 7, name: 'Vice President' },
       { id: 8, name: 'President' },
-      { id: 9, name: 'Founder' }
+      { id: 9, name: 'Founder' },
+      { id: 11, name: 'Artificial Intelligence' },
+      { id: 12, name: 'Cyber Security' }
     ]
   },
   privacy_policy: {
