@@ -132,7 +132,7 @@ export default function BoardAdminTab({ onAlert }) {
     if (!file) return;
     try {
       setUploading(true);
-      const result = await ApiService.uploadFile(file, 'images');
+      const result = await ApiService.uploadFile(file, 'board_photos');
       setForm((f) => ({ ...f, photo_url: result.url || '' }));
       onAlert?.({ type: 'success', message: 'Photo uploaded.' });
     } catch (err) {

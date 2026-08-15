@@ -421,7 +421,7 @@ const updateMyBoardPhoto = async (req, res) => {
 
       const ext = path.extname(photoFile.originalname) || '.png';
       const unique = `${Date.now()}_${Math.random().toString(36).substring(2)}${ext}`;
-      const key = `Images/board_${userId}_${unique}`;
+      const key = `Board_Photos/board_${userId}_${unique}`;
 
       await r2.send(
         new PutObjectCommand({

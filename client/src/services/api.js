@@ -1757,7 +1757,7 @@ class ApiService {
   /**
    * Upload a file to R2 storage
    * @param {File} file - The file to upload
-   * @param {string} type - The upload type (assets, codes, events, images, mobile, slides, courses)
+   * @param {string} type - The upload type (assets, board_photos, codes, events, images, mobile, slides, courses, …)
    * @param {Record<string, string|number>} [query] - Optional query (course_id, lesson_id, kind)
    * @returns {Promise<{success: boolean, url: string, key: string}>}
    */

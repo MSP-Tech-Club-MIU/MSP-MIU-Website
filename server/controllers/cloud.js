@@ -3,10 +3,28 @@ const { ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s
 const path = require('path');
 const { Op } = require('sequelize');
 const Event = require('../models/Event');
+const Board = require('../models/Board');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+
+/** Extract R2 object key from a public URL (or return the path if already a key). */
+function r2KeyFromPublicUrl(urlOrKey) {
+  if (!urlOrKey || typeof urlOrKey !== 'string') return null;
+  const trimmed = urlOrKey.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/^\/+/, '');
+  }
+  try {
+    const { pathname } = new URL(trimmed);
+    return decodeURIComponent(pathname.replace(/^\/+/, ''));
+  } catch {
+    return null;
+  }
+}
 
 const CLOUD_DIRECTORY_PREFIXES = [
   'Assets/',
+  'Board_Photos/',
   'Codes/',
   'Courses/',
   'Events_Thumbnails/',
@@ -154,7 +172,7 @@ async function attachEventLinks(assets, type) {
   });
 }
 
-// Get all images from cloud storage
+// Get gallery dome images only (excludes Meet the Board portraits)
 const getImages = async (req, res) => {
   try {
     const bucket = process.env.R2_BUCKET;
@@ -165,16 +183,30 @@ const getImages = async (req, res) => {
       Prefix: prefix
     });
 
-    const response = await r2.send(command);
+    const [response, boardRows] = await Promise.all([
+      r2.send(command),
+      Board.findAll({
+        attributes: ['photo_url'],
+        where: { photo_url: { [Op.ne]: null } },
+        raw: true
+      })
+    ]);
+
+    const boardPhotoKeys = new Set(
+      boardRows
+        .map((row) => r2KeyFromPublicUrl(row.photo_url))
+        .filter((key) => key && key.startsWith(prefix))
+    );
     
-    // Filter out directories (objects ending with /) and get only image files
+    // Filter out directories, non-images, and Meet the Board portraits
     const imageFiles = (response.Contents || [])
       .filter(obj => {
-        // Exclude directories and ensure it's an image file
         const key = obj.Key;
         const isDirectory = key.endsWith('/');
         const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(key);
-        return !isDirectory && isImage;
+        const isLegacyBoardUpload = /^Images\/board_/i.test(key);
+        const isLinkedBoardPhoto = boardPhotoKeys.has(key);
+        return !isDirectory && isImage && !isLegacyBoardUpload && !isLinkedBoardPhoto;
       })
       .map(obj => {
         // Return the full URL to the image using secure URL construction

@@ -39,6 +39,7 @@ const apkUpload = multer({
 // Map type → directory (flat prefixes; courses uses hierarchical keys below)
 const directoryMap = {
   assets: "Assets/",
+  board_photos: "Board_Photos/",
   codes: "Codes/",
   events: "Events_Thumbnails/",
   images: "Images/",
