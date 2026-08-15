@@ -174,7 +174,8 @@ const AdminPanel = () => {
     const [announcementModalKind, setAnnouncementModalKind] = useState('website');
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
     const [announcementForm, setAnnouncementForm] = useState({
-        title: '', description: '', department: '', announcement_date: '', priority: false, send_email: false
+        title: '', description: '', department: '', announcement_date: '', priority: false,
+        send_email: false, cta_label: '', cta_url: ''
     });
 
     // Suggestions & Feedback state
@@ -392,7 +393,7 @@ const AdminPanel = () => {
             if (showLoading) setAnnouncementsLoading(true);
             setAnnouncementsError(null);
             const result = await ApiService.getAnnouncements({
-                includeInactive: false,
+                forAdmin: true,
                 page: announcementsPage,
                 limit: LIST_LIMIT,
                 ...seasonFilters
@@ -481,10 +482,10 @@ const AdminPanel = () => {
 
     const openAnnouncementModal = (announcement = null, kind = 'website') => {
         if (announcement) {
-            const isEmail = !!announcement.send_email;
-            const titleMax = isEmail ? EMAIL_ANNOUNCEMENT_TITLE_MAX : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
-            const descMax = isEmail ? EMAIL_ANNOUNCEMENT_DESC_MAX : WEBSITE_ANNOUNCEMENT_DESC_MAX;
-            setAnnouncementModalKind(isEmail ? 'email' : 'website');
+            const isEmailOnly = announcement.publish_to_website === false;
+            const titleMax = isEmailOnly ? EMAIL_ANNOUNCEMENT_TITLE_MAX : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
+            const descMax = isEmailOnly ? EMAIL_ANNOUNCEMENT_DESC_MAX : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+            setAnnouncementModalKind(isEmailOnly ? 'email' : 'website');
             setEditingAnnouncement(announcement);
             setAnnouncementForm({
                 title: (announcement.title || '').slice(0, titleMax),
@@ -492,7 +493,9 @@ const AdminPanel = () => {
                 department: announcement.department || '',
                 announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
                 priority: !!announcement.priority,
-                send_email: isEmail
+                send_email: !!announcement.send_email,
+                cta_label: announcement.cta_label || '',
+                cta_url: announcement.cta_url || ''
             });
         } else {
             const isEmail = kind === 'email';
@@ -502,7 +505,9 @@ const AdminPanel = () => {
                 title: '', description: '', department: '',
                 announcement_date: new Date().toISOString().split('T')[0],
                 priority: false,
-                send_email: isEmail
+                send_email: false,
+                cta_label: '',
+                cta_url: ''
             });
         }
         setShowAnnouncementModal(true);
@@ -514,27 +519,38 @@ const AdminPanel = () => {
     const announcementDescMax = announcementModalKind === 'email'
         ? EMAIL_ANNOUNCEMENT_DESC_MAX
         : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+    const showCtaFields = announcementModalKind === 'email' || !!announcementForm.send_email;
 
     const saveAnnouncement = async () => {
         try {
+            const isEmailBroadcast = announcementModalKind === 'email';
             const payload = {
-                ...announcementForm,
-                send_email: announcementModalKind === 'email'
+                title: announcementForm.title,
+                description: announcementForm.description,
+                department: announcementForm.department,
+                announcement_date: announcementForm.announcement_date,
+                priority: announcementForm.priority,
+                publish_to_website: !isEmailBroadcast,
+                send_email: isEmailBroadcast ? true : !!announcementForm.send_email,
+                cta_label: showCtaFields ? announcementForm.cta_label : '',
+                cta_url: showCtaFields ? announcementForm.cta_url : ''
             };
             if (!editingAnnouncement && typeof selectedSeasonId === 'number') {
                 payload.season_id = selectedSeasonId;
             }
             if (editingAnnouncement) {
-                const { send_email, ...updatePayload } = payload;
+                const { send_email, publish_to_website, ...updatePayload } = payload;
                 await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, updatePayload);
                 setAlert({ type: 'success', message: 'Announcement updated!' });
             } else {
                 await ApiService.createAnnouncement(payload);
                 setAlert({
                     type: 'success',
-                    message: payload.send_email
-                        ? 'Email announcement sent to members!'
-                        : 'Website announcement posted!'
+                    message: isEmailBroadcast
+                        ? 'Email broadcast sent to members!'
+                        : (payload.send_email
+                            ? 'Website announcement posted and emailed!'
+                            : 'Website announcement posted!')
                 });
             }
             setShowAnnouncementModal(false);
@@ -542,6 +558,16 @@ const AdminPanel = () => {
         } catch (err) {
             setAlert({ type: 'error', message: err.message || 'Failed to save announcement' });
         }
+    };
+
+    const announcementChannelBadge = (a) => {
+        if (a.publish_to_website === false) {
+            return { label: 'Email only', active: true };
+        }
+        if (a.send_email) {
+            return { label: 'Website + email', active: true };
+        }
+        return { label: 'Website', active: false };
     };
 
     const deleteAnnouncement = async (id) => {
@@ -1116,12 +1142,14 @@ const AdminPanel = () => {
                                                 <th>Department</th>
                                                 <th>Date</th>
                                                 <th>Priority</th>
-                                                <th>Email</th>
+                                                <th>Channel</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {announcements.map((a) => (
+                                            {announcements.map((a) => {
+                                                const channel = announcementChannelBadge(a);
+                                                return (
                                                 <tr key={a.announcement_id}>
                                                     <td style={{ fontWeight: 600 }}>
                                                         {a.title}
@@ -1137,8 +1165,8 @@ const AdminPanel = () => {
                                                         </span>
                                                     </td>
                                                     <td>
-                                                        <span className={`AdminPanel__badge AdminPanel__badge--${a.send_email ? 'active' : 'completed'}`}>
-                                                            {a.send_email ? 'Emailed' : 'Website only'}
+                                                        <span className={`AdminPanel__badge AdminPanel__badge--${channel.active ? 'active' : 'completed'}`}>
+                                                            {channel.label}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -1146,7 +1174,8 @@ const AdminPanel = () => {
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--delete" onClick={() => deleteAnnouncement(a.announcement_id)}>Delete</button>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 )}
@@ -1171,17 +1200,17 @@ const AdminPanel = () => {
                                         >
                                             <h3 className="AdminPanel__modalTitle">
                                                 {editingAnnouncement
-                                                    ? (announcementModalKind === 'email' ? 'Edit email announcement' : 'Edit website announcement')
+                                                    ? (announcementModalKind === 'email' ? 'Edit email broadcast' : 'Edit website announcement')
                                                     : (announcementModalKind === 'email' ? 'Email broadcast' : 'Website announcement')}
                                             </h3>
                                             <p className="AdminPanel__emailNote" role="note">
                                                 {announcementModalKind === 'email'
                                                     ? (editingAnnouncement
-                                                        ? 'Editing an emailed announcement. Saving does not resend the email.'
-                                                        : 'Longer copy for email. This will be sent to all members and also appear on the website.')
+                                                        ? 'Editing a mail-only broadcast. Saving does not resend the email.'
+                                                        : 'Mail only — sent to all members. Will not appear on the website feed. CTA button is required.')
                                                     : (editingAnnouncement
-                                                        ? 'Editing a short website feed post.'
-                                                        : 'Short copy for the website feed only — no email will be sent.')}
+                                                        ? 'Editing a website feed post.'
+                                                        : 'Short copy for the website feed. Optionally email members (off by default).')}
                                             </p>
                                             <div className="AdminPanel__formGroup">
                                                 <label htmlFor="announcement-title">Title *</label>
@@ -1226,6 +1255,50 @@ const AdminPanel = () => {
                                                     {' '}Priority
                                                 </label>
                                             </div>
+                                            {announcementModalKind === 'website' && !editingAnnouncement && (
+                                                <div className="AdminPanel__formGroup">
+                                                    <label htmlFor="announcement-send-email">
+                                                        <input
+                                                            id="announcement-send-email"
+                                                            type="checkbox"
+                                                            checked={announcementForm.send_email}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, send_email: e.target.checked })}
+                                                        />
+                                                        {' '}Send email to members
+                                                    </label>
+                                                </div>
+                                            )}
+                                            {showCtaFields && (
+                                                <>
+                                                    <div className="AdminPanel__formGroup">
+                                                        <label htmlFor="announcement-cta-label">
+                                                            CTA button {announcementModalKind === 'email' ? '*' : '(optional)'}
+                                                        </label>
+                                                        <input
+                                                            id="announcement-cta-label"
+                                                            value={announcementForm.cta_label}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, cta_label: e.target.value.slice(0, 80) })}
+                                                            placeholder="Button label, e.g. Register now"
+                                                            maxLength={80}
+                                                            required={announcementModalKind === 'email'}
+                                                        />
+                                                    </div>
+                                                    <div className="AdminPanel__formGroup">
+                                                        <label htmlFor="announcement-cta-url">
+                                                            CTA button URL {announcementModalKind === 'email' ? '*' : '(optional)'}
+                                                        </label>
+                                                        <input
+                                                            id="announcement-cta-url"
+                                                            type="url"
+                                                            value={announcementForm.cta_url}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, cta_url: e.target.value.slice(0, 512) })}
+                                                            placeholder="https://…"
+                                                            maxLength={512}
+                                                            required={announcementModalKind === 'email'}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="AdminPanel__modalActions">
                                                 <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
                                                 <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>

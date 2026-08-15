@@ -45,6 +45,19 @@ const Announcement = sequelize.define('Announcement', {
     defaultValue: false,
     allowNull: false
   },
+  publish_to_website: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    allowNull: false
+  },
+  cta_label: {
+    type: DataTypes.STRING(80),
+    allowNull: true
+  },
+  cta_url: {
+    type: DataTypes.STRING(512),
+    allowNull: true
+  },
   created_by: {
     type: DataTypes.INTEGER,
     allowNull: false,
