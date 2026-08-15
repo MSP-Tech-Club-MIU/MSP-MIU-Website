@@ -104,6 +104,13 @@
 }
 
 /* Create Button */
+.Feed__createActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
 .Feed__createBtn {
     display: inline-flex;
     align-items: center;
@@ -135,6 +142,19 @@
     font-size: 1rem;
 }
 
+.Feed__createBtn--secondary {
+    background: transparent;
+    border: 1px solid rgba(142, 194, 240, 0.4);
+    color: #8EC2F0;
+    box-shadow: none;
+}
+
+.Feed__createBtn--secondary:hover {
+    background: rgba(3, 169, 244, 0.12);
+    border-color: rgba(3, 169, 244, 0.5);
+    box-shadow: none;
+}
+
 /* Modal */
 .Feed__modalOverlay {
     position: fixed;
@@ -156,7 +176,7 @@
     border-radius: 20px;
     padding: 32px;
     width: 100%;
-    max-width: 600px;
+    max-width: 520px;
     max-height: 90vh;
     overflow-y: auto;
     margin: auto;
@@ -164,6 +184,10 @@
     backdrop-filter: blur(14px) saturate(160%);
     box-shadow: 0 8px 32px rgba(0, 0, 0, .3);
     position: relative;
+}
+
+.Feed__modalContent--large {
+    max-width: 720px;
 }
 
 .Feed__modalClose {
@@ -271,7 +295,7 @@
 }
 
 .Feed__formHint {
-    margin: 0;
+    margin: 0 0 18px;
     padding: 10px 14px;
     background: rgba(3, 169, 244, 0.12);
     border: 1px solid rgba(3, 169, 244, 0.28);
@@ -279,6 +303,18 @@
     color: #8EC2F0;
     font-size: 0.85rem;
     line-height: 1.45;
+}
+
+.Feed__charCount {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #5AA0E6;
+    text-align: right;
+}
+
+.Feed__charCount.is-max {
+    color: #ffb4b4;
 }
 
 .Feed__formError {
@@ -364,6 +400,11 @@
     .Feed__createBtn {
         width: 100%;
         justify-content: center;
+    }
+
+    .Feed__createActions {
+        width: 100%;
+        flex-direction: column;
     }
 
     .Feed__modalContent {

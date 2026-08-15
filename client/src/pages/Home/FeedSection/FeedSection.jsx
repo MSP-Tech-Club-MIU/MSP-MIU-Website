@@ -6,7 +6,21 @@ import ApiService from '../../../services/api';
 import Pagination from '../../../components/Pagination';
 import SeasonBadge from '../../../components/SeasonBadge';
 import { useSeason } from '../../../context/SeasonContext';
-import { FiPlus, FiX } from 'react-icons/fi';
+import { FiPlus, FiMail, FiX } from 'react-icons/fi';
+
+const WEBSITE_TITLE_MAX = 50;
+const WEBSITE_DESC_MAX = 220;
+const EMAIL_TITLE_MAX = 120;
+const EMAIL_DESC_MAX = 2000;
+
+const emptyForm = (sendEmail = false) => ({
+  title: '',
+  description: '',
+  department: '',
+  announcement_date: '',
+  priority: false,
+  send_email: sendEmail
+});
 
 const FeedSection = memo(() => {
   const { seasonFilters, isAll, selectedSeasonId } = useSeason();
@@ -16,27 +30,23 @@ const FeedSection = memo(() => {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState(null);
   const [userRole, setUserRole] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    department: '',
-    announcement_date: '',
-    priority: false,
-    send_email: false
-  });
+  const [modalKind, setModalKind] = useState(null); // 'website' | 'email' | null
+  const [formData, setFormData] = useState(emptyForm(false));
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
-  // Check user role
+  const isEmailModal = modalKind === 'email';
+  const titleMax = isEmailModal ? EMAIL_TITLE_MAX : WEBSITE_TITLE_MAX;
+  const descMax = isEmailModal ? EMAIL_DESC_MAX : WEBSITE_DESC_MAX;
+
   useEffect(() => {
     const checkUserRole = async () => {
       if (ApiService.isAuthenticated()) {
         try {
           const user = await ApiService.getProfile();
           setUserRole(user.role);
-        } catch (error) {
-          console.error('Error fetching user role:', error);
+        } catch (err) {
+          console.error('Error fetching user role:', err);
           setUserRole(null);
         }
       } else {
@@ -56,8 +66,7 @@ const FeedSection = memo(() => {
         ...seasonFilters,
       });
       const list = Array.isArray(result) ? result : (result.data || []);
-      
-      // Map API response to component format
+
       const mappedAnnouncements = list.map(announcement => ({
         id: announcement.announcement_id,
         title: announcement.title,
@@ -68,12 +77,11 @@ const FeedSection = memo(() => {
         season: announcement.season || null,
         season_id: announcement.season_id ?? null,
       }));
-      
+
       setAnnouncements(mappedAnnouncements);
       setPagination(Array.isArray(result) ? null : (result.pagination || null));
     } catch (err) {
       console.error('Error fetching announcements:', err);
-      // If it's a JSON parse error, the API endpoint might not be available
       if (err.message && err.message.includes('JSON')) {
         setError('Announcements API is not available. Please ensure the backend server is running.');
       } else {
@@ -94,8 +102,22 @@ const FeedSection = memo(() => {
   const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
   const canCreateAnnouncements = isBoardOrAdmin;
 
+  const openModal = (kind) => {
+    setModalKind(kind);
+    setFormData(emptyForm(kind === 'email'));
+    setSubmitError(null);
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === 'title') {
+      setFormData(prev => ({ ...prev, title: value.slice(0, titleMax) }));
+      return;
+    }
+    if (name === 'description') {
+      setFormData(prev => ({ ...prev, description: value.slice(0, descMax) }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -108,21 +130,15 @@ const FeedSection = memo(() => {
     setSubmitError(null);
 
     try {
-      const payload = { ...formData };
+      const payload = {
+        ...formData,
+        send_email: modalKind === 'email'
+      };
       if (typeof selectedSeasonId === 'number') {
         payload.season_id = selectedSeasonId;
       }
       await ApiService.createAnnouncement(payload);
-      setShowModal(false);
-      setFormData({
-        title: '',
-        description: '',
-        department: '',
-        announcement_date: '',
-        priority: false,
-        send_email: false
-      });
-      // Refresh announcements list
+      handleCloseModal();
       setPage(1);
       await fetchAnnouncements(1);
     } catch (err) {
@@ -134,15 +150,8 @@ const FeedSection = memo(() => {
   };
 
   const handleCloseModal = () => {
-    setShowModal(false);
-    setFormData({
-      title: '',
-      description: '',
-      department: '',
-      announcement_date: '',
-      priority: false,
-      send_email: false
-    });
+    setModalKind(null);
+    setFormData(emptyForm(false));
     setSubmitError(null);
   };
 
@@ -151,15 +160,28 @@ const FeedSection = memo(() => {
       <div className="Feed__head">
         <h2 id="feed-heading" className="Feed__title">Announcements & Updates</h2>
         {canCreateAnnouncements && (
-          <motion.button
-            className="Feed__createBtn"
-            onClick={() => setShowModal(true)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <FiPlus />
-            Create Announcement
-          </motion.button>
+          <div className="Feed__createActions">
+            <motion.button
+              type="button"
+              className="Feed__createBtn Feed__createBtn--secondary"
+              onClick={() => openModal('website')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiPlus />
+              Website post
+            </motion.button>
+            <motion.button
+              type="button"
+              className="Feed__createBtn"
+              onClick={() => openModal('email')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiMail />
+              Email broadcast
+            </motion.button>
+          </div>
         )}
       </div>
       <div className="Feed__grid">
@@ -195,18 +217,18 @@ const FeedSection = memo(() => {
                 <> {' '}<SeasonBadge season={a.season} /></>
               )}
             </h3>
-            <p className="FeedCard__desc">{a.desc}</p>
-            {/* <motion.a href="/announcements" className="FeedCard__more" whileHover={{ color: '#fff', x: 3 }}>Read more →</motion.a> */}
+            <p className="FeedCard__desc">
+              {a.desc && a.desc.length > 280 ? `${a.desc.slice(0, 279)}…` : a.desc}
+            </p>
           </motion.article>
           ))
         )}
       </div>
       <Pagination pagination={pagination} onPageChange={setPage} />
 
-      {/* Create Announcement Modal — portaled so parent transforms cannot pin it off-screen */}
       {createPortal(
         <AnimatePresence>
-          {showModal && (
+          {modalKind && (
             <motion.div
               className="Feed__modalOverlay"
               initial={{ opacity: 0 }}
@@ -215,7 +237,7 @@ const FeedSection = memo(() => {
               onClick={handleCloseModal}
             >
               <motion.div
-                className="Feed__modalContent"
+                className={`Feed__modalContent${isEmailModal ? ' Feed__modalContent--large' : ''}`}
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -229,7 +251,14 @@ const FeedSection = memo(() => {
                   <FiX />
                 </button>
 
-                <h3 className="Feed__modalTitle">Create New Announcement</h3>
+                <h3 className="Feed__modalTitle">
+                  {isEmailModal ? 'Email broadcast' : 'Website announcement'}
+                </h3>
+                <p className="Feed__formHint" role="note">
+                  {isEmailModal
+                    ? 'Longer copy for email. Sent to all members and shown on the website.'
+                    : 'Short copy for the website feed only — no email will be sent.'}
+                </p>
 
                 <form onSubmit={handleSubmit} className="Feed__form">
                   <div className="Feed__formGroup">
@@ -241,21 +270,29 @@ const FeedSection = memo(() => {
                       value={formData.title}
                       onChange={handleInputChange}
                       required
-                      placeholder="Enter announcement title"
+                      maxLength={titleMax}
+                      placeholder={isEmailModal ? 'Email subject / title' : 'Short title'}
                     />
+                    <span className={`Feed__charCount${formData.title.length >= titleMax ? ' is-max' : ''}`}>
+                      {formData.title.length}/{titleMax}
+                    </span>
                   </div>
 
                   <div className="Feed__formGroup">
-                    <label htmlFor="description">Description *</label>
+                    <label htmlFor="description">{isEmailModal ? 'Email body *' : 'Description *'}</label>
                     <textarea
                       id="description"
                       name="description"
                       value={formData.description}
                       onChange={handleInputChange}
                       required
-                      rows="4"
-                      placeholder="Enter announcement description"
+                      rows={isEmailModal ? 10 : 4}
+                      maxLength={descMax}
+                      placeholder={isEmailModal ? 'Full email message…' : 'Brief description for the feed'}
                     />
+                    <span className={`Feed__charCount${formData.description.length >= descMax ? ' is-max' : ''}`}>
+                      {formData.description.length}/{descMax}
+                    </span>
                   </div>
 
                   <div className="Feed__formGroup">
@@ -295,24 +332,6 @@ const FeedSection = memo(() => {
                     </label>
                   </div>
 
-                  <div className="Feed__formGroup Feed__formGroup--checkbox">
-                    <label>
-                      <input
-                        type="checkbox"
-                        name="send_email"
-                        checked={formData.send_email}
-                        onChange={handleInputChange}
-                      />
-                      <span>Send email notification to all members</span>
-                    </label>
-                  </div>
-
-                  {formData.send_email && (
-                    <p className="Feed__formHint" role="note">
-                      An email about this announcement will be sent to all members.
-                    </p>
-                  )}
-
                   {submitError && (
                     <div className="Feed__formError">{submitError}</div>
                   )}
@@ -331,7 +350,9 @@ const FeedSection = memo(() => {
                       className="Feed__formBtn Feed__formBtn--submit"
                       disabled={submitting}
                     >
-                      {submitting ? 'Creating...' : 'Create Announcement'}
+                      {submitting
+                        ? (isEmailModal ? 'Sending...' : 'Posting...')
+                        : (isEmailModal ? 'Send email' : 'Post to website')}
                     </button>
                   </div>
                 </form>

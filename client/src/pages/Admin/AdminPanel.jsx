@@ -33,8 +33,12 @@ import './AdminPanel.css';
 
 const LIST_LIMIT = 20;
 const NOTIFICATIONS_LIMIT = 50;
-const ANNOUNCEMENT_TITLE_MAX = 50;
-const ANNOUNCEMENT_DESC_MAX = 220;
+/** Short copy for website feed cards */
+const WEBSITE_ANNOUNCEMENT_TITLE_MAX = 50;
+const WEBSITE_ANNOUNCEMENT_DESC_MAX = 220;
+/** Longer copy allowed for email broadcasts */
+const EMAIL_ANNOUNCEMENT_TITLE_MAX = 120;
+const EMAIL_ANNOUNCEMENT_DESC_MAX = 2000;
 
 const ADMIN_TAB_TO_ROUTE = {
     dashboard: 'dashboard',
@@ -166,6 +170,8 @@ const AdminPanel = () => {
     const [announcementsPage, setAnnouncementsPage] = useState(1);
     const [announcementsPagination, setAnnouncementsPagination] = useState(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    /** 'website' | 'email' — create mode; edit keeps the original channel */
+    const [announcementModalKind, setAnnouncementModalKind] = useState('website');
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
     const [announcementForm, setAnnouncementForm] = useState({
         title: '', description: '', department: '', announcement_date: '', priority: false, send_email: false
@@ -473,32 +479,48 @@ const AdminPanel = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.pathname, hasAccess]);
 
-    const openAnnouncementModal = (announcement = null) => {
+    const openAnnouncementModal = (announcement = null, kind = 'website') => {
         if (announcement) {
+            const isEmail = !!announcement.send_email;
+            const titleMax = isEmail ? EMAIL_ANNOUNCEMENT_TITLE_MAX : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
+            const descMax = isEmail ? EMAIL_ANNOUNCEMENT_DESC_MAX : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+            setAnnouncementModalKind(isEmail ? 'email' : 'website');
             setEditingAnnouncement(announcement);
             setAnnouncementForm({
-                title: (announcement.title || '').slice(0, ANNOUNCEMENT_TITLE_MAX),
-                description: (announcement.description || '').slice(0, ANNOUNCEMENT_DESC_MAX),
+                title: (announcement.title || '').slice(0, titleMax),
+                description: (announcement.description || '').slice(0, descMax),
                 department: announcement.department || '',
                 announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
                 priority: !!announcement.priority,
-                send_email: !!announcement.send_email
+                send_email: isEmail
             });
         } else {
+            const isEmail = kind === 'email';
+            setAnnouncementModalKind(isEmail ? 'email' : 'website');
             setEditingAnnouncement(null);
             setAnnouncementForm({
                 title: '', description: '', department: '',
                 announcement_date: new Date().toISOString().split('T')[0],
                 priority: false,
-                send_email: false
+                send_email: isEmail
             });
         }
         setShowAnnouncementModal(true);
     };
 
+    const announcementTitleMax = announcementModalKind === 'email'
+        ? EMAIL_ANNOUNCEMENT_TITLE_MAX
+        : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
+    const announcementDescMax = announcementModalKind === 'email'
+        ? EMAIL_ANNOUNCEMENT_DESC_MAX
+        : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+
     const saveAnnouncement = async () => {
         try {
-            const payload = { ...announcementForm };
+            const payload = {
+                ...announcementForm,
+                send_email: announcementModalKind === 'email'
+            };
             if (!editingAnnouncement && typeof selectedSeasonId === 'number') {
                 payload.season_id = selectedSeasonId;
             }
@@ -511,8 +533,8 @@ const AdminPanel = () => {
                 setAlert({
                     type: 'success',
                     message: payload.send_email
-                        ? 'Announcement created and emailed to members!'
-                        : 'Announcement created (website only)!'
+                        ? 'Email announcement sent to members!'
+                        : 'Website announcement posted!'
                 });
             }
             setShowAnnouncementModal(false);
@@ -1062,9 +1084,22 @@ const AdminPanel = () => {
                                     <h2 className="AdminPanel__sectionTitle">
                                         <MdCampaign /> Announcements
                                     </h2>
-                                    <button className="AdminPanel__addBtn" onClick={() => openAnnouncementModal()}>
-                                        <MdAdd /> Add Announcement
-                                    </button>
+                                    <div className="AdminPanel__headerActions">
+                                        <button
+                                            type="button"
+                                            className="AdminPanel__addBtn AdminPanel__addBtn--secondary"
+                                            onClick={() => openAnnouncementModal(null, 'website')}
+                                        >
+                                            <MdAdd /> Website post
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="AdminPanel__addBtn"
+                                            onClick={() => openAnnouncementModal(null, 'email')}
+                                        >
+                                            <MdEmail /> Email broadcast
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {announcementsLoading && announcements.length === 0 ? (
@@ -1129,44 +1164,52 @@ const AdminPanel = () => {
                                         role="presentation"
                                     >
                                         <div
-                                            className="AdminPanel__modalContent"
+                                            className={`AdminPanel__modalContent${announcementModalKind === 'email' ? ' AdminPanel__modalContent--large' : ''}`}
                                             onClick={e => e.stopPropagation()}
                                             role="dialog"
                                             aria-modal="true"
                                         >
-                                            <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
-                                            {!editingAnnouncement && (
-                                                <p className="AdminPanel__emailNote" role="note">
-                                                    {announcementForm.send_email
-                                                        ? 'This announcement will appear on the website and an email will be sent to all members.'
-                                                        : 'This announcement will appear on the website only. Check “Send email” to also notify members by mail.'}
-                                                </p>
-                                            )}
+                                            <h3 className="AdminPanel__modalTitle">
+                                                {editingAnnouncement
+                                                    ? (announcementModalKind === 'email' ? 'Edit email announcement' : 'Edit website announcement')
+                                                    : (announcementModalKind === 'email' ? 'Email broadcast' : 'Website announcement')}
+                                            </h3>
+                                            <p className="AdminPanel__emailNote" role="note">
+                                                {announcementModalKind === 'email'
+                                                    ? (editingAnnouncement
+                                                        ? 'Editing an emailed announcement. Saving does not resend the email.'
+                                                        : 'Longer copy for email. This will be sent to all members and also appear on the website.')
+                                                    : (editingAnnouncement
+                                                        ? 'Editing a short website feed post.'
+                                                        : 'Short copy for the website feed only — no email will be sent.')}
+                                            </p>
                                             <div className="AdminPanel__formGroup">
                                                 <label htmlFor="announcement-title">Title *</label>
                                                 <input
                                                     id="announcement-title"
                                                     value={announcementForm.title}
-                                                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value.slice(0, ANNOUNCEMENT_TITLE_MAX) })}
-                                                    placeholder="Title"
-                                                    maxLength={ANNOUNCEMENT_TITLE_MAX}
+                                                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value.slice(0, announcementTitleMax) })}
+                                                    placeholder={announcementModalKind === 'email' ? 'Email subject / title' : 'Short title'}
+                                                    maxLength={announcementTitleMax}
                                                 />
-                                                <span className={`AdminPanel__charCount${announcementForm.title.length >= ANNOUNCEMENT_TITLE_MAX ? ' is-max' : ''}`}>
-                                                    {announcementForm.title.length}/{ANNOUNCEMENT_TITLE_MAX}
+                                                <span className={`AdminPanel__charCount${announcementForm.title.length >= announcementTitleMax ? ' is-max' : ''}`}>
+                                                    {announcementForm.title.length}/{announcementTitleMax}
                                                 </span>
                                             </div>
                                             <div className="AdminPanel__formGroup">
-                                                <label htmlFor="announcement-description">Description *</label>
+                                                <label htmlFor="announcement-description">
+                                                    {announcementModalKind === 'email' ? 'Email body *' : 'Description *'}
+                                                </label>
                                                 <textarea
                                                     id="announcement-description"
                                                     value={announcementForm.description}
-                                                    onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, ANNOUNCEMENT_DESC_MAX) })}
-                                                    placeholder="Description"
-                                                    rows={4}
-                                                    maxLength={ANNOUNCEMENT_DESC_MAX}
+                                                    onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, announcementDescMax) })}
+                                                    placeholder={announcementModalKind === 'email' ? 'Full email message…' : 'Brief description for the feed'}
+                                                    rows={announcementModalKind === 'email' ? 10 : 4}
+                                                    maxLength={announcementDescMax}
                                                 />
-                                                <span className={`AdminPanel__charCount${announcementForm.description.length >= ANNOUNCEMENT_DESC_MAX ? ' is-max' : ''}`}>
-                                                    {announcementForm.description.length}/{ANNOUNCEMENT_DESC_MAX}
+                                                <span className={`AdminPanel__charCount${announcementForm.description.length >= announcementDescMax ? ' is-max' : ''}`}>
+                                                    {announcementForm.description.length}/{announcementDescMax}
                                                 </span>
                                             </div>
                                             <div className="AdminPanel__formGroup">
@@ -1183,22 +1226,13 @@ const AdminPanel = () => {
                                                     {' '}Priority
                                                 </label>
                                             </div>
-                                            {!editingAnnouncement && (
-                                                <div className="AdminPanel__formGroup">
-                                                    <label htmlFor="announcement-send-email">
-                                                        <input
-                                                            id="announcement-send-email"
-                                                            type="checkbox"
-                                                            checked={announcementForm.send_email}
-                                                            onChange={e => setAnnouncementForm({ ...announcementForm, send_email: e.target.checked })}
-                                                        />
-                                                        {' '}Send email notification to all members
-                                                    </label>
-                                                </div>
-                                            )}
                                             <div className="AdminPanel__modalActions">
                                                 <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
-                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>{editingAnnouncement ? 'Save' : 'Create'}</button>
+                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>
+                                                    {editingAnnouncement
+                                                        ? 'Save'
+                                                        : (announcementModalKind === 'email' ? 'Send email' : 'Post to website')}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>,
