@@ -49,6 +49,7 @@ export default function BoardAdminTab({ onAlert }) {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingId, setSendingId] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -203,6 +204,33 @@ export default function BoardAdminTab({ onAlert }) {
     }
   };
 
+  const sendActivationMail = async (row) => {
+    if (!row?.email) {
+      onAlert?.({ type: 'error', message: 'This board member has no email address.' });
+      return;
+    }
+    if (
+      !window.confirm(
+        `Send board account activation email to ${row.full_name} (${row.email})?`
+      )
+    ) {
+      return;
+    }
+    try {
+      setSendingId(row.board_id);
+      const result = await ApiService.sendBoardActivationEmail(row.board_id);
+      onAlert?.({
+        type: 'success',
+        message: result.message || `Board account activation email sent to ${row.email}`
+      });
+      await load();
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to send email' });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   return (
     <div className="AdminPanel__section">
       <div className="AdminPanel__sectionHeader">
@@ -227,31 +255,56 @@ export default function BoardAdminTab({ onAlert }) {
                 <th>Position</th>
                 <th>Dept</th>
                 <th>Faculty</th>
+                <th>Account</th>
                 <th>Visible</th>
                 <th>Order</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => (
-                <tr key={row.board_id}>
-                  <td style={{ fontWeight: 600 }}>
-                    {row.full_name}
-                    {isAll && (row.season || row.season_id) && (
-                      <> {' '}<SeasonBadge season={row.season} /></>
-                    )}
-                  </td>
-                  <td>{row.position}</td>
-                  <td>{row.department?.name || row.department_id || '—'}</td>
-                  <td>{row.faculty || '—'}</td>
-                  <td>{row.is_visible === false ? 'Hidden' : 'Yes'}</td>
-                  <td>{row.sort_order}</td>
-                  <td>
-                    <button type="button" className="AdminPanel__actionBtn AdminPanel__actionBtn--edit" onClick={() => openEdit(row)}>Edit</button>
-                    <button type="button" className="AdminPanel__actionBtn AdminPanel__actionBtn--delete" onClick={() => remove(row)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
+              {items.map((row) => {
+                const hasAccount = Boolean(row.has_active_account);
+                return (
+                  <tr key={row.board_id}>
+                    <td style={{ fontWeight: 600 }}>
+                      {row.full_name}
+                      {isAll && (row.season || row.season_id) && (
+                        <> {' '}<SeasonBadge season={row.season} /></>
+                      )}
+                    </td>
+                    <td>{row.position}</td>
+                    <td>{row.department?.name || row.department_id || '—'}</td>
+                    <td>{row.faculty || '—'}</td>
+                    <td>
+                      <span
+                        className={`AdminPanel__badge AdminPanel__badge--${
+                          hasAccount ? 'active' : 'pending'
+                        }`}
+                      >
+                        {hasAccount ? 'Active' : 'No account'}
+                      </span>
+                    </td>
+                    <td>{row.is_visible === false ? 'Hidden' : 'Yes'}</td>
+                    <td>{row.sort_order}</td>
+                    <td>
+                      {!hasAccount && (
+                        <button
+                          type="button"
+                          className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                          disabled={sendingId === row.board_id}
+                          onClick={() => sendActivationMail(row)}
+                        >
+                          {sendingId === row.board_id
+                            ? 'Sending…'
+                            : 'Send board account activation email'}
+                        </button>
+                      )}
+                      <button type="button" className="AdminPanel__actionBtn AdminPanel__actionBtn--edit" onClick={() => openEdit(row)}>Edit</button>
+                      <button type="button" className="AdminPanel__actionBtn AdminPanel__actionBtn--delete" onClick={() => remove(row)}>Delete</button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

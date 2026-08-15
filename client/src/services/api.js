@@ -716,6 +716,20 @@ class ApiService {
     return result;
   }
 
+  /** Send a board account activation email to a single board member. */
+  static async sendBoardActivationEmail(id) {
+    const response = await fetch(
+      `${API_BASE_URL}/board/${id}/send-activation-email`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send board activation email');
+    return result;
+  }
+
   static async getMyBoardMembership() {
     const response = await fetch(`${API_BASE_URL}/board/me`, {
       method: 'GET',

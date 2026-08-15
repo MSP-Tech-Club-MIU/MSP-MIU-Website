@@ -1,5 +1,6 @@
 const path = require('path');
-const { Board, Department, Season } = require('../models');
+const { Op } = require('sequelize');
+const { Board, Department, Season, User } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const {
   resolveSeasonFilter,
@@ -8,8 +9,59 @@ const {
   getDefaultSeasonId
 } = require('../utils/seasonFilter');
 const { r2, PutObjectCommand } = require('../config/cloud');
+const { sendBoardActivationEmailForMember } = require('../utils/boardActivationEmail');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
+
+function hasActiveAccount(user) {
+  return Boolean(user && (user.is_active || user.password_hash));
+}
+
+async function attachAccountStatus(boardMembers) {
+  const emails = [
+    ...new Set(
+      boardMembers
+        .map((m) => (m.email ? String(m.email).trim() : null))
+        .filter(Boolean)
+    )
+  ];
+  const userIds = [
+    ...new Set(
+      boardMembers
+        .map((m) => (m.user_id != null && m.user_id !== '' ? Number(m.user_id) : null))
+        .filter((id) => Number.isFinite(id) && id > 0)
+    )
+  ];
+
+  const orClauses = [];
+  if (emails.length) orClauses.push({ email: { [Op.in]: emails } });
+  if (userIds.length) orClauses.push({ user_id: { [Op.in]: userIds } });
+
+  const users = orClauses.length
+    ? await User.findAll({
+        where: { [Op.or]: orClauses },
+        attributes: ['user_id', 'email', 'is_active', 'password_hash']
+      })
+    : [];
+
+  const userById = new Map(users.map((u) => [Number(u.user_id), u]));
+  const userByEmail = new Map(
+    users
+      .filter((u) => u.email)
+      .map((u) => [String(u.email).trim().toLowerCase(), u])
+  );
+
+  return boardMembers.map((member) => {
+    const json = typeof member.toJSON === 'function' ? member.toJSON() : { ...member };
+    const linked = json.user_id != null ? userById.get(Number(json.user_id)) : null;
+    const emailKey = json.email ? String(json.email).trim().toLowerCase() : null;
+    const byEmail = emailKey ? userByEmail.get(emailKey) : null;
+    return {
+      ...json,
+      has_active_account: hasActiveAccount(linked) || hasActiveAccount(byEmail)
+    };
+  });
+}
 
 async function findBoardMembershipForUser(userId) {
   const members = await Board.findAll({
@@ -80,10 +132,13 @@ const getBoard = async (req, res) => {
       distinct: true
     });
 
+    // Account status is admin-only (includeHidden requires auth)
+    const data = includeHidden ? await attachAccountStatus(rows) : rows;
+
     res.json({
       success: true,
-      data: rows,
-      count: rows.length,
+      data,
+      count: data.length,
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
@@ -164,7 +219,6 @@ const member = await Board.create({
     if (member.email) {
       try {
         const { sendEmail } = await import('../utils/email.mjs');
-        const { sendBoardActivationEmailForMember } = require('../utils/boardActivationEmail');
         const result = await sendBoardActivationEmailForMember(member, sendEmail);
         activationEmail = result;
       } catch (emailErr) {
@@ -368,11 +422,56 @@ const updateMyBoardPhoto = async (req, res) => {
   }
 };
 
+/**
+ * Send a board account activation email to a single board member.
+ */
+const sendBoardActivationEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const member = await Board.findByPk(id);
+    if (!member) {
+      return res.status(404).json({ success: false, error: 'Board member not found' });
+    }
+
+    const { sendEmail } = await import('../utils/email.mjs');
+    const result = await sendBoardActivationEmailForMember(member, sendEmail);
+
+    if (result.skipped) {
+      return res.status(400).json({
+        success: false,
+        error: result.reason || 'Board member already has an active account',
+        data: result
+      });
+    }
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send activation email',
+        data: result
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Board account activation email sent to ${result.email}`,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error sending board activation email:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send board activation email'
+    });
+  }
+};
+
 module.exports = {
   getBoard,
   createBoardMember,
   updateBoardMember,
   deleteBoardMember,
   getMyBoardMembership,
-  updateMyBoardPhoto
+  updateMyBoardPhoto,
+  sendBoardActivationEmail
 };
