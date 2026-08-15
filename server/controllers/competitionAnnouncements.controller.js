@@ -2,6 +2,7 @@ const { CompetitionAnnouncement, Competition, User } = require('../models');
 const { broadcastCompetitionAnnouncementEmails } = require('../services/competitionAnnouncementBroadcast');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /**
  * Get all announcements for a specific competition
@@ -51,8 +52,8 @@ const getCompetitionAnnouncements = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error('Error fetching competition announcements:', error);
-    console.error('Error message:', error.message);
+    logger.error('Error fetching competition announcements:', error);
+    logger.error('Error message:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch competition announcements'
@@ -93,7 +94,7 @@ const getCompetitionAnnouncementById = async (req, res) => {
       data: announcement
     });
   } catch (error) {
-    console.error('Error fetching competition announcement:', error);
+    logger.error('Error fetching competition announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch competition announcement'
@@ -158,7 +159,7 @@ const createCompetitionAnnouncement = async (req, res) => {
       try {
         await broadcastCompetitionAnnouncementEmails(createdAnnouncement, competition);
       } catch (emailError) {
-        console.error('Error broadcasting announcement emails:', emailError);
+        logger.error('Error broadcasting announcement emails:', emailError);
         // Don't fail the request, just log the error
       }
     }
@@ -169,7 +170,7 @@ const createCompetitionAnnouncement = async (req, res) => {
       data: createdAnnouncement
     });
   } catch (error) {
-    console.error('Error creating competition announcement:', error);
+    logger.error('Error creating competition announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to create competition announcement'
@@ -228,7 +229,7 @@ const updateCompetitionAnnouncement = async (req, res) => {
       data: updatedAnnouncement
     });
   } catch (error) {
-    console.error('Error updating competition announcement:', error);
+    logger.error('Error updating competition announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to update competition announcement'
@@ -268,7 +269,7 @@ const deleteCompetitionAnnouncement = async (req, res) => {
       message: 'Competition announcement deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting competition announcement:', error);
+    logger.error('Error deleting competition announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to delete competition announcement'
@@ -318,7 +319,7 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
     try {
       await broadcastCompetitionAnnouncementEmails(announcement, competition);
     } catch (emailError) {
-      console.error('Error resending announcement emails:', emailError);
+      logger.error('Error resending announcement emails:', emailError);
       return res.status(500).json({
         success: false,
         error: 'Failed to resend announcement emails'
@@ -330,7 +331,7 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
       message: 'Announcement emails resent successfully to all competitors'
     });
   } catch (error) {
-    console.error('Error resending competition announcement emails:', error);
+    logger.error('Error resending competition announcement emails:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to resend announcement emails'

@@ -1,4 +1,5 @@
 const { Team, TeamMember, User, Competition, TeamInvitation } = require('../models');
+const logger = require('../utils/logger');
 
 /**
  * Get targeted competitor emails for an announcement
@@ -28,7 +29,7 @@ async function getCompetitorEmails(announcement) {
       });
 
       if (teams.length === 0) {
-        console.log(`No teams found for competition ${announcement.competition_id}`);
+        logger.info(`No teams found for competition ${announcement.competition_id}`);
         return [];
       }
       teamIds = teams.map(team => team.team_id);
@@ -90,10 +91,10 @@ async function getCompetitorEmails(announcement) {
     });
 
     const emailArray = Array.from(emails);
-    console.log(`Found ${emailArray.length} unique emails for announcement ${announcement.announcement_id} (including inactive users and users with pending invitations)`);
+    logger.info(`Found ${emailArray.length} unique emails for announcement ${announcement.announcement_id} (including inactive users and users with pending invitations)`);
     return emailArray;
   } catch (error) {
-    console.error('Error fetching competitor emails:', error);
+    logger.error('Error fetching competitor emails:', error);
     throw error;
   }
 }
@@ -136,7 +137,7 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
     const emails = await getCompetitorEmails(announcement);
 
     if (emails.length === 0) {
-      console.log(`Competition announcement: no recipients for announcement ${announcement.announcement_id}`);
+      logger.info(`Competition announcement: no recipients for announcement ${announcement.announcement_id}`);
       return;
     }
 
@@ -158,9 +159,9 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
       });
     }
 
-    console.log(`Competition announcement emails sent to ${emails.length} recipient(s) for competition ${announcement.competition_id}`);
+    logger.info(`Competition announcement emails sent to ${emails.length} recipient(s) for competition ${announcement.competition_id}`);
   } catch (error) {
-    console.error('Error broadcasting competition announcement emails:', error);
+    logger.error('Error broadcasting competition announcement emails:', error);
     throw error;
   }
 }

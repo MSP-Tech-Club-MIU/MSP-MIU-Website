@@ -56,6 +56,12 @@ const {
     unassignCompetitionTimeslotByAdmin
 } = require('../controllers/competitionTimeslots.controller');
 const { searchPeople } = require('../controllers/adminPeopleSearch');
+const {
+    listLogs,
+    getLogsMeta,
+    patchLogLevel,
+    clearLogs
+} = require('../controllers/adminLogs');
 
 // All admin routes require authentication
 router.use(authenticateToken);
@@ -66,6 +72,12 @@ const programsAdmin = adminOrProgramsAuth;
 // Dashboard + org tools — full admin only
 router.get('/dashboard', fullAdmin, getDashboardStats);
 router.get('/people-search', fullAdmin, searchPeople);
+
+// Server logs viewer — President / VP / Head of SoftDev only (fullAdmin)
+router.get('/logs', fullAdmin, listLogs);
+router.get('/logs/meta', fullAdmin, getLogsMeta);
+router.patch('/logs/level', fullAdmin, patchLogLevel);
+router.delete('/logs', fullAdmin, clearLogs);
 
 // Competitions — full admin or programs departments (SoftDev, Tech Training, AI, Cyber Security)
 router.get('/competitions', programsAdmin, getCompetitions);

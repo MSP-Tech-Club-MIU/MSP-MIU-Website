@@ -10,6 +10,7 @@ const {
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { notifyCourseEnrollments } = require('../utils/courseAvailableEmail');
+const logger = require('../utils/logger');
 
 const VALID_STATUSES = ['draft', 'coming_soon', 'published', 'archived'];
 const VALID_MATERIAL_TYPES = ['youtube', 'document', 'zip', 'code', 'other'];
@@ -89,7 +90,7 @@ const listCourses = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('listCourses:', error);
+    logger.error('listCourses:', error);
     res.status(500).json({ success: false, error: 'Failed to list courses' });
   }
 };
@@ -143,7 +144,7 @@ const getCourseById = async (req, res) => {
 
     res.json({ success: true, data: payload });
   } catch (error) {
-    console.error('getCourseById:', error);
+    logger.error('getCourseById:', error);
     res.status(500).json({ success: false, error: 'Failed to get course' });
   }
 };
@@ -162,7 +163,7 @@ const getCourseAdmin = async (req, res) => {
     }
     res.json({ success: true, data: course });
   } catch (error) {
-    console.error('getCourseAdmin:', error);
+    logger.error('getCourseAdmin:', error);
     res.status(500).json({ success: false, error: 'Failed to get course' });
   }
 };
@@ -193,7 +194,7 @@ const createCourse = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('createCourse:', error);
+    logger.error('createCourse:', error);
     res.status(500).json({ success: false, error: 'Failed to create course' });
   }
 };
@@ -225,7 +226,7 @@ const updateCourse = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('updateCourse:', error);
+    logger.error('updateCourse:', error);
     res.status(500).json({ success: false, error: 'Failed to update course' });
   }
 };
@@ -283,7 +284,7 @@ const updateCourseStatus = async (req, res) => {
       notify: notifyResult
     });
   } catch (error) {
-    console.error('updateCourseStatus:', error);
+    logger.error('updateCourseStatus:', error);
     res.status(500).json({ success: false, error: 'Failed to update course status' });
   }
 };
@@ -298,7 +299,7 @@ const deleteCourse = async (req, res) => {
     await course.destroy();
     res.json({ success: true, message: 'Course deleted' });
   } catch (error) {
-    console.error('deleteCourse:', error);
+    logger.error('deleteCourse:', error);
     res.status(500).json({ success: false, error: 'Failed to delete course' });
   }
 };
@@ -330,7 +331,7 @@ const createLesson = async (req, res) => {
 
     res.status(201).json({ success: true, data: lesson });
   } catch (error) {
-    console.error('createLesson:', error);
+    logger.error('createLesson:', error);
     res.status(500).json({ success: false, error: 'Failed to create lesson' });
   }
 };
@@ -358,7 +359,7 @@ const updateLesson = async (req, res) => {
     await lesson.save();
     res.json({ success: true, data: lesson });
   } catch (error) {
-    console.error('updateLesson:', error);
+    logger.error('updateLesson:', error);
     res.status(500).json({ success: false, error: 'Failed to update lesson' });
   }
 };
@@ -374,7 +375,7 @@ const deleteLesson = async (req, res) => {
     await lesson.destroy();
     res.json({ success: true, message: 'Lesson deleted' });
   } catch (error) {
-    console.error('deleteLesson:', error);
+    logger.error('deleteLesson:', error);
     res.status(500).json({ success: false, error: 'Failed to delete lesson' });
   }
 };
@@ -396,7 +397,7 @@ const reorderLessons = async (req, res) => {
     );
     res.json({ success: true, message: 'Lessons reordered' });
   } catch (error) {
-    console.error('reorderLessons:', error);
+    logger.error('reorderLessons:', error);
     res.status(500).json({ success: false, error: 'Failed to reorder lessons' });
   }
 };
@@ -446,7 +447,7 @@ const createMaterial = async (req, res) => {
 
     res.status(201).json({ success: true, data: material });
   } catch (error) {
-    console.error('createMaterial:', error);
+    logger.error('createMaterial:', error);
     res.status(500).json({ success: false, error: 'Failed to create material' });
   }
 };
@@ -483,7 +484,7 @@ const updateMaterial = async (req, res) => {
     await material.save();
     res.json({ success: true, data: material });
   } catch (error) {
-    console.error('updateMaterial:', error);
+    logger.error('updateMaterial:', error);
     res.status(500).json({ success: false, error: 'Failed to update material' });
   }
 };
@@ -505,7 +506,7 @@ const deleteMaterial = async (req, res) => {
     await material.destroy();
     res.json({ success: true, message: 'Material deleted' });
   } catch (error) {
-    console.error('deleteMaterial:', error);
+    logger.error('deleteMaterial:', error);
     res.status(500).json({ success: false, error: 'Failed to delete material' });
   }
 };
@@ -576,7 +577,7 @@ const enrollInCourse = async (req, res) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ success: false, error: 'Already registered for this course' });
     }
-    console.error('enrollInCourse:', error);
+    logger.error('enrollInCourse:', error);
     res.status(500).json({ success: false, error: 'Failed to enroll' });
   }
 };
@@ -673,7 +674,7 @@ const enrollWithAccount = async (req, res) => {
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ success: false, error: 'Already registered for this course' });
     }
-    console.error('enrollWithAccount:', error);
+    logger.error('enrollWithAccount:', error);
     res.status(500).json({ success: false, error: 'Failed to enroll with account' });
   }
 };
@@ -720,7 +721,7 @@ const markLessonComplete = async (req, res) => {
 
     res.json({ success: true, data: progress });
   } catch (error) {
-    console.error('markLessonComplete:', error);
+    logger.error('markLessonComplete:', error);
     res.status(500).json({ success: false, error: 'Failed to mark lesson complete' });
   }
 };
@@ -765,7 +766,7 @@ const getMyProgress = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('getMyProgress:', error);
+    logger.error('getMyProgress:', error);
     res.status(500).json({ success: false, error: 'Failed to get progress' });
   }
 };
@@ -827,7 +828,7 @@ const listEnrollments = async (req, res) => {
       pagination: paginationMeta({ page, limit, total: count })
     });
   } catch (error) {
-    console.error('listEnrollments:', error);
+    logger.error('listEnrollments:', error);
     res.status(500).json({ success: false, error: 'Failed to list enrollments' });
   }
 };
@@ -851,7 +852,7 @@ const updateEnrollment = async (req, res) => {
     await enrollment.save();
     res.json({ success: true, data: enrollment });
   } catch (error) {
-    console.error('updateEnrollment:', error);
+    logger.error('updateEnrollment:', error);
     res.status(500).json({ success: false, error: 'Failed to update enrollment' });
   }
 };
@@ -868,7 +869,7 @@ const deleteEnrollment = async (req, res) => {
     await enrollment.destroy();
     res.json({ success: true, message: 'Enrollment deleted' });
   } catch (error) {
-    console.error('deleteEnrollment:', error);
+    logger.error('deleteEnrollment:', error);
     res.status(500).json({ success: false, error: 'Failed to delete enrollment' });
   }
 };
@@ -938,7 +939,7 @@ const exportEnrollmentsCSV = async (req, res) => {
     );
     res.send(Buffer.from(BOM + csvContent, 'utf8'));
   } catch (error) {
-    console.error('exportEnrollmentsCSV:', error);
+    logger.error('exportEnrollmentsCSV:', error);
     res.status(500).json({ success: false, error: 'Failed to export enrollments' });
   }
 };

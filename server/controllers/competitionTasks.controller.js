@@ -3,6 +3,7 @@ const multer = require('multer');
 const { Competition, CompetitionTask, Quiz } = require('../models');
 const { uploadToR2 } = require('../config/cloud');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
 const ASSETS_URL_MAX_LEN = 2048;
@@ -139,7 +140,7 @@ async function getCompetitionTasksPublic(req, res) {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
-    console.error('getCompetitionTasksPublic:', err);
+    logger.error('getCompetitionTasksPublic:', err);
     return res.status(500).json({ success: false, error: 'Failed to load tasks' });
   }
 }
@@ -186,7 +187,7 @@ async function getAdminCompetitionTasks(req, res) {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
-    console.error('getAdminCompetitionTasks:', err);
+    logger.error('getAdminCompetitionTasks:', err);
     return res.status(500).json({ success: false, error: 'Failed to load tasks' });
   }
 }
@@ -230,7 +231,7 @@ async function postAdminCompetitionTask(req, res) {
       }
     });
   } catch (err) {
-    console.error('postAdminCompetitionTask:', err);
+    logger.error('postAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to create task' });
   }
 }
@@ -288,7 +289,7 @@ async function putAdminCompetitionTask(req, res) {
       }
     });
   } catch (err) {
-    console.error('putAdminCompetitionTask:', err);
+    logger.error('putAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to update task' });
   }
 }
@@ -339,7 +340,7 @@ async function postAdminCompetitionTaskAsset(req, res) {
       }
     });
   } catch (err) {
-    console.error('postAdminCompetitionTaskAsset:', err);
+    logger.error('postAdminCompetitionTaskAsset:', err);
     const msg = err?.message ? String(err.message) : '';
     return res.status(500).json({
       success: false,
@@ -365,7 +366,7 @@ async function deleteAdminCompetitionTask(req, res) {
     await task.destroy();
     return res.status(200).json({ success: true, message: 'Task deleted' });
   } catch (err) {
-    console.error('deleteAdminCompetitionTask:', err);
+    logger.error('deleteAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to delete task' });
   }
 }

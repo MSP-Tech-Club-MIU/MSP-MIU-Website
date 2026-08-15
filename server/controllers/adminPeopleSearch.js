@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Board, Member, User, Season, Department } = require('../models');
+const logger = require('../utils/logger');
 
 function likeClause(q) {
   return { [Op.like]: `%${q}%` };
@@ -225,7 +226,7 @@ const searchPeople = async (req, res) => {
       count: Math.min(results.length, 15)
     });
   } catch (error) {
-    console.error('searchPeople error:', error);
+    logger.error('searchPeople error:', error);
     return res.status(500).json({ success: false, error: 'Failed to search people' });
   }
 };

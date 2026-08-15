@@ -2,6 +2,7 @@ const { Application } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
+const logger = require('../utils/logger');
 
 function buildFieldCounts(rows, field) {
     const counts = {};
@@ -86,8 +87,8 @@ const createApplication = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error submitting application:', error);
-        console.error('Error details:', {
+        logger.error('Error submitting application:', error);
+        logger.error('Error details:', {
             message: error.message,
             stack: error.stack,
             name: error.name,
@@ -230,7 +231,7 @@ const getAllApplications = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching applications:', error);
+        logger.error('Error fetching applications:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -295,7 +296,7 @@ const updateApplicationStatus = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating application status:', error);
+        logger.error('Error updating application status:', error);
         const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
         const dup =
             error.name === 'SequelizeUniqueConstraintError' ||
@@ -339,7 +340,7 @@ const updateApplicationComment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating application comment:', error);
+        logger.error('Error updating application comment:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -368,7 +369,7 @@ const deleteApplication = async (req, res) => {
             message: 'Application deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting application:', error);
+        logger.error('Error deleting application:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'

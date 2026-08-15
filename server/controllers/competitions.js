@@ -6,6 +6,7 @@ const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator'
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
 const { resolveSeasonFilter, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
@@ -172,7 +173,7 @@ const getAllCompetitions = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching competitions:', error);
+        logger.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competitions'
@@ -235,7 +236,7 @@ const getCompetitionById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching competition:', error);
+        logger.error('Error fetching competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competition'
@@ -283,7 +284,7 @@ const getUserTeamForCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching user team:', error);
+        logger.error('Error fetching user team:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch team information'
@@ -490,7 +491,7 @@ const createCompetition = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error creating competition:', error);
+        logger.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create competition',
@@ -742,7 +743,7 @@ const updateCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating competition:', error);
+        logger.error('Error updating competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update competition',
@@ -808,7 +809,7 @@ const deleteCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting competition:', error);
+        logger.error('Error deleting competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete competition',
@@ -1016,7 +1017,7 @@ const getCompetitionLeaderboard = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching competition leaderboard:', error);
+        logger.error('Error fetching competition leaderboard:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch leaderboard'

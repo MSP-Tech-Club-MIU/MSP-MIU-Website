@@ -13,6 +13,7 @@ const {
   seasonHasAdminEligibleBoard
 } = require('../utils/adminEligibleBoard');
 const { applyCurrentSeasonBoardAccess } = require('../utils/boardUserSync');
+const logger = require('../utils/logger');
 
 /**
  * GET /seasons — list seasons for selectors
@@ -47,7 +48,7 @@ const listSeasons = async (req, res) => {
       count: seasons.length
     });
   } catch (error) {
-    console.error('listSeasons error:', error);
+    logger.error('listSeasons error:', error);
     return res.status(500).json({ success: false, error: 'Failed to list seasons' });
   }
 };
@@ -67,7 +68,7 @@ const getCurrentSeason = async (req, res) => {
       season_id: season.season_id
     });
   } catch (error) {
-    console.error('getCurrentSeason error:', error);
+    logger.error('getCurrentSeason error:', error);
     return res.status(500).json({ success: false, error: 'Failed to get current season' });
   }
 };
@@ -274,7 +275,7 @@ const createSeason = async (req, res) => {
     } catch (_) {
       /* already finished */
     }
-    console.error('createSeason error:', error);
+    logger.error('createSeason error:', error);
     const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
     const validationErrors = Array.isArray(error.errors)
       ? error.errors.map((e) => e.message).join('; ')
@@ -335,7 +336,7 @@ const updateSeason = async (req, res) => {
       message: 'Season updated'
     });
   } catch (error) {
-    console.error('updateSeason error:', error);
+    logger.error('updateSeason error:', error);
     return res.status(500).json({ success: false, error: 'Failed to update season' });
   }
 };
@@ -379,7 +380,7 @@ const setDefaultSeason = async (req, res) => {
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('setDefaultSeason error:', error);
+    logger.error('setDefaultSeason error:', error);
     return res.status(500).json({ success: false, error: 'Failed to set default season' });
   }
 };

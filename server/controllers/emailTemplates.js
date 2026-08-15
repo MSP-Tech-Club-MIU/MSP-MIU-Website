@@ -10,13 +10,14 @@ const { sendActivationEmailsToMembers } = require('../utils/activationEmail');
 const { sendBoardActivationEmailsToMembers } = require('../utils/boardActivationEmail');
 const { sendAcceptanceEmailsToMembers } = require('../utils/acceptanceEmail');
 const { resolveSeasonFilter } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 const listEmailTemplates = async (req, res) => {
   try {
     const templates = await listTemplates();
     res.json({ success: true, data: templates });
   } catch (error) {
-    console.error('listEmailTemplates:', error);
+    logger.error('listEmailTemplates:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to list templates' });
   }
 };
@@ -30,7 +31,7 @@ const getEmailTemplate = async (req, res) => {
     }
     res.json({ success: true, data: template });
   } catch (error) {
-    console.error('getEmailTemplate:', error);
+    logger.error('getEmailTemplate:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to get template' });
   }
 };
@@ -79,7 +80,7 @@ const updateEmailTemplate = async (req, res) => {
     const template = await getTemplate(key);
     res.json({ success: true, data: template || row });
   } catch (error) {
-    console.error('updateEmailTemplate:', error);
+    logger.error('updateEmailTemplate:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update template' });
   }
 };
@@ -107,7 +108,7 @@ const resetEmailTemplate = async (req, res) => {
     const template = await getTemplate(key);
     res.json({ success: true, data: template });
   } catch (error) {
-    console.error('resetEmailTemplate:', error);
+    logger.error('resetEmailTemplate:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to reset template' });
   }
 };
@@ -269,7 +270,7 @@ const sendTestEmail = async (req, res) => {
 
     res.json({ success: true, message: `Test email sent to ${to}` });
   } catch (error) {
-    console.error('sendTestEmail:', error);
+    logger.error('sendTestEmail:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send test email' });
   }
 };
@@ -284,7 +285,7 @@ const listDepartmentWhatsApp = async (req, res) => {
     const filtered = departments.filter((d) => departmentHasWhatsApp(d.name));
     res.json({ success: true, data: { departments: filtered } });
   } catch (error) {
-    console.error('listDepartmentWhatsApp:', error);
+    logger.error('listDepartmentWhatsApp:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to list WhatsApp links' });
   }
 };
@@ -311,7 +312,7 @@ const updateDepartmentWhatsApp = async (req, res) => {
     await department.save();
     res.json({ success: true, data: department });
   } catch (error) {
-    console.error('updateDepartmentWhatsApp:', error);
+    logger.error('updateDepartmentWhatsApp:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update WhatsApp link' });
   }
 };
@@ -324,7 +325,7 @@ const sendMemberActivation = async (req, res) => {
     });
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error('sendMemberActivation:', error);
+    logger.error('sendMemberActivation:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send activation emails' });
   }
 };
@@ -337,7 +338,7 @@ const sendBoardActivation = async (req, res) => {
     });
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error('sendBoardActivation:', error);
+    logger.error('sendBoardActivation:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send board activation emails' });
   }
 };
@@ -350,7 +351,7 @@ const sendMemberAcceptance = async (req, res) => {
     });
     res.json({ success: true, data: summary });
   } catch (error) {
-    console.error('sendMemberAcceptance:', error);
+    logger.error('sendMemberAcceptance:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send acceptance emails' });
   }
 };

@@ -1,5 +1,6 @@
 const { Suggestion, Member } = require('../models');
 const { getDefaultSeasonId } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 const MAX_LENGTH = 2000;
 
@@ -88,7 +89,7 @@ const createSuggestion = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating suggestion:', error);
+    logger.error('Error creating suggestion:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to submit suggestion'

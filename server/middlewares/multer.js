@@ -1,6 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const { r2, PutObjectCommand } = require("../config/cloud");
+const logger = require("../utils/logger");
 
 const STANDARD_EXTS = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'pptx', 'ppt', 'docx', 'doc', 'xls', 'xlsx', 'zip', 'apk'];
 const CODE_EXTS = ['js', 'jsx', 'ts', 'tsx', 'py', 'sql', 'sh', 'bash', 'txt', 'md', 'json', 'css', 'html', 'c', 'cpp', 'h', 'java', 'rb', 'go', 'rs', 'php', 'xml', 'yaml', 'yml', 'toml', 'ini', 'env', 'gitignore'];
@@ -10,7 +11,7 @@ const fileFilter = (req, file, cb) => {
   const ext = file.originalname.split('.').pop().toLowerCase();
 
   if (!allowedExt.includes(ext)) {
-    console.log('Rejected file extension:', ext);
+    logger.info('Rejected file extension:', { ext });
     return cb(new Error('File type not allowed'), false);
   }
   cb(null, true);
@@ -102,7 +103,7 @@ const uploadFile = async (req, res) => {
       ContentType: file.mimetype,
     });
     const result = await r2.send(command);
-    console.log(result);
+    logger.info('R2 upload completed', { result });
 
     const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
 
@@ -114,7 +115,7 @@ const uploadFile = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    logger.error('Upload failed', err);
     const status = err.status || 500;
     res.status(status).json({ error: err.message || "Upload failed", details: err.message });
   }

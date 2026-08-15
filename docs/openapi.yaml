@@ -612,6 +612,49 @@ paths:
       responses:
         '200':
           description: Deleted
+  /admin/logs:
+    get:
+      summary: 'Get /admin/logs'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /admin/logs'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+  /admin/logs/level:
+    patch:
+      summary: 'Patch /admin/logs/level'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+  /admin/logs/meta:
+    get:
+      summary: 'Get /admin/logs/meta'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
   /admin/notifications:
     get:
       tags:

@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 const Event = require('../models/Event');
 const Board = require('../models/Board');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /** Extract R2 object key from a public URL (or return the path if already a key). */
 function r2KeyFromPublicUrl(urlOrKey) {
@@ -55,12 +56,12 @@ function validateBaseUrl(baseUrl) {
     const url = new URL(cleaned);
     // Only allow http and https protocols
     if (!['http:', 'https:'].includes(url.protocol)) {
-      console.error('Invalid protocol in R2_PUBLIC_DOMAIN:', url.protocol);
+      logger.error(`Invalid protocol in R2_PUBLIC_DOMAIN: ${url.protocol}`);
       return null;
     }
     return cleaned;
   } catch (error) {
-    console.error('Invalid URL format in R2_PUBLIC_DOMAIN:', error.message);
+    logger.error('Invalid URL format in R2_PUBLIC_DOMAIN:', error);
     return null;
   }
 }
@@ -233,7 +234,7 @@ const getImages = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error('Error fetching images from R2:', error);
+    logger.error('Error fetching images from R2:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch images',
@@ -346,7 +347,7 @@ const getAssetsByType = async (req, res) => {
       pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error(`Error fetching ${req.params.type} from R2:`, error);
+    logger.error(`Error fetching ${req.params.type} from R2:`, error);
     res.status(500).json({
       success: false,
       error: `Failed to fetch ${req.params.type}`,
@@ -415,7 +416,7 @@ const deleteCloudObject = async (req, res) => {
 
     return res.json({ success: true, message: 'Object deleted', key });
   } catch (error) {
-    console.error('Error deleting cloud object:', error);
+    logger.error('Error deleting cloud object:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to delete object'
@@ -474,7 +475,7 @@ const replaceCloudObject = async (req, res) => {
       url: url || key
     });
   } catch (error) {
-    console.error('Error replacing cloud object:', error);
+    logger.error('Error replacing cloud object:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to replace object'

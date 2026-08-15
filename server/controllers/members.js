@@ -11,6 +11,7 @@ const {
   findExistingUserForEnrollment,
   syncUserFromMember
 } = require('../utils/memberEnrollment');
+const logger = require('../utils/logger');
 
 function hasActiveAccount(user) {
   return Boolean(user && (user.is_active || user.password_hash));
@@ -96,7 +97,7 @@ const getAllMembers = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error fetching members:', error);
+    logger.error('Error fetching members:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -130,7 +131,7 @@ const getMemberById = async (req, res) => {
       data: member
     });
   } catch (error) {
-    console.error('Error fetching member:', error);
+    logger.error('Error fetching member:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -230,7 +231,7 @@ const createMember = async (req, res) => {
           'Could not create member for this season. Run: npm run patch:members-multi-season if the DB still has a global unique university ID.'
       });
     }
-    console.error('Error creating member:', error);
+    logger.error('Error creating member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create member' });
   }
 };
@@ -272,7 +273,7 @@ const updateMember = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error updating member:', error);
+    logger.error('Error updating member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update member' });
   }
 };
@@ -296,7 +297,7 @@ const deleteMember = async (req, res) => {
       message: 'Member deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting member:', error);
+    logger.error('Error deleting member:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -460,7 +461,7 @@ const exportMembersToCSV = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error exporting members/board to CSV:', error);
+    logger.error('Error exporting members/board to CSV:', error);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
@@ -489,7 +490,7 @@ const sendActivationEmails = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error sending activation emails:', error);
+    logger.error('Error sending activation emails:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to send activation emails'
@@ -533,7 +534,7 @@ const sendActivationEmail = async (req, res) => {
       data: result
     });
   } catch (error) {
-    console.error('Error sending activation email:', error);
+    logger.error('Error sending activation email:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to send activation email'

@@ -1,4 +1,5 @@
 const sequelize = require('../config/db');
+const logger = require('../utils/logger');
 const Application = require('./Application');
 const Department = require('./Department');
 const Board = require('./Board');
@@ -602,9 +603,9 @@ async function ensureAnnouncementColumns() {
       );
       if (Number(rows[0]?.c) > 0) continue;
       await sequelize.query(`ALTER TABLE \`announcements\` ADD COLUMN ${ddl}`);
-      console.log(`Added announcements.${name}`);
+      logger.info(`Added announcements.${name}`);
     } catch (err) {
-      console.warn(`Could not ensure announcements.${name}:`, err.parent?.sqlMessage || err.message);
+      logger.warn(`Could not ensure announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
     }
   }
 }
@@ -614,15 +615,15 @@ const syncModels = async () => {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
     if (useAlter) {
       await sequelize.sync({ alter: true });
-      console.log('Models synchronized with database successfully (alter: true)');
+      logger.info('Models synchronized with database successfully (alter: true)');
     } else {
       await sequelize.sync();
-      console.log('Models synchronized with database successfully');
+      logger.info('Models synchronized with database successfully');
     }
     await ensureAnnouncementColumns();
   } catch (error) {
-    console.error('Error synchronizing models:', error);
-    console.log('Note: If you have existing data, you may need to manually adjust the schema');
+    logger.error('Error synchronizing models:', error);
+    logger.info('Note: If you have existing data, you may need to manually adjust the schema');
   }
 };
 

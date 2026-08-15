@@ -1,4 +1,5 @@
 const { renderTemplate } = require('./emailTemplates/render');
+const logger = require('./logger');
 
 function frontendBaseUrl() {
   return String(process.env.WEBSITE_URL || process.env.FRONTEND_URL || 'https://msp-miu.tech').replace(/\/+$/, '');
@@ -45,7 +46,7 @@ async function notifyCourseEnrollments(course, enrollments) {
     } catch (err) {
       results.failed += 1;
       results.errors.push({ enrollment_id: enrollment.enrollment_id, error: err.message });
-      console.error(`course_available email failed for enrollment ${enrollment.enrollment_id}:`, err.message);
+      logger.error(`course_available email failed for enrollment ${enrollment.enrollment_id}:`, { message: err.message });
     }
   }
 

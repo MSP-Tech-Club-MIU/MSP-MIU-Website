@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveSeoForPath, applyMetaToHtml } = require('../utils/seo');
+const logger = require('../utils/logger');
 
 const INDEX_PATH = path.join(__dirname, '..', '..', 'client', 'public', 'index.html');
 
@@ -25,10 +26,10 @@ async function sendSeoSpa(req, res) {
     return res.send(applyMetaToHtml(html, seo));
   } catch (err) {
     if (err && err.code === 'ENOENT') {
-      console.error('[seo] Missing client/public/index.html — run npm run build');
+      logger.error('[seo] Missing client/public/index.html — run npm run build');
       return res.status(503).type('text/plain').send('Frontend build is missing');
     }
-    console.error('[seo] SPA render failed:', err);
+    logger.error('[seo] SPA render failed:', err);
     return res.sendFile(INDEX_PATH);
   }
 }

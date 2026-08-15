@@ -1,4 +1,5 @@
 const { Quiz, QuizAttempt, QuizAnswer } = require('../models');
+const logger = require('../utils/logger');
 
 function num(v, fallback = 0) {
   if (v == null) return fallback;
@@ -72,7 +73,7 @@ async function runAutoSubmitExpiredAttempts() {
     }
   }
   if (finalized > 0 && process.env.QUIZ_DEBUG === '1') {
-    console.log(`[quiz-auto-submit] Finalized ${finalized} attempt(s).`);
+    logger.info(`[quiz-auto-submit] Finalized ${finalized} attempt(s).`);
   }
   return finalized;
 }

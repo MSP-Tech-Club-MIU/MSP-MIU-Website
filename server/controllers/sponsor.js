@@ -1,6 +1,7 @@
 const { Sponsor } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 const getAllSponsors = async (req, res) => {
   try {
@@ -33,7 +34,7 @@ const getAllSponsors = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error fetching sponsors:', error);
+    logger.error('Error fetching sponsors:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch sponsors'
@@ -82,7 +83,7 @@ const createSponsor = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error creating sponsor:', error);
+    logger.error('Error creating sponsor:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to create sponsor' });
   }
 };
@@ -137,7 +138,7 @@ const updateSponsor = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error updating sponsor:', error);
+    logger.error('Error updating sponsor:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update sponsor' });
   }
 };
@@ -152,7 +153,7 @@ const deleteSponsor = async (req, res) => {
     await sponsor.destroy();
     res.json({ success: true, message: 'Sponsor deleted' });
   } catch (error) {
-    console.error('Error deleting sponsor:', error);
+    logger.error('Error deleting sponsor:', error);
     res.status(500).json({ success: false, error: 'Failed to delete sponsor' });
   }
 };

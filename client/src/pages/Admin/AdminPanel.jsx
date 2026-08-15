@@ -7,7 +7,8 @@ import {
     MdNotifications, MdHome, MdAdd,
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
-    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook,
+    MdBugReport
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -29,6 +30,7 @@ import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
+import LogsAdminTab from './LogsAdminTab';
 import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 import './AdminPanel.css';
 
@@ -58,7 +60,8 @@ const ADMIN_TAB_TO_ROUTE = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
-    android: 'android'
+    android: 'android',
+    logs: 'logs'
 };
 
 const ADMIN_ROUTE_TO_TAB = {
@@ -79,7 +82,8 @@ const ADMIN_ROUTE_TO_TAB = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
-    android: 'android'
+    android: 'android',
+    logs: 'logs'
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -198,6 +202,7 @@ const AdminPanel = () => {
     // Navigation items (category groups the admin sidebar)
     const fullNavItems = useMemo(() => [
         { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
+        { key: 'logs', label: 'Server logs', icon: <MdBugReport />, category: 'Overview' },
         { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
         { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
         { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
@@ -916,6 +921,13 @@ const AdminPanel = () => {
                                     </div>
                                 </motion.div>
                             </div>
+                        </motion.div>
+                    )}
+
+                    {/* === SERVER LOGS (full admin only) === */}
+                    {accessLevel === 'full' && activeTab === 'logs' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <LogsAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 

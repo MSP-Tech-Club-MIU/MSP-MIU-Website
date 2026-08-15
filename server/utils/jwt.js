@@ -4,6 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
+const logger = require('./logger');
 
 /**
  * Validate JWT secret is properly set and meets security requirements
@@ -82,7 +83,7 @@ const getJWTExpiration = () => {
         // Basic validation: should be a number followed by a time unit (s, m, h, d)
         const expirationRegex = /^\d+[smhd]$/;
         if (!expirationRegex.test(expiresIn)) {
-            console.warn(`Invalid JWT_EXPIRES_IN format: ${expiresIn}. Using default: 7d`);
+            logger.warn(`Invalid JWT_EXPIRES_IN format: ${expiresIn}. Using default: 7d`);
             return '7d';
         }
         return expiresIn;
@@ -121,7 +122,7 @@ const generateToken = (payload, customExpiresIn = null) => {
                 };
             }
             // Log warning but continue for backward compatibility
-            console.warn(`[JWT] Secret validation warning: ${secretValidation.error}. Using secret anyway for backward compatibility.`);
+            logger.warn(`[JWT] Secret validation warning: ${secretValidation.error}. Using secret anyway for backward compatibility.`);
         }
 
         // Validate payload
@@ -192,7 +193,7 @@ const verifyToken = (token) => {
                 };
             }
             // Log warning but continue for backward compatibility
-            console.warn(`[JWT] Secret validation warning: ${secretValidation.error}. Using secret anyway.`);
+            logger.warn(`[JWT] Secret validation warning: ${secretValidation.error}. Using secret anyway.`);
         }
 
         if (!token || typeof token !== 'string') {

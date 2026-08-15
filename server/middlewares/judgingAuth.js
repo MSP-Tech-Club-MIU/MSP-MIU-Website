@@ -1,6 +1,7 @@
 const { Board } = require('../models');
 const db = require('../config/db');
 const { getDefaultSeasonId } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 function parseCsv(value) {
   return String(value || '')
@@ -129,7 +130,7 @@ const authorizeJudgingAccess = async (req, res, next) => {
     req.boardMember = boardMember;
     return next();
   } catch (error) {
-    console.error('Judging auth middleware error:', error);
+    logger.error('Judging auth middleware error:', error);
     return res.status(500).json({
       success: false,
       error: 'Authorization error'

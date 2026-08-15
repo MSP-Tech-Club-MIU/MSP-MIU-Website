@@ -1,5 +1,6 @@
 const { Attendance, Event, sequelize } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const logger = require('../utils/logger');
 
 /**
  * Helper function to update the attendees count in the events table
@@ -10,7 +11,7 @@ const updateEventAttendeesCount = async (eventId, transaction = null) => {
     try {
         const event = await Event.findByPk(eventId, { transaction });
         if (!event) {
-            console.warn(`Event ${eventId} not found when updating attendees count`);
+            logger.warn(`Event ${eventId} not found when updating attendees count`);
             return;
         }
 
@@ -26,7 +27,7 @@ const updateEventAttendeesCount = async (eventId, transaction = null) => {
         }, { transaction });
     } catch (updateError) {
         // Log error but don't fail the request if attendees update fails
-        console.error('Error updating attendees count:', updateError);
+        logger.error('Error updating attendees count:', updateError);
     }
 };
 
@@ -130,8 +131,8 @@ const createAttendanceRequest = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error submitting attendance request:', error);
-        console.error('Error details:', {
+        logger.error('Error submitting attendance request:', error);
+        logger.error('Error details:', {
             message: error.message,
             stack: error.stack,
             name: error.name
@@ -240,7 +241,7 @@ const getAllAttendanceRequests = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching attendance requests:', error);
+        logger.error('Error fetching attendance requests:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -273,7 +274,7 @@ const getAttendanceRequestById = async (req, res) => {
             data: attendanceRequest
         });
     } catch (error) {
-        console.error('Error fetching attendance request:', error);
+        logger.error('Error fetching attendance request:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -312,7 +313,7 @@ const updateAttendanceRequest = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating attendance request:', error);
+        logger.error('Error updating attendance request:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -346,7 +347,7 @@ const deleteAttendanceRequest = async (req, res) => {
             message: 'Attendance request deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting attendance request:', error);
+        logger.error('Error deleting attendance request:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -488,7 +489,7 @@ const exportAttendanceRequestsToCSV = async (req, res) => {
         // Send CSV content with proper encoding
         res.send(csvBuffer);
     } catch (error) {
-        console.error('Error exporting attendance requests to CSV:', error);
+        logger.error('Error exporting attendance requests to CSV:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'

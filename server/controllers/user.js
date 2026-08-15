@@ -4,7 +4,8 @@ const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
 const { generateToken: generateJWTToken } = require('../utils/jwt');
-const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAuditEvent, logError, logSecurityEvent } = logger;
 const { r2, PutObjectCommand } = require('../config/cloud');
 const { resolveSeasonIdForWrite, getDefaultSeasonId, serializeSeason, getDefaultSeason } = require('../utils/seasonFilter');
 
@@ -386,7 +387,7 @@ const uploadToCloud = async (file, directory, filename) => {
         const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
         return { key, url: publicURL };
     } catch (error) {
-        console.error('Cloud upload error:', error);
+        logger.error('Cloud upload error:', error);
         throw error;
     }
 };

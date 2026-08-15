@@ -8,6 +8,7 @@ const {
   runAnnouncementEmailJob,
   createAnnouncementEmailJob
 } = require('../services/announcementEmailJob');
+const logger = require('../utils/logger');
 
 const WEBSITE_TITLE_MAX = 50;
 const WEBSITE_DESC_MAX = 220;
@@ -63,7 +64,7 @@ const getAnnouncementEmailJobStatus = async (req, res) => {
     }
     return res.json({ success: true, data: publicJobView(job) });
   } catch (error) {
-    console.error('Error fetching announcement email job:', error);
+    logger.error('Error fetching announcement email job:', error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch email job'
@@ -124,7 +125,7 @@ const getAllAnnouncements = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error fetching announcements:', error);
+    logger.error('Error fetching announcements:', error);
     const detail = error.parent?.sqlMessage || error.message || 'Failed to fetch announcements';
     return res.status(500).json({
       success: false,
@@ -161,7 +162,7 @@ const getAnnouncementById = async (req, res) => {
       data: announcement
     });
   } catch (error) {
-    console.error('Error fetching announcement:', error);
+    logger.error('Error fetching announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch announcement'
@@ -300,7 +301,7 @@ const addAnnouncement = async (req, res) => {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
     }
-    console.error('Error creating announcement:', error);
+    logger.error('Error creating announcement:', error);
     const detail = error.parent?.sqlMessage || error.message || 'Failed to create announcement';
     return res.status(500).json({
       success: false,
@@ -421,7 +422,7 @@ const updateAnnouncement = async (req, res) => {
       data: updatedAnnouncement
     });
   } catch (error) {
-    console.error('Error updating announcement:', error);
+    logger.error('Error updating announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to update announcement'
@@ -455,7 +456,7 @@ const deleteAnnouncement = async (req, res) => {
       message: 'Announcement deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting announcement:', error);
+    logger.error('Error deleting announcement:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to delete announcement'

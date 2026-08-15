@@ -10,6 +10,7 @@ const {
     resolveSeasonIdForWrite,
     getDefaultSeasonId
 } = require('../utils/seasonFilter');
+const logger = require('../utils/logger');
 
 /**
  * Helper: Log an admin notification
@@ -34,7 +35,7 @@ const logAdminAction = async (actionType, message, req, entityType = null, entit
             season_id
         });
     } catch (err) {
-        console.error('Failed to log admin notification:', err);
+        logger.error('Failed to log admin notification:', err);
     }
 };
 
@@ -124,7 +125,7 @@ const getDashboardStats = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching dashboard stats:', error);
+        logger.error('Error fetching dashboard stats:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch dashboard statistics'
@@ -162,7 +163,7 @@ const getCompetitions = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching competitions:', error);
+        logger.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competitions'
@@ -275,7 +276,7 @@ const createCompetition = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error creating competition:', error);
+        logger.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to create competition'
@@ -392,7 +393,7 @@ const updateCompetition = async (req, res) => {
             data: competition
         });
     } catch (error) {
-        console.error('Error updating competition:', error);
+        logger.error('Error updating competition:', error);
         if (error?.name === 'SequelizeValidationError' || error?.name === 'SequelizeDatabaseError') {
             return res.status(400).json({
                 success: false,
@@ -438,7 +439,7 @@ const deleteCompetition = async (req, res) => {
             message: 'Competition deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting competition:', error);
+        logger.error('Error deleting competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete competition'
@@ -496,7 +497,7 @@ const getCompetitionJudges = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching competition judges:', error);
+        logger.error('Error fetching competition judges:', error);
         return res.status(500).json({ success: false, error: 'Failed to fetch competition judges' });
     }
 };
@@ -583,7 +584,7 @@ const updateCompetitionJudges = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating competition judges:', error);
+        logger.error('Error updating competition judges:', error);
         return res.status(500).json({ success: false, error: 'Failed to update competition judges' });
     }
 };
@@ -645,7 +646,7 @@ const getAttendanceRequests = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching attendance requests:', error);
+        logger.error('Error fetching attendance requests:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch attendance requests'
@@ -686,7 +687,7 @@ const updateAttendanceStatus = async (req, res) => {
             data: request
         });
     } catch (error) {
-        console.error('Error updating attendance:', error);
+        logger.error('Error updating attendance:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update attendance status'
@@ -737,7 +738,7 @@ const getRegistrations = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching registrations:', error);
+        logger.error('Error fetching registrations:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch registrations'
@@ -778,7 +779,7 @@ const updateRegistrationStatus = async (req, res) => {
             data: application
         });
     } catch (error) {
-        console.error('Error updating registration:', error);
+        logger.error('Error updating registration:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update registration status'
@@ -817,7 +818,7 @@ const getNotifications = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching notifications:', error);
+        logger.error('Error fetching notifications:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch notifications'
@@ -861,7 +862,7 @@ const getSuggestions = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching suggestions:', error);
+        logger.error('Error fetching suggestions:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch suggestions' });
     }
 };
@@ -899,7 +900,7 @@ const getEventFeedbackAll = async (req, res) => {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        console.error('Error fetching feedback:', error);
+        logger.error('Error fetching feedback:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedback' });
     }
 };
@@ -921,7 +922,7 @@ const deleteSuggestion = async (req, res) => {
         );
         res.json({ success: true, message: 'Suggestion deleted' });
     } catch (error) {
-        console.error('Error deleting suggestion:', error);
+        logger.error('Error deleting suggestion:', error);
         res.status(500).json({ success: false, error: 'Failed to delete suggestion' });
     }
 };
@@ -943,7 +944,7 @@ const deleteAdminFeedback = async (req, res) => {
         );
         res.json({ success: true, message: 'Feedback deleted' });
     } catch (error) {
-        console.error('Error deleting feedback:', error);
+        logger.error('Error deleting feedback:', error);
         res.status(500).json({ success: false, error: 'Failed to delete feedback' });
     }
 };
@@ -1058,7 +1059,7 @@ const getCompetitionTeams = async (req, res) => {
             pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch teams' });
     }
 };
@@ -1102,7 +1103,7 @@ const createAdminTeam = async (req, res) => {
 
         res.status(201).json({ success: true, data: team });
     } catch (error) {
-        console.error('Error creating team:', error);
+        logger.error('Error creating team:', error);
         res.status(500).json({ success: false, error: 'Failed to create team' });
     }
 };
@@ -1135,7 +1136,7 @@ const updateAdminTeam = async (req, res) => {
 
         res.json({ success: true, data: team });
     } catch (error) {
-        console.error('Error updating team:', error);
+        logger.error('Error updating team:', error);
         res.status(500).json({ success: false, error: 'Failed to update team' });
     }
 };
@@ -1165,7 +1166,7 @@ const deleteAdminTeam = async (req, res) => {
 
         res.json({ success: true, message: 'Team deleted successfully' });
     } catch (error) {
-        console.error('Error deleting team:', error);
+        logger.error('Error deleting team:', error);
         res.status(500).json({ success: false, error: 'Failed to delete team' });
     }
 };
@@ -1237,7 +1238,7 @@ const getAdminTeamDetails = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching admin team details:', error);
+        logger.error('Error fetching admin team details:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch team details' });
     }
 };
@@ -1284,7 +1285,7 @@ const removeAdminTeamMember = async (req, res) => {
 
         res.json({ success: true, message: 'Team member removed' });
     } catch (error) {
-        console.error('Error removing team member (admin):', error);
+        logger.error('Error removing team member (admin):', error);
         res.status(500).json({ success: false, error: 'Failed to remove team member' });
     }
 };
@@ -1361,7 +1362,7 @@ const updateAdminTeamMember = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating team member (admin):', error);
+        logger.error('Error updating team member (admin):', error);
         if (error?.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
                 success: false,
@@ -1412,7 +1413,7 @@ const cancelAdminTeamInvitation = async (req, res) => {
 
         res.json({ success: true, message: 'Invitation cancelled' });
     } catch (error) {
-        console.error('Error cancelling invitation (admin):', error);
+        logger.error('Error cancelling invitation (admin):', error);
         res.status(500).json({ success: false, error: 'Failed to cancel invitation' });
     }
 };
