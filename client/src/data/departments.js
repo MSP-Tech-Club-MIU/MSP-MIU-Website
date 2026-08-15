@@ -12,6 +12,8 @@ export const departments = [
   { id: 7, name: 'Vice President' },
   { id: 8, name: 'President' },
   { id: 9, name: 'Founder' },
+  { id: 11, name: 'Artificial Intelligence' },
+  { id: 12, name: 'Cyber Security' },
 ];
 
 /** Departments members can actually choose (excludes Founder / President / VP display roles). */

@@ -355,7 +355,7 @@ const setDefaultSeason = async (req, res) => {
       return res.status(400).json({
         success: false,
         error:
-          'Cannot set as default: this season needs at least one board member who is President, Vice President, or Head of Software Development / Technical Training, linked to a user account. Add them on the Board tab first.'
+          'Cannot set as default: this season needs at least one board member who is President, Vice President, or Head of Software Development, linked to a user account. Add them on the Board tab first.'
       });
     }
 

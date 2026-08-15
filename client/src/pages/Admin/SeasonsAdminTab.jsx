@@ -9,7 +9,7 @@ import './SeasonsAdminTab.css';
 
 const ADMIN_POSITIONS = ['President', 'Vice President', 'Head'];
 const ALL_POSITIONS = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
-const ADMIN_DEPT_IDS = new Set([1, 2]);
+const ADMIN_DEPT_IDS = new Set([1]);
 const DEPT_REQUIRED_POSITIONS = new Set(['Head', 'Co-Head']);
 /** Real joinable departments — exclude President/VP/Founder display ids */
 const BOARD_DEPT_OPTIONS = (depts) =>
@@ -206,7 +206,7 @@ const SeasonsAdminTab = () => {
 
     if (!hasAdminEligible) {
       setModalError(
-        'Add at least one President, Vice President, or Head of Software Development / Technical Training with a linked User ID.'
+        'Add at least one President, Vice President, or Head of Software Development with a linked User ID.'
       );
       return;
     }
@@ -402,7 +402,7 @@ const SeasonsAdminTab = () => {
                   Search an existing <strong>board member</strong>, <strong>club member</strong>, or{' '}
                   <strong>user</strong> by name — selecting a match fills User ID, University ID, and
                   email. At least one must be <strong>President</strong>, <strong>Vice President</strong>,
-                  or <strong>Head</strong> of Software Development / Technical Training with a linked
+                  or <strong>Head</strong> of Software Development with a linked
                   User ID so Admin Panel access is preserved.
                 </p>
 

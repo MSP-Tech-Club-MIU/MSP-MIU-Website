@@ -28,6 +28,7 @@ import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
+import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 import './AdminPanel.css';
 
 const LIST_LIMIT = 20;
@@ -94,10 +95,11 @@ const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState(() => getAdminTabFromPath(location.pathname));
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
-    /** 'full' | 'registrations' — registrations = board/dept5 without full admin */
+    /** 'full' | 'programs' | 'registrations' */
     const [accessLevel, setAccessLevel] = useState('full');
     const [alert, setAlert] = useState(null);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const canUseProgramsTabs = accessLevel === 'full' || accessLevel === 'programs';
 
     useEffect(() => {
         document.body.classList.add('admin-panel-active');
@@ -106,7 +108,13 @@ const AdminPanel = () => {
 
     useEffect(() => {
         if (location.pathname === '/admin' || location.pathname === '/admin/') {
-            navigate(accessLevel === 'registrations' ? '/admin/registrations' : '/admin/dashboard', { replace: true });
+            const home =
+                accessLevel === 'registrations'
+                    ? '/admin/registrations'
+                    : accessLevel === 'programs'
+                      ? '/admin/events'
+                      : '/admin/dashboard';
+            navigate(home, { replace: true });
             return;
         }
 
@@ -120,6 +128,11 @@ const AdminPanel = () => {
         if (accessLevel === 'registrations' && tabFromPath !== 'registrations') {
             navigate('/admin/registrations', { replace: true });
             setActiveTab('registrations');
+            return;
+        }
+        if (accessLevel === 'programs' && !PROGRAMS_TAB_KEYS.includes(tabFromPath)) {
+            navigate('/admin/events', { replace: true });
+            setActiveTab('events');
             return;
         }
         setActiveTab((prev) => (prev === tabFromPath ? prev : tabFromPath));
@@ -198,7 +211,19 @@ const AdminPanel = () => {
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
     ], []);
 
-    const navItems = accessLevel === 'registrations' ? registrationsOnlyNav : fullNavItems;
+    const programsOnlyNav = useMemo(() => [
+        { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+        { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+    ], []);
+
+    const navItems =
+        accessLevel === 'registrations'
+            ? registrationsOnlyNav
+            : accessLevel === 'programs'
+              ? programsOnlyNav
+              : fullNavItems;
 
     const bottomItems = useMemo(() => [
         { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
@@ -237,6 +262,29 @@ const AdminPanel = () => {
                 fetchDashboard();
                 fetchCompetitions();
                 fetchNotifications();
+                return;
+            }
+
+            // SoftDev / Tech Training / AI / Cyber Security board → Programs tabs
+            let boardDeptId = null;
+            try {
+                const boardResult = await ApiService.getMyBoardMembership();
+                boardDeptId = boardResult?.data?.department_id;
+            } catch (err) {
+                console.error('Failed to load board membership:', err);
+            }
+
+            if (
+                profile?.role === 'board' &&
+                isProgramsEligibleDepartment(boardDeptId)
+            ) {
+                setAccessLevel('programs');
+                setHasAccess(true);
+                setLoading(false);
+                fetchCompetitions();
+                if (!PROGRAMS_TAB_KEYS.some((k) => location.pathname.includes(`/admin/${k}`))) {
+                    navigate('/admin/events', { replace: true });
+                }
                 return;
             }
 
@@ -392,12 +440,18 @@ const AdminPanel = () => {
 
     // Load data when tab / page changes
     useEffect(() => {
-        if (!hasAccess || accessLevel !== 'full') return;
-        if (activeTab === 'dashboard') fetchDashboard();
-        if (activeTab === 'competitions') fetchCompetitions();
-        if (activeTab === 'notifications') fetchNotifications({ forDropdown: false });
-        if (activeTab === 'announcements') fetchAnnouncementsAdmin(true);
-        if (activeTab === 'suggestions') fetchSuggestionsAndFeedback();
+        if (!hasAccess) return;
+        if (accessLevel === 'full') {
+            if (activeTab === 'dashboard') fetchDashboard();
+            if (activeTab === 'competitions') fetchCompetitions();
+            if (activeTab === 'notifications') fetchNotifications({ forDropdown: false });
+            if (activeTab === 'announcements') fetchAnnouncementsAdmin(true);
+            if (activeTab === 'suggestions') fetchSuggestionsAndFeedback();
+            return;
+        }
+        if (accessLevel === 'programs' && activeTab === 'competitions') {
+            fetchCompetitions();
+        }
     }, [
         activeTab,
         hasAccess,
@@ -495,6 +549,7 @@ const AdminPanel = () => {
 
     const handleTabChange = (key) => {
         if (accessLevel === 'registrations' && key !== 'registrations') return;
+        if (accessLevel === 'programs' && !PROGRAMS_TAB_KEYS.includes(key)) return;
         setActiveTab(key);
         setMobileMenuOpen(false);
 
@@ -772,21 +827,21 @@ const AdminPanel = () => {
                     )}
 
                     {/* === EVENTS === */}
-                    {accessLevel === 'full' && activeTab === 'events' && (
+                    {canUseProgramsTabs && activeTab === 'events' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <EventsAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 
                     {/* === COURSES === */}
-                    {accessLevel === 'full' && activeTab === 'courses' && (
+                    {canUseProgramsTabs && activeTab === 'courses' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <CoursesAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 
                     {/* === COMPETITIONS === */}
-                    {accessLevel === 'full' && activeTab === 'competitions' && (
+                    {canUseProgramsTabs && activeTab === 'competitions' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
