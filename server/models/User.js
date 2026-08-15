@@ -45,6 +45,10 @@ const User = sequelize.define('User', {
       isEmail: true
     }
   },
+  email_unsubscribed_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   password_hash: {
     type: DataTypes.STRING(255),
     allowNull: true

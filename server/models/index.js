@@ -610,6 +610,27 @@ async function ensureAnnouncementColumns() {
   }
 }
 
+async function ensureUserEmailColumns() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'email_unsubscribed_at'`
+    );
+    if (Number(rows[0]?.c) > 0) return;
+    await sequelize.query(
+      'ALTER TABLE `users` ADD COLUMN email_unsubscribed_at DATETIME NULL'
+    );
+    logger.info('Added users.email_unsubscribed_at');
+  } catch (err) {
+    logger.warn('Could not ensure users.email_unsubscribed_at:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -621,6 +642,7 @@ const syncModels = async () => {
       logger.info('Models synchronized with database successfully');
     }
     await ensureAnnouncementColumns();
+    await ensureUserEmailColumns();
   } catch (error) {
     logger.error('Error synchronizing models:', error);
     logger.info('Note: If you have existing data, you may need to manually adjust the schema');

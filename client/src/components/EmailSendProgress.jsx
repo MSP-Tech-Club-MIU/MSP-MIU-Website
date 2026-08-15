@@ -10,6 +10,7 @@ import './EmailSendProgress.css';
 export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
+  const [showFailures, setShowFailures] = useState(false);
   const doneRef = useRef(false);
   const hideTimer = useRef(null);
   const onDoneRef = useRef(onDone);
@@ -22,6 +23,7 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
     doneRef.current = false;
     setError(null);
     setJob(null);
+    setShowFailures(false);
 
     let cancelled = false;
     let timer = null;
@@ -38,9 +40,10 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
             doneRef.current = true;
             onDoneRef.current?.(data);
           }
+          const hasFailures = (data.failed || 0) > 0 || (data.failures || []).length > 0;
           hideTimer.current = setTimeout(() => {
-            if (!cancelled) onClearRef.current?.();
-          }, 4500);
+            if (!cancelled && !hasFailures) onClearRef.current?.();
+          }, hasFailures ? 12000 : 4500);
           return;
         }
       } catch (err) {
@@ -65,28 +68,33 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
   const total = job?.total ?? 0;
   const sent = job?.sent ?? 0;
   const failed = job?.failed ?? 0;
+  const skipped = job?.skipped ?? 0;
+  const failures = Array.isArray(job?.failures) ? job.failures : [];
   const percent = job?.percent ?? 0;
   const done = status === 'completed' || status === 'failed';
   const displayTitle = job?.title || title || 'Announcement';
+  const canExpandFailures = failed > 0 || failures.length > 0;
 
   let subtitle = 'Preparing to send…';
   if (error) {
     subtitle = error;
   } else if (status === 'running' && total > 0) {
-    subtitle = `Sent ${sent} of ${total}${failed ? ` · ${failed} failed` : ''}`;
+    subtitle = `Sent ${sent} of ${total}${failed ? ` · ${failed} failed` : ''}${skipped ? ` · ${skipped} skipped` : ''}`;
   } else if (status === 'running') {
     subtitle = 'Sending to members…';
   } else if (status === 'completed') {
-    subtitle = failed
-      ? `Finished: ${sent} sent, ${failed} failed`
-      : `All ${sent || total} emails sent`;
+    const parts = [];
+    if (failed) parts.push(`${sent} sent, ${failed} failed`);
+    else parts.push(`All ${sent || total} emails sent`);
+    if (skipped) parts.push(`${skipped} unsubscribed skipped`);
+    subtitle = parts.join(' · ');
   } else if (status === 'failed') {
     subtitle = job?.error || 'Email broadcast failed';
   }
 
   return createPortal(
     <div
-      className={`EmailSendProgress EmailSendProgress--${done ? status : 'active'}`}
+      className={`EmailSendProgress EmailSendProgress--${done ? status : 'active'}${showFailures ? ' EmailSendProgress--expanded' : ''}`}
       role="status"
       aria-live="polite"
       aria-busy={!done}
@@ -94,7 +102,7 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
       <div className="EmailSendProgress__icon" aria-hidden="true">
         {!done ? (
           <span className="EmailSendProgress__spinner" />
-        ) : status === 'completed' ? (
+        ) : status === 'completed' && failed === 0 ? (
           '✓'
         ) : (
           '!'
@@ -103,7 +111,9 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
       <div className="EmailSendProgress__body">
         <p className="EmailSendProgress__title">
           {done
-            ? (status === 'completed' ? 'Emails sent' : 'Email send finished with errors')
+            ? (status === 'completed' && failed === 0
+              ? 'Emails sent'
+              : 'Email send finished with errors')
             : 'Sending announcement emails'}
         </p>
         <p className="EmailSendProgress__subtitle">{displayTitle}</p>
@@ -114,6 +124,35 @@ export default function EmailSendProgress({ jobId, title, onDone, onClear }) {
             style={{ width: `${done && total === 0 ? 100 : percent}%` }}
           />
         </div>
+        {canExpandFailures && (
+          <div className="EmailSendProgress__failures">
+            <button
+              type="button"
+              className="EmailSendProgress__failuresToggle"
+              onClick={() => setShowFailures((v) => !v)}
+              aria-expanded={showFailures}
+            >
+              {showFailures ? 'Hide failed sends' : 'View failed sends'}
+              {failures.length ? ` (${failures.length})` : failed ? ` (${failed})` : ''}
+            </button>
+            {showFailures && (
+              <ul className="EmailSendProgress__failuresList">
+                {failures.length > 0 ? (
+                  failures.map((f, i) => (
+                    <li key={`${f.email}-${i}`}>
+                      <span className="EmailSendProgress__failEmail">{f.email}</span>
+                      <span className="EmailSendProgress__failReason">{f.reason || 'failed'}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="EmailSendProgress__failEmpty">
+                    {failed} send(s) failed (details unavailable)
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
       {done && (
         <button

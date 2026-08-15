@@ -60,15 +60,33 @@ function toPublicPayload(release) {
  * Notify all users about a new Android app release.
  */
 async function broadcastAndroidAppUpdateEmails(release) {
-  const users = await User.findAll({ attributes: ['email'] });
-  const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
-  if (emails.length === 0) {
-    logger.info('Android app update email: no recipients');
-    return { sent: 0 };
+  const users = await User.findAll({
+    attributes: ['user_id', 'email', 'email_unsubscribed_at']
+  });
+  const seen = new Set();
+  const recipients = [];
+  let skipped = 0;
+  for (const u of users) {
+    const email = String(u.email || '').trim();
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (u.email_unsubscribed_at) {
+      skipped += 1;
+      continue;
+    }
+    recipients.push({ email, userId: u.user_id });
+  }
+
+  if (recipients.length === 0) {
+    logger.info(`Android app update email: no recipients (skipped=${skipped})`);
+    return { sent: 0, failed: 0, skipped };
   }
 
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildAndroidAppUpdateEmail } = await import('../utils/androidAppUpdateEmail.mjs');
+  const { sendBulkEmails } = require('../utils/bulkEmailSend');
 
   const publicRelease = toPublicPayload(release);
   const { subject, text, html } = await buildAndroidAppUpdateEmail({
@@ -79,18 +97,24 @@ async function broadcastAndroidAppUpdateEmails(release) {
     frontendUrl: process.env.FRONTEND_URL
   });
 
-  for (const to of emails) {
-    await sendEmail({
-      to,
+  const result = await sendBulkEmails({
+    recipients,
+    sendFn: sendEmail,
+    buildPayload: async (recipient) => ({
+      to: recipient.email,
+      userId: recipient.userId,
       subject,
       text,
       html,
-      fromName: 'MSP MIU'
-    });
-  }
+      fromName: 'MSP MIU',
+      category: 'marketing'
+    })
+  });
 
-  logger.info(`Android app update emails sent to ${emails.length} recipient(s)`);
-  return { sent: emails.length };
+  logger.info(
+    `Android app update emails: sent=${result.sent} failed=${result.failed} skipped=${skipped}`
+  );
+  return { ...result, skipped };
 }
 
 /**
