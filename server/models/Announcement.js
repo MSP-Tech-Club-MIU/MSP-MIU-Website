@@ -40,6 +40,11 @@ const Announcement = sequelize.define('Announcement', {
     defaultValue: false,
     allowNull: false
   },
+  send_email: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
   created_by: {
     type: DataTypes.INTEGER,
     allowNull: false,

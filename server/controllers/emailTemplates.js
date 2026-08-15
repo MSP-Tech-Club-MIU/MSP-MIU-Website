@@ -140,7 +140,10 @@ const SAMPLE_VARS = {
     titleHtml: 'Sample Announcement',
     descriptionHtml: 'This is a sample announcement body.',
     preheader: 'This is a sample announcement body.',
-    testBannerHtml: ''
+    testBannerHtml: '',
+    metaHtml: '<p style="margin:14px 0 0;"><span style="display:inline-block;padding:4px 10px;background:#eaf2ff;color:#0d7bd8;border-radius:999px;font-size:12px;font-weight:600;">Technical</span></p>',
+    departmentLine: 'Department: Technical\n',
+    dateLine: 'Date: 15 August 2026\n\n'
   },
   android_app_update: {
     title: 'Android app update 1.0.1',

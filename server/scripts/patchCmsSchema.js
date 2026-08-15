@@ -66,6 +66,13 @@ async function addColumn(table, column, ddl) {
     await addColumn('competitions', 'max_teams', 'max_teams INT NULL');
     await addColumn('competitions', 'registration_deadline', 'registration_deadline DATETIME NULL');
 
+    // site announcements: optional email broadcast
+    await addColumn(
+      'announcements',
+      'send_email',
+      'send_email TINYINT(1) NOT NULL DEFAULT 0'
+    );
+
     // users.score nulls that break full alter sync
     if (await columnExists('users', 'score')) {
       await sequelize.query('UPDATE users SET score = 0 WHERE score IS NULL');

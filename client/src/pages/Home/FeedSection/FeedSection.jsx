@@ -22,7 +22,8 @@ const FeedSection = memo(() => {
     description: '',
     department: '',
     announcement_date: '',
-    priority: false
+    priority: false,
+    send_email: false
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -118,7 +119,8 @@ const FeedSection = memo(() => {
         description: '',
         department: '',
         announcement_date: '',
-        priority: false
+        priority: false,
+        send_email: false
       });
       // Refresh announcements list
       setPage(1);
@@ -138,7 +140,8 @@ const FeedSection = memo(() => {
       description: '',
       department: '',
       announcement_date: '',
-      priority: false
+      priority: false,
+      send_email: false
     });
     setSubmitError(null);
   };
@@ -291,6 +294,24 @@ const FeedSection = memo(() => {
                       <span>Priority Announcement</span>
                     </label>
                   </div>
+
+                  <div className="Feed__formGroup Feed__formGroup--checkbox">
+                    <label>
+                      <input
+                        type="checkbox"
+                        name="send_email"
+                        checked={formData.send_email}
+                        onChange={handleInputChange}
+                      />
+                      <span>Send email notification to all members</span>
+                    </label>
+                  </div>
+
+                  {formData.send_email && (
+                    <p className="Feed__formHint" role="note">
+                      An email about this announcement will be sent to all members.
+                    </p>
+                  )}
 
                   {submitError && (
                     <div className="Feed__formError">{submitError}</div>

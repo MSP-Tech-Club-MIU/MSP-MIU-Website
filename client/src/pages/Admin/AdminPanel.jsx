@@ -168,7 +168,7 @@ const AdminPanel = () => {
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
     const [announcementForm, setAnnouncementForm] = useState({
-        title: '', description: '', department: '', announcement_date: '', priority: false
+        title: '', description: '', department: '', announcement_date: '', priority: false, send_email: false
     });
 
     // Suggestions & Feedback state
@@ -481,14 +481,16 @@ const AdminPanel = () => {
                 description: (announcement.description || '').slice(0, ANNOUNCEMENT_DESC_MAX),
                 department: announcement.department || '',
                 announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
-                priority: !!announcement.priority
+                priority: !!announcement.priority,
+                send_email: !!announcement.send_email
             });
         } else {
             setEditingAnnouncement(null);
             setAnnouncementForm({
                 title: '', description: '', department: '',
                 announcement_date: new Date().toISOString().split('T')[0],
-                priority: false
+                priority: false,
+                send_email: false
             });
         }
         setShowAnnouncementModal(true);
@@ -501,11 +503,17 @@ const AdminPanel = () => {
                 payload.season_id = selectedSeasonId;
             }
             if (editingAnnouncement) {
-                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, payload);
+                const { send_email, ...updatePayload } = payload;
+                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, updatePayload);
                 setAlert({ type: 'success', message: 'Announcement updated!' });
             } else {
                 await ApiService.createAnnouncement(payload);
-                setAlert({ type: 'success', message: 'Announcement created!' });
+                setAlert({
+                    type: 'success',
+                    message: payload.send_email
+                        ? 'Announcement created and emailed to members!'
+                        : 'Announcement created (website only)!'
+                });
             }
             setShowAnnouncementModal(false);
             fetchAnnouncementsAdmin(false);
@@ -1073,6 +1081,7 @@ const AdminPanel = () => {
                                                 <th>Department</th>
                                                 <th>Date</th>
                                                 <th>Priority</th>
+                                                <th>Email</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -1090,6 +1099,11 @@ const AdminPanel = () => {
                                                     <td>
                                                         <span className={`AdminPanel__badge AdminPanel__badge--${a.priority ? 'active' : 'completed'}`}>
                                                             {a.priority ? 'High' : 'Normal'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`AdminPanel__badge AdminPanel__badge--${a.send_email ? 'active' : 'completed'}`}>
+                                                            {a.send_email ? 'Emailed' : 'Website only'}
                                                         </span>
                                                     </td>
                                                     <td>
@@ -1123,7 +1137,9 @@ const AdminPanel = () => {
                                             <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
                                             {!editingAnnouncement && (
                                                 <p className="AdminPanel__emailNote" role="note">
-                                                    Note: creating this announcement will send an email about it to all members.
+                                                    {announcementForm.send_email
+                                                        ? 'This announcement will appear on the website and an email will be sent to all members.'
+                                                        : 'This announcement will appear on the website only. Check “Send email” to also notify members by mail.'}
                                                 </p>
                                             )}
                                             <div className="AdminPanel__formGroup">
@@ -1167,6 +1183,19 @@ const AdminPanel = () => {
                                                     {' '}Priority
                                                 </label>
                                             </div>
+                                            {!editingAnnouncement && (
+                                                <div className="AdminPanel__formGroup">
+                                                    <label htmlFor="announcement-send-email">
+                                                        <input
+                                                            id="announcement-send-email"
+                                                            type="checkbox"
+                                                            checked={announcementForm.send_email}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, send_email: e.target.checked })}
+                                                        />
+                                                        {' '}Send email notification to all members
+                                                    </label>
+                                                </div>
+                                            )}
                                             <div className="AdminPanel__modalActions">
                                                 <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
                                                 <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>{editingAnnouncement ? 'Save' : 'Create'}</button>

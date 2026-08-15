@@ -20,17 +20,38 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
 
   const title = announcement.title || 'Announcement';
   const description = announcement.description || '';
+  const department = (announcement.department || '').trim();
+  const rawDate = announcement.announcement_date || '';
 
   const titleHtml = escapeHtml(title);
   const descriptionHtml = escapeHtml(description).replace(/\n/g, '<br/>');
   const preheader = escapeHtml(plainPreview(description, 140) || title);
 
+  const dateLabel = formatAnnouncementDate(rawDate);
+  const metaParts = [];
+  if (department) {
+    metaParts.push(
+      `<span style="display:inline-block;padding:4px 10px;background:#eaf2ff;color:#0d7bd8;border-radius:999px;font-size:12px;font-weight:600;">${escapeHtml(department)}</span>`
+    );
+  }
+  if (dateLabel) {
+    metaParts.push(
+      `<span style="display:inline-block;font-size:13px;color:#666666;">${escapeHtml(dateLabel)}</span>`
+    );
+  }
+  const metaHtml = metaParts.length
+    ? `<p style="margin:14px 0 0;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">${metaParts.join('')}</p>`
+    : '';
+
+  const departmentLine = department ? `Department: ${department}\n` : '';
+  const dateLine = dateLabel ? `Date: ${dateLabel}\n\n` : department ? '\n' : '';
+
   let testBannerHtml = '';
   if (testMode && announcementId != null) {
     testBannerHtml = `<tr>
-  <td style="padding:16px 26px 0;font-family:Inter,system-ui,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(255,191,0,0.12);border:1px solid rgba(255,191,0,0.45);border-radius:12px;">
-      <tr><td style="padding:12px 16px;font-size:13px;color:#ffd666;line-height:1.5;">
+  <td style="padding:16px 36px 0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e6;border:1px solid #f0d58a;border-radius:6px;">
+      <tr><td style="padding:12px 16px;font-size:13px;color:#8a6d1d;line-height:1.5;">
         <strong>Test email</strong> · announcement_id=${escapeHtml(String(announcementId))}
       </td></tr>
     </table>
@@ -38,8 +59,8 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
 </tr>`;
   } else if (testMode) {
     testBannerHtml = `<tr>
-  <td style="padding:16px 26px 0;font-family:Inter,system-ui,sans-serif;">
-    <p style="margin:0;padding:12px 16px;background:rgba(255,191,0,0.12);border:1px solid rgba(255,191,0,0.45);border-radius:12px;font-size:13px;color:#ffd666;"><strong>Test email</strong></p>
+  <td style="padding:16px 36px 0;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+    <p style="margin:0;padding:12px 16px;background:#fff8e6;border:1px solid #f0d58a;border-radius:6px;font-size:13px;color:#8a6d1d;"><strong>Test email</strong></p>
   </td>
 </tr>`;
   }
@@ -51,7 +72,10 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
     titleHtml,
     descriptionHtml,
     preheader,
-    testBannerHtml
+    testBannerHtml,
+    metaHtml,
+    departmentLine,
+    dateLine
   });
 
   const subject = testMode ? `[TEST] ${rendered.subject}` : rendered.subject;
@@ -60,6 +84,19 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
     : rendered.text;
 
   return { subject, text, html: rendered.html };
+}
+
+function formatAnnouncementDate(value) {
+  if (!value) return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    return String(value);
+  }
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 }
 
 function plainPreview(text, maxLen) {
