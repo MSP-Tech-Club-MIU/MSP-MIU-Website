@@ -12,6 +12,7 @@ const {
   validateInitialBoardMembers,
   seasonHasAdminEligibleBoard
 } = require('../utils/adminEligibleBoard');
+const { applyCurrentSeasonBoardAccess } = require('../utils/boardUserSync');
 
 /**
  * GET /seasons — list seasons for selectors
@@ -255,6 +256,10 @@ const createSeason = async (req, res) => {
       }
     }
 
+    if (season.is_default) {
+      await applyCurrentSeasonBoardAccess(season.season_id, { transaction });
+    }
+
     await transaction.commit();
 
     return res.status(201).json({
@@ -364,6 +369,7 @@ const setDefaultSeason = async (req, res) => {
       { where: { is_default: true }, transaction }
     );
     await season.update({ is_default: true, is_active: true }, { transaction });
+    await applyCurrentSeasonBoardAccess(id, { transaction });
     await transaction.commit();
 
     return res.json({

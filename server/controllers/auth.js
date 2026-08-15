@@ -831,6 +831,10 @@ const activateAccount = async (req, res) => {
             // Always set role to 'board' if it's a board member
             if (isBoardMember) {
                 updateData.role = 'board';
+                if (boardMember) {
+                    updateData.department_id = boardMember.department_id;
+                    updateData.season_id = boardMember.season_id;
+                }
             } else {
                 updateData.role = role;
             }

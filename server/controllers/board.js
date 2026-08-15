@@ -10,6 +10,10 @@ const {
 } = require('../utils/seasonFilter');
 const { r2, PutObjectCommand } = require('../config/cloud');
 const { sendBoardActivationEmailForMember } = require('../utils/boardActivationEmail');
+const {
+  syncUserFromBoard,
+  demoteUserIfNoCurrentBoard
+} = require('../utils/boardUserSync');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
 
@@ -198,7 +202,7 @@ const createBoardMember = async (req, res) => {
       return res.status(400).json({ success: false, error: 'year is required (e.g. 2025-2026)' });
     }
 
-const member = await Board.create({
+    const member = await Board.create({
       full_name: String(full_name).trim(),
       position,
       department_id: department_id != null && department_id !== '' ? Number(department_id) : null,
@@ -214,6 +218,12 @@ const member = await Board.create({
       sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
       is_visible: is_visible === undefined ? true : Boolean(is_visible)
     });
+
+    try {
+      await syncUserFromBoard(member);
+    } catch (syncErr) {
+      console.error('Board user sync failed after create:', syncErr);
+    }
 
     let activationEmail = null;
     if (member.email) {
@@ -305,8 +315,32 @@ const updateBoardMember = async (req, res) => {
       return res.status(400).json({ success: false, error: 'No fields to update' });
     }
 
+    const previousUserId = member.user_id;
+    const previousDepartmentId = member.department_id;
+    const previousPosition = member.position;
+
     await member.update(updates);
     await member.reload();
+
+    try {
+      await syncUserFromBoard(member);
+      const userIdDiffers =
+        previousUserId != null &&
+        Number(previousUserId) !== Number(member.user_id ?? NaN);
+      const positionOrDeptChanged =
+        previousPosition !== member.position ||
+        Number(previousDepartmentId ?? NaN) !== Number(member.department_id ?? NaN);
+      const userUnlinked = previousUserId != null && member.user_id == null;
+      if (
+        previousUserId != null &&
+        (userIdDiffers || (positionOrDeptChanged && userUnlinked))
+      ) {
+        await demoteUserIfNoCurrentBoard(previousUserId);
+      }
+    } catch (syncErr) {
+      console.error('Board user sync failed after update:', syncErr);
+    }
+
     res.json({ success: true, data: member });
   } catch (error) {
     if (error.status) {
@@ -324,7 +358,15 @@ const deleteBoardMember = async (req, res) => {
     if (!member) {
       return res.status(404).json({ success: false, error: 'Board member not found' });
     }
+    const userId = member.user_id;
     await member.destroy();
+    try {
+      if (userId != null) {
+        await demoteUserIfNoCurrentBoard(userId);
+      }
+    } catch (syncErr) {
+      console.error('Board user demote failed after delete:', syncErr);
+    }
     res.json({ success: true, message: 'Board member deleted' });
   } catch (error) {
     console.error('Error deleting board member:', error);
