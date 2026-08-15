@@ -138,28 +138,66 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
 
     if (emails.length === 0) {
       logger.info(`Competition announcement: no recipients for announcement ${announcement.announcement_id}`);
-      return;
+      return { sent: 0, failed: 0, skipped: 0 };
     }
 
     const { sendEmail } = await import('../utils/email.mjs');
     const { buildCompetitionAnnouncementEmail } = await import('../utils/competitionAnnouncementEmail.mjs');
+    const { sendBulkEmails } = require('../utils/bulkEmailSend');
+    const { Op } = require('sequelize');
 
     const { subject, text, html } = await buildCompetitionAnnouncementEmail(announcement, competition, {
       frontendUrl: process.env.FRONTEND_URL
     });
 
-    // Send emails to each recipient individually for reliability
-    for (const to of emails) {
-      await sendEmail({
-        to,
-        subject,
-        text,
-        html,
-        fromName: 'MSP MIU Competition Announcements'
+    const users = await User.findAll({
+      where: { email: { [Op.in]: emails } },
+      attributes: ['user_id', 'email', 'email_unsubscribed_at']
+    });
+    const byEmail = new Map(
+      users.map((u) => [String(u.email || '').trim().toLowerCase(), u])
+    );
+
+    const recipients = [];
+    let skipped = 0;
+    for (const email of emails) {
+      const key = String(email || '').trim().toLowerCase();
+      const user = byEmail.get(key);
+      if (user?.email_unsubscribed_at) {
+        skipped += 1;
+        continue;
+      }
+      recipients.push({
+        email: String(email).trim(),
+        userId: user?.user_id
       });
     }
 
-    logger.info(`Competition announcement emails sent to ${emails.length} recipient(s) for competition ${announcement.competition_id}`);
+    if (recipients.length === 0) {
+      logger.info(
+        `Competition announcement: all recipients unsubscribed for ${announcement.announcement_id} (skipped=${skipped})`
+      );
+      return { sent: 0, failed: 0, skipped };
+    }
+
+    const result = await sendBulkEmails({
+      recipients,
+      sendFn: sendEmail,
+      buildPayload: async (recipient) => ({
+        to: recipient.email,
+        userId: recipient.userId,
+        subject,
+        text,
+        html,
+        fromName: 'MSP MIU Competition Announcements',
+        category: 'marketing'
+      })
+    });
+
+    logger.info(
+      `Competition announcement emails: sent=${result.sent} failed=${result.failed} skipped=${skipped} competition=${announcement.competition_id}`
+    );
+    return { ...result, skipped };
   } catch (error) {
     logger.error('Error broadcasting competition announcement emails:', error);
     throw error;

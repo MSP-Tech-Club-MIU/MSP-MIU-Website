@@ -88,6 +88,13 @@ async function addColumn(table, column, ddl) {
       'cta_url VARCHAR(512) NULL'
     );
 
+    // marketing email opt-out
+    await addColumn(
+      'users',
+      'email_unsubscribed_at',
+      'email_unsubscribed_at DATETIME NULL'
+    );
+
     // Refresh site_announcement once when CTA placeholders are missing
     if (await tableExists('email_templates')) {
       try {

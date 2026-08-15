@@ -31,6 +31,7 @@ router.use("/admin", require("./routes/admin")); // This line is for Admin Route
 router.use("/suggestions", require("./routes/suggestions"));
 router.use("/seasons", require("./routes/seasons"));
 router.use("/email-templates", require("./routes/emailTemplates"));
+router.use("/email", require("./routes/emailPreferences"));
 router.use("/android-app", require("./routes/androidApp"));
 
 module.exports = router;

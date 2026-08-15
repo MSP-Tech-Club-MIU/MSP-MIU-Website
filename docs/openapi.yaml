@@ -65,6 +65,8 @@ tags:
     name: CompetitionAnnouncements
   -
     name: courses
+  -
+    name: email
 components:
   securitySchemes:
     bearerAuth:
@@ -2506,6 +2508,22 @@ paths:
       security:
         -
           bearerAuth: []
+  /email/unsubscribe:
+    get:
+      summary: 'Get /email/unsubscribe'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - email
+  /email/unsubscribe/confirm:
+    get:
+      summary: 'Get /email/unsubscribe/confirm'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - email
   '/evaluation/{submissionId}':
     get:
       tags:
