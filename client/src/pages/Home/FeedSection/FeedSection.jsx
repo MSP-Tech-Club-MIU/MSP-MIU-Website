@@ -13,13 +13,15 @@ const WEBSITE_DESC_MAX = 220;
 const EMAIL_TITLE_MAX = 120;
 const EMAIL_DESC_MAX = 2000;
 
-const emptyForm = (sendEmail = false) => ({
+const emptyForm = () => ({
   title: '',
   description: '',
   department: '',
   announcement_date: '',
   priority: false,
-  send_email: sendEmail
+  send_email: false,
+  cta_label: '',
+  cta_url: ''
 });
 
 const FeedSection = memo(() => {
@@ -31,13 +33,14 @@ const FeedSection = memo(() => {
   const [pagination, setPagination] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [modalKind, setModalKind] = useState(null); // 'website' | 'email' | null
-  const [formData, setFormData] = useState(emptyForm(false));
+  const [formData, setFormData] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
   const isEmailModal = modalKind === 'email';
   const titleMax = isEmailModal ? EMAIL_TITLE_MAX : WEBSITE_TITLE_MAX;
   const descMax = isEmailModal ? EMAIL_DESC_MAX : WEBSITE_DESC_MAX;
+  const showCtaFields = isEmailModal || !!formData.send_email;
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -104,7 +107,7 @@ const FeedSection = memo(() => {
 
   const openModal = (kind) => {
     setModalKind(kind);
-    setFormData(emptyForm(kind === 'email'));
+    setFormData(emptyForm());
     setSubmitError(null);
   };
 
@@ -116,6 +119,14 @@ const FeedSection = memo(() => {
     }
     if (name === 'description') {
       setFormData(prev => ({ ...prev, description: value.slice(0, descMax) }));
+      return;
+    }
+    if (name === 'cta_label') {
+      setFormData(prev => ({ ...prev, cta_label: value.slice(0, 80) }));
+      return;
+    }
+    if (name === 'cta_url') {
+      setFormData(prev => ({ ...prev, cta_url: value.slice(0, 512) }));
       return;
     }
     setFormData(prev => ({
@@ -130,9 +141,17 @@ const FeedSection = memo(() => {
     setSubmitError(null);
 
     try {
+      const isEmailBroadcast = modalKind === 'email';
       const payload = {
-        ...formData,
-        send_email: modalKind === 'email'
+        title: formData.title,
+        description: formData.description,
+        department: formData.department,
+        announcement_date: formData.announcement_date,
+        priority: formData.priority,
+        publish_to_website: !isEmailBroadcast,
+        send_email: isEmailBroadcast ? true : !!formData.send_email,
+        cta_label: showCtaFields ? formData.cta_label : '',
+        cta_url: showCtaFields ? formData.cta_url : ''
       };
       if (typeof selectedSeasonId === 'number') {
         payload.season_id = selectedSeasonId;
@@ -151,7 +170,7 @@ const FeedSection = memo(() => {
 
   const handleCloseModal = () => {
     setModalKind(null);
-    setFormData(emptyForm(false));
+    setFormData(emptyForm());
     setSubmitError(null);
   };
 
@@ -256,8 +275,8 @@ const FeedSection = memo(() => {
                 </h3>
                 <p className="Feed__formHint" role="note">
                   {isEmailModal
-                    ? 'Longer copy for email. Sent to all members and shown on the website.'
-                    : 'Short copy for the website feed only — no email will be sent.'}
+                    ? 'Mail only — sent to all members. Will not appear on the website feed. CTA button is required.'
+                    : 'Short copy for the website feed. Optionally email members (off by default).'}
                 </p>
 
                 <form onSubmit={handleSubmit} className="Feed__form">
@@ -331,6 +350,55 @@ const FeedSection = memo(() => {
                       <span>Priority Announcement</span>
                     </label>
                   </div>
+
+                  {!isEmailModal && (
+                    <div className="Feed__formGroup Feed__formGroup--checkbox">
+                      <label>
+                        <input
+                          type="checkbox"
+                          name="send_email"
+                          checked={formData.send_email}
+                          onChange={handleInputChange}
+                        />
+                        <span>Send email to members</span>
+                      </label>
+                    </div>
+                  )}
+
+                  {showCtaFields && (
+                    <>
+                      <div className="Feed__formGroup">
+                        <label htmlFor="cta_label">
+                          CTA button {isEmailModal ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="text"
+                          id="cta_label"
+                          name="cta_label"
+                          value={formData.cta_label}
+                          onChange={handleInputChange}
+                          required={isEmailModal}
+                          maxLength={80}
+                          placeholder="Button label, e.g. Register now"
+                        />
+                      </div>
+                      <div className="Feed__formGroup">
+                        <label htmlFor="cta_url">
+                          CTA button URL {isEmailModal ? '*' : '(optional)'}
+                        </label>
+                        <input
+                          type="url"
+                          id="cta_url"
+                          name="cta_url"
+                          value={formData.cta_url}
+                          onChange={handleInputChange}
+                          required={isEmailModal}
+                          maxLength={512}
+                          placeholder="https://…"
+                        />
+                      </div>
+                    </>
+                  )}
 
                   {submitError && (
                     <div className="Feed__formError">{submitError}</div>

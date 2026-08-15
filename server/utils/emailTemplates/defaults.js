@@ -367,6 +367,8 @@ This is an automated email, please do not reply.`,
 
 {{departmentLine}}{{dateLine}}{{description}}
 
+{{ctaText}}
+
 —
 MSP MIU · {{frontendUrl}}`,
     `<!DOCTYPE html>
@@ -403,7 +405,7 @@ MSP MIU · {{frontendUrl}}`,
           </tr>
           <tr>
             <td style="padding:0 36px 32px;text-align:center;">
-              <a href="{{frontendUrl}}" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#0d7bd8 0%,#03A9F4 100%);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;box-shadow:0 4px 8px rgba(13,123,216,0.3);">View on MSP MIU</a>
+              {{ctaHtml}}
             </td>
           </tr>
           <tr>
@@ -418,7 +420,7 @@ MSP MIU · {{frontendUrl}}`,
   </table>
 </body>
 </html>`,
-    ['title', 'description', 'frontendUrl', 'titleHtml', 'descriptionHtml', 'preheader', 'testBannerHtml', 'metaHtml', 'departmentLine', 'dateLine']
+    ['title', 'description', 'frontendUrl', 'titleHtml', 'descriptionHtml', 'preheader', 'testBannerHtml', 'metaHtml', 'departmentLine', 'dateLine', 'ctaHtml', 'ctaText']
   ),
 
   android_app_update: def(

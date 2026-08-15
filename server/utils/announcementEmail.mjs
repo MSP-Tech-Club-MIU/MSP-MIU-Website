@@ -46,6 +46,11 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
   const departmentLine = department ? `Department: ${department}\n` : '';
   const dateLine = dateLabel ? `Date: ${dateLabel}\n\n` : department ? '\n' : '';
 
+  const ctaLabel = String(announcement.cta_label || '').trim() || 'View on MSP MIU';
+  const ctaUrl = String(announcement.cta_url || '').trim() || frontendUrl;
+  const ctaHtml = `<a href="${escapeHtml(ctaUrl)}" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#0d7bd8 0%,#03A9F4 100%);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;box-shadow:0 4px 8px rgba(13,123,216,0.3);">${escapeHtml(ctaLabel)}</a>`;
+  const ctaText = `${ctaLabel}: ${ctaUrl}`;
+
   let testBannerHtml = '';
   if (testMode && announcementId != null) {
     testBannerHtml = `<tr>
@@ -75,7 +80,9 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
     testBannerHtml,
     metaHtml,
     departmentLine,
-    dateLine
+    dateLine,
+    ctaHtml,
+    ctaText
   });
 
   const subject = testMode ? `[TEST] ${rendered.subject}` : rendered.subject;

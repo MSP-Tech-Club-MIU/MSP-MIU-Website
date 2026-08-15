@@ -143,7 +143,9 @@ const SAMPLE_VARS = {
     testBannerHtml: '',
     metaHtml: '<p style="margin:14px 0 0;"><span style="display:inline-block;padding:4px 10px;background:#eaf2ff;color:#0d7bd8;border-radius:999px;font-size:12px;font-weight:600;">Technical</span></p>',
     departmentLine: 'Department: Technical\n',
-    dateLine: 'Date: 15 August 2026\n\n'
+    dateLine: 'Date: 15 August 2026\n\n',
+    ctaHtml: '<a href="https://msp-miu.tech" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#0d7bd8 0%,#03A9F4 100%);color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;">View on MSP MIU</a>',
+    ctaText: 'View on MSP MIU: https://msp-miu.tech'
   },
   android_app_update: {
     title: 'Android app update 1.0.1',

@@ -1157,7 +1157,7 @@ class ApiService {
   // ========== Announcements API Methods ==========
 
   // Get all announcements
-  // options: { includeInactive?: boolean, page?: number, limit?: number }
+  // options: { includeInactive?: boolean, forAdmin?: boolean, page?: number, limit?: number }
   static async getAnnouncements(includeInactiveOrOptions = false) {
     try {
       const options =
@@ -1167,6 +1167,7 @@ class ApiService {
 
       const queryParams = new URLSearchParams();
       if (options.includeInactive) queryParams.append('includeInactive', 'true');
+      if (options.forAdmin) queryParams.append('forAdmin', 'true');
       appendPaginationParams(queryParams, options);
       appendSeasonParams(queryParams, options);
 
