@@ -1244,11 +1244,11 @@ class ApiService {
   }
 
   // Create a new announcement (admin/board only)
+  // Returns { data, emailJob?, message }
   static async createAnnouncement(announcementData) {
     try {
       const headers = this.getHeaders(true);
 
-      // Debug: Log if token is being sent
       const token = this.getAuthToken();
       if (!token) {
         throw new Error('Authentication token not found. Please log in again.');
@@ -1263,10 +1263,8 @@ class ApiService {
       const result = await response.json();
 
       if (!response.ok) {
-        // Use the actual error message from the server
         const errorMessage = result.error || result.message || 'Failed to create announcement';
 
-        // Provide more specific error messages
         if (response.status === 403) {
           throw new Error(errorMessage || 'Access denied. You do not have permission to create announcements.');
         } else if (response.status === 401) {
@@ -1276,14 +1274,29 @@ class ApiService {
         }
       }
 
-      // Clear announcements cache
       this.clearCache('announcements');
 
-      return result.data;
+      return {
+        data: result.data,
+        emailJob: result.emailJob || null,
+        message: result.message || 'Announcement created successfully',
+      };
     } catch (error) {
       console.error('Error creating announcement:', error);
       throw error;
     }
+  }
+
+  static async getAnnouncementEmailJob(jobId) {
+    const response = await fetch(`${API_BASE_URL}/announcements/email-jobs/${jobId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch email job status');
+    }
+    return result.data;
   }
 
   // Update an announcement (admin/board only)

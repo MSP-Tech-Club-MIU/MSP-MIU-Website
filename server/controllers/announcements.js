@@ -1,6 +1,13 @@
 const { Announcement, User } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const {
+  startAnnouncementEmailBroadcast,
+  getAnnouncementEmailJob,
+  publicJobView,
+  runAnnouncementEmailJob,
+  createAnnouncementEmailJob
+} = require('../services/announcementEmailJob');
 
 const WEBSITE_TITLE_MAX = 50;
 const WEBSITE_DESC_MAX = 220;
@@ -34,38 +41,35 @@ function isValidHttpUrl(value) {
 }
 
 /**
- * Notify all users by email.
- * Sends directly to each recipient so SMTP providers that mishandle
- * BCC-only deliveries still deliver to everyone reliably.
+ * Notify all users by email (awaits completion). Prefer startAnnouncementEmailBroadcast for HTTP.
  */
 async function broadcastNewAnnouncementEmails(announcement) {
-  const users = await User.findAll({
-    attributes: ['email']
+  const job = createAnnouncementEmailJob({
+    announcementId: announcement?.announcement_id,
+    title: announcement?.title
   });
-  const emails = [...new Set(users.map((u) => (u.email || '').trim()).filter(Boolean))];
-  if (emails.length === 0) {
-    console.log('Announcement email: no recipients (no users with email)');
-    return;
-  }
+  await runAnnouncementEmailJob(job.id, announcement);
+  return publicJobView(getAnnouncementEmailJob(job.id));
+}
 
-  const { sendEmail } = await import('../utils/email.mjs');
-  const { buildAnnouncementEmail } = await import('../utils/announcementEmail.mjs');
-
-  const { subject, text, html } = await buildAnnouncementEmail(announcement, {
-    frontendUrl: process.env.FRONTEND_URL
-  });
-
-  for (const to of emails) {
-    await sendEmail({
-      to,
-      subject,
-      text,
-      html,
-      fromName: 'MSP MIU Announcements'
+/**
+ * GET /api/announcements/email-jobs/:jobId
+ */
+const getAnnouncementEmailJobStatus = async (req, res) => {
+  try {
+    const job = getAnnouncementEmailJob(req.params.jobId);
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Email job not found' });
+    }
+    return res.json({ success: true, data: publicJobView(job) });
+  } catch (error) {
+    console.error('Error fetching announcement email job:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch email job'
     });
   }
-  console.log(`Announcement emails sent to ${emails.length} recipient(s)`);
-}
+};
 
 /**
  * Get all active announcements
@@ -121,9 +125,10 @@ const getAllAnnouncements = async (req, res) => {
       return res.status(error.status).json({ success: false, error: error.message });
     }
     console.error('Error fetching announcements:', error);
+    const detail = error.parent?.sqlMessage || error.message || 'Failed to fetch announcements';
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch announcements'
+      error: detail
     });
   }
 };
@@ -273,19 +278,22 @@ const addAnnouncement = async (req, res) => {
     });
 
     if (createdAnnouncement.send_email) {
-      await broadcastNewAnnouncementEmails(createdAnnouncement);
-    }
-
-    let message = 'Website announcement posted';
-    if (!publishToWebsite) {
-      message = 'Email broadcast sent to members';
-    } else if (shouldSendEmail) {
-      message = 'Website announcement posted and emails sent';
+      const emailJob = startAnnouncementEmailBroadcast(createdAnnouncement);
+      let message = 'Website announcement posted; sending emails…';
+      if (!publishToWebsite) {
+        message = 'Email broadcast started; sending to members…';
+      }
+      return res.status(201).json({
+        success: true,
+        message,
+        data: createdAnnouncement,
+        emailJob
+      });
     }
 
     return res.status(201).json({
       success: true,
-      message,
+      message: 'Website announcement posted',
       data: createdAnnouncement
     });
   } catch (error) {
@@ -293,9 +301,10 @@ const addAnnouncement = async (req, res) => {
       return res.status(error.status).json({ success: false, error: error.message });
     }
     console.error('Error creating announcement:', error);
+    const detail = error.parent?.sqlMessage || error.message || 'Failed to create announcement';
     return res.status(500).json({
       success: false,
-      error: 'Failed to create announcement'
+      error: detail
     });
   }
 };
@@ -456,6 +465,7 @@ const deleteAnnouncement = async (req, res) => {
 
 module.exports = {
   broadcastNewAnnouncementEmails,
+  getAnnouncementEmailJobStatus,
   getAllAnnouncements,
   getAnnouncementById,
   addAnnouncement,
