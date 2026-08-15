@@ -1013,6 +1013,24 @@ paths:
       responses:
         '200':
           description: Deleted
+  '/announcements/email-jobs/{jobId}':
+    get:
+      summary: 'Get /announcements/email-jobs/{jobId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Announcements
+      parameters:
+        -
+          name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   /applications:
     get:
       tags:

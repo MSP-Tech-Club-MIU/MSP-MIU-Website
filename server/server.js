@@ -1,10 +1,6 @@
 const express = require("express");
-const { syncModels } = require("./models");
 
 const router = express.Router();
-
-// Initialize database models
-syncModels();
 
 // Auth routes (public)
 router.use("/auth", require("./routes/auth"));

@@ -5,6 +5,7 @@ import './FeedSection.css';
 import ApiService from '../../../services/api';
 import Pagination from '../../../components/Pagination';
 import SeasonBadge from '../../../components/SeasonBadge';
+import EmailSendProgress from '../../../components/EmailSendProgress';
 import { useSeason } from '../../../context/SeasonContext';
 import { FiPlus, FiMail, FiX } from 'react-icons/fi';
 
@@ -36,6 +37,7 @@ const FeedSection = memo(() => {
   const [formData, setFormData] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
   const isEmailModal = modalKind === 'email';
   const titleMax = isEmailModal ? EMAIL_TITLE_MAX : WEBSITE_TITLE_MAX;
@@ -156,10 +158,16 @@ const FeedSection = memo(() => {
       if (typeof selectedSeasonId === 'number') {
         payload.season_id = selectedSeasonId;
       }
-      await ApiService.createAnnouncement(payload);
+      const result = await ApiService.createAnnouncement(payload);
       handleCloseModal();
       setPage(1);
       await fetchAnnouncements(1);
+      if (result?.emailJob?.id) {
+        setEmailSendJob({
+          id: result.emailJob.id,
+          title: result.data?.title || payload.title
+        });
+      }
     } catch (err) {
       console.error('Error creating announcement:', err);
       setSubmitError(err.message || 'Failed to create announcement');
@@ -244,6 +252,14 @@ const FeedSection = memo(() => {
         )}
       </div>
       <Pagination pagination={pagination} onPageChange={setPage} />
+
+      {emailSendJob && (
+        <EmailSendProgress
+          jobId={emailSendJob.id}
+          title={emailSendJob.title}
+          onClear={() => setEmailSendJob(null)}
+        />
+      )}
 
       {createPortal(
         <AnimatePresence>

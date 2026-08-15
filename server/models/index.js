@@ -583,6 +583,32 @@ seasonScoped.forEach(({ model, as }) => {
 // MySQL InnoDB allows max 64 indexes per table; repeated alter sync piles up FKs/indexes
 // and can fail with ER_TOO_MANY_KEYS (seen on users after season_id).
 // Opt in only when needed: DB_SYNC_ALTER=true
+async function ensureAnnouncementColumns() {
+  const columns = [
+    ['send_email', 'send_email TINYINT(1) NOT NULL DEFAULT 0'],
+    ['publish_to_website', 'publish_to_website TINYINT(1) NOT NULL DEFAULT 1'],
+    ['cta_label', 'cta_label VARCHAR(80) NULL'],
+    ['cta_url', 'cta_url VARCHAR(512) NULL']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`announcements\` ADD COLUMN ${ddl}`);
+      console.log(`Added announcements.${name}`);
+    } catch (err) {
+      console.warn(`Could not ensure announcements.${name}:`, err.parent?.sqlMessage || err.message);
+    }
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -593,6 +619,7 @@ const syncModels = async () => {
       await sequelize.sync();
       console.log('Models synchronized with database successfully');
     }
+    await ensureAnnouncementColumns();
   } catch (error) {
     console.error('Error synchronizing models:', error);
     console.log('Note: If you have existing data, you may need to manually adjust the schema');

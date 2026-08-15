@@ -1,16 +1,25 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getAllAnnouncements, 
-  getAnnouncementById, 
-  addAnnouncement, 
-  updateAnnouncement, 
-  deleteAnnouncement 
+const {
+  getAllAnnouncements,
+  getAnnouncementById,
+  addAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  getAnnouncementEmailJobStatus
 } = require('../controllers/announcements');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
 // Get all announcements (public - only active ones by default)
 router.get('/', getAllAnnouncements);
+
+// Email broadcast job progress (must be before /:id)
+router.get(
+  '/email-jobs/:jobId',
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  getAnnouncementEmailJobStatus
+);
 
 // Get announcement by ID (public)
 router.get('/:id', getAnnouncementById);
@@ -25,4 +34,3 @@ router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateAnnoun
 router.delete('/:id', authenticateToken, verifyRole('admin', 'board'), deleteAnnouncement);
 
 module.exports = router;
-

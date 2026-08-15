@@ -14,6 +14,7 @@ import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
+import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
 import AdminShell, { ParticleBackground } from './AdminShell';
 import RegistrationsTab from './RegistrationsTab';
@@ -102,6 +103,7 @@ const AdminPanel = () => {
     /** 'full' | 'programs' | 'registrations' */
     const [accessLevel, setAccessLevel] = useState('full');
     const [alert, setAlert] = useState(null);
+    const [emailSendJob, setEmailSendJob] = useState(null); // { id, title }
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const canUseProgramsTabs = accessLevel === 'full' || accessLevel === 'programs';
 
@@ -541,19 +543,28 @@ const AdminPanel = () => {
             if (editingAnnouncement) {
                 const { send_email, publish_to_website, ...updatePayload } = payload;
                 await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, updatePayload);
+                setShowAnnouncementModal(false);
                 setAlert({ type: 'success', message: 'Announcement updated!' });
             } else {
-                await ApiService.createAnnouncement(payload);
-                setAlert({
-                    type: 'success',
-                    message: isEmailBroadcast
-                        ? 'Email broadcast sent to members!'
-                        : (payload.send_email
-                            ? 'Website announcement posted and emailed!'
-                            : 'Website announcement posted!')
-                });
+                const result = await ApiService.createAnnouncement(payload);
+                setShowAnnouncementModal(false);
+                fetchAnnouncementsAdmin(false);
+                if (result?.emailJob?.id) {
+                    setEmailSendJob({
+                        id: result.emailJob.id,
+                        title: result.data?.title || payload.title
+                    });
+                    setAlert({
+                        type: 'success',
+                        message: isEmailBroadcast
+                            ? 'Broadcast created — sending emails in the background.'
+                            : 'Posted — sending emails in the background.'
+                    });
+                } else {
+                    setAlert({ type: 'success', message: 'Website announcement posted!' });
+                }
+                return;
             }
-            setShowAnnouncementModal(false);
             fetchAnnouncementsAdmin(false);
         } catch (err) {
             setAlert({ type: 'error', message: err.message || 'Failed to save announcement' });
@@ -808,6 +819,32 @@ const AdminPanel = () => {
                             </motion.div>
                         )}
                     </AnimatePresence>
+
+                    {emailSendJob && (
+                        <EmailSendProgress
+                            jobId={emailSendJob.id}
+                            title={emailSendJob.title}
+                            onDone={(job) => {
+                                if (job.status === 'completed' && !(job.failed > 0)) {
+                                    setAlert({
+                                        type: 'success',
+                                        message: `Emails sent (${job.sent}/${job.total}).`
+                                    });
+                                } else if (job.status === 'completed') {
+                                    setAlert({
+                                        type: 'error',
+                                        message: `Finished with issues: ${job.sent} sent, ${job.failed} failed.`
+                                    });
+                                } else {
+                                    setAlert({
+                                        type: 'error',
+                                        message: job.error || 'Email broadcast failed.'
+                                    });
+                                }
+                            }}
+                            onClear={() => setEmailSendJob(null)}
+                        />
+                    )}
 
                     {/* === DASHBOARD === */}
                     {accessLevel === 'full' && activeTab === 'dashboard' && stats && (
