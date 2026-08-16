@@ -147,14 +147,13 @@ const LogsAdminTab = ({ onAlert }) => {
         <h2 className="AdminPanel__sectionTitle">
           <MdBugReport /> Server logs
         </h2>
+        <p className="AdminPanel__muted LogsAdmin__hint">
+          Live view of recent server logs kept in memory on this instance
+          ({meta?.bufferCount ?? '—'} / {meta?.bufferMax ?? '—'} entries). Cleared on
+          deploy or restart. Visible only to President, Vice President, and Head of
+          Software Development.
+        </p>
       </div>
-
-      <p className="LogsAdmin__hint">
-        Live view of recent server logs kept in memory on this instance
-        ({meta?.bufferCount ?? '—'} / {meta?.bufferMax ?? '—'} entries). Cleared on
-        deploy or restart. Visible only to President, Vice President, and Head of
-        Software Development.
-      </p>
 
       <div className="LogsAdmin__toolbar">
         <div className="LogsAdmin__filters">
