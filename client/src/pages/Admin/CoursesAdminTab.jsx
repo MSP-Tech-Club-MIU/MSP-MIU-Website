@@ -21,6 +21,7 @@ import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
 import mspLogo from '../../assets/Images/msp-logo.png';
+import CourseAttendanceTab from './CourseAttendanceTab';
 
 const PAGE_SIZE = 6;
 const ENROLL_PAGE_SIZE = 20;
@@ -392,19 +393,6 @@ export default function CoursesAdminTab({ onAlert }) {
     if (view === 'enrollments') loadEnrollments();
   }, [view, loadEnrollments]);
 
-  const toggleAttended = async (row) => {
-    try {
-      await ApiService.updateCourseEnrollment(
-        row.enrollment_id,
-        { attended: !row.attended },
-        row.course_id
-      );
-      await loadEnrollments();
-    } catch (err) {
-      onAlert?.({ type: 'error', message: err.message || 'Update failed' });
-    }
-  };
-
   const exportCsv = async () => {
     try {
       const blob = await ApiService.exportCourseEnrollmentsCsv(enrollCourseId || undefined);
@@ -567,16 +555,16 @@ export default function CoursesAdminTab({ onAlert }) {
       )
     : null;
 
-  if (view === 'enrollments') {
+  if (view === 'attendance') {
     return (
       <div className="AdminPanel__section SponsorsAdmin">
         <div className="AdminPanel__sectionHeader">
           <div>
             <h2 className="AdminPanel__sectionTitle">
-              <MdFactCheck /> Course enrollments
+              <MdFactCheck /> Attendance & Progress
             </h2>
             <p className="SponsorsAdmin__sectionSub">
-              Registration roster, attendance, and lesson completion.
+              Session attendance and lesson completion for course attendees.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -587,6 +575,61 @@ export default function CoursesAdminTab({ onAlert }) {
             >
               <MdArrowBack style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
               Back to Courses
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() =>
+                setView(
+                  'enrollments',
+                  enrollCourseId ? { course_id: enrollCourseId } : {}
+                )
+              }
+            >
+              Enrollments
+            </button>
+          </div>
+        </div>
+        <CourseAttendanceTab
+          onAlert={onAlert}
+          initialCourseId={enrollCourseId || null}
+        />
+      </div>
+    );
+  }
+
+  if (view === 'enrollments') {
+    return (
+      <div className="AdminPanel__section SponsorsAdmin">
+        <div className="AdminPanel__sectionHeader">
+          <div>
+            <h2 className="AdminPanel__sectionTitle">
+              <MdFactCheck /> Course enrollments
+            </h2>
+            <p className="SponsorsAdmin__sectionSub">
+              Registration roster and enrollment status.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() => setView('list')}
+            >
+              <MdArrowBack style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+              Back to Courses
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() =>
+                setView(
+                  'attendance',
+                  enrollCourseId ? { course_id: enrollCourseId } : {}
+                )
+              }
+            >
+              Attendance & Progress
             </button>
             <button
               type="button"
@@ -612,8 +655,6 @@ export default function CoursesAdminTab({ onAlert }) {
                   <th>Course</th>
                   <th>Contact</th>
                   <th>Status</th>
-                  <th>Progress</th>
-                  <th>Attended</th>
                 </tr>
               </thead>
               <tbody>
@@ -629,16 +670,6 @@ export default function CoursesAdminTab({ onAlert }) {
                       <div style={{ opacity: 0.7 }}>{row.phone_number}</div>
                     </td>
                     <td>{row.status}</td>
-                    <td>{row.completion_percent ?? 0}% ({row.completed_count}/{row.lesson_count})</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => toggleAttended(row)}
-                      >
-                        {row.attended ? 'Yes' : 'No'}
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -683,6 +714,13 @@ export default function CoursesAdminTab({ onAlert }) {
             >
               <MdFactCheck style={{ marginRight: 4 }} />
               Enrollments
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() => setView('attendance', { course_id: contentId })}
+            >
+              Attendance
             </button>
             {courseDetail?.status !== 'published' ? (
               <button
@@ -925,7 +963,7 @@ export default function CoursesAdminTab({ onAlert }) {
             <MdMenuBook /> Courses
           </h2>
           <p className="SponsorsAdmin__sectionSub">
-            Create courses, manage lessons and materials, publish with email notify, and review enrollments.
+            Create courses, manage lessons and materials, publish with email notify, and review enrollments and attendance.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -936,6 +974,14 @@ export default function CoursesAdminTab({ onAlert }) {
           >
             <MdFactCheck style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
             Enrollments
+          </button>
+          <button
+            type="button"
+            className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+            onClick={() => setView('attendance')}
+          >
+            <MdFactCheck style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+            Attendance & Progress
           </button>
           <button type="button" className="AdminPanel__addBtn" onClick={openCreate}>
             <MdAdd /> Add Course
@@ -1016,6 +1062,13 @@ export default function CoursesAdminTab({ onAlert }) {
                         onClick={() => setView('enrollments', { course_id: row.course_id })}
                       >
                         Enrollments
+                      </button>
+                      <button
+                        type="button"
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                        onClick={() => setView('attendance', { course_id: row.course_id })}
+                      >
+                        Attendance
                       </button>
                       <Link
                         to={`/courses/${row.course_id}`}

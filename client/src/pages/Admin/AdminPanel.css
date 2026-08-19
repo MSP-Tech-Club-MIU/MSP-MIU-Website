@@ -1406,6 +1406,72 @@ body.admin-panel-active .SiteLayout__main {
     }
 }
 
+/* ── Course attendance & progress ── */
+.CourseAttendanceAdmin__expandBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+    cursor: pointer;
+}
+
+.CourseAttendanceAdmin__expandBtn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.CourseAttendanceAdmin__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 140px;
+}
+
+.CourseAttendanceAdmin__progressBar {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.CourseAttendanceAdmin__progressBar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #2f80ed, #56ccf2);
+}
+
+.CourseAttendanceAdmin__progressLabel {
+    font-size: 0.8rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.7));
+}
+
+.CourseAttendanceAdmin__detailRow td {
+    background: rgba(255, 255, 255, 0.02);
+    border-top: none;
+}
+
+.CourseAttendanceAdmin__detail {
+    padding: 4px 8px 8px 40px;
+    font-size: 0.88rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.75));
+}
+
+.CourseAttendanceAdmin__detail ul {
+    margin: 8px 0 0;
+    padding-left: 1.1rem;
+}
+
+.CourseAttendanceAdmin__detail p {
+    margin: 6px 0 0;
+}
+
 /* ── Filters ── */
 .AdminPanel__filters {
     display: flex;
