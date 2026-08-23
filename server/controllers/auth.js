@@ -5,6 +5,7 @@ const logger = require('../utils/logger');
 const { logAuditEvent, logError, logSecurityEvent } = logger;
 const { resolveSeasonIdForWrite, getDefaultSeasonId } = require('../utils/seasonFilter');
 const { findMemberByEmailPreferCurrentSeason } = require('../utils/memberEnrollment');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 
 /**
  * Login user
@@ -116,6 +117,30 @@ const login = async (req, res) => {
             });
         }
 
+        // Check if user is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            user_id: user.user_id,
+            name: user.full_name,
+            university_id: user.university_id,
+            phone_number: user.phone_number,
+            email: user.email
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            loginAttempt.error_type = 'USER_BLACKLISTED';
+            loginAttempt.user_id = user.user_id;
+            logSecurityEvent('LOGIN_BLOCKED', {
+                reason: 'User blacklisted',
+                user_id: user.user_id,
+                university_id
+            }, req);
+
+            return res.status(403).json({
+                success: false,
+                error: `Account restricted: You are blocked from participating in club activities. Reason: ${blacklistStatus.reason}`
+            });
+        }
+
         // Generate token with user id, role, and department_id
         const tokenResult = generateJWTToken({
             id: user.user_id,
@@ -210,6 +235,21 @@ const register = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Password must be at least 6 characters long'
+            });
+        }
+
+        // Check if user/applicant is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            email,
+            university_id: req.body.university_id,
+            name: req.body.full_name || req.body.name,
+            phone_number: req.body.phone_number
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Registration blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
             });
         }
 
@@ -771,6 +811,27 @@ const activateAccount = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'No account found. Please contact the administrator.'
+            });
+        }
+
+        // Check if member or board member is blacklisted
+        const targetPerson = member || boardMember;
+        const blacklistStatus = await checkBlacklist({
+            email: activationEmail,
+            university_id: targetPerson?.university_id,
+            name: targetPerson?.full_name,
+            phone_number: targetPerson?.phone_number
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            logSecurityEvent('ACCOUNT_ACTIVATION_BLOCKED', {
+                reason: 'User blacklisted',
+                email: activationEmail
+            }, req);
+
+            return res.status(403).json({
+                success: false,
+                error: `Account activation blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
             });
         }
 

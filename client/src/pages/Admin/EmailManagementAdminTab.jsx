@@ -558,13 +558,13 @@ export default function EmailManagementAdminTab({ onAlert }) {
             type="button"
             className="EmailMgmt__hubCard EmailMgmt__hubCard--whatsapp"
             style={{ marginBottom: '1.25rem' }}
-            onClick={() => navigate('/admin/courses?view=announcements')}
+            onClick={() => navigate('/admin/course-emails')}
           >
             <span className="EmailMgmt__hubIcon">
               <MdCampaign />
             </span>
             <span className="EmailMgmt__hubBody">
-              <strong>Course announcements & communications</strong>
+              <strong>Course emails & communications</strong>
               <span>Broadcast emails or message individual students for any course</span>
             </span>
             <MdChevronRight className="EmailMgmt__hubChevron" />
@@ -674,7 +674,7 @@ export default function EmailManagementAdminTab({ onAlert }) {
           bulkAction={bulk.action}
           bulkLabel={bulk.label}
           bulkBusy={bulkBusy}
-          onOpenCourseCommunications={() => navigate('/admin/courses?view=announcements')}
+          onOpenCourseCommunications={() => navigate('/admin/course-emails')}
         />
 
         {showWhatsAppOnPage && (

@@ -2,6 +2,7 @@ const { Application } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 function buildFieldCounts(rows, field) {
@@ -40,6 +41,21 @@ const createApplication = async (req, res) => {
             return res.status(400).json({ 
                 success: false,
                 error: 'All required fields must be provided' 
+            });
+        }
+
+        // Check if applicant is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            name: full_name,
+            university_id,
+            phone_number,
+            email
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Application rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
             });
         }
 

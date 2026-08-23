@@ -1,5 +1,6 @@
 const { Attendance, Event, sequelize } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 /**
@@ -54,6 +55,20 @@ const createAttendanceRequest = async (req, res) => {
             return res.status(400).json({ 
                 success: false,
                 error: 'Missing required fields: event_id, full_name, phone_number, and university_id are required' 
+            });
+        }
+
+        // Check if student is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            name: full_name,
+            university_id,
+            phone_number
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Attendance request rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
             });
         }
 

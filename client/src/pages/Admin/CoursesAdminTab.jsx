@@ -1291,28 +1291,14 @@ export default function CoursesAdminTab({ onAlert }) {
                     </td>
                     <td>{row.status}</td>
                     <td>
-                      <button
-                        type="button"
+                      <Link
+                        to={`/admin/course-emails?course_id=${row.course_id}&target_type=individual&target_enrollment_id=${row.enrollment_id}`}
                         className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                        style={{ padding: '4px 8px', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
                         title={`Send message to ${row.full_name}`}
-                        onClick={() => {
-                          setActiveAnnounceCourseId(row.course_id);
-                          setAnnouncementForm((prev) => ({
-                            ...prev,
-                            target_type: 'individual',
-                            target_enrollment_id: String(row.enrollment_id),
-                            target_email: row.email || ''
-                          }));
-                          setView('announcements', {
-                            course_id: row.course_id,
-                            target_type: 'individual',
-                            target_enrollment_id: row.enrollment_id
-                          });
-                        }}
                       >
                         <MdEmail style={{ marginRight: 4 }} /> Message
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -1611,6 +1597,13 @@ export default function CoursesAdminTab({ onAlert }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <Link
+            to="/admin/course-emails"
+            className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+          >
+            <MdSend style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+            Course Emails
+          </Link>
           <button
             type="button"
             className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -1711,6 +1704,12 @@ export default function CoursesAdminTab({ onAlert }) {
                       >
                         Lessons
                       </button>
+                      <Link
+                        to={`/admin/course-emails?course_id=${row.course_id}`}
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                      >
+                        <MdSend style={{ marginRight: 4 }} /> Send Email
+                      </Link>
                       <button
                         type="button"
                         className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
