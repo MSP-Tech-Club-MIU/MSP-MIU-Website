@@ -10,7 +10,7 @@
  */
 export const PROGRAMS_DEPARTMENT_IDS = [1, 2, 11, 12];
 
-export const PROGRAMS_TAB_KEYS = ['events', 'courses', 'competitions', 'registrations'];
+export const PROGRAMS_TAB_KEYS = ['events', 'courses', 'competitions', 'registrations', 'course-emails'];
 
 export function isProgramsEligibleDepartment(departmentId) {
   const id = typeof departmentId === 'number' ? departmentId : parseInt(departmentId, 10);

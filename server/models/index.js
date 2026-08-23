@@ -42,10 +42,12 @@ const CourseEnrollment = require('./CourseEnrollment');
 const CourseLessonProgress = require('./CourseLessonProgress');
 const CourseAnnouncement = require('./CourseAnnouncement');
 const CourseLessonAttendance = require('./CourseLessonAttendance');
+const Blacklist = require('./Blacklist');
 
 // Initialize models
 const models = {
   Application,
+  Blacklist,
   Department,
   Board,
   Member,
@@ -646,6 +648,16 @@ seasonScoped.forEach(({ model, as }) => {
   });
 });
 
+// Blacklist associations
+Blacklist.belongsTo(User, {
+  foreignKey: 'created_by_user_id',
+  as: 'creator'
+});
+User.hasMany(Blacklist, {
+  foreignKey: 'created_by_user_id',
+  as: 'blacklistEntries'
+});
+
 // Sync models with database.
 // Prefer targeted patch scripts (patchCmsSchema / patchSeasonSchema) over alter:true.
 // MySQL InnoDB allows max 64 indexes per table; repeated alter sync piles up FKs/indexes
@@ -755,6 +767,25 @@ async function ensureCourseColumnsAndAttendanceTable() {
   }
 }
 
+async function ensureBlacklistTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'blacklists'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await Blacklist.sync();
+      logger.info('Created blacklists table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure blacklists table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -769,6 +800,7 @@ const syncModels = async () => {
     await ensureUserEmailColumns();
     await ensureCourseAnnouncementTable();
     await ensureCourseColumnsAndAttendanceTable();
+    await ensureBlacklistTable();
   } catch (error) {
     logger.error('Error synchronizing models:', error);
     logger.info('Note: If you have existing data, you may need to manually adjust the schema');

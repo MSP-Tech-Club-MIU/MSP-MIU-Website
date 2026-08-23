@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 // Import email templates
@@ -313,6 +314,35 @@ const createTeam = async (req, res) => {
                 success: false,
                 error: `Team cannot exceed ${competition.max_team_size} member(s). You submitted ${submittedTeamSize}.`
             });
+        }
+
+        // Check leader blacklist status
+        const leaderBlacklist = await checkBlacklist({
+            user_id: leaderUserId,
+            name: leaderName,
+            university_id: leaderUniversityId,
+            email: leaderEmail
+        });
+        if (leaderBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Team creation blocked: Team leader is restricted from participating in club activities. Reason: ${leaderBlacklist.reason}`
+            });
+        }
+
+        // Check invited members blacklist status
+        for (const member of normalizedMembers) {
+            const memberBlacklist = await checkBlacklist({
+                name: member.name,
+                university_id: member.university_id,
+                email: member.email
+            });
+            if (memberBlacklist.isBlacklisted) {
+                return res.status(403).json({
+                    success: false,
+                    error: `Team creation blocked: Member "${member.name || member.university_id || member.email}" is restricted from participating in club activities. Reason: ${memberBlacklist.reason}`
+                });
+            }
         }
 
         // Create team (created_by_user_id can be NULL for pending teams)
@@ -814,6 +844,19 @@ const inviteToTeam = async (req, res) => {
             });
         }
 
+        // Check if invited person is blacklisted
+        const inviteeBlacklist = await checkBlacklist({
+            name,
+            university_id,
+            email
+        });
+        if (inviteeBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Invitation blocked: This person is restricted from participating in club activities. Reason: ${inviteeBlacklist.reason}`
+            });
+        }
+
         // Check if user is team leader
         const teamMembers = await db.query(
             `SELECT tm.role, t.team_name, t.is_locked, t.competition_id,
@@ -1091,6 +1134,18 @@ const acceptInvitation = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
+            });
+        }
+
+        // Check if accepting user is blacklisted
+        const userBlacklist = await checkBlacklist({
+            user_id: userId,
+            email: userEmail
+        });
+        if (userBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Cannot accept invitation: You are restricted from participating in club activities. Reason: ${userBlacklist.reason}`
             });
         }
 
@@ -1423,6 +1478,19 @@ const acceptInvitationNewUser = async (req, res) => {
             return res.status(registrationGate.status).json({
                 success: false,
                 error: registrationGate.error
+            });
+        }
+
+        // Check if invited user is blacklisted
+        const inviteeBlacklist = await checkBlacklist({
+            name: invitation.invited_name,
+            university_id: invitation.invited_university_id,
+            email: invitation.invited_email
+        });
+        if (inviteeBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Cannot accept invitation: You are restricted from participating in club activities. Reason: ${inviteeBlacklist.reason}`
             });
         }
 

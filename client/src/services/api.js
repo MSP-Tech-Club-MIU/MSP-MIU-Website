@@ -3574,6 +3574,109 @@ class ApiService {
       throw error;
     }
   }
+
+  // ==========================================
+  // Admin Blacklist Management
+  // ==========================================
+
+  /**
+   * Get all blacklist entries (admin)
+   */
+  static async getBlacklist(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      if (filters.search) queryParams.append('search', filters.search);
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/blacklist${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch blacklist entries');
+      return result;
+    } catch (error) {
+      console.error('Error fetching blacklist:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get single blacklist entry by ID
+   */
+  static async getBlacklistEntry(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/blacklist/${id}`, {
+        method: 'GET',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch blacklist entry');
+      return result;
+    } catch (error) {
+      console.error('Error fetching blacklist entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a person to the blacklist
+   */
+  static async createBlacklistEntry(payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/blacklist`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create blacklist entry');
+      return result;
+    } catch (error) {
+      console.error('Error creating blacklist entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update a blacklist entry
+   */
+  static async updateBlacklistEntry(id, payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/blacklist/${id}`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update blacklist entry');
+      return result;
+    } catch (error) {
+      console.error('Error updating blacklist entry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove a person from the blacklist
+   */
+  static async deleteBlacklistEntry(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/blacklist/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete blacklist entry');
+      return result;
+    } catch (error) {
+      console.error('Error deleting blacklist entry:', error);
+      throw error;
+    }
+  }
   // ==========================================
   // Admin Teams Management
   // ==========================================

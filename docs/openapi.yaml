@@ -157,6 +157,79 @@ paths:
       responses:
         '200':
           description: Updated
+  /admin/blacklist:
+    get:
+      summary: 'Get /admin/blacklist'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create/submit /admin/blacklist'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+  '/admin/blacklist/{id}':
+    get:
+      summary: 'Get /admin/blacklist/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update /admin/blacklist/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /admin/blacklist/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/admin/competition-tasks/{taskId}':
     put:
       tags:

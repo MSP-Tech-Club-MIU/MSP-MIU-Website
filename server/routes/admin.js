@@ -62,6 +62,13 @@ const {
     patchLogLevel,
     clearLogs
 } = require('../controllers/adminLogs');
+const {
+    getBlacklistEntries,
+    getBlacklistEntryById,
+    createBlacklistEntry,
+    updateBlacklistEntry,
+    deleteBlacklistEntry
+} = require('../controllers/adminBlacklist');
 
 // All admin routes require authentication
 router.use(authenticateToken);
@@ -138,5 +145,12 @@ router.get('/suggestions', fullAdmin, getSuggestions);
 router.delete('/suggestions/:id', fullAdmin, deleteSuggestion);
 router.get('/feedback', fullAdmin, getEventFeedbackAll);
 router.delete('/feedback/:id', fullAdmin, deleteAdminFeedback);
+
+// Blacklist management — full admin only
+router.get('/blacklist', fullAdmin, getBlacklistEntries);
+router.post('/blacklist', fullAdmin, createBlacklistEntry);
+router.get('/blacklist/:id', fullAdmin, getBlacklistEntryById);
+router.put('/blacklist/:id', fullAdmin, updateBlacklistEntry);
+router.delete('/blacklist/:id', fullAdmin, deleteBlacklistEntry);
 
 module.exports = router;

@@ -8,7 +8,7 @@ import {
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
     MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook,
-    MdBugReport
+    MdBugReport, MdSend, MdBlock
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -29,8 +29,10 @@ import EventsAdminTab from './EventsAdminTab';
 import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
+import CourseEmailsAdminTab from './CourseEmailsAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
 import LogsAdminTab from './LogsAdminTab';
+import BlacklistAdminTab from './BlacklistAdminTab';
 import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 import './AdminPanel.css';
 
@@ -60,7 +62,10 @@ const ADMIN_TAB_TO_ROUTE = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
+    'course-emails': 'course-emails',
+    course_emails: 'course-emails',
     android: 'android',
+    blacklist: 'blacklist',
     logs: 'logs'
 };
 
@@ -82,7 +87,10 @@ const ADMIN_ROUTE_TO_TAB = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
+    'course-emails': 'course-emails',
+    course_emails: 'course-emails',
     android: 'android',
+    blacklist: 'blacklist',
     logs: 'logs'
 };
 
@@ -208,6 +216,7 @@ const AdminPanel = () => {
         { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
         { key: 'members', label: 'Members', icon: <MdPeople />, category: 'Organization' },
+        { key: 'blacklist', label: 'Blacklist', icon: <MdBlock />, category: 'Organization' },
         { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness />, category: 'Organization' },
         { key: 'board', label: 'Board', icon: <MdGroups />, category: 'Organization' },
         { key: 'departments', label: 'Departments', icon: <MdAccountTree />, category: 'Organization' },
@@ -216,6 +225,7 @@ const AdminPanel = () => {
         { key: 'content', label: 'Site content', icon: <MdArticle />, category: 'Content' },
         { key: 'android', label: 'Android app', icon: <MdPhoneAndroid />, category: 'Content' },
         { key: 'emails', label: 'Email management', icon: <MdEmail />, category: 'Communications' },
+        { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Communications' },
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
         { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
@@ -228,6 +238,7 @@ const AdminPanel = () => {
     const programsOnlyNav = useMemo(() => [
         { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
         { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+        { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Programs' },
         { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
     ], []);
@@ -1097,9 +1108,21 @@ const AdminPanel = () => {
                         </motion.div>
                     )}
 
+                    {canUseProgramsTabs && (activeTab === 'course-emails' || activeTab === 'course_emails') && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <CourseEmailsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
                     {accessLevel === 'full' && activeTab === 'members' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <MembersAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'blacklist' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <BlacklistAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 

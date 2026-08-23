@@ -12,6 +12,7 @@ const {
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { notifyCourseEnrollments } = require('../utils/courseAvailableEmail');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 const VALID_STATUSES = ['draft', 'coming_soon', 'published', 'archived'];
@@ -564,6 +565,20 @@ const enrollInCourse = async (req, res) => {
       });
     }
 
+    const blacklistStatus = await checkBlacklist({
+      name: full_name,
+      university_id,
+      phone_number,
+      email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Enrollment rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
     const trimmedEmail = String(email).trim().toLowerCase();
     const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
     if (!miuEmailRegex.test(trimmedEmail)) {
@@ -652,6 +667,20 @@ const enrollWithAccount = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Your MSP account is missing email or university ID. Update your profile and try again.'
+      });
+    }
+
+    const blacklistStatus = await checkBlacklist({
+      user_id: user.user_id,
+      name: full_name,
+      university_id,
+      email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Enrollment rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
       });
     }
 

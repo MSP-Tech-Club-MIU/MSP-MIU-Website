@@ -7,6 +7,7 @@ const {
   getEffectiveDeadlineDate,
   // kept for quizAttemptLifecycle utilities (unused here after unlock gating change)
 } = require('../services/quizAttemptLifecycle');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 /** Safe for JSON (MySQL BIGINT / DECIMAL can arrive as BigInt or strings). */
@@ -290,6 +291,17 @@ async function createQuizAttempt(req, res) {
     }
 
     const userId = req.user.user_id;
+
+    const blacklistStatus = await checkBlacklist({
+      user_id: userId
+    });
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Quiz attempt blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
     const memberships = await db.query(
       `SELECT t.team_id
        FROM teams t

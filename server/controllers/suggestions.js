@@ -1,5 +1,6 @@
 const { Suggestion, Member } = require('../models');
 const { getDefaultSeasonId } = require('../utils/seasonFilter');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 const logger = require('../utils/logger');
 
 const MAX_LENGTH = 2000;
@@ -26,6 +27,18 @@ const createSuggestion = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: `Suggestion must be less than ${MAX_LENGTH} characters`
+      });
+    }
+
+    const blacklistStatus = await checkBlacklist({
+      user_id: req.user?.user_id,
+      name: anonymous ? null : name,
+      email: anonymous ? null : email
+    });
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Action blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
       });
     }
 
