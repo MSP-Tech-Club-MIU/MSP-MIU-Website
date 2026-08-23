@@ -15,7 +15,8 @@ import {
   MdEmojiEvents,
   MdLock,
   MdLink,
-  MdPhoneAndroid
+  MdPhoneAndroid,
+  MdMenuBook
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { useSeason } from '../../context/SeasonContext';
@@ -45,7 +46,9 @@ const TEMPLATE_ICONS = {
   team_created_guest: MdEmojiEvents,
   timeslot_selection: MdEmojiEvents,
   timeslot_assigned: MdEmojiEvents,
-  course_certificate: MdEmail
+  course_certificate: MdEmail,
+  course_announcement: MdCampaign,
+  course_available: MdMenuBook
 };
 
 const WHATSAPP_TEMPLATE_KEYS = new Set(['member_acceptance']);
@@ -69,7 +72,8 @@ function TemplateEditor({
   setTestEmail,
   bulkAction,
   bulkLabel,
-  bulkBusy
+  bulkBusy,
+  onOpenCourseCommunications
 }) {
   if (!template) {
     return <div className="EmailMgmt__empty">Template not found.</div>;
@@ -145,6 +149,23 @@ function TemplateEditor({
           Announcement title/body still come from the announcement record. This editor changes the
           email chrome and wrapper copy around those fields.
         </p>
+      )}
+
+      {template.template_key === 'course_announcement' && (
+        <div className="EmailMgmt__hint" style={{ marginBottom: '1.25rem' }}>
+          <p style={{ margin: '0 0 0.5rem' }}>
+            This template formats broadcast and individual emails sent to enrolled course students. Title and message come dynamically from each announcement.
+          </p>
+          {onOpenCourseCommunications && (
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={onOpenCourseCommunications}
+            >
+              <MdCampaign style={{ marginRight: 4 }} /> Open Course Communications Console
+            </button>
+          )}
+        </div>
       )}
 
       {template.template_key === 'course_certificate' && (
@@ -532,6 +553,22 @@ export default function EmailManagementAdminTab({ onAlert }) {
             </span>
             <MdChevronRight className="EmailMgmt__hubChevron" />
           </button>
+
+          <button
+            type="button"
+            className="EmailMgmt__hubCard EmailMgmt__hubCard--whatsapp"
+            style={{ marginBottom: '1.25rem' }}
+            onClick={() => navigate('/admin/courses?view=announcements')}
+          >
+            <span className="EmailMgmt__hubIcon">
+              <MdCampaign />
+            </span>
+            <span className="EmailMgmt__hubBody">
+              <strong>Course announcements & communications</strong>
+              <span>Broadcast emails or message individual students for any course</span>
+            </span>
+            <MdChevronRight className="EmailMgmt__hubChevron" />
+          </button>
         </div>
 
         {groupedTemplates.map((group) => (
@@ -637,6 +674,7 @@ export default function EmailManagementAdminTab({ onAlert }) {
           bulkAction={bulk.action}
           bulkLabel={bulk.label}
           bulkBusy={bulkBusy}
+          onOpenCourseCommunications={() => navigate('/admin/courses?view=announcements')}
         />
 
         {showWhatsAppOnPage && (
