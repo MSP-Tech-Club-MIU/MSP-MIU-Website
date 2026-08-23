@@ -451,6 +451,34 @@ class ApiService {
     }
   }
 
+  /**
+   * Check whether an applicant is eligible to apply before they fill the full form.
+   * Called after step 0 (Personal Info) on the /become-member page.
+   *
+   * @param {{ university_id: string, full_name: string, email: string }} payload
+   * @returns {Promise<{ eligible: boolean, reason?: string, message?: string, warning?: string }>}
+   */
+  static async checkApplicationEligibility(payload) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/applications/check-eligibility`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to check eligibility');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error checking application eligibility:', error);
+      throw error;
+    }
+  }
+
 
   static async getAllApplications(filters = {}) {
     try {
