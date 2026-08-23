@@ -2075,6 +2075,43 @@ class ApiService {
     return result;
   }
 
+  static async getCourseLessonAttendance(courseId, lessonId) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/attendance`, {
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch lesson attendance');
+    return result.data || result;
+  }
+
+  static async updateCourseLessonAttendance(courseId, lessonId, enrollmentId, data) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/attendance/${enrollmentId}`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update lesson attendance');
+    return result.data || result;
+  }
+
+  static async bulkUpdateCourseLessonAttendance(courseId, lessonId, data) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/lessons/${lessonId}/attendance`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to bulk update lesson attendance');
+    return result.data || result;
+  }
+
   static async exportCourseEnrollmentsCsv(courseId) {
     const url = courseId
       ? `${API_BASE_URL}/courses/${courseId}/enrollments/export`

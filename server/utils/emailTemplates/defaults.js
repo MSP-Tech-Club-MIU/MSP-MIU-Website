@@ -864,6 +864,55 @@ MSP MIU Team`,
 </body>
 </html>`,
     ['studentName', 'courseTitle', 'courseUrl']
+  ),
+
+  course_announcement: def(
+    'course_announcement',
+    'Course announcement',
+    'announcement',
+    '{{courseTitle}} - {{announcementTitle}}',
+    `Hi {{studentName}},
+
+You have received an announcement for {{courseTitle}}:
+
+Title: {{announcementTitle}}
+
+Message:
+{{announcementMessage}}
+
+{{ctaBlockText}}
+
+---
+This is an automated message from MSP MIU Course Management.`,
+    `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 24px 12px;">
+    <div style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <div style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+        <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
+        <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Course Communication</p>
+      </div>
+      <div style="padding: 28px 36px; background-color: white;">
+        <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{courseTitleHtml}}</p>
+        <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
+        <p style="margin: 0 0 16px; font-size: 15px; color: #555555;">Hello <strong>{{studentNameHtml}}</strong>,</p>
+        <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; white-space: pre-wrap; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+        {{ctaButtonHtml}}
+        <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+          <p style="margin: 0 0 8px;">This is an automated communication from MSP MIU Course Management.</p>
+          <p style="margin: 0;">Please do not reply directly to this email.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`,
+    ['courseTitle', 'announcementTitle', 'announcementMessage', 'studentName', 'courseUrl', 'ctaLabel', 'ctaUrl', 'courseTitleHtml', 'announcementTitleHtml', 'announcementMessageHtml', 'studentNameHtml', 'ctaButtonHtml', 'ctaBlockText']
   )
 };
 

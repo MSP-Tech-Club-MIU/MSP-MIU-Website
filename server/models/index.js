@@ -40,6 +40,8 @@ const CourseLesson = require('./CourseLesson');
 const CourseLessonMaterial = require('./CourseLessonMaterial');
 const CourseEnrollment = require('./CourseEnrollment');
 const CourseLessonProgress = require('./CourseLessonProgress');
+const CourseAnnouncement = require('./CourseAnnouncement');
+const CourseLessonAttendance = require('./CourseLessonAttendance');
 
 // Initialize models
 const models = {
@@ -80,7 +82,9 @@ const models = {
   CourseLesson,
   CourseLessonMaterial,
   CourseEnrollment,
-  CourseLessonProgress
+  CourseLessonProgress,
+  CourseAnnouncement,
+  CourseLessonAttendance
 };
 
 // Set up associations
@@ -554,6 +558,69 @@ CourseLessonProgress.belongsTo(CourseLesson, {
   as: 'lesson'
 });
 
+// CourseAnnouncement associations
+Course.hasMany(CourseAnnouncement, {
+  foreignKey: 'course_id',
+  as: 'announcements',
+  onDelete: 'CASCADE'
+});
+CourseAnnouncement.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course',
+  onDelete: 'CASCADE'
+});
+
+User.hasMany(CourseAnnouncement, {
+  foreignKey: 'created_by',
+  as: 'courseAnnouncements'
+});
+CourseAnnouncement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+
+CourseEnrollment.hasMany(CourseAnnouncement, {
+  foreignKey: 'target_enrollment_id',
+  as: 'announcements',
+  onDelete: 'SET NULL'
+});
+CourseAnnouncement.belongsTo(CourseEnrollment, {
+  foreignKey: 'target_enrollment_id',
+  as: 'targetEnrollment',
+  onDelete: 'SET NULL'
+});
+
+// CourseLessonAttendance associations
+Course.hasMany(CourseLessonAttendance, {
+  foreignKey: 'course_id',
+  as: 'lessonAttendances',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseLesson.hasMany(CourseLessonAttendance, {
+  foreignKey: 'lesson_id',
+  as: 'attendanceRecords',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
+CourseEnrollment.hasMany(CourseLessonAttendance, {
+  foreignKey: 'enrollment_id',
+  as: 'lessonAttendances',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(CourseEnrollment, {
+  foreignKey: 'enrollment_id',
+  as: 'enrollment'
+});
+
 // Season associations
 const seasonScoped = [
   { model: Board, as: 'boardMembers' },
@@ -631,6 +698,63 @@ async function ensureUserEmailColumns() {
   }
 }
 
+async function ensureCourseAnnouncementTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'course_announcements'`
+    );
+    if (Number(rows[0]?.c) > 0) return;
+    await CourseAnnouncement.sync();
+    logger.info('Created course_announcements table');
+  } catch (err) {
+    logger.warn('Could not ensure course_announcements table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
+async function ensureCourseColumnsAndAttendanceTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'courses'
+         AND COLUMN_NAME = 'max_attendance'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await sequelize.query(
+        'ALTER TABLE `courses` ADD COLUMN max_attendance INT NULL DEFAULT NULL'
+      );
+      logger.info('Added courses.max_attendance column');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure courses.max_attendance:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'course_lesson_attendance'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await CourseLessonAttendance.sync();
+      logger.info('Created course_lesson_attendance table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure course_lesson_attendance table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -643,6 +767,8 @@ const syncModels = async () => {
     }
     await ensureAnnouncementColumns();
     await ensureUserEmailColumns();
+    await ensureCourseAnnouncementTable();
+    await ensureCourseColumnsAndAttendanceTable();
   } catch (error) {
     logger.error('Error synchronizing models:', error);
     logger.info('Note: If you have existing data, you may need to manually adjust the schema');

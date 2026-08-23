@@ -5,7 +5,9 @@ const {
   CourseLesson,
   CourseLessonMaterial,
   CourseEnrollment,
-  CourseLessonProgress
+  CourseLessonProgress,
+  CourseAnnouncement,
+  CourseLessonAttendance
 } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
@@ -18,6 +20,23 @@ const PUBLIC_LIST_STATUSES = ['coming_soon', 'published'];
 
 function makeAccessToken() {
   return crypto.randomBytes(32).toString('hex');
+}
+
+function computeCertificateEligibility({ totalLessons, attendedCount, maxAttendance }) {
+  const total = Number(totalLessons) || 0;
+  const attended = Number(attendedCount) || 0;
+  const missedCount = Math.max(0, total - attended);
+  const hasMax = maxAttendance !== null && maxAttendance !== undefined && Number.isFinite(Number(maxAttendance));
+  const maxMissed = hasMax ? Math.max(0, parseInt(maxAttendance, 10)) : 0;
+  const eligible = total > 0 ? (missedCount <= maxMissed) : true;
+  return {
+    total_lessons: total,
+    attended_count: attended,
+    missed_count: missedCount,
+    max_attendance: hasMax ? parseInt(maxAttendance, 10) : null,
+    max_missed_allowed: maxMissed,
+    certificate_eligible: eligible
+  };
 }
 
 function lessonInclude(publishedOnly = false) {
@@ -173,12 +192,16 @@ const getCourseAdmin = async (req, res) => {
  */
 const createCourse = async (req, res) => {
   try {
-    const { title, description, thumbnail_url, status } = req.body;
+    const { title, description, thumbnail_url, status, max_attendance } = req.body;
     if (!title || !String(title).trim()) {
       return res.status(400).json({ success: false, error: 'title is required' });
     }
     const nextStatus = status && VALID_STATUSES.includes(status) ? status : 'draft';
     const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
+    const parsedMaxAttendance = (max_attendance !== undefined && max_attendance !== null && String(max_attendance).trim() !== '')
+      ? Math.max(0, parseInt(max_attendance, 10))
+      : null;
 
     const course = await Course.create({
       title: String(title).trim(),
@@ -186,6 +209,7 @@ const createCourse = async (req, res) => {
       thumbnail_url: thumbnail_url || null,
       status: nextStatus,
       season_id,
+      max_attendance: Number.isFinite(parsedMaxAttendance) ? parsedMaxAttendance : null,
       published_at: nextStatus === 'published' ? new Date() : null
     });
 
@@ -207,7 +231,7 @@ const updateCourse = async (req, res) => {
     const course = await findCourseOr404(req.params.id, res);
     if (!course) return;
 
-    const { title, description, thumbnail_url, season_id } = req.body;
+    const { title, description, thumbnail_url, season_id, max_attendance } = req.body;
     if (title !== undefined) {
       if (!String(title).trim()) {
         return res.status(400).json({ success: false, error: 'title cannot be empty' });
@@ -218,6 +242,12 @@ const updateCourse = async (req, res) => {
     if (thumbnail_url !== undefined) course.thumbnail_url = thumbnail_url || null;
     if (season_id !== undefined || req.body.season !== undefined) {
       course.season_id = await resolveSeasonIdForWrite(req.body, req.query);
+    }
+    if (max_attendance !== undefined) {
+      const parsedMaxAttendance = (max_attendance !== null && String(max_attendance).trim() !== '')
+        ? Math.max(0, parseInt(max_attendance, 10))
+        : null;
+      course.max_attendance = Number.isFinite(parsedMaxAttendance) ? parsedMaxAttendance : null;
     }
 
     await course.save();
@@ -534,12 +564,21 @@ const enrollInCourse = async (req, res) => {
       });
     }
 
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+    if (!miuEmailRegex.test(trimmedEmail)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only @miuegypt.edu.eg email addresses are allowed'
+      });
+    }
+
     const existing = await CourseEnrollment.findOne({
       where: {
         course_id: course.course_id,
         [Op.or]: [
           { university_id: String(university_id).trim() },
-          { email: String(email).trim().toLowerCase() }
+          { email: trimmedEmail }
         ]
       }
     });
@@ -554,7 +593,7 @@ const enrollInCourse = async (req, res) => {
     const enrollment = await CourseEnrollment.create({
       course_id: course.course_id,
       full_name: String(full_name).trim(),
-      email: String(email).trim().toLowerCase(),
+      email: trimmedEmail,
       phone_number: String(phone_number).trim(),
       university_id: String(university_id).trim(),
       status: course.status === 'published' ? 'enrolled' : 'preordered',
@@ -613,6 +652,14 @@ const enrollWithAccount = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Your MSP account is missing email or university ID. Update your profile and try again.'
+      });
+    }
+
+    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+    if (!miuEmailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only @miuegypt.edu.eg email addresses are allowed'
       });
     }
 
@@ -739,10 +786,21 @@ const getMyProgress = async (req, res) => {
 
     const enrollment = await CourseEnrollment.findOne({
       where: { course_id: courseId, access_token: token },
-      include: [{
-        model: CourseLessonProgress,
-        as: 'lessonProgress'
-      }]
+      include: [
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['course_id', 'title', 'status', 'max_attendance']
+        },
+        {
+          model: CourseLessonProgress,
+          as: 'lessonProgress'
+        },
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances'
+        }
+      ]
     });
     if (!enrollment) {
       return res.status(404).json({ success: false, error: 'Enrollment not found' });
@@ -752,6 +810,14 @@ const getMyProgress = async (req, res) => {
       where: { course_id: courseId, is_published: true }
     });
     const completed = enrollment.lessonProgress || [];
+    const attendedRecords = (enrollment.lessonAttendances || []).filter((a) => a.attended);
+    const attendedLessonIds = attendedRecords.map((a) => a.lesson_id);
+
+    const certEligibility = computeCertificateEligibility({
+      totalLessons: lessonCount,
+      attendedCount: attendedRecords.length,
+      maxAttendance: enrollment.course?.max_attendance
+    });
 
     res.json({
       success: true,
@@ -762,7 +828,13 @@ const getMyProgress = async (req, res) => {
         completed_lesson_ids: completed.map((p) => p.lesson_id),
         completed_count: completed.length,
         lesson_count: lessonCount,
-        completion_percent: lessonCount === 0 ? 0 : Math.round((completed.length / lessonCount) * 100)
+        completion_percent: lessonCount === 0 ? 0 : Math.round((completed.length / lessonCount) * 100),
+        attended_lesson_ids: attendedLessonIds,
+        attended_count: certEligibility.attended_count,
+        missed_count: certEligibility.missed_count,
+        max_attendance: certEligibility.max_attendance,
+        max_missed_allowed: certEligibility.max_missed_allowed,
+        certificate_eligible: certEligibility.certificate_eligible
       }
     });
   } catch (error) {
@@ -787,12 +859,17 @@ const listEnrollments = async (req, res) => {
         {
           model: Course,
           as: 'course',
-          attributes: ['course_id', 'title', 'status']
+          attributes: ['course_id', 'title', 'status', 'max_attendance']
         },
         {
           model: CourseLessonProgress,
           as: 'lessonProgress',
           attributes: ['lesson_id', 'completed_at']
+        },
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances',
+          attributes: ['id', 'lesson_id', 'attended', 'attended_at']
         }
       ],
       order: [['created_at', 'DESC']],
@@ -801,14 +878,19 @@ const listEnrollments = async (req, res) => {
       distinct: true
     });
 
-    // Attach completion % using published lesson counts per course
+    // Attach completion % and certificate eligibility using published lesson counts per course
     const courseIds = [...new Set(rows.map((r) => r.course_id))];
     const lessonCounts = {};
+    const courseLessonsMap = {};
     await Promise.all(
       courseIds.map(async (cid) => {
-        lessonCounts[cid] = await CourseLesson.count({
-          where: { course_id: cid, is_published: true }
+        const lessons = await CourseLesson.findAll({
+          where: { course_id: cid, is_published: true },
+          attributes: ['lesson_id', 'title', 'sort_order'],
+          order: [['sort_order', 'ASC'], ['lesson_id', 'ASC']]
         });
+        lessonCounts[cid] = lessons.length;
+        courseLessonsMap[cid] = lessons;
       })
     );
 
@@ -816,9 +898,25 @@ const listEnrollments = async (req, res) => {
       const json = row.toJSON();
       const total = lessonCounts[row.course_id] || 0;
       const done = (json.lessonProgress || []).length;
+      const attendedList = (json.lessonAttendances || []).filter((a) => a.attended);
+      const attendedLessonIds = attendedList.map((a) => a.lesson_id);
+
+      const cert = computeCertificateEligibility({
+        totalLessons: total,
+        attendedCount: attendedList.length,
+        maxAttendance: row.course?.max_attendance
+      });
+
       json.completed_count = done;
       json.lesson_count = total;
       json.completion_percent = total === 0 ? 0 : Math.round((done / total) * 100);
+      json.attended_lesson_ids = attendedLessonIds;
+      json.attended_count = cert.attended_count;
+      json.missed_count = cert.missed_count;
+      json.max_attendance = cert.max_attendance;
+      json.max_missed_allowed = cert.max_missed_allowed;
+      json.certificate_eligible = cert.certificate_eligible;
+      json.available_lessons = courseLessonsMap[row.course_id] || [];
       return json;
     });
 
@@ -874,6 +972,243 @@ const deleteEnrollment = async (req, res) => {
   }
 };
 
+/**
+ * GET /courses/:id/lessons/:lessonId/attendance
+ * List attendance for a specific session/lesson
+ */
+const getLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const totalPublishedLessons = await CourseLesson.count({
+      where: { course_id: courseId, is_published: true }
+    });
+
+    const enrollments = await CourseEnrollment.findAll({
+      where: { course_id: courseId },
+      include: [
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances',
+          attributes: ['id', 'lesson_id', 'attended', 'attended_at']
+        }
+      ],
+      order: [['full_name', 'ASC']]
+    });
+
+    let attendedCount = 0;
+    const roster = enrollments.map((enr) => {
+      const attendances = enr.lessonAttendances || [];
+      const thisLessonAtt = attendances.find((a) => a.lesson_id === lessonId);
+      const isAttendedThisLesson = Boolean(thisLessonAtt?.attended);
+      if (isAttendedThisLesson) attendedCount++;
+
+      const totalAttended = attendances.filter((a) => a.attended).length;
+      const cert = computeCertificateEligibility({
+        totalLessons: totalPublishedLessons,
+        attendedCount: totalAttended,
+        maxAttendance: course.max_attendance
+      });
+
+      return {
+        enrollment_id: enr.enrollment_id,
+        full_name: enr.full_name,
+        email: enr.email,
+        phone_number: enr.phone_number,
+        university_id: enr.university_id,
+        status: enr.status,
+        attended_this_lesson: isAttendedThisLesson,
+        attended_at: thisLessonAtt?.attended_at || null,
+        total_attended_lessons: totalAttended,
+        total_lessons: totalPublishedLessons,
+        missed_lessons: cert.missed_count,
+        max_attendance: cert.max_attendance,
+        certificate_eligible: cert.certificate_eligible
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        course: {
+          course_id: course.course_id,
+          title: course.title,
+          max_attendance: course.max_attendance
+        },
+        lesson: {
+          lesson_id: lesson.lesson_id,
+          title: lesson.title,
+          sort_order: lesson.sort_order,
+          is_published: lesson.is_published
+        },
+        roster,
+        summary: {
+          total_enrollees: enrollments.length,
+          attended_count: attendedCount,
+          absent_count: enrollments.length - attendedCount
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('getLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to get lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/lessons/:lessonId/attendance/:enrollmentId
+ * Update attendance for a single enrollee in a specific lesson
+ */
+const updateLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+    const enrollmentId = parseInt(req.params.enrollmentId, 10);
+    const attended = req.body.attended !== undefined ? Boolean(req.body.attended) : true;
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { enrollment_id: enrollmentId, course_id: courseId }
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    let record = await CourseLessonAttendance.findOne({
+      where: { lesson_id: lessonId, enrollment_id: enrollmentId }
+    });
+
+    if (record) {
+      record.attended = attended;
+      record.attended_at = new Date();
+      await record.save();
+    } else {
+      record = await CourseLessonAttendance.create({
+        course_id: courseId,
+        lesson_id: lessonId,
+        enrollment_id: enrollmentId,
+        attended,
+        attended_at: new Date()
+      });
+    }
+
+    if (attended && !enrollment.attended) {
+      enrollment.attended = true;
+      await enrollment.save();
+    }
+
+    const totalPublishedLessons = await CourseLesson.count({
+      where: { course_id: courseId, is_published: true }
+    });
+    const allAttended = await CourseLessonAttendance.count({
+      where: { enrollment_id: enrollmentId, attended: true }
+    });
+    const cert = computeCertificateEligibility({
+      totalLessons: totalPublishedLessons,
+      attendedCount: allAttended,
+      maxAttendance: course.max_attendance
+    });
+
+    res.json({
+      success: true,
+      message: 'Lesson attendance updated',
+      data: {
+        record,
+        attended_count: cert.attended_count,
+        missed_count: cert.missed_count,
+        certificate_eligible: cert.certificate_eligible
+      }
+    });
+  } catch (error) {
+    logger.error('updateLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to update lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/lessons/:lessonId/attendance
+ * Bulk update attendance for a specific session/lesson
+ */
+const bulkUpdateLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+    const attendees = Array.isArray(req.body?.attendees) ? req.body.attendees : [];
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    await Promise.all(
+      attendees.map(async ({ enrollment_id, attended }) => {
+        const enrId = parseInt(enrollment_id, 10);
+        if (!Number.isFinite(enrId)) return;
+        const isAttended = Boolean(attended);
+        const [attRecord] = await CourseLessonAttendance.findOrCreate({
+          where: { lesson_id: lessonId, enrollment_id: enrId },
+          defaults: {
+            course_id: courseId,
+            lesson_id: lessonId,
+            enrollment_id: enrId,
+            attended: isAttended,
+            attended_at: new Date()
+          }
+        });
+        if (attRecord.attended !== isAttended) {
+          attRecord.attended = isAttended;
+          attRecord.attended_at = new Date();
+          await attRecord.save();
+        }
+        if (isAttended) {
+          await CourseEnrollment.update(
+            { attended: true },
+            { where: { enrollment_id: enrId, attended: false } }
+          );
+        }
+      })
+    );
+
+    res.json({ success: true, message: 'Lesson attendance updated successfully' });
+  } catch (error) {
+    logger.error('bulkUpdateLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to bulk update lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/enrollments/:enrollmentId/lessons/:lessonId/attendance
+ * Update attendance for a specific enrollment and lesson
+ */
+const updateEnrollmentLessonAttendance = async (req, res) => {
+  return updateLessonAttendance(req, res);
+};
+
 const exportEnrollmentsCSV = async (req, res) => {
   try {
     const where = {};
@@ -883,19 +1218,25 @@ const exportEnrollmentsCSV = async (req, res) => {
     const rows = await CourseEnrollment.findAll({
       where,
       include: [
-        { model: Course, as: 'course', attributes: ['title'] },
-        { model: CourseLessonProgress, as: 'lessonProgress', attributes: ['lesson_id'] }
+        { model: Course, as: 'course', attributes: ['course_id', 'title', 'max_attendance'] },
+        { model: CourseLessonProgress, as: 'lessonProgress', attributes: ['lesson_id'] },
+        { model: CourseLessonAttendance, as: 'lessonAttendances', attributes: ['lesson_id', 'attended'] }
       ],
       order: [['created_at', 'ASC']]
     });
 
     const courseIds = [...new Set(rows.map((r) => r.course_id))];
     const lessonCounts = {};
+    const publishedLessonsMap = {};
     await Promise.all(
       courseIds.map(async (cid) => {
-        lessonCounts[cid] = await CourseLesson.count({
-          where: { course_id: cid, is_published: true }
+        const lessons = await CourseLesson.findAll({
+          where: { course_id: cid, is_published: true },
+          attributes: ['lesson_id', 'title', 'sort_order'],
+          order: [['sort_order', 'ASC'], ['lesson_id', 'ASC']]
         });
+        lessonCounts[cid] = lessons.length;
+        publishedLessonsMap[cid] = lessons;
       })
     );
 
@@ -905,16 +1246,38 @@ const exportEnrollmentsCSV = async (req, res) => {
       return s;
     };
 
+    const isSingleCourse = courseIds.length === 1;
+    const singleCourseLessons = isSingleCourse ? (publishedLessonsMap[courseIds[0]] || []) : [];
+
     const headers = [
       '#', 'Course', 'Full Name', 'Email', 'Phone', 'University ID',
-      'Status', 'Attended', 'Lessons Completed', 'Lesson Count', 'Completion %', 'Registered At'
+      'Status', 'Overall Attended', 'Sessions Attended', 'Sessions Missed',
+      'Max Allowed Missed', 'Certificate Eligible',
+      'Lessons Completed', 'Lesson Count', 'Completion %'
     ];
+
+    if (isSingleCourse && singleCourseLessons.length > 0) {
+      singleCourseLessons.forEach((l, idx) => {
+        headers.push(`Session ${idx + 1}: ${l.title}`);
+      });
+    }
+
+    headers.push('Registered At');
 
     const csvRows = rows.map((row, index) => {
       const total = lessonCounts[row.course_id] || 0;
       const done = (row.lessonProgress || []).length;
       const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-      return [
+      const attendedList = (row.lessonAttendances || []).filter((a) => a.attended);
+      const attendedIdsSet = new Set(attendedList.map((a) => a.lesson_id));
+
+      const cert = computeCertificateEligibility({
+        totalLessons: total,
+        attendedCount: attendedList.length,
+        maxAttendance: row.course?.max_attendance
+      });
+
+      const cols = [
         index + 1,
         row.course?.title || '',
         row.full_name,
@@ -923,11 +1286,24 @@ const exportEnrollmentsCSV = async (req, res) => {
         row.university_id,
         row.status,
         row.attended ? 'Yes' : 'No',
+        cert.attended_count,
+        cert.missed_count,
+        cert.max_attendance != null ? cert.max_attendance : '0 (100%)',
+        cert.certificate_eligible ? 'Yes' : 'No',
         done,
         total,
-        pct,
-        row.created_at ? new Date(row.created_at).toISOString() : ''
-      ].map(escapeCSV).join(',');
+        pct
+      ];
+
+      if (isSingleCourse && singleCourseLessons.length > 0) {
+        singleCourseLessons.forEach((l) => {
+          cols.push(attendedIdsSet.has(l.lesson_id) ? 'Present' : 'Absent');
+        });
+      }
+
+      cols.push(row.created_at ? new Date(row.created_at).toISOString() : '');
+
+      return cols.map(escapeCSV).join(',');
     });
 
     const csvContent = [headers.map(escapeCSV).join(','), ...csvRows].join('\r\n');
@@ -967,5 +1343,9 @@ module.exports = {
   listEnrollments,
   updateEnrollment,
   deleteEnrollment,
+  getLessonAttendance,
+  updateLessonAttendance,
+  bulkUpdateLessonAttendance,
+  updateEnrollmentLessonAttendance,
   exportEnrollmentsCSV
 };

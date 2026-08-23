@@ -24,6 +24,7 @@
     "patch:board-faculty": "node scripts/patchBoardFaculty.js",
     "patch:board-multi-season": "node scripts/patchBoardMultiSeason.js",
     "patch:members-multi-season": "node scripts/patchMembersApplicationsMultiSeason.js",
+    "patch:course-announcements": "node scripts/patchCourseAnnouncementSchema.js",
     "insert-approved-members": "node scripts/MemberInsertion.js",
     "check:season-separation": "node scripts/checkSeasonSeparation.js"
   },
