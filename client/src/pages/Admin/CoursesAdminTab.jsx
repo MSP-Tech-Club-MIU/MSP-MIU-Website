@@ -13,7 +13,11 @@ import {
   MdDelete,
   MdEdit,
   MdPublish,
-  MdAttachFile
+  MdAttachFile,
+  MdCampaign,
+  MdEmail,
+  MdSend,
+  MdRefresh
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -414,6 +418,208 @@ export default function CoursesAdminTab({ onAlert }) {
     }
   };
 
+  // ---- Announcements state ----
+  const targetEnrollmentFromQuery = searchParams.get('target_enrollment_id')
+    ? parseInt(searchParams.get('target_enrollment_id'), 10)
+    : null;
+  const targetTypeFromQuery = searchParams.get('target_type') || 'all';
+
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementsPage, setAnnouncementsPage] = useState(1);
+  const [announcementsPagination, setAnnouncementsPagination] = useState(null);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(false);
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+  const [resendingAnnouncementId, setResendingAnnouncementId] = useState(null);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [activeAnnounceCourseId, setActiveAnnounceCourseId] = useState(enrollCourseId || null);
+
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    message: '',
+    target_type: targetTypeFromQuery,
+    target_enrollment_id: targetEnrollmentFromQuery ? String(targetEnrollmentFromQuery) : '',
+    target_email: '',
+    cta_label: '',
+    cta_url: '',
+    send_email: true
+  });
+
+  const [courseStudents, setCourseStudents] = useState([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [recipientPreview, setRecipientPreview] = useState({ total: 0, unsubscribedEstimate: 0, activeEstimate: 0 });
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (enrollCourseId && enrollCourseId !== activeAnnounceCourseId) {
+      setActiveAnnounceCourseId(enrollCourseId);
+    } else if (!activeAnnounceCourseId && items.length > 0) {
+      setActiveAnnounceCourseId(items[0].course_id);
+    }
+  }, [enrollCourseId, items, activeAnnounceCourseId]);
+
+  useEffect(() => {
+    if (targetEnrollmentFromQuery) {
+      setAnnouncementForm((prev) => ({
+        ...prev,
+        target_type: 'individual',
+        target_enrollment_id: String(targetEnrollmentFromQuery)
+      }));
+    }
+  }, [targetEnrollmentFromQuery]);
+
+  const loadAnnouncements = useCallback(async () => {
+    if (!activeAnnounceCourseId) return;
+    try {
+      setAnnouncementsLoading(true);
+      const result = await ApiService.getCourseAnnouncements(activeAnnounceCourseId, {
+        page: announcementsPage,
+        limit: 10,
+        includeInactive: 'true'
+      });
+      setAnnouncements(Array.isArray(result?.data) ? result.data : []);
+      setAnnouncementsPagination(result?.pagination || null);
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to load course announcements' });
+      setAnnouncements([]);
+      setAnnouncementsPagination(null);
+    } finally {
+      setAnnouncementsLoading(false);
+    }
+  }, [activeAnnounceCourseId, announcementsPage, onAlert]);
+
+  const loadCourseStudents = useCallback(async () => {
+    if (!activeAnnounceCourseId) return;
+    try {
+      const result = await ApiService.getCourseEnrollments({
+        course_id: activeAnnounceCourseId,
+        limit: 500
+      });
+      setCourseStudents(Array.isArray(result?.data) ? result.data : []);
+    } catch (err) {
+      setCourseStudents([]);
+    }
+  }, [activeAnnounceCourseId]);
+
+  useEffect(() => {
+    if (view === 'announcements') {
+      loadAnnouncements();
+      loadCourseStudents();
+    }
+  }, [view, loadAnnouncements, loadCourseStudents]);
+
+  useEffect(() => {
+    if (view !== 'announcements' || !activeAnnounceCourseId) return;
+    let cancel = false;
+    (async () => {
+      try {
+        setPreviewLoading(true);
+        const preview = await ApiService.getCourseRecipientsPreview(activeAnnounceCourseId, {
+          target_type: announcementForm.target_type,
+          target_enrollment_id: announcementForm.target_enrollment_id ? parseInt(announcementForm.target_enrollment_id, 10) : undefined,
+          target_email: announcementForm.target_email || undefined
+        });
+        if (!cancel && preview) {
+          setRecipientPreview(preview);
+        }
+      } catch (err) {
+        // ignore preview error
+      } finally {
+        if (!cancel) setPreviewLoading(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [view, activeAnnounceCourseId, announcementForm.target_type, announcementForm.target_enrollment_id, announcementForm.target_email]);
+
+  const submitAnnouncement = async () => {
+    if (!activeAnnounceCourseId) {
+      onAlert?.({ type: 'error', message: 'Please select a course first.' });
+      return;
+    }
+    if (!announcementForm.title.trim()) {
+      onAlert?.({ type: 'error', message: 'Title / Subject is required' });
+      return;
+    }
+    if (!announcementForm.message.trim()) {
+      onAlert?.({ type: 'error', message: 'Message is required' });
+      return;
+    }
+    if (announcementForm.target_type === 'individual' && !announcementForm.target_enrollment_id && !announcementForm.target_email.trim()) {
+      onAlert?.({ type: 'error', message: 'Please select or enter an individual student' });
+      return;
+    }
+
+    try {
+      setAnnouncementSubmitting(true);
+      const payload = {
+        title: announcementForm.title.trim(),
+        message: announcementForm.message.trim(),
+        target_type: announcementForm.target_type,
+        target_enrollment_id: announcementForm.target_enrollment_id ? parseInt(announcementForm.target_enrollment_id, 10) : null,
+        target_email: announcementForm.target_email ? announcementForm.target_email.trim() : null,
+        cta_label: announcementForm.cta_label ? announcementForm.cta_label.trim() : null,
+        cta_url: announcementForm.cta_url ? announcementForm.cta_url.trim() : null,
+        send_email: announcementForm.send_email
+      };
+
+      if (editingAnnouncement) {
+        await ApiService.updateCourseAnnouncement(activeAnnounceCourseId, editingAnnouncement.announcement_id, payload);
+        onAlert?.({ type: 'success', message: 'Course announcement updated' });
+        setEditingAnnouncement(null);
+      } else {
+        const res = await ApiService.createCourseAnnouncement(activeAnnounceCourseId, payload);
+        const stats = res?.emailStats;
+        const msg = stats
+          ? `Announcement sent! (${stats.sent || 0} delivered, ${stats.skipped || 0} skipped, ${stats.failed || 0} failed)`
+          : 'Course announcement created successfully';
+        onAlert?.({ type: 'success', message: msg });
+      }
+
+      setAnnouncementForm({
+        title: '',
+        message: '',
+        target_type: 'all',
+        target_enrollment_id: '',
+        target_email: '',
+        cta_label: '',
+        cta_url: '',
+        send_email: true
+      });
+      await loadAnnouncements();
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to save announcement' });
+    } finally {
+      setAnnouncementSubmitting(false);
+    }
+  };
+
+  const handleResendEmails = async (announcement) => {
+    if (!window.confirm(`Resend emails for "${announcement.title}" to targeted recipients?`)) return;
+    try {
+      setResendingAnnouncementId(announcement.announcement_id);
+      const res = await ApiService.resendCourseAnnouncementEmails(activeAnnounceCourseId, announcement.announcement_id);
+      const stats = res?.data?.emailStats;
+      const msg = stats
+        ? `Emails resent! (${stats.sent || 0} sent, ${stats.skipped || 0} skipped, ${stats.failed || 0} failed)`
+        : 'Announcement emails resent successfully';
+      onAlert?.({ type: 'success', message: msg });
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to resend announcement emails' });
+    } finally {
+      setResendingAnnouncementId(null);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (announcement) => {
+    if (!window.confirm(`Are you sure you want to delete "${announcement.title}"?`)) return;
+    try {
+      await ApiService.deleteCourseAnnouncement(activeAnnounceCourseId, announcement.announcement_id, { hard: true });
+      onAlert?.({ type: 'success', message: 'Course announcement deleted' });
+      await loadAnnouncements();
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to delete announcement' });
+    }
+  };
+
   const busy = saving || uploadingImage;
   const previewThumb = form.thumbnail_url?.trim() || mspLogo;
 
@@ -573,6 +779,388 @@ export default function CoursesAdminTab({ onAlert }) {
       )
     : null;
 
+  if (view === 'announcements') {
+    const selectedCourse = items.find((c) => String(c.course_id) === String(activeAnnounceCourseId)) || null;
+
+    const filteredStudents = courseStudents.filter((s) => {
+      if (!studentSearch.trim()) return true;
+      const q = studentSearch.toLowerCase();
+      return (
+        (s.full_name || '').toLowerCase().includes(q) ||
+        (s.email || '').toLowerCase().includes(q) ||
+        (s.university_id || '').toLowerCase().includes(q)
+      );
+    });
+
+    return (
+      <div className="AdminPanel__section SponsorsAdmin">
+        <div className="AdminPanel__sectionHeader">
+          <div>
+            <h2 className="AdminPanel__sectionTitle">
+              <MdCampaign /> Course announcements & communication
+            </h2>
+            <p className="SponsorsAdmin__sectionSub">
+              Broadcast emails or message individual students for {selectedCourse?.title || 'selected course'}.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {items.length > 1 && (
+              <select
+                className="AdminPanel__input"
+                style={{ padding: '0.45rem 0.75rem', borderRadius: 8, background: 'rgba(14,39,68,0.7)', color: '#fff', border: '1px solid rgba(142,194,240,0.3)' }}
+                value={activeAnnounceCourseId || ''}
+                onChange={(e) => {
+                  const cid = parseInt(e.target.value, 10);
+                  setActiveAnnounceCourseId(cid);
+                  setView('announcements', { course_id: cid });
+                }}
+              >
+                {items.map((c) => (
+                  <option key={c.course_id} value={c.course_id}>
+                    {c.title} ({c.status})
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() => setView('list')}
+            >
+              <MdArrowBack style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+              Back to Courses
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() =>
+                setView(
+                  'enrollments',
+                  activeAnnounceCourseId ? { course_id: activeAnnounceCourseId } : {}
+                )
+              }
+            >
+              Enrollments
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() =>
+                setView(
+                  'attendance',
+                  activeAnnounceCourseId ? { course_id: activeAnnounceCourseId } : {}
+                )
+              }
+            >
+              Attendance & Progress
+            </button>
+          </div>
+        </div>
+
+        {/* --- Announcement Composer Form --- */}
+        <div className="AdminPanel__announcementsSection" style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(14, 39, 68, 0.45)', borderRadius: '12px', border: '1px solid rgba(142, 194, 240, 0.18)' }}>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1.15rem', color: '#8ec2f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MdSend /> {editingAnnouncement ? 'Edit announcement' : 'Compose new announcement / message'}
+          </h3>
+
+          <div className="AdminPanel__formGroup" style={{ marginBottom: '1rem' }}>
+            <label style={{ fontWeight: 600, color: '#eaf2ff', marginBottom: '0.4rem', display: 'block' }}>Target Audience</label>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              {[
+                { value: 'all', label: 'All Registered Members' },
+                { value: 'enrolled', label: 'Enrolled Only' },
+                { value: 'preordered', label: 'Waitlist / Preordered Only' },
+                { value: 'attended', label: 'Attended Only' },
+                { value: 'individual', label: 'Specific Student' }
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '8px',
+                    background: announcementForm.target_type === opt.value ? 'rgba(3, 169, 244, 0.22)' : 'rgba(255, 255, 255, 0.05)',
+                    border: `1px solid ${announcementForm.target_type === opt.value ? '#03a9f4' : 'rgba(255, 255, 255, 0.12)'}`,
+                    color: announcementForm.target_type === opt.value ? '#fff' : 'rgba(234, 242, 255, 0.8)',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="course_target_type"
+                    value={opt.value}
+                    checked={announcementForm.target_type === opt.value}
+                    onChange={(e) => setAnnouncementForm((s) => ({ ...s, target_type: e.target.value }))}
+                    style={{ margin: 0 }}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+
+            {/* If Individual Selected, show student picker */}
+            {announcementForm.target_type === 'individual' && (
+              <div style={{ padding: '1rem', background: 'rgba(3, 28, 53, 0.6)', borderRadius: '8px', border: '1px solid rgba(3, 169, 244, 0.3)', marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.88rem', color: '#8ec2f0', display: 'block', marginBottom: '0.4rem' }}>
+                  Select enrolled student or enter email:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Search student by name, ID or email…"
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+                  />
+                  <select
+                    value={announcementForm.target_enrollment_id}
+                    onChange={(e) => {
+                      const selId = e.target.value;
+                      const selStudent = courseStudents.find((s) => String(s.enrollment_id) === String(selId));
+                      setAnnouncementForm((prev) => ({
+                        ...prev,
+                        target_enrollment_id: selId,
+                        target_email: selStudent?.email || ''
+                      }));
+                    }}
+                    style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+                  >
+                    <option value="">-- Choose enrolled student ({filteredStudents.length} available) --</option>
+                    {filteredStudents.map((st) => (
+                      <option key={st.enrollment_id} value={st.enrollment_id}>
+                        {st.full_name} ({st.university_id || 'No ID'}) - {st.email} [{st.status}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'rgba(234,242,255,0.65)' }}>
+                  Or enter direct email address:
+                  <input
+                    type="email"
+                    placeholder="student@miuegypt.edu.eg"
+                    value={announcementForm.target_email}
+                    onChange={(e) => setAnnouncementForm((prev) => ({ ...prev, target_email: e.target.value }))}
+                    style={{ marginLeft: '0.5rem', padding: '0.25rem 0.5rem', borderRadius: '4px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Recipient estimate badge */}
+            <div style={{ marginTop: '0.25rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span className="AdminPanel__badge AdminPanel__badge--info">
+                {previewLoading ? 'Calculating recipients…' : `👥 Estimated recipients: ${recipientPreview.total || 0} (${recipientPreview.activeEstimate || 0} active, ${recipientPreview.unsubscribedEstimate || 0} unsubscribed)`}
+              </span>
+            </div>
+          </div>
+
+          <div className="AdminPanel__formGroup" style={{ marginBottom: '1rem' }}>
+            <label style={{ fontWeight: 600, color: '#eaf2ff', marginBottom: '0.4rem', display: 'block' }}>
+              Announcement Title / Subject *
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Midterm Project Guidelines Released"
+              value={announcementForm.title}
+              onChange={(e) => setAnnouncementForm((s) => ({ ...s, title: e.target.value }))}
+              style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+            />
+          </div>
+
+          <div className="AdminPanel__formGroup" style={{ marginBottom: '1rem' }}>
+            <label style={{ fontWeight: 600, color: '#eaf2ff', marginBottom: '0.4rem', display: 'block' }}>
+              Announcement Message *
+            </label>
+            <textarea
+              rows={6}
+              placeholder="Write your announcement content here. Plain text and markdown formatted messages are supported..."
+              value={announcementForm.message}
+              onChange={(e) => setAnnouncementForm((s) => ({ ...s, message: e.target.value }))}
+              style={{ width: '100%', padding: '0.6rem 0.8rem', borderRadius: '8px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff', resize: 'vertical' }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem', marginBottom: '1rem' }}>
+            <div className="AdminPanel__formGroup">
+              <label style={{ fontSize: '0.85rem', color: 'rgba(234,242,255,0.8)', marginBottom: '0.3rem', display: 'block' }}>
+                CTA Button Label (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. View Guidelines"
+                value={announcementForm.cta_label}
+                onChange={(e) => setAnnouncementForm((s) => ({ ...s, cta_label: e.target.value }))}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+              />
+            </div>
+            <div className="AdminPanel__formGroup">
+              <label style={{ fontSize: '0.85rem', color: 'rgba(234,242,255,0.8)', marginBottom: '0.3rem', display: 'block' }}>
+                CTA Button URL (Optional - defaults to course lessons with auto login token)
+              </label>
+              <input
+                type="url"
+                placeholder="https://..."
+                value={announcementForm.cta_url}
+                onChange={(e) => setAnnouncementForm((s) => ({ ...s, cta_url: e.target.value }))}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', background: 'rgba(14,39,68,0.7)', border: '1px solid rgba(142,194,240,0.3)', color: '#fff' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#eaf2ff', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={announcementForm.send_email}
+                onChange={(e) => setAnnouncementForm((s) => ({ ...s, send_email: e.target.checked }))}
+              />
+              <span>Send styled email notification to recipients</span>
+            </label>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {editingAnnouncement && (
+                <button
+                  type="button"
+                  className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                  onClick={() => {
+                    setEditingAnnouncement(null);
+                    setAnnouncementForm({
+                      title: '',
+                      message: '',
+                      target_type: 'all',
+                      target_enrollment_id: '',
+                      target_email: '',
+                      cta_label: '',
+                      cta_url: '',
+                      send_email: true
+                    });
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              )}
+              <button
+                type="button"
+                className="AdminPanel__addBtn"
+                disabled={announcementSubmitting}
+                onClick={submitAnnouncement}
+              >
+                <MdSend /> {announcementSubmitting ? 'Sending…' : editingAnnouncement ? 'Save Changes' : announcementForm.target_type === 'individual' ? 'Send Message to Student' : 'Broadcast Announcement'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* --- Sent Announcements History --- */}
+        <div>
+          <h3 style={{ margin: '0 0 1rem', fontSize: '1.15rem', color: '#8ec2f0' }}>
+            Past Communications & Announcements ({announcementsPagination?.total ?? announcements.length})
+          </h3>
+
+          {announcementsLoading ? (
+            <div className="AdminPanel__empty"><p>Loading announcements…</p></div>
+          ) : announcements.length === 0 ? (
+            <div className="AdminPanel__empty"><p>No announcements or messages sent for this course yet.</p></div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              {announcements.map((ann) => (
+                <div
+                  key={ann.announcement_id}
+                  style={{
+                    padding: '1.25rem',
+                    background: 'rgba(14, 39, 68, 0.55)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(142, 194, 240, 0.2)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.65rem'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#ffffff' }}>{ann.title}</h4>
+                      <div style={{ fontSize: '0.78rem', color: 'rgba(234, 242, 255, 0.65)', marginTop: '0.2rem' }}>
+                        By {ann.creator?.full_name || 'Admin'} · {new Date(ann.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <span className="AdminPanel__badge AdminPanel__badge--info">
+                        Target: {ann.target_type === 'individual' ? (ann.targetEnrollment ? `Student: ${ann.targetEnrollment.full_name}` : ann.target_email || 'Individual') : ann.target_type}
+                      </span>
+                      {ann.send_email && (
+                        <span className="AdminPanel__badge AdminPanel__badge--approved">
+                          ✓ Email dispatched
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <p style={{ margin: 0, color: 'rgba(234, 242, 255, 0.9)', whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.92rem' }}>
+                    {ann.message}
+                  </p>
+
+                  {ann.cta_url && (
+                    <div style={{ fontSize: '0.82rem', color: '#03a9f4' }}>
+                      Link: <a href={ann.cta_url} target="_blank" rel="noreferrer" style={{ color: '#03a9f4', textDecoration: 'underline' }}>{ann.cta_label || ann.cta_url}</a>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.75rem', justifyContent: 'flex-end' }}>
+                    <button
+                      type="button"
+                      className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                      onClick={() => {
+                        setEditingAnnouncement(ann);
+                        setAnnouncementForm({
+                          title: ann.title || '',
+                          message: ann.message || '',
+                          target_type: ann.target_type || 'all',
+                          target_enrollment_id: ann.target_enrollment_id ? String(ann.target_enrollment_id) : '',
+                          target_email: ann.target_email || '',
+                          cta_label: ann.cta_label || '',
+                          cta_url: ann.cta_url || '',
+                          send_email: Boolean(ann.send_email)
+                        });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      <MdEdit /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
+                      disabled={resendingAnnouncementId === ann.announcement_id}
+                      onClick={() => handleResendEmails(ann)}
+                    >
+                      <MdRefresh /> {resendingAnnouncementId === ann.announcement_id ? 'Resending…' : 'Resend Emails'}
+                    </button>
+                    <button
+                      type="button"
+                      className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                      onClick={() => handleDeleteAnnouncement(ann)}
+                    >
+                      <MdDelete /> Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {announcementsPagination && announcementsPagination.totalPages > 1 && (
+            <Pagination
+              pagination={announcementsPagination}
+              onPageChange={setAnnouncementsPage}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (view === 'attendance') {
     return (
       <div className="AdminPanel__section SponsorsAdmin">
@@ -642,6 +1230,19 @@ export default function CoursesAdminTab({ onAlert }) {
               className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
               onClick={() =>
                 setView(
+                  'announcements',
+                  enrollCourseId ? { course_id: enrollCourseId } : {}
+                )
+              }
+            >
+              <MdCampaign style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+              Announcements
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={() =>
+                setView(
                   'attendance',
                   enrollCourseId ? { course_id: enrollCourseId } : {}
                 )
@@ -673,6 +1274,7 @@ export default function CoursesAdminTab({ onAlert }) {
                   <th>Course</th>
                   <th>Contact</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -688,6 +1290,30 @@ export default function CoursesAdminTab({ onAlert }) {
                       <div style={{ opacity: 0.7 }}>{row.phone_number}</div>
                     </td>
                     <td>{row.status}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                        style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                        title={`Send message to ${row.full_name}`}
+                        onClick={() => {
+                          setActiveAnnounceCourseId(row.course_id);
+                          setAnnouncementForm((prev) => ({
+                            ...prev,
+                            target_type: 'individual',
+                            target_enrollment_id: String(row.enrollment_id),
+                            target_email: row.email || ''
+                          }));
+                          setView('announcements', {
+                            course_id: row.course_id,
+                            target_type: 'individual',
+                            target_enrollment_id: row.enrollment_id
+                          });
+                        }}
+                      >
+                        <MdEmail style={{ marginRight: 4 }} /> Message
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -988,6 +1614,14 @@ export default function CoursesAdminTab({ onAlert }) {
           <button
             type="button"
             className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+            onClick={() => setView('announcements')}
+          >
+            <MdCampaign style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
+            Announcements
+          </button>
+          <button
+            type="button"
+            className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
             onClick={() => setView('enrollments')}
           >
             <MdFactCheck style={{ marginRight: 4, verticalAlign: 'text-bottom' }} />
@@ -1076,6 +1710,16 @@ export default function CoursesAdminTab({ onAlert }) {
                         onClick={() => setView('content', { id: row.course_id })}
                       >
                         Lessons
+                      </button>
+                      <button
+                        type="button"
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                        onClick={() => {
+                          setActiveAnnounceCourseId(row.course_id);
+                          setView('announcements', { course_id: row.course_id });
+                        }}
+                      >
+                        <MdCampaign /> Announcements
                       </button>
                       <button
                         type="button"

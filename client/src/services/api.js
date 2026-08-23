@@ -2124,6 +2124,111 @@ class ApiService {
     return response.blob();
   }
 
+  // ── Course Announcements & Communications ──────────────────────
+  static async getCourseAnnouncements(courseId, filters = {}) {
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') queryParams.append(k, String(v));
+    });
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements${qs ? `?${qs}` : ''}`,
+      { headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch course announcements');
+    return result;
+  }
+
+  static async getCourseAnnouncementById(courseId, announcementId) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/${announcementId}`,
+      { headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch course announcement');
+    return result.data || result;
+  }
+
+  static async getCourseRecipientsPreview(courseId, params = {}) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/recipients-preview`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(params)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to preview recipients');
+    return result.data || result;
+  }
+
+  static async createCourseAnnouncement(courseId, data) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/announcements`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to create course announcement');
+    return result;
+  }
+
+  static async sendDirectCourseMemberMessage(courseId, data) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/message-member`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send message to member');
+    return result;
+  }
+
+  static async updateCourseAnnouncement(courseId, announcementId, data) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/${announcementId}`,
+      {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(data)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update course announcement');
+    return result;
+  }
+
+  static async deleteCourseAnnouncement(courseId, announcementId, { hard = false } = {}) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/${announcementId}${hard ? '?hard=1' : ''}`,
+      {
+        method: 'DELETE',
+        headers: this.getHeaders(true)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete course announcement');
+    return result;
+  }
+
+  static async resendCourseAnnouncementEmails(courseId, announcementId) {
+    const response = await fetch(
+      `${API_BASE_URL}/courses/${courseId}/announcements/${announcementId}/resend-emails`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true)
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to resend announcement emails');
+    return result;
+  }
+
   // ===== COMPETITIONS API =====
 
   /**
