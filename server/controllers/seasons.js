@@ -13,6 +13,7 @@ const {
   seasonHasAdminEligibleBoard
 } = require('../utils/adminEligibleBoard');
 const { applyCurrentSeasonBoardAccess } = require('../utils/boardUserSync');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -263,6 +264,15 @@ const createSeason = async (req, res) => {
 
     await transaction.commit();
 
+    await logAdminAction(
+      'season_created',
+      `Created season "${season.label}" with ${createdBoard.length} initial board member(s)`,
+      req,
+      'season',
+      season.season_id,
+      season.season_id
+    );
+
     return res.status(201).json({
       success: true,
       data: serializeSeason(season),
@@ -330,6 +340,16 @@ const updateSeason = async (req, res) => {
     }
 
     await season.update(updates);
+
+    await logAdminAction(
+      'season_updated',
+      `Updated season "${season.label}"`,
+      req,
+      'season',
+      season.season_id,
+      season.season_id
+    );
+
     return res.json({
       success: true,
       data: serializeSeason(season),
@@ -372,6 +392,15 @@ const setDefaultSeason = async (req, res) => {
     await season.update({ is_default: true, is_active: true }, { transaction });
     await applyCurrentSeasonBoardAccess(id, { transaction });
     await transaction.commit();
+
+    await logAdminAction(
+      'season_set_default',
+      `Set "${season.label}" as the default active season`,
+      req,
+      'season',
+      season.season_id,
+      season.season_id
+    );
 
     return res.json({
       success: true,

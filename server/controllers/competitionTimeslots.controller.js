@@ -14,6 +14,7 @@ const {
   getTeamMemberEmails,
   formatDateForEmail
 } = require('../services/competitionTimeslotService');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 function toCompetitionModeContext(competition) {
@@ -149,6 +150,15 @@ const createAdminCompetitionTimeslot = async (req, res) => {
 
     const competition = await assertProjectCompetition(competitionId);
 
+    await logAdminAction(
+      'timeslot_created',
+      `Created timeslot for competition "${competition.title}"`,
+      req,
+      'competition',
+      competition.competition_id,
+      competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       competition: toCompetitionModeContext(competition),
@@ -175,6 +185,15 @@ const updateAdminCompetitionTimeslot = async (req, res) => {
 
     const competition = await assertProjectCompetition(competitionId);
 
+    await logAdminAction(
+      'timeslot_updated',
+      `Updated timeslot #${timeslotId} for competition "${competition.title}"`,
+      req,
+      'competition',
+      competition.competition_id,
+      competition.season_id
+    );
+
     return res.json({
       success: true,
       competition: toCompetitionModeContext(competition),
@@ -191,6 +210,15 @@ const deleteAdminCompetitionTimeslot = async (req, res) => {
     const timeslotId = Number(req.params.timeslotId);
 
     await deleteTimeslot({ competitionId, timeslotId });
+
+    await logAdminAction(
+      'timeslot_deleted',
+      `Deleted timeslot #${timeslotId} from competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
+
     return res.json({ success: true, message: 'Timeslot deleted successfully' });
   } catch (error) {
     return handleTimeslotError(res, error, 'Failed to delete timeslot');
@@ -202,6 +230,15 @@ const publishCompetitionTimeslotSelectionLinks = async (req, res) => {
     const competitionId = Number(req.params.id);
     const payload = await buildTeamSelectionLinks(competitionId);
     const failures = await sendSelectionLinksEmailBatch(payload);
+
+    await logAdminAction(
+      'timeslot_selection_links_published',
+      `Published timeslot selection links to ${payload.links.length} team(s) for "${payload.competition?.title || competitionId}"`,
+      req,
+      'competition',
+      competitionId,
+      payload.competition?.season_id
+    );
 
     return res.json({
       success: true,
@@ -248,6 +285,15 @@ const assignCompetitionTimeslotByAdmin = async (req, res) => {
       logger.error('Timeslot assignment email failed:', mailErr);
     }
 
+    await logAdminAction(
+      'timeslot_assigned',
+      `Assigned team "${result.team?.team_name || teamId}" to timeslot in "${result.competition?.title || competitionId}"`,
+      req,
+      'competition',
+      competitionId,
+      result.competition?.season_id
+    );
+
     return res.json({
       success: true,
       message: 'Timeslot assigned successfully',
@@ -269,6 +315,14 @@ const unassignCompetitionTimeslotByAdmin = async (req, res) => {
     const timeslotId = Number(req.params.timeslotId);
 
     await unassignTimeslotByAdmin({ competitionId, timeslotId });
+
+    await logAdminAction(
+      'timeslot_unassigned',
+      `Unassigned team from timeslot #${timeslotId} in competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
 
     return res.json({
       success: true,

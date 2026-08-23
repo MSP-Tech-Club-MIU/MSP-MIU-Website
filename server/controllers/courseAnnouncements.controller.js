@@ -4,6 +4,7 @@ const {
   getCourseRecipientsCount
 } = require('../services/courseAnnouncementBroadcast');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -268,6 +269,15 @@ const createCourseAnnouncement = async (req, res) => {
       ]
     });
 
+    await logAdminAction(
+      'course_announcement_created',
+      `Created announcement "${createdAnnouncement.title}" for course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
     return res.status(201).json({
       success: true,
       message: willSendEmail
@@ -400,6 +410,14 @@ const updateCourseAnnouncement = async (req, res) => {
       ]
     });
 
+    await logAdminAction(
+      'course_announcement_updated',
+      `Updated announcement "${updatedAnnouncement.title}" in course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
+
     return res.json({
       success: true,
       message: 'Course announcement updated successfully',
@@ -436,13 +454,30 @@ const deleteCourseAnnouncement = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Announcement not found' });
     }
 
+    const annTitle = announcement.title;
+
     if (hardDelete) {
       await announcement.destroy();
+      await logAdminAction(
+        'course_announcement_deleted',
+        `Permanently deleted announcement "${annTitle}" in course #${courseId}`,
+        req,
+        'course',
+        courseId
+      );
       return res.json({ success: true, message: 'Course announcement permanently deleted' });
     }
 
     announcement.is_active = false;
     await announcement.save();
+
+    await logAdminAction(
+      'course_announcement_deleted',
+      `Deleted announcement "${annTitle}" in course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
 
     return res.json({
       success: true,
@@ -484,6 +519,15 @@ const resendCourseAnnouncementEmails = async (req, res) => {
     }
 
     const emailStats = await broadcastCourseAnnouncementEmails(announcement, course);
+
+    await logAdminAction(
+      'course_announcement_emails_resent',
+      `Resent emails for announcement "${announcement.title}" in course "${course.title}"`,
+      req,
+      'course',
+      courseId,
+      course.season_id
+    );
 
     return res.json({
       success: true,

@@ -14,6 +14,7 @@ const {
   syncUserFromBoard,
   demoteUserIfNoCurrentBoard
 } = require('../utils/boardUserSync');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
@@ -241,6 +242,15 @@ const createBoardMember = async (req, res) => {
       }
     }
 
+    await logAdminAction(
+      'board_member_created',
+      `Created board member "${member.full_name}" (${member.position})`,
+      req,
+      'board',
+      member.board_id,
+      member.season_id
+    );
+
     const payload = { success: true, data: member };
     if (activationEmail) {
       payload.activationEmail = activationEmail;
@@ -342,6 +352,15 @@ const updateBoardMember = async (req, res) => {
       logger.error('Board user sync failed after update:', syncErr);
     }
 
+    await logAdminAction(
+      'board_member_updated',
+      `Updated board member "${member.full_name}" (${member.position})`,
+      req,
+      'board',
+      member.board_id,
+      member.season_id
+    );
+
     res.json({ success: true, data: member });
   } catch (error) {
     if (error.status) {
@@ -359,6 +378,9 @@ const deleteBoardMember = async (req, res) => {
     if (!member) {
       return res.status(404).json({ success: false, error: 'Board member not found' });
     }
+    const memberName = member.full_name;
+    const memberPosition = member.position;
+    const seasonId = member.season_id;
     const userId = member.user_id;
     await member.destroy();
     try {
@@ -368,6 +390,16 @@ const deleteBoardMember = async (req, res) => {
     } catch (syncErr) {
       logger.error('Board user demote failed after delete:', syncErr);
     }
+
+    await logAdminAction(
+      'board_member_deleted',
+      `Deleted board member "${memberName}" (${memberPosition})`,
+      req,
+      'board',
+      id,
+      seasonId
+    );
+
     res.json({ success: true, message: 'Board member deleted' });
   } catch (error) {
     logger.error('Error deleting board member:', error);
@@ -458,6 +490,16 @@ const updateMyBoardPhoto = async (req, res) => {
         seasonInclude()
       ]
     });
+
+    await logAdminAction(
+      'board_photo_updated',
+      `Updated board photo for "${member.full_name}" (${member.position})`,
+      req,
+      'board',
+      member.board_id,
+      member.season_id
+    );
+
     res.json({ success: true, data: member });
   } catch (error) {
     logger.error('Error updating own board photo:', error);
@@ -494,6 +536,15 @@ const sendBoardActivationEmail = async (req, res) => {
         data: result
       });
     }
+
+    await logAdminAction(
+      'board_activation_email_sent',
+      `Sent board account activation email to "${member.full_name}" (${result.email})`,
+      req,
+      'board',
+      member.board_id,
+      member.season_id
+    );
 
     res.json({
       success: true,

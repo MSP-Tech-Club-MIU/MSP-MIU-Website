@@ -13,6 +13,7 @@ const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { notifyCourseEnrollments } = require('../utils/courseAvailableEmail');
 const { checkBlacklist } = require('../utils/blacklistCheck');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const VALID_STATUSES = ['draft', 'coming_soon', 'published', 'archived'];
@@ -214,6 +215,15 @@ const createCourse = async (req, res) => {
       published_at: nextStatus === 'published' ? new Date() : null
     });
 
+    await logAdminAction(
+      'course_created',
+      `Created course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
     res.status(201).json({ success: true, message: 'Course created', data: course });
   } catch (error) {
     if (error.status) {
@@ -252,6 +262,16 @@ const updateCourse = async (req, res) => {
     }
 
     await course.save();
+
+    await logAdminAction(
+      'course_updated',
+      `Updated course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
     res.json({ success: true, message: 'Course updated', data: course });
   } catch (error) {
     if (error.status) {
@@ -308,6 +328,16 @@ const updateCourseStatus = async (req, res) => {
     }
 
     await course.save();
+
+    await logAdminAction(
+      'course_status_updated',
+      `Updated status of course "${course.title}" from "${prev}" to "${status}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
     res.json({
       success: true,
       message: `Course status updated from ${prev} to ${status}`,
@@ -327,7 +357,19 @@ const deleteCourse = async (req, res) => {
   try {
     const course = await findCourseOr404(req.params.id, res);
     if (!course) return;
+    const courseTitle = course.title;
+    const seasonId = course.season_id;
     await course.destroy();
+
+    await logAdminAction(
+      'course_deleted',
+      `Deleted course "${courseTitle}"`,
+      req,
+      'course',
+      req.params.id,
+      seasonId
+    );
+
     res.json({ success: true, message: 'Course deleted' });
   } catch (error) {
     logger.error('deleteCourse:', error);
@@ -360,6 +402,15 @@ const createLesson = async (req, res) => {
       is_published: is_published === undefined ? true : Boolean(is_published)
     });
 
+    await logAdminAction(
+      'course_lesson_created',
+      `Added lesson "${lesson.title}" to course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
     res.status(201).json({ success: true, data: lesson });
   } catch (error) {
     logger.error('createLesson:', error);
@@ -388,6 +439,15 @@ const updateLesson = async (req, res) => {
     if (is_published !== undefined) lesson.is_published = Boolean(is_published);
 
     await lesson.save();
+
+    await logAdminAction(
+      'course_lesson_updated',
+      `Updated lesson "${lesson.title}" in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
     res.json({ success: true, data: lesson });
   } catch (error) {
     logger.error('updateLesson:', error);
@@ -403,7 +463,17 @@ const deleteLesson = async (req, res) => {
     if (!lesson) {
       return res.status(404).json({ success: false, error: 'Lesson not found' });
     }
+    const lessonTitle = lesson.title;
     await lesson.destroy();
+
+    await logAdminAction(
+      'course_lesson_deleted',
+      `Deleted lesson "${lessonTitle}" from course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
     res.json({ success: true, message: 'Lesson deleted' });
   } catch (error) {
     logger.error('deleteLesson:', error);
@@ -426,6 +496,15 @@ const reorderLessons = async (req, res) => {
         )
       )
     );
+
+    await logAdminAction(
+      'course_lessons_reordered',
+      `Reordered lessons in course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
+
     res.json({ success: true, message: 'Lessons reordered' });
   } catch (error) {
     logger.error('reorderLessons:', error);
@@ -476,6 +555,14 @@ const createMaterial = async (req, res) => {
       sort_order: Number(order) || 0
     });
 
+    await logAdminAction(
+      'course_material_created',
+      `Added material "${material.title}" to lesson #${lesson.lesson_id} in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
     res.status(201).json({ success: true, data: material });
   } catch (error) {
     logger.error('createMaterial:', error);
@@ -513,6 +600,15 @@ const updateMaterial = async (req, res) => {
     if (sort_order !== undefined) material.sort_order = Number(sort_order) || 0;
 
     await material.save();
+
+    await logAdminAction(
+      'course_material_updated',
+      `Updated material "${material.title}" in lesson #${lesson.lesson_id} of course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
     res.json({ success: true, data: material });
   } catch (error) {
     logger.error('updateMaterial:', error);
@@ -534,7 +630,17 @@ const deleteMaterial = async (req, res) => {
     if (!material) {
       return res.status(404).json({ success: false, error: 'Material not found' });
     }
+    const matTitle = material.title;
     await material.destroy();
+
+    await logAdminAction(
+      'course_material_deleted',
+      `Deleted material "${matTitle}" from lesson #${lesson.lesson_id} in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
     res.json({ success: true, message: 'Material deleted' });
   } catch (error) {
     logger.error('deleteMaterial:', error);
@@ -977,6 +1083,15 @@ const updateEnrollment = async (req, res) => {
       enrollment.status = req.body.status;
     }
     await enrollment.save();
+
+    await logAdminAction(
+      'course_enrollment_updated',
+      `Updated enrollment #${enrollment.enrollment_id} for "${enrollment.full_name}" in course #${enrollment.course_id}`,
+      req,
+      'course',
+      enrollment.course_id
+    );
+
     res.json({ success: true, data: enrollment });
   } catch (error) {
     logger.error('updateEnrollment:', error);
@@ -993,7 +1108,18 @@ const deleteEnrollment = async (req, res) => {
     if (req.params.id && String(enrollment.course_id) !== String(req.params.id)) {
       return res.status(404).json({ success: false, error: 'Enrollment not found' });
     }
+    const enrolleeName = enrollment.full_name;
+    const courseId = enrollment.course_id;
     await enrollment.destroy();
+
+    await logAdminAction(
+      'course_enrollment_deleted',
+      `Deleted enrollment of "${enrolleeName}" from course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
+
     res.json({ success: true, message: 'Enrollment deleted' });
   } catch (error) {
     logger.error('deleteEnrollment:', error);
@@ -1158,6 +1284,14 @@ const updateLessonAttendance = async (req, res) => {
       maxAttendance: course.max_attendance
     });
 
+    await logAdminAction(
+      'course_attendance_updated',
+      `Updated attendance for "${enrollment.full_name}" in session "${lesson.title}" (${attended ? 'Present' : 'Absent'})`,
+      req,
+      'course',
+      courseId
+    );
+
     res.json({
       success: true,
       message: 'Lesson attendance updated',
@@ -1221,6 +1355,14 @@ const bulkUpdateLessonAttendance = async (req, res) => {
           );
         }
       })
+    );
+
+    await logAdminAction(
+      'course_bulk_attendance_updated',
+      `Bulk updated attendance for ${attendees.length} enrollees in session "${lesson.title}"`,
+      req,
+      'course',
+      courseId
     );
 
     res.json({ success: true, message: 'Lesson attendance updated successfully' });

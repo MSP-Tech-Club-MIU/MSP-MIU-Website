@@ -1,6 +1,7 @@
 const { Department } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { departmentHasWhatsApp } = require('../utils/emailTemplates/defaults');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const normalizeWhatsAppUrl = (value) => {
@@ -29,6 +30,15 @@ const createDepartment = async (req, res) => {
         : null;
     }
     const dept = await Department.create(payload);
+
+    await logAdminAction(
+      'department_created',
+      `Created department "${dept.name}"`,
+      req,
+      'department',
+      dept.department_id
+    );
+
     res.status(201).json({ success: true, data: dept });
   } catch (error) {
     logger.error('Error creating department:', error);
@@ -87,6 +97,15 @@ const updateDepartment = async (req, res) => {
     }
 
     await dept.update(updates);
+
+    await logAdminAction(
+      'department_updated',
+      `Updated department "${dept.name}"`,
+      req,
+      'department',
+      dept.department_id
+    );
+
     res.json({ success: true, data: dept });
   } catch (error) {
     logger.error('Error updating department:', error);
@@ -104,7 +123,17 @@ const deleteDepartment = async (req, res) => {
     if (!dept) {
       return res.status(404).json({ success: false, error: 'Department not found' });
     }
+    const deptName = dept.name;
     await dept.destroy();
+
+    await logAdminAction(
+      'department_deleted',
+      `Deleted department "${deptName}"`,
+      req,
+      'department',
+      id
+    );
+
     res.json({ success: true, message: 'Department deleted' });
   } catch (error) {
     logger.error('Error deleting department:', error);

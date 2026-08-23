@@ -8,6 +8,7 @@ const {
 } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { cairoLocalInputToUtc } = require('../utils/cairoQuizTime');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const QUIZ_STATUSES = ['draft', 'published', 'active', 'closed'];
@@ -252,6 +253,15 @@ async function patchAdminQuiz(req, res) {
       byQuestion.get(key).push(o);
     });
 
+    await logAdminAction(
+      'quiz_updated',
+      `Updated quiz settings for competition "${loaded.competition.title}"`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      loaded.competition.season_id
+    );
+
     return res.status(200).json({
       success: true,
       data: formatAdminQuizPayload(quizFresh, questions, byQuestion)
@@ -330,6 +340,15 @@ async function postAdminQuizQuestion(req, res) {
       byQuestion.get(key).push(o);
     });
 
+    await logAdminAction(
+      'quiz_question_created',
+      `Added question to quiz for "${competition.title}"`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
@@ -397,6 +416,15 @@ async function putAdminQuizQuestion(req, res) {
       byQuestion.get(key).push(o);
     });
 
+    await logAdminAction(
+      'quiz_question_updated',
+      `Updated question #${question.question_id} in quiz for "${ctx.competition?.title || 'competition'}"`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      ctx.competition?.season_id
+    );
+
     return res.status(200).json({
       success: true,
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
@@ -434,6 +462,15 @@ async function deleteAdminQuizQuestion(req, res) {
       if (!byQuestion.has(key)) byQuestion.set(key, []);
       byQuestion.get(key).push(o);
     });
+
+    await logAdminAction(
+      'quiz_question_deleted',
+      `Deleted question from quiz for "${ctx.competition?.title || 'competition'}"`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      ctx.competition?.season_id
+    );
 
     return res.status(200).json({
       success: true,
@@ -546,6 +583,15 @@ async function postAdminQuizOption(req, res) {
       byQuestion.get(key).push(o);
     });
 
+    await logAdminAction(
+      'quiz_option_created',
+      `Added option to question #${question.question_id} in quiz for "${ctx.competition?.title || 'competition'}"`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      ctx.competition?.season_id
+    );
+
     return res.status(201).json({
       success: true,
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
@@ -627,6 +673,15 @@ async function putAdminQuizOption(req, res) {
       byQuestion.get(key).push(o);
     });
 
+    await logAdminAction(
+      'quiz_option_updated',
+      `Updated option #${option.option_id} for question #${question.question_id} in quiz`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      ctx.competition?.season_id
+    );
+
     return res.status(200).json({
       success: true,
       data: formatAdminQuizPayload(quiz, questions, byQuestion)
@@ -643,7 +698,7 @@ async function deleteAdminQuizOption(req, res) {
     if (!ctx) {
       return res.status(404).json({ success: false, error: 'Option not found' });
     }
-    const { option, quiz } = ctx;
+    const { option, question, quiz } = ctx;
     await option.destroy();
 
     const questions = await QuizQuestion.findAll({
@@ -664,6 +719,15 @@ async function deleteAdminQuizOption(req, res) {
       if (!byQuestion.has(key)) byQuestion.set(key, []);
       byQuestion.get(key).push(o);
     });
+
+    await logAdminAction(
+      'quiz_option_deleted',
+      `Deleted option #${option.option_id} from quiz`,
+      req,
+      'quiz',
+      quiz.quiz_id,
+      ctx.competition?.season_id
+    );
 
     return res.status(200).json({
       success: true,

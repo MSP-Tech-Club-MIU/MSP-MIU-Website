@@ -1,8 +1,10 @@
+const { Op } = require('sequelize');
 const { Application } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
 const { checkBlacklist } = require('../utils/blacklistCheck');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 function buildFieldCounts(rows, field) {
@@ -59,21 +61,48 @@ const createApplication = async (req, res) => {
             });
         }
 
-        // Note: Application.year is the student's academic year (INT), not the MSP season
-        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
-
-        // One application per student per season — prior seasons do not block re-enrollment
-        const existing = await Application.findOne({
-            where: { university_id, season_id }
-        });
-
-        if (existing) {
-            return res.status(409).json({
+        // Validate university_id format (e.g., 2024/12345 or numbers)
+        const idRegex = /^[0-9/]+$/;
+        if (!idRegex.test(university_id)) {
+            return res.status(400).json({
                 success: false,
-                error: 'You already have an application for the current season'
+                error: 'Invalid university ID format'
             });
         }
 
+        // Validate email format
+        const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid email format'
+            });
+        }
+
+        // Validate phone number format (Egyptian numbers)
+        const phoneRegex = /^01[0125][0-9]{8}$/;
+        if (!phoneRegex.test(phone_number)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid phone number format. Must be a valid Egyptian number (e.g., 01012345678)'
+            });
+        }
+
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
+        // Check if applicant already applied with same university_id in the same season
+        const existingApplication = await Application.findOne({
+            where: { university_id, season_id }
+        });
+
+        if (existingApplication) {
+            return res.status(400).json({
+                success: false,
+                error: 'An application with this university ID already exists for this season'
+            });
+        }
+
+        // Create application
         const application = await Application.create({
             university_id,
             full_name,
@@ -82,167 +111,124 @@ const createApplication = async (req, res) => {
             year,
             phone_number,
             first_choice,
-            second_choice: second_choice || null, // Allow null for second_choice
+            second_choice: second_choice || null,
             skills,
             motivation,
             interview,
+            status: 'pending',
             season_id
         });
 
         res.status(201).json({
             success: true,
             message: 'Application submitted successfully',
-            data: {
-                application_id: application.application_id,
-                university_id: application.university_id,
-                status: application.status
-            }
+            data: application
         });
 
     } catch (error) {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        logger.error('Error submitting application:', error);
-        logger.error('Error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name,
-            code: error.code,
-            errno: error.errno,
-            sqlState: error.sqlState
-        });
+        logger.error('Error creating application:', error);
         res.status(500).json({
             success: false,
-            error: 'Internal server error',
-            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: 'Internal server error'
         });
     }
 };
 
-
+// Get all applications (Board only)
 const getAllApplications = async (req, res) => {
     try {
-        // Extract query parameters for filtering
-        // Note: query.year filters Application.year (student year INT), not MSP season
         const { 
-            first_choice, 
-            second_choice, 
             status, 
             faculty, 
-            year,
-            search 
+            year, 
+            first_choice, 
+            second_choice,
+            interview,
+            search,
+            view
         } = req.query;
 
-        const seasonFilter = await resolveSeasonFilter(req.query);
-
-        // Build where clause for filtering
-        const whereClause = { ...seasonFilter.where };
-        
-        if (first_choice) {
-            whereClause.first_choice = parseInt(first_choice);
-        }
-        
-        if (second_choice) {
-            whereClause.second_choice = parseInt(second_choice);
-        }
-        
-        if (status) {
-            whereClause.status = status;
-        }
-        
-        if (faculty) {
-            whereClause.faculty = faculty;
-        }
-        
-        if (year) {
-            whereClause.year = parseInt(year);
-        }
-
-        // Build the query options
         const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const whereClause = { ...seasonFilter.where };
+
+        if (status) whereClause.status = status;
+        if (faculty) whereClause.faculty = faculty;
+        if (year) whereClause.year = year;
+        if (first_choice) whereClause.first_choice = first_choice;
+        if (second_choice) whereClause.second_choice = second_choice;
+        if (interview) whereClause.interview = interview;
+
+        // Search functionality
+        if (search) {
+            whereClause[Op.or] = [
+                { full_name: { [Op.like]: `%${search}%` } },
+                { email: { [Op.like]: `%${search}%` } },
+                { university_id: { [Op.like]: `%${search}%` } }
+            ];
+        }
+
         const include = [];
         if (seasonFilter.includeSeason) {
             include.push(seasonInclude());
         }
-        const queryOptions = {
+
+        if (view === 'summary') {
+            const allRows = await Application.findAll({
+                where: whereClause,
+                include,
+                attributes: ['status', 'faculty', 'year', 'first_choice', 'second_choice', 'interview']
+            });
+
+            return res.json({
+                success: true,
+                total: allRows.length,
+                breakdown: {
+                    status: buildFieldCounts(allRows, 'status'),
+                    faculty: buildFieldCounts(allRows, 'faculty'),
+                    year: buildFieldCounts(allRows, 'year'),
+                    first_choice: buildFieldCounts(allRows, 'first_choice'),
+                    second_choice: buildFieldCounts(allRows, 'second_choice'),
+                    interview: buildFieldCounts(allRows, 'interview')
+                }
+            });
+        }
+
+        const { count, rows: applications } = await Application.findAndCountAll({
             where: whereClause,
             include,
-            order: [['application_id', 'DESC']],
+            order: [['created_at', 'DESC']],
             limit,
             offset,
             distinct: true
-        };
+        });
 
-        // Add text search if provided
-        if (search) {
-            const { Op } = require('sequelize');
-            
-            // Sanitize search input: trim, limit length, and escape special LIKE characters
-            let sanitizedSearch = String(search).trim();
-            
-            // Limit search length to prevent DoS attacks
-            if (sanitizedSearch.length > 100) {
-                sanitizedSearch = sanitizedSearch.substring(0, 100);
-            }
-            
-            // Escape special LIKE pattern characters (% and _) to prevent pattern injection
-            // Replace % with \% and _ with \_ to treat them as literal characters
-            // This prevents users from using SQL LIKE wildcards for injection attempts
-            sanitizedSearch = sanitizedSearch.replace(/[%_\\]/g, (match) => {
-                if (match === '\\') return '\\\\';
-                return `\\${match}`;
-            });
-            
-            // Sequelize automatically parameterizes queries, but we've sanitized the input
-            // to prevent pattern-based attacks and ensure safe LIKE pattern matching
-            queryOptions.where = {
-                ...whereClause,
-                [Op.or]: [
-                    { university_id: { [Op.like]: `%${sanitizedSearch}%` } },
-                    { full_name: { [Op.like]: `%${sanitizedSearch}%` } },
-                    { email: { [Op.like]: `%${sanitizedSearch}%` } },
-                    { phone_number: { [Op.like]: `%${sanitizedSearch}%` } },
-                    { skills: { [Op.like]: `%${sanitizedSearch}%` } },
-                    { motivation: { [Op.like]: `%${sanitizedSearch}%` } }
-                    // Note: Comment field excluded from search
-                ]
-            };
-        }
+        // Get counts for dashboard
+        const allFilteredRows = await Application.findAll({
+            where: whereClause,
+            attributes: ['status', 'faculty', 'year', 'first_choice', 'second_choice', 'interview']
+        });
 
-        const whereForStats = queryOptions.where;
-        const [{ rows: applications, count: total }, allForStats] = await Promise.all([
-            Application.findAndCountAll(queryOptions),
-            Application.findAll({
-                where: whereForStats,
-                attributes: ['first_choice', 'second_choice', 'faculty', 'status']
-            })
-        ]);
-
-        const stats = {
-            total,
-            by_first_choice: buildFieldCounts(allForStats, 'first_choice'),
-            by_second_choice: buildFieldCounts(allForStats, 'second_choice'),
-            by_faculty: buildFieldCounts(allForStats, 'faculty'),
-            by_status: buildFieldCounts(allForStats, 'status')
-        };
+        const statusCounts = {};
+        allFilteredRows.forEach(app => {
+            statusCounts[app.status] = (statusCounts[app.status] || 0) + 1;
+        });
 
         res.json({
             success: true,
             data: applications,
-            count: applications.length,
-            pagination: paginationMeta({ page, limit, total }),
-            stats,
-            filters: {
-                first_choice,
-                second_choice,
-                status,
-                faculty,
-                year,
-                search,
-                season_id: req.query.season_id ?? req.query.season
+            pagination: paginationMeta({ page, limit, total: count }),
+            stats: {
+                total: count,
+                pending: statusCounts['pending'] || 0,
+                approved: statusCounts['approved'] || 0,
+                rejected: statusCounts['rejected'] || 0
             }
         });
+
     } catch (error) {
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
@@ -254,9 +240,6 @@ const getAllApplications = async (req, res) => {
         });
     }
 };
-
-
-
 
 // Update application status (approve/reject)
 const updateApplicationStatus = async (req, res) => {
@@ -291,6 +274,15 @@ const updateApplicationStatus = async (req, res) => {
                     : application.first_choice;
             enrollment = await enrollFromApplication(application, { departmentId });
         }
+
+        await logAdminAction(
+            'application_status_updated',
+            `Updated application #${id} status for "${application.full_name}" to "${status}"`,
+            req,
+            'application',
+            id,
+            application.season_id
+        );
 
         res.json({
             success: true,
@@ -349,6 +341,15 @@ const updateApplicationComment = async (req, res) => {
 
         await application.update({ comment });
 
+        await logAdminAction(
+            'application_comment_updated',
+            `Updated interview comment for applicant "${application.full_name}"`,
+            req,
+            'application',
+            id,
+            application.season_id
+        );
+
         res.json({
             success: true,
             message: 'Comment updated successfully',
@@ -378,7 +379,20 @@ const deleteApplication = async (req, res) => {
             });
         }
 
+        const appName = application.full_name;
+        const appUniId = application.university_id;
+        const seasonId = application.season_id;
+
         await application.destroy();
+
+        await logAdminAction(
+            'application_deleted',
+            `Deleted application of "${appName}" (${appUniId})`,
+            req,
+            'application',
+            id,
+            seasonId
+        );
 
         res.json({
             success: true,

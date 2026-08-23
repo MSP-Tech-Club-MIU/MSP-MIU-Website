@@ -2,6 +2,7 @@ const { CompetitionAnnouncement, Competition, User } = require('../models');
 const { broadcastCompetitionAnnouncementEmails } = require('../services/competitionAnnouncementBroadcast');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -164,6 +165,15 @@ const createCompetitionAnnouncement = async (req, res) => {
       }
     }
 
+    await logAdminAction(
+      'competition_announcement_created',
+      `Created announcement "${createdAnnouncement.title}" for competition "${competition.title}"`,
+      req,
+      'competition',
+      competition.competition_id,
+      competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       message: 'Competition announcement created successfully' + (createdAnnouncement.send_email ? ' and emails sent to competitors' : ''),
@@ -223,6 +233,14 @@ const updateCompetitionAnnouncement = async (req, res) => {
       }]
     });
 
+    await logAdminAction(
+      'competition_announcement_updated',
+      `Updated announcement "${updatedAnnouncement.title}" in competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
+
     return res.json({
       success: true,
       message: 'Competition announcement updated successfully',
@@ -263,6 +281,14 @@ const deleteCompetitionAnnouncement = async (req, res) => {
     // Soft delete
     announcement.is_active = false;
     await announcement.save();
+
+    await logAdminAction(
+      'competition_announcement_deleted',
+      `Deleted announcement "${announcement.title}" in competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
 
     return res.json({
       success: true,
@@ -325,6 +351,15 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
         error: 'Failed to resend announcement emails'
       });
     }
+
+    await logAdminAction(
+      'competition_announcement_emails_resent',
+      `Resent emails for announcement "${announcement.title}" in competition "${competition.title}"`,
+      req,
+      'competition',
+      competitionId,
+      competition.season_id
+    );
 
     return res.json({
       success: true,

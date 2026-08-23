@@ -1,5 +1,6 @@
 const { SiteContent } = require('../models');
 const { ALLOWED_KEYS, getDefault } = require('../utils/siteContentDefaults');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 async function ensureKey(key) {
@@ -99,6 +100,14 @@ const updateSiteContent = async (req, res) => {
 
     const fresh = row || (await SiteContent.findByPk(key));
 
+    await logAdminAction(
+      'site_content_updated',
+      `Updated site content section "${key}"`,
+      req,
+      'site_content',
+      key
+    );
+
     return res.json({
       success: true,
       data: { key, value: fresh.content_value, updated_at: fresh.updated_at }
@@ -124,7 +133,19 @@ const resetSiteContent = async (req, res) => {
       content_value: value,
       updated_at: new Date()
     });
-    return res.json({ success: true, data: { key, value } });
+
+    await logAdminAction(
+      'site_content_reset',
+      `Reset site content section "${key}" to defaults`,
+      req,
+      'site_content',
+      key
+    );
+
+    return res.json({
+      success: true,
+      data: { key, value }
+    });
   } catch (error) {
     logger.error('Error resetting site content:', error);
     return res.status(500).json({ success: false, error: 'Failed to reset site content' });

@@ -1,6 +1,7 @@
 const { r2, PutObjectCommand } = require('../config/cloud');
 const { SiteContent, User } = require('../models');
 const { getDefault } = require('../utils/siteContentDefaults');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const CONTENT_KEY = 'android_app';
@@ -202,6 +203,13 @@ const publishAndroidAppUpdate = async (req, res) => {
       emailResult = await broadcastAndroidAppUpdateEmails(contentValue);
     }
 
+    await logAdminAction(
+      'android_app_published',
+      `Published Android app update v${versionName} (build ${nextVersionCode})`,
+      req,
+      'android_app'
+    );
+
     return res.json({
       success: true,
       message: notifyUsers
@@ -233,6 +241,14 @@ const notifyAndroidAppUpdate = async (req, res) => {
     }
 
     const emailResult = await broadcastAndroidAppUpdateEmails(release);
+
+    await logAdminAction(
+      'android_app_notified',
+      `Sent Android app update emails for v${release.versionName} to ${emailResult.sent} user(s)`,
+      req,
+      'android_app'
+    );
+
     return res.json({
       success: true,
       message: `Update email sent to ${emailResult.sent} user(s)`,

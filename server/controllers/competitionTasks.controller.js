@@ -3,11 +3,11 @@ const multer = require('multer');
 const { Competition, CompetitionTask, Quiz } = require('../models');
 const { uploadToR2 } = require('../config/cloud');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
 const ASSETS_URL_MAX_LEN = 2048;
-
 function num(v, fallback = 0) {
   if (v == null) return fallback;
   if (typeof v === 'bigint') return Number(v);
@@ -219,6 +219,16 @@ async function postAdminCompetitionTask(req, res) {
       position: pos,
       assets_url: normAssetsUrl(assets_url)
     });
+
+    await logAdminAction(
+      'competition_task_created',
+      `Created task "${task.title}" for competition "${loaded.competition.title}"`,
+      req,
+      'competition',
+      loaded.competition.competition_id,
+      loaded.competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       data: {
@@ -277,6 +287,16 @@ async function putAdminCompetitionTask(req, res) {
     }
     await task.update(updates);
     await task.reload();
+
+    await logAdminAction(
+      'competition_task_updated',
+      `Updated task "${task.title}" for competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({
       success: true,
       data: {
@@ -326,6 +346,16 @@ async function postAdminCompetitionTaskAsset(req, res) {
     const url = publicUrlForR2Key(key);
     await task.update({ assets_url: normAssetsUrl(url) });
     await task.reload();
+
+    await logAdminAction(
+      'competition_task_asset_uploaded',
+      `Uploaded asset for task "${task.title}" in competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({
       success: true,
       url: task.assets_url,
@@ -363,7 +393,18 @@ async function deleteAdminCompetitionTask(req, res) {
     if (!comp || comp.type !== 'task_quiz') {
       return res.status(400).json({ success: false, error: 'Invalid competition for task' });
     }
+    const taskTitle = task.title;
     await task.destroy();
+
+    await logAdminAction(
+      'competition_task_deleted',
+      `Deleted task "${taskTitle}" from competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({ success: true, message: 'Task deleted' });
   } catch (err) {
     logger.error('deleteAdminCompetitionTask:', err);

@@ -1,4 +1,5 @@
 const logger = require('../utils/logger');
+const { logAdminAction } = require('../utils/adminNotification');
 const {
   getRecentLogs,
   clearLogBuffer,
@@ -52,7 +53,7 @@ const getLogsMeta = (req, res) => {
  * PATCH /api/admin/logs/level
  * Body: { level: 'debug'|'info'|... }
  */
-const patchLogLevel = (req, res) => {
+const patchLogLevel = async (req, res) => {
   try {
     const { level } = req.body || {};
     const result = setLogLevel(level);
@@ -67,6 +68,13 @@ const patchLogLevel = (req, res) => {
         changed_by: req.user?.user_id
       },
       req
+    );
+
+    await logAdminAction(
+      'log_level_changed',
+      `Changed server log level to "${result.level}"`,
+      req,
+      'admin_logs'
     );
 
     res.json({
@@ -84,7 +92,7 @@ const patchLogLevel = (req, res) => {
  * DELETE /api/admin/logs
  * Clears the in-memory buffer.
  */
-const clearLogs = (req, res) => {
+const clearLogs = async (req, res) => {
   try {
     clearLogBuffer();
     logAuditEvent(
@@ -92,6 +100,14 @@ const clearLogs = (req, res) => {
       { cleared_by: req.user?.user_id },
       req
     );
+
+    await logAdminAction(
+      'log_buffer_cleared',
+      'Cleared in-memory server log buffer',
+      req,
+      'admin_logs'
+    );
+
     res.json({
       success: true,
       message: 'Log buffer cleared',

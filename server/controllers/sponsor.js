@@ -1,6 +1,7 @@
 const { Sponsor } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const getAllSponsors = async (req, res) => {
@@ -78,6 +79,15 @@ const createSponsor = async (req, res) => {
       season_id
     });
 
+    await logAdminAction(
+      'sponsor_created',
+      `Created sponsor "${sponsor.name}"`,
+      req,
+      'sponsor',
+      sponsor.sponsor_id,
+      sponsor.season_id
+    );
+
     res.status(201).json({ success: true, data: sponsor });
   } catch (error) {
     if (error.status) {
@@ -133,6 +143,16 @@ const updateSponsor = async (req, res) => {
 
     await sponsor.update(updates);
     await sponsor.reload();
+
+    await logAdminAction(
+      'sponsor_updated',
+      `Updated sponsor "${sponsor.name}"`,
+      req,
+      'sponsor',
+      sponsor.sponsor_id,
+      sponsor.season_id
+    );
+
     res.json({ success: true, data: sponsor });
   } catch (error) {
     if (error.status) {
@@ -150,7 +170,19 @@ const deleteSponsor = async (req, res) => {
     if (!sponsor) {
       return res.status(404).json({ success: false, error: 'Sponsor not found' });
     }
+    const sponsorName = sponsor.name;
+    const seasonId = sponsor.season_id;
     await sponsor.destroy();
+
+    await logAdminAction(
+      'sponsor_deleted',
+      `Deleted sponsor "${sponsorName}"`,
+      req,
+      'sponsor',
+      id,
+      seasonId
+    );
+
     res.json({ success: true, message: 'Sponsor deleted' });
   } catch (error) {
     logger.error('Error deleting sponsor:', error);
