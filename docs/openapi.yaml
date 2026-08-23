@@ -1224,6 +1224,14 @@ paths:
       responses:
         '200':
           description: Updated
+  /applications/check-eligibility:
+    post:
+      summary: 'Create/submit /applications/check-eligibility'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Applications
   /attendance:
     get:
       tags:

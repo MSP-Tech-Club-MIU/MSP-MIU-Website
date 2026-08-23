@@ -111,6 +111,9 @@ const BecomeMember = memo(() => {
   })
 
   const [errors, setErrors] = useState({})
+  // null | { eligible, reason, message, warning }
+  const [eligibilityStatus, setEligibilityStatus] = useState(null)
+  const [checkingEligibility, setCheckingEligibility] = useState(false)
 
   // Memoize computed values
   const canGoBack = useMemo(() => step > 0, [step]);
@@ -118,6 +121,10 @@ const BecomeMember = memo(() => {
 
   const updateField = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    // Clear eligibility status whenever step-0 fields are edited so user re-checks
+    if (key === 'name' || key === 'email' || key === 'studentId') {
+      setEligibilityStatus(null)
+    }
   }, []);
 
   // When faculty changes, if current departments are not allowed for the selected faculty, clear them
@@ -168,14 +175,47 @@ const BecomeMember = memo(() => {
     return Object.keys(e).length === 0
   }
 
-  function onNext() {
+  async function onNext() {
     if (!validateCurrentStep()) return
+
+    // After step 0 — run server-side eligibility check before advancing
+    if (step === 0) {
+      // If we already have a hard-block status, don't advance
+      if (eligibilityStatus && !eligibilityStatus.eligible) return
+
+      // If no status yet (or warning was dismissed and fields are unchanged), run the check
+      if (!eligibilityStatus) {
+        setCheckingEligibility(true)
+        try {
+          const result = await ApiService.checkApplicationEligibility({
+            university_id: form.studentId,
+            full_name: form.name,
+            email: form.email,
+          })
+          setEligibilityStatus(result)
+          // Only advance if eligible (warnings still allow advancing)
+          if (!result.eligible) return
+        } catch {
+          // Network/server error — set a generic warning and allow advancing
+          // so a transient error doesn't permanently block the user
+          setEligibilityStatus({
+            eligible: true,
+            warning: 'check_failed',
+            message: 'Could not verify eligibility right now. Please proceed — we will validate on submission.'
+          })
+        } finally {
+          setCheckingEligibility(false)
+        }
+      }
+    }
+
     setStep(s => Math.min(s + 1, totalSteps - 1))
   }
 
   function onBack() {
     setStep(s => Math.max(s - 1, 0))
   }
+
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -291,8 +331,61 @@ const BecomeMember = memo(() => {
                   {errors.studentId && <small className="error">{errors.studentId}</small>}
                 </label>
               </div>
+
+              {/* Eligibility feedback card */}
+              {eligibilityStatus && !eligibilityStatus.eligible && (
+                <div style={{
+                  marginTop: 20,
+                  padding: '14px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(220, 38, 38, 0.12)',
+                  border: '1px solid rgba(220, 38, 38, 0.45)',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start'
+                }}>
+                  <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>🚫</span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#f87171', fontSize: 14 }}>
+                      {eligibilityStatus.reason === 'blacklisted' && 'Access Restricted'}
+                      {eligibilityStatus.reason === 'already_member' && 'Already a Member'}
+                      {eligibilityStatus.reason === 'pending_application' && 'Application Already Submitted'}
+                      {eligibilityStatus.reason === 'approved_application' && 'Application Approved'}
+                      {eligibilityStatus.reason === 'rejected_application' && 'Application Not Accepted'}
+                      {eligibilityStatus.reason === 'no_season' && 'Applications Closed'}
+                      {eligibilityStatus.reason === 'existing_application' && 'Application on File'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#fca5a5', fontSize: 13 }}>{eligibilityStatus.message}</p>
+                  </div>
+                </div>
+              )}
+
+              {eligibilityStatus && eligibilityStatus.eligible && eligibilityStatus.warning && (
+                <div style={{
+                  marginTop: 20,
+                  padding: '14px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(251, 191, 36, 0.10)',
+                  border: '1px solid rgba(251, 191, 36, 0.40)',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start'
+                }}>
+                  <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>
+                    {eligibilityStatus.warning === 'check_failed' ? '⚠️' : '👋'}
+                  </span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#fbbf24', fontSize: 14 }}>
+                      {eligibilityStatus.warning === 'returning_member' && 'Welcome Back!'}
+                      {eligibilityStatus.warning === 'check_failed' && 'Verification Unavailable'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#fde68a', fontSize: 13 }}>{eligibilityStatus.message}</p>
+                  </div>
+                </div>
+              )}
             </section>
           )}
+
 
           {step === 1 && (
             <section className="step animate-in">
@@ -451,7 +544,29 @@ const BecomeMember = memo(() => {
           <div className="actions">
             <button type="button" className="btn ghost" onClick={onBack} disabled={!canGoBack}>Previous</button>
             {canGoNext && step < 4 && (
-              <button type="button" className="btn" onClick={onNext}>Next →</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={onNext}
+                disabled={checkingEligibility || (step === 0 && eligibilityStatus && !eligibilityStatus.eligible)}
+              >
+                {checkingEligibility ? (
+                  <>
+                    <span style={{ display: 'inline-block', marginRight: '8px' }}>
+                      <div style={{
+                        width: '14px',
+                        height: '14px',
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        display: 'inline-block'
+                      }} />
+                    </span>
+                    Checking…
+                  </>
+                ) : 'Next →'}
+              </button>
             )}
             {step === 4 && (
               <button type="button" className="btn" onClick={() => { if (validateCurrentStep()) setStep(5) }}>Review</button>

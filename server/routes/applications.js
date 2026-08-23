@@ -1,10 +1,11 @@
 const express = require("express");
-const { createApplication, getAllApplications, updateApplicationStatus, updateApplicationComment, deleteApplication } = require("../controllers/applications");
+const { createApplication, getAllApplications, updateApplicationStatus, updateApplicationComment, deleteApplication, checkEligibility } = require("../controllers/applications");
 const { authenticateToken, verifyRoleOrDepartment, verifyRole } = require("../middlewares/auth");
 
 const router = express.Router();
 
 // Public routes
+router.post("/check-eligibility", checkEligibility);
 router.post("/", createApplication);
 
 // Protected routes (require authentication)

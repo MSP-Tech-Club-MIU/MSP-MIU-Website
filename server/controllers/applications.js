@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Application } = require('../models');
+const { Application, Member } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
@@ -407,10 +407,139 @@ const deleteApplication = async (req, res) => {
     }
 };
 
+// Check eligibility before a user completes the full form (called after step 0)
+const checkEligibility = async (req, res) => {
+    try {
+        const { university_id, full_name, email } = req.body;
+
+        if (!university_id && !email && !full_name) {
+            return res.status(400).json({
+                success: false,
+                error: 'At least one of university_id, email, or full_name must be provided'
+            });
+        }
+
+        // 1. Resolve the current/default season
+        let season_id;
+        try {
+            season_id = await resolveSeasonIdForWrite({}, {});
+        } catch (seasonErr) {
+            // No default season → applications are closed
+            return res.json({
+                success: true,
+                eligible: false,
+                reason: 'no_season',
+                message: 'Applications are not open right now. Please check back later.'
+            });
+        }
+
+        // 2. Blacklist check (name + university_id; email used as supplementary identifier)
+        const blacklistStatus = await checkBlacklist({
+            name: full_name,
+            university_id,
+            email
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            return res.json({
+                success: true,
+                eligible: false,
+                reason: 'blacklisted',
+                message: `You are restricted from participating in club activities. Reason: ${blacklistStatus.reason || 'Contact the club administration for more details.'}`
+            });
+        }
+
+        // 3. Check for existing application this season (any status)
+        if (university_id) {
+            const existingApp = await Application.findOne({
+                where: { university_id, season_id },
+                attributes: ['application_id', 'status', 'full_name']
+            });
+
+            if (existingApp) {
+                const statusMessages = {
+                    pending: {
+                        reason: 'pending_application',
+                        message: 'You have already submitted an application for this season. We will contact you soon.'
+                    },
+                    approved: {
+                        reason: 'approved_application',
+                        message: 'Your application for this season has already been approved. Welcome to the club!'
+                    },
+                    rejected: {
+                        reason: 'rejected_application',
+                        message: 'Your application was not accepted this season. Please contact us if you have questions.'
+                    }
+                };
+
+                const statusInfo = statusMessages[existingApp.status] || {
+                    reason: 'existing_application',
+                    message: 'You already have an application on file for this season.'
+                };
+
+                return res.json({
+                    success: true,
+                    eligible: false,
+                    ...statusInfo
+                });
+            }
+        }
+
+        // 4. Check membership in the current season
+        if (university_id) {
+            const currentSeasonMember = await Member.findOne({
+                where: { university_id, season_id },
+                attributes: ['member_id', 'full_name', 'season_id']
+            });
+
+            if (currentSeasonMember) {
+                return res.json({
+                    success: true,
+                    eligible: false,
+                    reason: 'already_member',
+                    message: 'You are already a member of the club this season!'
+                });
+            }
+
+            // 5. Check for membership in a previous season (soft warning — still eligible)
+            const previousSeasonMember = await Member.findOne({
+                where: { university_id },
+                attributes: ['member_id', 'full_name', 'season_id']
+            });
+
+            if (previousSeasonMember) {
+                return res.json({
+                    success: true,
+                    eligible: true,
+                    warning: 'returning_member',
+                    message: 'Welcome back! You were a member in a previous season. You can still apply for this season.'
+                });
+            }
+        }
+
+        // 6. All clear
+        return res.json({
+            success: true,
+            eligible: true
+        });
+
+    } catch (error) {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error checking application eligibility:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+};
+
 module.exports = {
     createApplication,
     getAllApplications,
     updateApplicationStatus,
     updateApplicationComment,
-    deleteApplication
+    deleteApplication,
+    checkEligibility
 };
