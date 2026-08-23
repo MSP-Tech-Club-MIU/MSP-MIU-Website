@@ -3,6 +3,7 @@ const { uploadToR2 } = require('../config/cloud');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -669,6 +670,14 @@ const gradeSubmission = async (req, res) => {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
             }
+        );
+
+        await logAdminAction(
+            'submission_graded',
+            `Graded submission #${id} in competition #${subRows[0].competition_id} with score ${numericScore}`,
+            req,
+            'competition',
+            subRows[0].competition_id
         );
 
         res.status(200).json({

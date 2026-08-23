@@ -1,8 +1,7 @@
-const { QueryTypes } = require('sequelize');
+const { QueryTypes, Op } = require('sequelize');
 const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, sequelize } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
-const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const {
     resolveSeasonFilter,
@@ -10,34 +9,8 @@ const {
     resolveSeasonIdForWrite,
     getDefaultSeasonId
 } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
-
-/**
- * Helper: Log an admin notification
- */
-const logAdminAction = async (actionType, message, req, entityType = null, entityId = null) => {
-    try {
-        const boardMember = req.boardMember;
-        let season_id = null;
-        try {
-            season_id = await resolveSeasonIdForWrite(req.body || {}, req.query || {});
-        } catch (_) {
-            season_id = await getDefaultSeasonId();
-        }
-        await AdminNotification.create({
-            action_type: actionType,
-            message,
-            performed_by: req.user.user_id,
-            performer_name: boardMember?.full_name || 'Admin',
-            performer_position: boardMember?.position || 'Admin',
-            entity_type: entityType,
-            entity_id: entityId,
-            season_id
-        });
-    } catch (err) {
-        logger.error('Failed to log admin notification:', err);
-    }
-};
 
 function parseCompetitionConfig(configValue) {
     if (!configValue) return null;
@@ -792,6 +765,15 @@ const updateRegistrationStatus = async (req, res) => {
  */
 const getNotifications = async (req, res) => {
     try {
+        const boardMember = req.boardMember;
+        const position = String(boardMember?.position || '').trim();
+        if (position !== 'President' && position !== 'Vice President') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Notifications are restricted to President and Vice President roles.'
+            });
+        }
+
         const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50 });
         const seasonFilter = await resolveSeasonFilter(req.query);
         const include = [];
@@ -1442,5 +1424,6 @@ module.exports = {
     updateAdminTeamMember,
     removeAdminTeamMember,
     cancelAdminTeamInvitation,
-    updateCompetitionJudges
+    updateCompetitionJudges,
+    logAdminAction
 };

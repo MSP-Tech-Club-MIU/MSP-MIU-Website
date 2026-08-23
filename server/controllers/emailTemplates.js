@@ -10,6 +10,7 @@ const { sendActivationEmailsToMembers } = require('../utils/activationEmail');
 const { sendBoardActivationEmailsToMembers } = require('../utils/boardActivationEmail');
 const { sendAcceptanceEmailsToMembers } = require('../utils/acceptanceEmail');
 const { resolveSeasonFilter } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const listEmailTemplates = async (req, res) => {
@@ -78,6 +79,15 @@ const updateEmailTemplate = async (req, res) => {
     });
 
     const template = await getTemplate(key);
+
+    await logAdminAction(
+      'email_template_updated',
+      `Updated email template "${template?.name || key}"`,
+      req,
+      'email_template',
+      key
+    );
+
     res.json({ success: true, data: template || row });
   } catch (error) {
     logger.error('updateEmailTemplate:', error);
@@ -106,6 +116,15 @@ const resetEmailTemplate = async (req, res) => {
     });
 
     const template = await getTemplate(key);
+
+    await logAdminAction(
+      'email_template_reset',
+      `Reset email template "${fallback.name}" to defaults`,
+      req,
+      'email_template',
+      key
+    );
+
     res.json({ success: true, data: template });
   } catch (error) {
     logger.error('resetEmailTemplate:', error);
@@ -268,6 +287,14 @@ const sendTestEmail = async (req, res) => {
       html: rendered.html
     });
 
+    await logAdminAction(
+      'email_template_tested',
+      `Sent test email for template "${key}" to ${to}`,
+      req,
+      'email_template',
+      key
+    );
+
     res.json({ success: true, message: `Test email sent to ${to}` });
   } catch (error) {
     logger.error('sendTestEmail:', error);
@@ -310,6 +337,15 @@ const updateDepartmentWhatsApp = async (req, res) => {
         ? String(whatsapp_group_url).trim()
         : null;
     await department.save();
+
+    await logAdminAction(
+      'department_whatsapp_updated',
+      `Updated WhatsApp group link for department "${department.name}"`,
+      req,
+      'department',
+      id
+    );
+
     res.json({ success: true, data: department });
   } catch (error) {
     logger.error('updateDepartmentWhatsApp:', error);
@@ -323,6 +359,14 @@ const sendMemberActivation = async (req, res) => {
     const summary = await sendActivationEmailsToMembers({
       where: { ...seasonFilter.where }
     });
+
+    await logAdminAction(
+      'activation_emails_sent',
+      `Sent ${summary.sent} member activation email(s)`,
+      req,
+      'member'
+    );
+
     res.json({ success: true, data: summary });
   } catch (error) {
     logger.error('sendMemberActivation:', error);
@@ -336,6 +380,14 @@ const sendBoardActivation = async (req, res) => {
     const summary = await sendBoardActivationEmailsToMembers({
       where: { ...seasonFilter.where }
     });
+
+    await logAdminAction(
+      'board_activation_emails_sent',
+      `Sent ${summary.sent} board activation email(s)`,
+      req,
+      'board'
+    );
+
     res.json({ success: true, data: summary });
   } catch (error) {
     logger.error('sendBoardActivation:', error);
@@ -349,6 +401,14 @@ const sendMemberAcceptance = async (req, res) => {
     const summary = await sendAcceptanceEmailsToMembers({
       where: { ...seasonFilter.where }
     });
+
+    await logAdminAction(
+      'acceptance_emails_sent',
+      `Sent ${summary.sent} member acceptance email(s)`,
+      req,
+      'member'
+    );
+
     res.json({ success: true, data: summary });
   } catch (error) {
     logger.error('sendMemberAcceptance:', error);

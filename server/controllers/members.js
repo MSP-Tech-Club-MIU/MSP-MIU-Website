@@ -11,6 +11,7 @@ const {
   findExistingUserForEnrollment,
   syncUserFromMember
 } = require('../utils/memberEnrollment');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 function hasActiveAccount(user) {
@@ -72,26 +73,29 @@ const getAllMembers = async (req, res) => {
         required: false
       }
     ];
-    if (seasonFilter.includeSeason) {
-      include.push(seasonInclude());
+
+    if (seasonFilter.seasonIncludeRequired) {
+      include.push(seasonInclude(seasonFilter.seasonId));
     }
 
-    const { rows: members, count: total } = await Member.findAndCountAll({
+    const { rows, count } = await Member.findAndCountAll({
       where,
       include,
-      order: [['joined_at', 'DESC']],
+      order: [
+        ['department_id', 'ASC'],
+        ['full_name', 'ASC']
+      ],
       limit,
       offset,
       distinct: true
     });
 
-    const data = await attachAccountStatus(members);
+    const data = await attachAccountStatus(rows);
 
     res.json({
       success: true,
       data,
-      count: data.length,
-      pagination: paginationMeta({ page, limit, total })
+      pagination: paginationMeta({ page, limit, total: count })
     });
   } catch (error) {
     if (error.status) {
@@ -113,8 +117,7 @@ const getMemberById = async (req, res) => {
         {
           model: Department,
           as: 'department',
-          attributes: ['department_id', 'name'],
-          required: false
+          attributes: ['department_id', 'name']
         }
       ]
     });
@@ -215,6 +218,15 @@ const createMember = async (req, res) => {
       await syncUserFromMember(member);
     }
 
+    await logAdminAction(
+      'member_created',
+      `Created member "${member.full_name}" (${member.university_id})`,
+      req,
+      'member',
+      member.member_id,
+      member.season_id
+    );
+
     res.status(201).json({ success: true, data: member });
   } catch (error) {
     if (error.status) {
@@ -268,6 +280,16 @@ const updateMember = async (req, res) => {
     await member.update(updates);
     await member.reload();
     await syncUserFromMember(member);
+
+    await logAdminAction(
+      'member_updated',
+      `Updated member "${member.full_name}" (${member.university_id})`,
+      req,
+      'member',
+      member.member_id,
+      member.season_id
+    );
+
     res.json({ success: true, data: member });
   } catch (error) {
     if (error.status) {
@@ -290,7 +312,19 @@ const deleteMember = async (req, res) => {
       });
     }
 
+    const memberName = member.full_name;
+    const memberUniId = member.university_id;
+    const seasonId = member.season_id;
     await member.destroy();
+
+    await logAdminAction(
+      'member_deleted',
+      `Deleted member "${memberName}" (${memberUniId})`,
+      req,
+      'member',
+      id,
+      seasonId
+    );
 
     res.json({
       success: true,
@@ -481,6 +515,13 @@ const sendActivationEmails = async (req, res) => {
       where: { ...seasonFilter.where }
     });
 
+    await logAdminAction(
+      'activation_emails_sent',
+      `Sent ${summary.sent} member activation email(s) (Skipped: ${summary.skipped}, Failed: ${summary.failed})`,
+      req,
+      'member'
+    );
+
     res.json({
       success: true,
       message: `Sent ${summary.sent} activation email(s). Skipped ${summary.skipped}. Failed ${summary.failed}.`,
@@ -527,6 +568,15 @@ const sendActivationEmail = async (req, res) => {
         data: result
       });
     }
+
+    await logAdminAction(
+      'activation_email_sent',
+      `Sent account activation email to "${member.full_name}" (${result.email})`,
+      req,
+      'member',
+      member.member_id,
+      member.season_id
+    );
 
     res.json({
       success: true,

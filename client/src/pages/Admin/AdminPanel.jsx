@@ -243,12 +243,21 @@ const AdminPanel = () => {
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
     ], []);
 
-    const navItems =
-        accessLevel === 'registrations'
-            ? registrationsOnlyNav
-            : accessLevel === 'programs'
-              ? programsOnlyNav
-              : fullNavItems;
+    const adminPosition = stats?.adminInfo?.position || adminProfile?.position;
+    const isPresidentOrVP = adminPosition === 'President' || adminPosition === 'Vice President';
+
+    const navItems = useMemo(() => {
+        let baseItems =
+            accessLevel === 'registrations'
+                ? registrationsOnlyNav
+                : accessLevel === 'programs'
+                  ? programsOnlyNav
+                  : fullNavItems;
+        if (!isPresidentOrVP) {
+            baseItems = baseItems.filter((item) => item.key !== 'notifications');
+        }
+        return baseItems;
+    }, [accessLevel, registrationsOnlyNav, programsOnlyNav, fullNavItems, isPresidentOrVP]);
 
     const bottomItems = useMemo(() => [
         { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
@@ -286,7 +295,6 @@ const AdminPanel = () => {
                 setLoading(false);
                 fetchDashboard();
                 fetchCompetitions();
-                fetchNotifications();
                 return;
             }
 
@@ -336,6 +344,13 @@ const AdminPanel = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate]);
 
+    // Redirect away from notifications tab if user is not President or Vice President
+    useEffect(() => {
+        if (hasAccess && accessLevel === 'full' && stats?.adminInfo && !isPresidentOrVP && activeTab === 'notifications') {
+            navigate('/admin/dashboard', { replace: true });
+        }
+    }, [hasAccess, accessLevel, stats, isPresidentOrVP, activeTab, navigate]);
+
     // Auto dismiss alerts
     useEffect(() => {
         if (!alert) return;
@@ -382,6 +397,7 @@ const AdminPanel = () => {
     }, [competitionsPage, seasonFilters]);
 
     const fetchNotifications = useCallback(async (opts = {}) => {
+        if (!isPresidentOrVP) return;
         const { forDropdown = false } = opts;
         try {
             setNotificationsLoading(true);
@@ -404,7 +420,7 @@ const AdminPanel = () => {
             setNotificationsLoading(false);
             notificationsFetchedRef.current = true;
         }
-    }, [notificationsPage, seasonFilters]);
+    }, [isPresidentOrVP, notificationsPage, seasonFilters]);
 
     const fetchAnnouncementsAdmin = useCallback(async (showLoading = true) => {
         try {
@@ -713,7 +729,7 @@ const AdminPanel = () => {
 
     const topRight = (
         <>
-            {accessLevel === 'full' && (
+            {accessLevel === 'full' && isPresidentOrVP && (
                 <button
                     className="AdminPanel__topBtn"
                     aria-label="Notifications"
@@ -745,7 +761,7 @@ const AdminPanel = () => {
                 )}
             </div>
 
-            {showNotificationsDropdown && accessLevel === 'full' && (
+            {showNotificationsDropdown && accessLevel === 'full' && isPresidentOrVP && (
                 <div className="AdminPanel__notificationsDropdown">
                     <div className="AdminPanel__notificationsHeader">
                         <span>Recent activity</span>
@@ -1127,7 +1143,7 @@ const AdminPanel = () => {
                     )}
 
                     {/* === NOTIFICATIONS (FULL LIST) === */}
-                    {accessLevel === 'full' && activeTab === 'notifications' && (
+                    {accessLevel === 'full' && isPresidentOrVP && activeTab === 'notifications' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">

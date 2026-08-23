@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
-const { adminAuth, adminOrProgramsAuth } = require('../middlewares/adminAuth');
+const { adminAuth, adminOrProgramsAuth, presidentOrVicePresidentAuth } = require('../middlewares/adminAuth');
 const {
     getDashboardStats,
     getCompetitions,
@@ -75,6 +75,7 @@ router.use(authenticateToken);
 
 const fullAdmin = adminAuth;
 const programsAdmin = adminOrProgramsAuth;
+const presidentOrVP = presidentOrVicePresidentAuth;
 
 // Dashboard + org tools — full admin only
 router.get('/dashboard', fullAdmin, getDashboardStats);
@@ -139,8 +140,8 @@ router.put('/attendance/:id', programsAdmin, updateAttendanceStatus);
 router.get('/registrations', fullAdmin, getRegistrations);
 router.put('/registrations/:id', fullAdmin, updateRegistrationStatus);
 
-// Communications — full admin only
-router.get('/notifications', fullAdmin, getNotifications);
+// Communications — notifications restricted to President and Vice President
+router.get('/notifications', presidentOrVP, getNotifications);
 router.get('/suggestions', fullAdmin, getSuggestions);
 router.delete('/suggestions/:id', fullAdmin, deleteSuggestion);
 router.get('/feedback', fullAdmin, getEventFeedbackAll);

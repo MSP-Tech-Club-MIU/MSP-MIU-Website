@@ -127,4 +127,49 @@ const adminOrProgramsAuth = async (req, res, next) => {
     }
 };
 
-module.exports = { adminAuth, adminOrProgramsAuth, loadCurrentSeasonBoardMember };
+/**
+ * Restricted to President and Vice President only.
+ * Used for sensitive oversight features like viewing all admin notifications.
+ * Must run after authenticateToken.
+ */
+const presidentOrVicePresidentAuth = async (req, res, next) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication Required'
+            });
+        }
+
+        const { boardMember, defaultSeasonId } = await loadCurrentSeasonBoardMember(req.user.user_id);
+
+        if (!boardMember) {
+            return denyNoBoard(res, defaultSeasonId);
+        }
+
+        const position = String(boardMember.position || '').trim();
+        if (position === 'President' || position === 'Vice President') {
+            req.boardMember = boardMember;
+            return next();
+        }
+
+        return res.status(403).json({
+            success: false,
+            error: 'Access denied. Notifications are restricted to President and Vice President roles.'
+        });
+    } catch (error) {
+        logger.error('President/VP auth middleware error:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Authorization error'
+        });
+    }
+};
+
+module.exports = {
+    adminAuth,
+    adminOrProgramsAuth,
+    presidentOrVicePresidentAuth,
+    loadCurrentSeasonBoardMember
+};
+

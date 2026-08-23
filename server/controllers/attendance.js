@@ -1,6 +1,7 @@
 const { Attendance, Event, sequelize } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { checkBlacklist } = require('../utils/blacklistCheck');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -318,6 +319,14 @@ const updateAttendanceRequest = async (req, res) => {
             await attendanceRequest.save();
         }
 
+        await logAdminAction(
+            'event_attendance_updated',
+            `Marked attendance for "${attendanceRequest.full_name}" in event #${attendanceRequest.event_id} (${attendanceRequest.attended ? 'Attended' : 'Not Attended'})`,
+            req,
+            'event',
+            attendanceRequest.event_id
+        );
+
         res.json({
             success: true,
             message: 'Attendance request updated successfully',
@@ -350,12 +359,22 @@ const deleteAttendanceRequest = async (req, res) => {
             });
         }
 
+        const attendeeName = attendanceRequest.full_name;
+        const attendeeUniId = attendanceRequest.university_id;
         const eventId = attendanceRequest.event_id;
 
         await attendanceRequest.destroy();
 
         // Update the attendees count in the events table
         await updateEventAttendeesCount(eventId);
+
+        await logAdminAction(
+            'event_attendance_deleted',
+            `Deleted attendance request for "${attendeeName}" (${attendeeUniId}) from event #${eventId}`,
+            req,
+            'event',
+            eventId
+        );
 
         res.json({
             success: true,

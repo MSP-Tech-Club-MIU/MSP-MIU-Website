@@ -2,6 +2,7 @@ const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /**
@@ -70,6 +71,15 @@ const addEvent = async (req, res) => {
             registration_enabled: regEnabled,
             season_id
         });
+
+        await logAdminAction(
+            'event_created',
+            `Created event "${newEvent.name}"`,
+            req,
+            'event',
+            newEvent.event_id,
+            newEvent.season_id
+        );
 
         res.status(201).json({
             success: true,
@@ -212,30 +222,23 @@ const getEventById = async (req, res) => {
  * download content
  * GET /api/events/:id/download
  */
-
 const downloadContent = async (req, res) => {
-try {
-const event = await Event.findByPk(req.params.id);
-if (!event || !event.upload_file){
-    return res.status(404).json({
-        success: false,
-        error: 'File not found'
-    });
-}
-res.download(event.upload_file);
-} catch (error) {
-    res.status(500).json({
-        success: false,
-        error: 'Failed to download file'
-    });
-
-}
-}
-
-
-
-
-
+    try {
+        const event = await Event.findByPk(req.params.id);
+        if (!event || !event.upload_file){
+            return res.status(404).json({
+                success: false,
+                error: 'File not found'
+            });
+        }
+        res.download(event.upload_file);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Failed to download file'
+        });
+    }
+};
 
 /**
  * Update an event
@@ -283,16 +286,13 @@ const updateEvent = async (req, res) => {
             : undefined;
 
         // Handle file URLs from req.body (files are stored on R2 cloud storage)
-        // Files are uploaded to R2 via /api/upload route first, then URLs are sent here
         let newUploadFile = event.upload_file; // Default to existing
         if (upload_file !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty to clear
             newUploadFile = (upload_file === null || upload_file === '') ? null : upload_file;
         }
 
         let newMainImage = event.main_image; // Default to existing
         if (main_image !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty to clear
             newMainImage = (main_image === null || main_image === '') ? null : main_image;
         }
 
@@ -315,6 +315,15 @@ const updateEvent = async (req, res) => {
 
         // Reload event to get updated data
         await event.reload();
+
+        await logAdminAction(
+            'event_updated',
+            `Updated event "${event.name}"`,
+            req,
+            'event',
+            event.event_id,
+            event.season_id
+        );
 
         res.status(200).json({
             success: true,
@@ -374,7 +383,18 @@ const deleteEvent = async (req, res) => {
             });
         }
 
+        const eventName = event.name;
+        const seasonId = event.season_id;
         await event.destroy();
+
+        await logAdminAction(
+            'event_deleted',
+            `Deleted event "${eventName}"`,
+            req,
+            'event',
+            id,
+            seasonId
+        );
 
         res.status(200).json({
             success: true,
@@ -517,6 +537,14 @@ const deleteFeedback = async (req, res) => {
         }
 
         await feedback.destroy();
+
+        await logAdminAction(
+            'event_feedback_deleted',
+            `Deleted feedback #${feedbackId} for event #${eventId}`,
+            req,
+            'event',
+            eventId
+        );
 
         res.status(200).json({
             success: true,

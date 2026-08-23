@@ -6,6 +6,7 @@ const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator'
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
 const { resolveSeasonFilter, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
@@ -481,6 +482,16 @@ const createCompetition = async (req, res) => {
 
         const normalizedCompetition = parseCompetitionConfig(newCompetitions[0]);
         await ensureQuizForCompetition(normalizedCompetition, created_by);
+
+        await logAdminAction(
+            'competition_created',
+            `Created competition "${normalizedCompetition.title}"`,
+            req,
+            'competition',
+            normalizedCompetition.competition_id,
+            normalizedCompetition.season_id
+        );
+
         res.status(201).json({
             success: true,
             message: 'Competition created successfully',
@@ -736,6 +747,16 @@ const updateCompetition = async (req, res) => {
 
         const normalizedCompetition = parseCompetitionConfig(updated[0]);
         await ensureQuizForCompetition(normalizedCompetition, req.user.user_id);
+
+        await logAdminAction(
+            'competition_updated',
+            `Updated competition "${normalizedCompetition.title}"`,
+            req,
+            'competition',
+            normalizedCompetition.competition_id,
+            normalizedCompetition.season_id
+        );
+
         res.status(200).json({
             success: true,
             message: 'Competition updated successfully',
@@ -763,7 +784,7 @@ const deleteCompetition = async (req, res) => {
 
         // Check if competition exists
         const existing = await db.query(
-            `SELECT competition_id, type, evaluation_mode FROM competitions WHERE competition_id = ?`,
+            `SELECT competition_id, title, type, evaluation_mode, season_id FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
@@ -801,6 +822,15 @@ const deleteCompetition = async (req, res) => {
                 replacements: [id],
                 type: db.QueryTypes.DELETE
             }
+        );
+
+        await logAdminAction(
+            'competition_deleted',
+            `Deleted competition "${existing[0].title || id}"`,
+            req,
+            'competition',
+            id,
+            existing[0].season_id
         );
 
         res.status(200).json({

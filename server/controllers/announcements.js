@@ -8,6 +8,7 @@ const {
   runAnnouncementEmailJob,
   createAnnouncementEmailJob
 } = require('../services/announcementEmailJob');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const WEBSITE_TITLE_MAX = 50;
@@ -278,6 +279,15 @@ const addAnnouncement = async (req, res) => {
       }]
     });
 
+    await logAdminAction(
+      'announcement_created',
+      `Created announcement "${createdAnnouncement.title}"`,
+      req,
+      'announcement',
+      createdAnnouncement.announcement_id,
+      createdAnnouncement.season_id
+    );
+
     if (createdAnnouncement.send_email) {
       const emailJob = startAnnouncementEmailBroadcast(createdAnnouncement);
       let message = 'Website announcement posted; sending emails…';
@@ -416,6 +426,15 @@ const updateAnnouncement = async (req, res) => {
       }]
     });
 
+    await logAdminAction(
+      'announcement_updated',
+      `Updated announcement "${updatedAnnouncement.title}"`,
+      req,
+      'announcement',
+      id,
+      updatedAnnouncement.season_id
+    );
+
     return res.json({
       success: true,
       message: 'Announcement updated successfully',
@@ -448,8 +467,19 @@ const deleteAnnouncement = async (req, res) => {
       });
     }
 
+    const annTitle = announcement.title;
+    const seasonId = announcement.season_id;
     announcement.is_active = false;
     await announcement.save();
+
+    await logAdminAction(
+      'announcement_deleted',
+      `Deleted announcement "${annTitle}"`,
+      req,
+      'announcement',
+      id,
+      seasonId
+    );
 
     return res.json({
       success: true,

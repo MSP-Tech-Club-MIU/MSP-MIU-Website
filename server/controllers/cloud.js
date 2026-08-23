@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 const Event = require('../models/Event');
 const Board = require('../models/Board');
 const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 /** Extract R2 object key from a public URL (or return the path if already a key). */
@@ -414,6 +415,14 @@ const deleteCloudObject = async (req, res) => {
       })
     );
 
+    await logAdminAction(
+      'cloud_object_deleted',
+      `Deleted cloud asset "${key}"`,
+      req,
+      'cloud',
+      key
+    );
+
     return res.json({ success: true, message: 'Object deleted', key });
   } catch (error) {
     logger.error('Error deleting cloud object:', error);
@@ -468,6 +477,15 @@ const replaceCloudObject = async (req, res) => {
     );
 
     const url = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, key);
+
+    await logAdminAction(
+      'cloud_object_replaced',
+      `Replaced cloud asset "${key}"`,
+      req,
+      'cloud',
+      key
+    );
+
     return res.json({
       success: true,
       message: 'Object replaced',
