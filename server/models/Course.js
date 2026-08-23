@@ -41,6 +41,11 @@ const Course = sequelize.define('Course', {
     type: DataTypes.DATE,
     allowNull: true
   },
+  max_attendance: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    defaultValue: null
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

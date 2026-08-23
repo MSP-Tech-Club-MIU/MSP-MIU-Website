@@ -39,7 +39,8 @@ const emptyCourseForm = () => ({
   title: '',
   description: '',
   thumbnail_url: '',
-  status: 'draft'
+  status: 'draft',
+  max_attendance: ''
 });
 
 export default function CoursesAdminTab({ onAlert }) {
@@ -118,7 +119,8 @@ export default function CoursesAdminTab({ onAlert }) {
       title: row.title || '',
       description: row.description || '',
       thumbnail_url: row.thumbnail_url || '',
-      status: row.status || 'draft'
+      status: row.status || 'draft',
+      max_attendance: row.max_attendance !== null && row.max_attendance !== undefined ? String(row.max_attendance) : ''
     });
     setModalOpen(true);
   };
@@ -135,11 +137,16 @@ export default function CoursesAdminTab({ onAlert }) {
     }
     setSaving(true);
     try {
+      const parsedMax = form.max_attendance !== '' && form.max_attendance !== null && !isNaN(Number(form.max_attendance))
+        ? Math.max(0, parseInt(form.max_attendance, 10))
+        : null;
+
       const payload = {
         title: form.title.trim(),
         description: form.description || null,
         thumbnail_url: form.thumbnail_url || null,
-        season_id: selectedSeasonId || undefined
+        season_id: selectedSeasonId || undefined,
+        max_attendance: parsedMax
       };
       if (editing) {
         await ApiService.updateCourse(editing.course_id, payload);
@@ -517,6 +524,17 @@ export default function CoursesAdminTab({ onAlert }) {
                         <option key={o.value} value={o.value}>{o.label}</option>
                       ))}
                     </select>
+                  </label>
+                  <label className="AdminPanel__fullWidth">
+                    Max Allowed Missed Attendances (for Certificate)
+                    <input
+                      type="number"
+                      min="0"
+                      value={form.max_attendance}
+                      onChange={(e) => setForm((f) => ({ ...f, max_attendance: e.target.value }))}
+                      placeholder="e.g. 1 (leave blank for 0 / 100% required)"
+                      disabled={busy}
+                    />
                   </label>
                   <label className="AdminPanel__fullWidth">
                     Thumbnail URL
@@ -1036,6 +1054,9 @@ export default function CoursesAdminTab({ onAlert }) {
                             {String(row.description).length > 80 ? '…' : ''}
                           </span>
                         ) : null}
+                        <div style={{ fontSize: '0.78rem', opacity: 0.85, marginTop: 4 }}>
+                          Max allowed missed sessions: <strong>{row.max_attendance != null ? row.max_attendance : '0 (100% required)'}</strong>
+                        </div>
                       </div>
                     </div>
                   </td>

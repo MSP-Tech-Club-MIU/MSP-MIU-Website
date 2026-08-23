@@ -1846,6 +1846,182 @@ paths:
       security:
         -
           bearerAuth: []
+  '/courses/{courseId}/announcements':
+    get:
+      summary: 'Get /courses/{courseId}/announcements'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+    post:
+      summary: 'Create/submit /courses/{courseId}/announcements'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/{announcementId}':
+    get:
+      summary: 'Get /courses/{courseId}/announcements/{announcementId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+    put:
+      summary: 'Update /courses/{courseId}/announcements/{announcementId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /courses/{courseId}/announcements/{announcementId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/{announcementId}/resend-emails':
+    post:
+      summary: 'Create/submit /courses/{courseId}/announcements/{announcementId}/resend-emails'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/message-member':
+    post:
+      summary: 'Create/submit /courses/{courseId}/announcements/message-member'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/recipients-preview':
+    get:
+      summary: 'Get /courses/{courseId}/announcements/recipients-preview'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create/submit /courses/{courseId}/announcements/recipients-preview'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/courses/{id}':
     get:
       summary: 'Get /courses/{id}'
@@ -2011,6 +2187,36 @@ paths:
       security:
         -
           bearerAuth: []
+  '/courses/{id}/enrollments/{enrollmentId}/lessons/{lessonId}/attendance':
+    put:
+      summary: 'Update /courses/{id}/enrollments/{enrollmentId}/lessons/{lessonId}/attendance'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: enrollmentId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/courses/{id}/enrollments/export':
     get:
       summary: 'Get /courses/{id}/enrollments/export'
@@ -2087,6 +2293,83 @@ paths:
             type: string
         -
           name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/{lessonId}/attendance':
+    get:
+      summary: 'Get /courses/{id}/lessons/{lessonId}/attendance'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update /courses/{id}/lessons/{lessonId}/attendance'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/lessons/{lessonId}/attendance/{enrollmentId}':
+    put:
+      summary: 'Update /courses/{id}/lessons/{lessonId}/attendance/{enrollmentId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: enrollmentId
           in: path
           required: true
           schema:

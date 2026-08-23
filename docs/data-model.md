@@ -73,6 +73,18 @@ erDiagram
 | `Quiz` → `QuizQuestion` → `QuizOption` | Quiz content |
 | `QuizAttempt` → `QuizAnswer` | Timed attempts |
 
+## Course & Learning models
+
+| Model | Purpose |
+|-------|---------|
+| `Course` | Course definition (`title`, `description`, `thumbnail_url`, `status`, `max_attendance`, `season_id`) |
+| `CourseLesson` | Individual sessions / lessons in a course |
+| `CourseLessonMaterial` | Lesson media: YouTube embeds, files, docs |
+| `CourseEnrollment` | Student registrations and access tokens |
+| `CourseLessonProgress` | Lesson completion markers |
+| `CourseLessonAttendance` | Per-session / lesson attendance records for certificate eligibility |
+| `CourseAnnouncement` | Announcements / broadcast communications for courses |
+
 ## Sync behavior
 
 `syncModels()` prefers plain `sequelize.sync()`. Setting `DB_SYNC_ALTER=true` enables `alter: true`, which can hit MySQL index limits — use [patch scripts](./scripts-and-ops.md) instead for schema evolution.

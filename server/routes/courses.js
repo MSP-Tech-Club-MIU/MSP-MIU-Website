@@ -24,6 +24,10 @@ const {
   listEnrollments,
   updateEnrollment,
   deleteEnrollment,
+  getLessonAttendance,
+  updateLessonAttendance,
+  bulkUpdateLessonAttendance,
+  updateEnrollmentLessonAttendance,
   exportEnrollmentsCSV
 } = require('../controllers/courses');
 
@@ -59,10 +63,22 @@ router.put('/:id/lessons/reorder', ...admin, reorderLessons);
 router.put('/:id/lessons/:lessonId', ...admin, updateLesson);
 router.delete('/:id/lessons/:lessonId', ...admin, deleteLesson);
 
+// Lesson attendance routes
+router.get('/:id/lessons/:lessonId/attendance', ...admin, getLessonAttendance);
+router.put('/:id/lessons/:lessonId/attendance', ...admin, bulkUpdateLessonAttendance);
+router.put('/:id/lessons/:lessonId/attendance/:enrollmentId', ...admin, updateLessonAttendance);
+router.put('/:id/enrollments/:enrollmentId/lessons/:lessonId/attendance', ...admin, updateEnrollmentLessonAttendance);
+
 router.post('/:id/lessons/:lessonId/materials', ...admin, createMaterial);
 router.put('/:id/lessons/:lessonId/materials/:materialId', ...admin, updateMaterial);
 router.delete('/:id/lessons/:lessonId/materials/:materialId', ...admin, deleteMaterial);
 
+const courseAnnouncementsRouter = require('./courseAnnouncements');
+
 router.get('/:id', getCourseById);
+
+// Mount course announcements / communications router
+router.use('/:courseId/announcements', courseAnnouncementsRouter);
+router.use('/:id/announcements', courseAnnouncementsRouter);
 
 module.exports = router;

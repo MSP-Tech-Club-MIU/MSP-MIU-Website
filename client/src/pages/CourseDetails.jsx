@@ -116,11 +116,22 @@ export default function CourseDetails() {
 
   const onEnroll = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
     setFormMsg(null);
     setFormError(null);
+
+    const emailTrimmed = String(form.email || '').trim();
+    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+    if (!miuEmailRegex.test(emailTrimmed)) {
+      setFormError('Only @miuegypt.edu.eg email addresses are allowed');
+      return;
+    }
+
+    setSubmitting(true);
     try {
-      const result = await ApiService.enrollInCourse(courseId, form);
+      const result = await ApiService.enrollInCourse(courseId, {
+        ...form,
+        email: emailTrimmed
+      });
       persistToken(result.data?.access_token);
       setFormMsg(result.message || 'Registered successfully');
       setForm(emptyForm());
@@ -286,10 +297,11 @@ export default function CourseDetails() {
                     />
                   </label>
                   <label>
-                    Email
+                    Email (@miuegypt.edu.eg)
                     <input
                       required
                       type="email"
+                      placeholder="name2398765@miuegypt.edu.eg"
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     />
