@@ -8,7 +8,7 @@ import {
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
     MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook,
-    MdBugReport, MdSend, MdBlock
+    MdBugReport, MdSend, MdBlock, MdTrackChanges
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -29,10 +29,12 @@ import EventsAdminTab from './EventsAdminTab';
 import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
+import EmailTrackerAdminTab from './EmailTrackerAdminTab';
 import CourseEmailsAdminTab from './CourseEmailsAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
 import LogsAdminTab from './LogsAdminTab';
 import BlacklistAdminTab from './BlacklistAdminTab';
+import { FormattedText, EmailComposerToolbar } from '../../utils/formatMarkdown';
 import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 import './AdminPanel.css';
 
@@ -62,6 +64,8 @@ const ADMIN_TAB_TO_ROUTE = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
+    'email-tracker': 'email-tracker',
+    email_tracker: 'email-tracker',
     'course-emails': 'course-emails',
     course_emails: 'course-emails',
     android: 'android',
@@ -87,6 +91,8 @@ const ADMIN_ROUTE_TO_TAB = {
     members: 'members',
     seasons: 'seasons',
     emails: 'emails',
+    'email-tracker': 'email-tracker',
+    email_tracker: 'email-tracker',
     'course-emails': 'course-emails',
     course_emails: 'course-emails',
     android: 'android',
@@ -197,6 +203,8 @@ const AdminPanel = () => {
         title: '', description: '', department: '', announcement_date: '', priority: false,
         cta_label: '', cta_url: '', rejection_reason: ''
     });
+    const [announcementPreviewMode, setAnnouncementPreviewMode] = useState(false);
+    const [reviewPreviewMode, setReviewPreviewMode] = useState(false);
 
     // Suggestions & Feedback state
     const [suggestions, setSuggestions] = useState([]);
@@ -231,6 +239,7 @@ const AdminPanel = () => {
         { key: 'content', label: 'Site content', icon: <MdArticle />, category: 'Content' },
         { key: 'android', label: 'Android app', icon: <MdPhoneAndroid />, category: 'Content' },
         { key: 'emails', label: 'Email management', icon: <MdEmail />, category: 'Communications' },
+        { key: 'email-tracker', label: 'Email tracker', icon: <MdTrackChanges />, category: 'Communications' },
         { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Communications' },
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
@@ -521,6 +530,7 @@ const AdminPanel = () => {
     }, [location.pathname, hasAccess]);
 
     const openAnnouncementModal = (announcement = null, kind = 'website') => {
+        setAnnouncementPreviewMode(false);
         if (announcement) {
             const isEmailOnly = announcement.publish_to_website === false;
             const titleMax = isEmailOnly ? EMAIL_ANNOUNCEMENT_TITLE_MAX : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
@@ -551,6 +561,20 @@ const AdminPanel = () => {
             });
         }
         setShowAnnouncementModal(true);
+    };
+
+    const handleInsertAnnouncementMarkdown = (snippet) => {
+        setAnnouncementForm(prev => ({
+            ...prev,
+            description: (prev.description ? `${prev.description}\n` : '') + snippet
+        }));
+    };
+
+    const handleInsertReviewMarkdown = (snippet) => {
+        setReviewForm(prev => ({
+            ...prev,
+            description: (prev.description ? `${prev.description}\n` : '') + snippet
+        }));
     };
 
     const announcementTitleMax = announcementModalKind === 'email'
@@ -616,6 +640,7 @@ const AdminPanel = () => {
 
     const openReviewModal = (announcement) => {
         if (!announcement) return;
+        setReviewPreviewMode(false);
         setReviewAnnouncement(announcement);
         setReviewForm({
             title: announcement.title || '',
@@ -1213,6 +1238,12 @@ const AdminPanel = () => {
                         </motion.div>
                     )}
 
+                    {accessLevel === 'full' && (activeTab === 'email-tracker' || activeTab === 'email_tracker') && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EmailTrackerAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
                     {canUseProgramsTabs && (activeTab === 'course-emails' || activeTab === 'course_emails') && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <CourseEmailsAdminTab onAlert={setAlert} />
@@ -1424,20 +1455,42 @@ const AdminPanel = () => {
                                                 </span>
                                             </div>
                                             <div className="AdminPanel__formGroup">
-                                                <label htmlFor="announcement-description">
-                                                    {announcementModalKind === 'email' ? 'Email body *' : 'Description *'}
-                                                </label>
-                                                <textarea
-                                                    id="announcement-description"
-                                                    value={announcementForm.description}
-                                                    onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, announcementDescMax) })}
-                                                    placeholder={announcementModalKind === 'email' ? 'Full email message…' : 'Brief description for the feed'}
-                                                    rows={announcementModalKind === 'email' ? 10 : 4}
-                                                    maxLength={announcementDescMax}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                    <label htmlFor="announcement-description" style={{ margin: 0 }}>
+                                                        {announcementModalKind === 'email' ? 'Email body *' : 'Description *'}
+                                                    </label>
+                                                    <span className={`AdminPanel__charCount${announcementForm.description.length >= announcementDescMax ? ' is-max' : ''}`} style={{ margin: 0 }}>
+                                                        {announcementForm.description.length}/{announcementDescMax}
+                                                    </span>
+                                                </div>
+
+                                                <EmailComposerToolbar
+                                                    onInsert={handleInsertAnnouncementMarkdown}
+                                                    isPreview={announcementPreviewMode}
+                                                    onTogglePreview={() => setAnnouncementPreviewMode(p => !p)}
                                                 />
-                                                <span className={`AdminPanel__charCount${announcementForm.description.length >= announcementDescMax ? ' is-max' : ''}`}>
-                                                    {announcementForm.description.length}/{announcementDescMax}
-                                                </span>
+
+                                                {announcementPreviewMode ? (
+                                                    <div className="FormattedText__livePreviewBox">
+                                                        {announcementForm.description.trim() ? (
+                                                            <FormattedText text={announcementForm.description} />
+                                                        ) : (
+                                                            <div className="FormattedText__livePreviewEmpty">
+                                                                Type your message or use the toolbar to insert formatted event details.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        id="announcement-description"
+                                                        value={announcementForm.description}
+                                                        onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, announcementDescMax) })}
+                                                        placeholder={announcementModalKind === 'email' ? 'Full email message…' : 'Brief description for the feed'}
+                                                        rows={announcementModalKind === 'email' ? 10 : 4}
+                                                        maxLength={announcementDescMax}
+                                                        style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                                                    />
+                                                )}
                                             </div>
                                             <div className="AdminPanel__formGroup">
                                                 <label>Department *</label>
@@ -1542,13 +1595,31 @@ const AdminPanel = () => {
                                             </div>
                                             <div className="AdminPanel__formGroup">
                                                 <label htmlFor="review-description">Message Body *</label>
-                                                <textarea
-                                                    id="review-description"
-                                                    value={reviewForm.description}
-                                                    onChange={e => setReviewForm({ ...reviewForm, description: e.target.value })}
-                                                    rows={8}
-                                                    placeholder="Announcement message"
+                                                <EmailComposerToolbar
+                                                    onInsert={handleInsertReviewMarkdown}
+                                                    isPreview={reviewPreviewMode}
+                                                    onTogglePreview={() => setReviewPreviewMode(p => !p)}
                                                 />
+                                                {reviewPreviewMode ? (
+                                                    <div className="FormattedText__livePreviewBox">
+                                                        {reviewForm.description.trim() ? (
+                                                            <FormattedText text={reviewForm.description} />
+                                                        ) : (
+                                                            <div className="FormattedText__livePreviewEmpty">
+                                                                Type your message or use the toolbar to insert formatted event details.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        id="review-description"
+                                                        value={reviewForm.description}
+                                                        onChange={e => setReviewForm({ ...reviewForm, description: e.target.value })}
+                                                        rows={8}
+                                                        placeholder="Announcement message"
+                                                        style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                                                    />
+                                                )}
                                             </div>
                                             <div className="AdminPanel__formGroup">
                                                 <label>Department</label>

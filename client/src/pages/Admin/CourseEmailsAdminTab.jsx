@@ -14,11 +14,13 @@ import {
   MdCheckCircle,
   MdFactCheck,
   MdArrowBack,
-  MdOpenInNew
+  MdOpenInNew,
+  MdTrackChanges
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
 import { useSeason } from '../../context/SeasonContext';
+import { FormattedText, EmailComposerToolbar } from '../../utils/formatMarkdown';
 import mspLogo from '../../assets/Images/msp-logo.png';
 
 const AUDIENCE_OPTIONS = [
@@ -74,6 +76,14 @@ export default function CourseEmailsAdminTab({ onAlert }) {
   const [submitting, setSubmitting] = useState(false);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [resendingId, setResendingId] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
+
+  const handleInsertMarkdown = (snippet) => {
+    setForm((prev) => ({
+      ...prev,
+      message: (prev.message ? `${prev.message}\n` : '') + snippet
+    }));
+  };
 
   // Sent History
   const [history, setHistory] = useState([]);
@@ -326,6 +336,13 @@ export default function CourseEmailsAdminTab({ onAlert }) {
             onClick={() => navigate('/admin/courses')}
           >
             <MdMenuBook style={{ marginRight: 4 }} /> Manage Courses
+          </button>
+          <button
+            type="button"
+            className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+            onClick={() => navigate('/admin/email-tracker')}
+          >
+            <MdTrackChanges style={{ marginRight: 4 }} /> Email Tracker
           </button>
           <button
             type="button"
@@ -630,27 +647,54 @@ export default function CourseEmailsAdminTab({ onAlert }) {
 
         {/* Message Body */}
         <div className="AdminPanel__formGroup" style={{ marginBottom: '1.15rem' }}>
-          <label style={{ fontWeight: 600, color: '#eaf2ff', marginBottom: '0.4rem', display: 'block' }}>
-            Email Body Content * (supports plain text & markdown)
-          </label>
-          <textarea
-            required
-            rows={8}
-            placeholder={`Dear {{studentName}},\n\nPlease review the updated syllabus and submission deadline for {{courseTitle}}.\n\nBest regards,\nMSP Tech Club Team`}
-            value={form.message}
-            onChange={(e) => setForm((s) => ({ ...s, message: e.target.value }))}
-            style={{
-              width: '100%',
-              padding: '0.75rem 0.9rem',
-              borderRadius: '8px',
-              background: 'rgba(10, 28, 49, 0.9)',
-              border: '1px solid rgba(142,194,240,0.3)',
-              color: '#fff',
-              fontSize: '0.95rem',
-              lineHeight: 1.55,
-              resize: 'vertical'
-            }}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <label style={{ fontWeight: 600, color: '#eaf2ff', margin: 0 }}>
+              Email Body Content * (supports plain text, markdown & highlighted event details)
+            </label>
+            <span style={{ fontSize: '0.78rem', color: form.message.length >= 4000 ? '#ef5350' : 'rgba(142, 194, 240, 0.7)' }}>
+              {form.message.length}/4000
+            </span>
+          </div>
+
+          <EmailComposerToolbar
+            onInsert={handleInsertMarkdown}
+            isPreview={previewMode}
+            onTogglePreview={() => setPreviewMode((p) => !p)}
           />
+
+          {previewMode ? (
+            <div className="FormattedText__livePreviewBox">
+              {form.message.trim() ? (
+                <FormattedText text={form.message} />
+              ) : (
+                <div className="FormattedText__livePreviewEmpty">
+                  Type your message or use the toolbar to insert formatted event details.
+                </div>
+              )}
+            </div>
+          ) : (
+            <textarea
+              required
+              rows={8}
+              maxLength={4000}
+              placeholder={`Dear {{studentName}},\n\nPlease review the updated syllabus and submission deadline for {{courseTitle}}.\n\n**Date:** 25/08/2026\n**Time:** 1:00–3:00 PM sharp\n**Session:** Introduction to Cybersecurity\n**Presented by:** MSP Cybersecurity Team\n\nBest regards,\nMSP Tech Club Team`}
+              value={form.message}
+              onChange={(e) => setForm((s) => ({ ...s, message: e.target.value.slice(0, 4000) }))}
+              style={{
+                width: '100%',
+                padding: '0.75rem 0.9rem',
+                borderRadius: '8px',
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
+                background: 'rgba(10, 28, 49, 0.9)',
+                border: '1px solid rgba(142,194,240,0.3)',
+                color: '#fff',
+                fontSize: '0.95rem',
+                lineHeight: 1.55,
+                resize: 'vertical'
+              }}
+            />
+          )}
         </div>
 
         {/* Call to action button */}

@@ -111,6 +111,12 @@ async function getCertificateCourseName() {
   return 'Front-End Course';
 }
 
+const {
+  formatEmailBodyHtml,
+  formatInlineMarkdown,
+  parseKeyValueLine
+} = require('../formatEmailText');
+
 module.exports = {
   interpolate,
   escapeHtml,
@@ -118,5 +124,8 @@ module.exports = {
   getTemplate,
   listTemplates,
   renderTemplate,
-  getCertificateCourseName
+  getCertificateCourseName,
+  formatEmailBodyHtml,
+  formatInlineMarkdown,
+  parseKeyValueLine
 };

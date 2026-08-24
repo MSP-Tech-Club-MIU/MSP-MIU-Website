@@ -901,7 +901,7 @@ This is an automated message from MSP MIU Course Management.`,
         <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{courseTitleHtml}}</p>
         <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
         <p style="margin: 0 0 16px; font-size: 15px; color: #555555;">Hello <strong>{{studentNameHtml}}</strong>,</p>
-        <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; white-space: pre-wrap; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+        <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
         {{ctaButtonHtml}}
         <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
           <p style="margin: 0 0 8px;">This is an automated communication from MSP MIU Course Management.</p>

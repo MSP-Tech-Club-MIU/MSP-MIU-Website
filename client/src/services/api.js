@@ -1315,14 +1315,57 @@ class ApiService {
     }
   }
 
-  static async getAnnouncementEmailJob(jobId) {
-    const response = await fetch(`${API_BASE_URL}/announcements/email-jobs/${jobId}`, {
+  static async getEmailJobs(params = {}) {
+    const query = new URLSearchParams();
+    if (params.limit) query.set('limit', String(params.limit));
+    if (params.status) query.set('status', params.status);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/email-jobs${qs}`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
     const result = await response.json();
     if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch email jobs');
+    }
+    return result.data;
+  }
+
+  static async getEmailJob(jobId) {
+    const response = await fetch(`${API_BASE_URL}/email-jobs/${jobId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      // Fallback to legacy endpoint if needed
+      try {
+        const legacyRes = await fetch(`${API_BASE_URL}/announcements/email-jobs/${jobId}`, {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        });
+        const legacyResult = await legacyRes.json();
+        if (legacyRes.ok && legacyResult.data) return legacyResult.data;
+      } catch (_) {
+        /* ignore */
+      }
       throw new Error(result.error || 'Failed to fetch email job status');
+    }
+    return result.data;
+  }
+
+  static async getAnnouncementEmailJob(jobId) {
+    return this.getEmailJob(jobId);
+  }
+
+  static async cancelEmailJob(jobId) {
+    const response = await fetch(`${API_BASE_URL}/email-jobs/${jobId}/cancel`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to cancel email job');
     }
     return result.data;
   }
