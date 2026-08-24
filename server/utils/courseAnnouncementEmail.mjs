@@ -39,8 +39,8 @@ export async function buildCourseAnnouncementEmail(announcement, course, enrollm
   }
 
   const ctaButtonHtml = actionUrl
-    ? `<div style="text-align: center; margin: 28px 0 16px;">
-        <a href="${escapeHtml(actionUrl)}" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">${escapeHtml(actionLabel)}</a>
+    ? `<div style="text-align: center; margin: 18px 0 12px;">
+        <a href="${escapeHtml(actionUrl)}" class="email-btn" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 5px rgba(13, 123, 216, 0.25);">${escapeHtml(actionLabel)}</a>
       </div>`
     : '';
 
