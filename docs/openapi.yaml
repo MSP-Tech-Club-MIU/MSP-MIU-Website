@@ -1131,6 +1131,42 @@ paths:
       responses:
         '200':
           description: Deleted
+  '/announcements/{id}/approve':
+    put:
+      summary: 'Update /announcements/{id}/approve'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Announcements
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/announcements/{id}/reject':
+    put:
+      summary: 'Update /announcements/{id}/reject'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Announcements
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/announcements/email-jobs/{jobId}':
     get:
       summary: 'Get /announcements/email-jobs/{jobId}'
@@ -1697,6 +1733,54 @@ paths:
       responses:
         '200':
           description: Deleted
+  '/competitions/{competitionId}/announcements/{announcementId}/approve':
+    put:
+      summary: 'Update /competitions/{competitionId}/announcements/{announcementId}/approve'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: competitionId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/competitions/{competitionId}/announcements/{announcementId}/reject':
+    put:
+      summary: 'Update /competitions/{competitionId}/announcements/{announcementId}/reject'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: competitionId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/competitions/{competitionId}/announcements/{announcementId}/resend-emails':
     post:
       tags:
@@ -2005,6 +2089,54 @@ paths:
           bearerAuth: []
     delete:
       summary: 'Delete /courses/{courseId}/announcements/{announcementId}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/{announcementId}/approve':
+    put:
+      summary: 'Update /courses/{courseId}/announcements/{announcementId}/approve'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - CompetitionAnnouncements
+      parameters:
+        -
+          name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        -
+          name: announcementId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{courseId}/announcements/{announcementId}/reject':
+    put:
+      summary: 'Update /courses/{courseId}/announcements/{announcementId}/reject'
       responses:
         '200':
           description: Success

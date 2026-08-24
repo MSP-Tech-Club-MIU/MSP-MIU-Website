@@ -37,7 +37,7 @@ const STATUS_OPTIONS = [
   { value: 'archived', label: 'Archived' }
 ];
 
-const MATERIAL_TYPES = ['youtube', 'document', 'zip', 'code', 'other'];
+const MATERIAL_TYPES = ['youtube', 'meeting', 'document', 'zip', 'code', 'other'];
 
 const emptyCourseForm = () => ({
   title: '',
@@ -317,8 +317,8 @@ export default function CoursesAdminTab({ onAlert }) {
       const payload = {
         title: materialForm.title.trim(),
         material_type: materialForm.material_type,
-        youtube_url: materialForm.material_type === 'youtube' ? materialForm.youtube_url : null,
-        file_url: materialForm.material_type !== 'youtube' ? materialForm.file_url : null,
+        youtube_url: (materialForm.material_type === 'youtube' || materialForm.material_type === 'meeting') ? materialForm.youtube_url : null,
+        file_url: (materialForm.material_type !== 'youtube' && materialForm.material_type !== 'meeting') ? materialForm.file_url : null,
         file_name: materialForm.file_name || null
       };
       await ApiService.createCourseMaterial(contentId, lessonId, payload);
@@ -1458,8 +1458,10 @@ export default function CoursesAdminTab({ onAlert }) {
                               <td>{m.material_type}</td>
                               <td>{m.title}</td>
                               <td>
-                                {m.youtube_url ? (
+                                {m.material_type === 'youtube' ? (
                                   <span className="SponsorsAdmin__rowTagline">{m.youtube_url}</span>
+                                ) : m.material_type === 'meeting' ? (
+                                  <a href={m.youtube_url} target="_blank" rel="noreferrer" className="SponsorsAdmin__rowTagline" style={{ textDecoration: 'underline' }}>{m.youtube_url}</a>
                                 ) : m.file_url ? (
                                   <a href={m.file_url} target="_blank" rel="noreferrer">Open file</a>
                                 ) : (
@@ -1519,11 +1521,11 @@ export default function CoursesAdminTab({ onAlert }) {
                         }
                       />
                     </label>
-                    {matType === 'youtube' ? (
+                    {matType === 'youtube' || matType === 'meeting' ? (
                       <label className="AdminPanel__fullWidth">
-                        YouTube URL
+                        {matType === 'youtube' ? 'YouTube URL' : 'Meeting URL'}
                         <input
-                          placeholder="https://www.youtube.com/watch?v=…"
+                          placeholder={matType === 'youtube' ? "https://www.youtube.com/watch?v=…" : "https://zoom.us/j/... or Google Meet / Teams link"}
                           value={isActiveLesson ? materialForm.youtube_url : ''}
                           onFocus={() => setMaterialForm((f) => ({ ...f, lesson_id: lesson.lesson_id }))}
                           onChange={(e) =>
@@ -1531,7 +1533,7 @@ export default function CoursesAdminTab({ onAlert }) {
                               ...f,
                               lesson_id: lesson.lesson_id,
                               youtube_url: e.target.value,
-                              material_type: 'youtube'
+                              material_type: matType
                             }))
                           }
                         />
