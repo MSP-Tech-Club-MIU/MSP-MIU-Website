@@ -195,6 +195,10 @@ Announcement.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
 });
+Announcement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
+});
 
 // Leaderboard associations
 Leaderboard.belongsTo(Member, {
@@ -296,6 +300,10 @@ CompetitionAnnouncement.belongsTo(Competition, {
 CompetitionAnnouncement.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
+});
+CompetitionAnnouncement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
 });
 User.hasMany(CompetitionAnnouncement, {
   foreignKey: 'created_by',
@@ -580,6 +588,10 @@ CourseAnnouncement.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
 });
+CourseAnnouncement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
+});
 
 CourseEnrollment.hasMany(CourseAnnouncement, {
   foreignKey: 'target_enrollment_id',
@@ -668,7 +680,11 @@ async function ensureAnnouncementColumns() {
     ['send_email', 'send_email TINYINT(1) NOT NULL DEFAULT 0'],
     ['publish_to_website', 'publish_to_website TINYINT(1) NOT NULL DEFAULT 1'],
     ['cta_label', 'cta_label VARCHAR(80) NULL'],
-    ['cta_url', 'cta_url VARCHAR(512) NULL']
+    ['cta_url', 'cta_url VARCHAR(512) NULL'],
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
   ];
   for (const [name, ddl] of columns) {
     try {
@@ -685,6 +701,58 @@ async function ensureAnnouncementColumns() {
       logger.info(`Added announcements.${name}`);
     } catch (err) {
       logger.warn(`Could not ensure announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
+    }
+  }
+}
+
+async function ensureCourseAnnouncementColumns() {
+  const columns = [
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'course_announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`course_announcements\` ADD COLUMN ${ddl}`);
+      logger.info(`Added course_announcements.${name}`);
+    } catch (err) {
+      logger.warn(`Could not ensure course_announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
+    }
+  }
+}
+
+async function ensureCompetitionAnnouncementColumns() {
+  const columns = [
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'competition_announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`competition_announcements\` ADD COLUMN ${ddl}`);
+      logger.info(`Added competition_announcements.${name}`);
+    } catch (err) {
+      logger.warn(`Could not ensure competition_announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
     }
   }
 }
@@ -797,6 +865,8 @@ const syncModels = async () => {
       logger.info('Models synchronized with database successfully');
     }
     await ensureAnnouncementColumns();
+    await ensureCourseAnnouncementColumns();
+    await ensureCompetitionAnnouncementColumns();
     await ensureUserEmailColumns();
     await ensureCourseAnnouncementTable();
     await ensureCourseColumnsAndAttendanceTable();

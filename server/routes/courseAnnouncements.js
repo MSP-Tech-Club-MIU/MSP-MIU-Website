@@ -5,12 +5,15 @@ const {
   getCourseAnnouncementById,
   getCourseRecipientsPreview,
   createCourseAnnouncement,
+  approveCourseAnnouncement,
+  rejectCourseAnnouncement,
   sendDirectCourseMemberMessage,
   updateCourseAnnouncement,
   deleteCourseAnnouncement,
   resendCourseAnnouncementEmails
 } = require('../controllers/courseAnnouncements.controller');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
+const { presidentOrVicePresidentAuth } = require('../middlewares/adminAuth');
 
 const admin = [authenticateToken, verifyRole('admin', 'board')];
 
@@ -21,14 +24,20 @@ router.post('/recipients-preview', ...admin, getCourseRecipientsPreview);
 // Send direct message/email to a specific course member (admin/board)
 router.post('/message-member', ...admin, sendDirectCourseMemberMessage);
 
-// Get all announcements for a course (public sees active, admin sees all)
+// Get all announcements for a course (public sees active and approved, admin sees all)
 router.get('/', getCourseAnnouncements);
 
 // Get specific course announcement (public)
 router.get('/:announcementId', getCourseAnnouncementById);
 
-// Create announcement and optionally broadcast emails (admin/board)
+// Create announcement and optionally broadcast emails (admin/board; broadcasts queued if non-President/VP)
 router.post('/', ...admin, createCourseAnnouncement);
+
+// Approve course announcement & dispatch emails (President/VP only)
+router.put('/:announcementId/approve', authenticateToken, presidentOrVicePresidentAuth, approveCourseAnnouncement);
+
+// Refuse course announcement email broadcast (President/VP only)
+router.put('/:announcementId/reject', authenticateToken, presidentOrVicePresidentAuth, rejectCourseAnnouncement);
 
 // Update announcement (admin/board)
 router.put('/:announcementId', ...admin, updateCourseAnnouncement);

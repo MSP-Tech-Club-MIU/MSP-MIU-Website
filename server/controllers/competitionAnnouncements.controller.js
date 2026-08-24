@@ -3,6 +3,7 @@ const { broadcastCompetitionAnnouncementEmails } = require('../services/competit
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { logAdminAction } = require('../utils/adminNotification');
+const { checkIsPresidentOrVicePresident } = require('../middlewares/adminAuth');
 const logger = require('../utils/logger');
 
 /**
@@ -12,7 +13,8 @@ const logger = require('../utils/logger');
 const getCompetitionAnnouncements = async (req, res) => {
   try {
     const { competitionId } = req.params;
-    const { includeInactive } = req.query;
+    const { includeInactive, approval_status } = req.query;
+    const isAdmin = Boolean(req.user && ['admin', 'board'].includes(req.user.role));
 
     // Verify competition exists
     const competition = await Competition.findByPk(competitionId);
@@ -25,21 +27,37 @@ const getCompetitionAnnouncements = async (req, res) => {
 
     const whereClause = { competition_id: competitionId };
 
-    // Only show active announcements by default (unless admin/board requests all)
-    if (!includeInactive || includeInactive !== 'true') {
+    // Public feed: active + approved only
+    if (!isAdmin) {
       whereClause.is_active = true;
+      whereClause.approval_status = 'approved';
+    } else {
+      if (!includeInactive || includeInactive !== 'true') {
+        whereClause.is_active = true;
+      }
+      if (approval_status) {
+        whereClause.approval_status = approval_status;
+      }
     }
 
     const { page, limit, offset } = parsePagination(req.query);
 
     const { rows: announcements, count: total } = await CompetitionAnnouncement.findAndCountAll({
       where: whereClause,
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email'],
-        required: false
-      }],
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ],
       order: [['created_at', 'DESC']],
       limit,
       offset,
@@ -54,7 +72,6 @@ const getCompetitionAnnouncements = async (req, res) => {
     });
   } catch (error) {
     logger.error('Error fetching competition announcements:', error);
-    logger.error('Error message:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch competition announcements'
@@ -75,12 +92,20 @@ const getCompetitionAnnouncementById = async (req, res) => {
         announcement_id: announcementId,
         competition_id: competitionId
       },
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email'],
-        required: false
-      }]
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
     });
 
     if (!announcement) {
@@ -107,7 +132,6 @@ const getCompetitionAnnouncementById = async (req, res) => {
  * Create a new competition announcement and broadcast to competitors
  * POST /api/competitions/:competitionId/announcements
  * Requires: admin or board role
- * Body: { title, message, send_email }
  */
 const createCompetitionAnnouncement = async (req, res) => {
   try {
@@ -132,51 +156,102 @@ const createCompetitionAnnouncement = async (req, res) => {
       });
     }
 
-    // Create announcement
-    const announcement = await CompetitionAnnouncement.create({
-      competition_id: competitionId,
-      title,
-      message,
-      created_by: userId,
-      send_email: send_email === true || send_email === 'true' || send_email === 1,
-      target_type: target_type || 'all',
-      target_team_id: target_team_id || null,
-      target_user_id: target_user_id || null,
-      is_active: true
-    });
+    const willSendEmail = send_email === true || send_email === 'true' || send_email === 1;
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
 
-    // Fetch created announcement with creator info
-    const createdAnnouncement = await CompetitionAnnouncement.findByPk(announcement.announcement_id, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email'],
-        required: false
-      }]
-    });
+    // Approval status decision:
+    // Individual single competitor sends are always immediately approved.
+    // Broadcasts (non-competitor: all or team) require President/VP approval to dispatch immediately.
+    let approvalStatus = 'approved';
+    let approvedBy = userId;
+    let emailSent = false;
+    let shouldBroadcastNow = false;
 
-    // Broadcast emails if send_email is true
-    if (createdAnnouncement.send_email) {
-      try {
-        await broadcastCompetitionAnnouncementEmails(createdAnnouncement, competition);
-      } catch (emailError) {
-        logger.error('Error broadcasting announcement emails:', emailError);
-        // Don't fail the request, just log the error
+    if (willSendEmail) {
+      if (target_type === 'competitor') {
+        approvalStatus = 'approved';
+        approvedBy = userId;
+        emailSent = true;
+        shouldBroadcastNow = true;
+      } else if (isPresidentOrVP) {
+        approvalStatus = 'approved';
+        approvedBy = userId;
+        emailSent = true;
+        shouldBroadcastNow = true;
+      } else {
+        approvalStatus = 'pending';
+        approvedBy = null;
+        emailSent = false;
+        shouldBroadcastNow = false;
       }
     }
 
+    // Create announcement
+    const announcement = await CompetitionAnnouncement.create({
+      competition_id: competitionId,
+      title: String(title).trim(),
+      message: String(message).trim(),
+      created_by: userId,
+      send_email: willSendEmail,
+      target_type: target_type || 'all',
+      target_team_id: target_team_id || null,
+      target_user_id: target_user_id || null,
+      approval_status: approvalStatus,
+      approved_by: approvedBy,
+      email_sent: emailSent,
+      is_active: true
+    });
+
+    // Broadcast emails if approved for immediate send
+    if (shouldBroadcastNow) {
+      try {
+        await broadcastCompetitionAnnouncementEmails(announcement, competition);
+      } catch (emailError) {
+        logger.error('Error broadcasting announcement emails:', emailError);
+      }
+    }
+
+    // Fetch created announcement with creator info
+    const createdAnnouncement = await CompetitionAnnouncement.findByPk(announcement.announcement_id, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
+    });
+
     await logAdminAction(
       'competition_announcement_created',
-      `Created announcement "${createdAnnouncement.title}" for competition "${competition.title}"`,
+      `Created announcement "${createdAnnouncement.title}" for competition "${competition.title}" (${approvalStatus})`,
       req,
       'competition',
       competition.competition_id,
       competition.season_id
     );
 
+    let responseMessage = 'Competition announcement created successfully';
+    if (willSendEmail) {
+      if (shouldBroadcastNow) {
+        responseMessage = target_type === 'competitor'
+          ? 'Competition message sent to competitor'
+          : 'Competition announcement created and emails sent to competitors';
+      } else {
+        responseMessage = 'Competition announcement submitted and queued for President / Vice-President approval before email broadcast.';
+      }
+    }
+
     return res.status(201).json({
       success: true,
-      message: 'Competition announcement created successfully' + (createdAnnouncement.send_email ? ' and emails sent to competitors' : ''),
+      message: responseMessage,
       data: createdAnnouncement
     });
   } catch (error) {
@@ -184,6 +259,185 @@ const createCompetitionAnnouncement = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to create competition announcement'
+    });
+  }
+};
+
+/**
+ * Approve competition announcement and dispatch email broadcast (allows optional edits)
+ * PUT /api/competitions/:competitionId/announcements/:announcementId/approve
+ * Requires: President or Vice President role
+ */
+const approveCompetitionAnnouncement = async (req, res) => {
+  try {
+    const { competitionId, announcementId } = req.params;
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Competition announcement approval is restricted to President and Vice President roles.'
+      });
+    }
+
+    const competition = await Competition.findByPk(competitionId);
+    if (!competition) {
+      return res.status(404).json({ success: false, error: 'Competition not found' });
+    }
+
+    const announcement = await CompetitionAnnouncement.findOne({
+      where: {
+        announcement_id: announcementId,
+        competition_id: competitionId
+      }
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ success: false, error: 'Announcement not found' });
+    }
+
+    const {
+      title,
+      message,
+      target_type,
+      target_team_id,
+      target_user_id
+    } = req.body;
+
+    if (title !== undefined) announcement.title = String(title).trim();
+    if (message !== undefined) announcement.message = String(message).trim();
+    if (target_type !== undefined) announcement.target_type = target_type;
+    if (target_team_id !== undefined) announcement.target_team_id = target_team_id;
+    if (target_user_id !== undefined) announcement.target_user_id = target_user_id;
+
+    announcement.approval_status = 'approved';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = null;
+    announcement.email_sent = true;
+    announcement.is_active = true;
+
+    await announcement.save();
+
+    if (announcement.send_email) {
+      try {
+        await broadcastCompetitionAnnouncementEmails(announcement, competition);
+      } catch (emailError) {
+        logger.error('Error broadcasting approved competition announcement emails:', emailError);
+      }
+    }
+
+    const updatedAnnouncement = await CompetitionAnnouncement.findByPk(announcementId, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'competition_announcement_approved',
+      `Approved competition announcement "${updatedAnnouncement.title}" for competition "${competition.title}"`,
+      req,
+      'competition',
+      competitionId,
+      competition.season_id
+    );
+
+    return res.json({
+      success: true,
+      message: 'Competition announcement approved and email broadcast dispatched',
+      data: updatedAnnouncement
+    });
+  } catch (error) {
+    logger.error('Error approving competition announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to approve competition announcement'
+    });
+  }
+};
+
+/**
+ * Refuse competition announcement email broadcast
+ * PUT /api/competitions/:competitionId/announcements/:announcementId/reject
+ * Requires: President or Vice President role
+ */
+const rejectCompetitionAnnouncement = async (req, res) => {
+  try {
+    const { competitionId, announcementId } = req.params;
+    const { reason } = req.body;
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Competition announcement refusal is restricted to President and Vice President roles.'
+      });
+    }
+
+    const announcement = await CompetitionAnnouncement.findOne({
+      where: {
+        announcement_id: announcementId,
+        competition_id: competitionId
+      }
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ success: false, error: 'Announcement not found' });
+    }
+
+    announcement.approval_status = 'rejected';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = reason ? String(reason).trim() : null;
+
+    await announcement.save();
+
+    const updatedAnnouncement = await CompetitionAnnouncement.findByPk(announcementId, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'competition_announcement_rejected',
+      `Refused competition announcement "${updatedAnnouncement.title}"${reason ? `: ${reason}` : ''}`,
+      req,
+      'competition',
+      competitionId
+    );
+
+    return res.json({
+      success: true,
+      message: 'Competition announcement email broadcast refused',
+      data: updatedAnnouncement
+    });
+  } catch (error) {
+    logger.error('Error rejecting competition announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to refuse competition announcement'
     });
   }
 };
@@ -225,12 +479,20 @@ const updateCompetitionAnnouncement = async (req, res) => {
     await announcement.save();
 
     const updatedAnnouncement = await CompetitionAnnouncement.findByPk(announcementId, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email'],
-        required: false
-      }]
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
     });
 
     await logAdminAction(
@@ -306,7 +568,7 @@ const deleteCompetitionAnnouncement = async (req, res) => {
 /**
  * Resend announcement emails to all competitors
  * POST /api/competitions/:competitionId/announcements/:announcementId/resend-emails
- * Requires: admin or board role
+ * Requires: admin or board role (President/VP required if broadcast)
  */
 const resendCompetitionAnnouncementEmails = async (req, res) => {
   try {
@@ -339,6 +601,16 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
         success: false,
         error: 'Announcement not found'
       });
+    }
+
+    if (announcement.target_type !== 'competitor') {
+      const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+      if (!isPresidentOrVP) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. Resending broadcast competition announcement emails requires President or Vice President approval.'
+        });
+      }
     }
 
     // Send emails
@@ -378,6 +650,8 @@ module.exports = {
   getCompetitionAnnouncements,
   getCompetitionAnnouncementById,
   createCompetitionAnnouncement,
+  approveCompetitionAnnouncement,
+  rejectCompetitionAnnouncement,
   updateCompetitionAnnouncement,
   deleteCompetitionAnnouncement,
   resendCompetitionAnnouncementEmails
