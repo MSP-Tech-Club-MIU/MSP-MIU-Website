@@ -15,10 +15,12 @@ const MEMBER_ACTIVATION_HTML = `<!DOCTYPE html>
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 18px !important; }
-      .email-body-pad { padding: 20px 16px !important; }
-      .email-footer-pad { padding: 16px 16px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-body-pad { padding: 16px 14px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-footer-pad { padding: 14px 14px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
     }
   </style>
@@ -26,29 +28,29 @@ const MEMBER_ACTIVATION_HTML = `<!DOCTYPE html>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td class="email-outer-td" align="center" style="padding: 12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td class="email-header-pad" style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
+            <td class="email-header-pad" style="padding: 26px 32px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU</h1>
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding: 36px 40px;">
+            <td class="email-body-pad" style="padding: 28px 32px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{studentName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to MSP MIU! 🎉</strong></p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">To complete your account setup and activate your account on the MSP-MIU website, please click on the activation button below:</p>
-              <div style="margin: 30px 0; text-align: center;">
-                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Account</a>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Account</a>
               </div>
-              <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <div style="margin: 18px 0; padding: 12px 14px; background-color: #f9f9f9; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If the button doesn't work, copy and paste this link into your browser:</p>
                 <p style="margin: 0; word-break: break-all;"><a href="{{activationLink}}" style="color: #0d7bd8; text-decoration: none; font-size: 12px;">{{activationLink}}</a></p>
               </div>
-              <div style="margin: 30px 0; padding: 20px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
-                <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">What's Next?</h2>
+              <div class="email-msg-box" style="margin: 24px 0; padding: 16px 18px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
+                <h2 style="margin: 0 0 12px 0; color: #333333; font-size: 17px; font-weight: 600;">What's Next?</h2>
                 <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">Once you've activated your account, you'll be able to:</p>
-                <ul style="margin: 0 0 0 20px; padding: 0; color: #666666; font-size: 14px; line-height: 1.8;">
+                <ul style="margin: 0 0 0 18px; padding: 0; color: #666666; font-size: 14px; line-height: 1.7;">
                   <li>Log in to the MSP-MIU website</li>
                   <li>Access your profile and dashboard</li>
                   <li>Participate in MSP activities and events</li>
@@ -56,12 +58,12 @@ const MEMBER_ACTIVATION_HTML = `<!DOCTYPE html>
                   <li>Connect with other MSP members</li>
                 </ul>
               </div>
-              <p style="margin: 30px 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">If you have any questions or need assistance, please don't hesitate to contact us.</p>
-              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to the MSP MIU family!</strong></p>
+              <p style="margin: 24px 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;">If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              <p style="margin: 0 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;"><strong>Welcome to the MSP MIU family!</strong></p>
             </td>
           </tr>
           <tr>
-            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 18px 32px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Best regards,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -84,10 +86,12 @@ const BOARD_ACTIVATION_HTML = `<!DOCTYPE html>
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 18px !important; }
-      .email-body-pad { padding: 20px 16px !important; }
-      .email-footer-pad { padding: 16px 16px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-body-pad { padding: 16px 14px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-footer-pad { padding: 14px 14px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
     }
   </style>
@@ -95,30 +99,30 @@ const BOARD_ACTIVATION_HTML = `<!DOCTYPE html>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td class="email-outer-td" align="center" style="padding: 12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td class="email-header-pad" style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
+            <td class="email-header-pad" style="padding: 26px 32px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU Board</h1>
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding: 36px 40px;">
+            <td class="email-body-pad" style="padding: 28px 32px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{boardMemberName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to MSP MIU Board! 🎉</strong></p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">As a <strong>{{position}}</strong> of MSP MIU, we're excited to have you on board!</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">To complete your account setup and activate your account on the MSP-MIU website, please click on the activation button below:</p>
-              <div style="margin: 30px 0; text-align: center;">
-                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Board Account</a>
+              <div style="margin: 24px 0; text-align: center;">
+                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Board Account</a>
               </div>
-              <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 6px;">
-                <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">If the button doesn't work, copy and paste this link into your browser:</p>
+              <div style="margin: 18px 0; padding: 12px 14px; background-color: #f9f9f9; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If the button doesn't work, copy and paste this link into your browser:</p>
                 <p style="margin: 0; word-break: break-all;"><a href="{{activationLink}}" style="color: #0d7bd8; text-decoration: none; font-size: 12px;">{{activationLink}}</a></p>
               </div>
-              <div style="margin: 30px 0; padding: 20px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
-                <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">Board Member Benefits</h2>
+              <div class="email-msg-box" style="margin: 24px 0; padding: 16px 18px; background-color: #eaf2ff; border-radius: 6px; border-left: 4px solid #03A9F4;">
+                <h2 style="margin: 0 0 12px 0; color: #333333; font-size: 17px; font-weight: 600;">Board Member Benefits</h2>
                 <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">Once you've activated your account, you'll be able to:</p>
-                <ul style="margin: 0 0 0 20px; padding: 0; color: #666666; font-size: 14px; line-height: 1.8;">
+                <ul style="margin: 0 0 0 18px; padding: 0; color: #666666; font-size: 14px; line-height: 1.7;">
                   <li>Log in to the MSP-MIU website</li>
                   <li>Access your board member dashboard</li>
                   <li>Manage MSP activities and events</li>
@@ -127,12 +131,12 @@ const BOARD_ACTIVATION_HTML = `<!DOCTYPE html>
                   <li>Coordinate with other board members</li>
                 </ul>
               </div>
-              <p style="margin: 30px 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">If you have any questions or need assistance, please don't hesitate to contact us.</p>
-              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to the MSP MIU Board!</strong></p>
+              <p style="margin: 24px 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;">If you have any questions or need assistance, please don't hesitate to contact us.</p>
+              <p style="margin: 0 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;"><strong>Welcome to the MSP MIU Board!</strong></p>
             </td>
           </tr>
           <tr>
-            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 18px 32px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Best regards,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -155,10 +159,12 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 18px !important; }
-      .email-body-pad { padding: 20px 16px !important; }
-      .email-footer-pad { padding: 16px 16px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-body-pad { padding: 16px 14px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-footer-pad { padding: 14px 14px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
     }
   </style>
@@ -166,44 +172,44 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td class="email-outer-td" align="center" style="padding: 12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td class="email-header-pad" style="padding: 30px 40px; background-color: #031C35;">
+            <td class="email-header-pad" style="padding: 26px 32px; background-color: #031C35;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU</h1>
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding: 30px 40px; background-color: #ffffff;">
+            <td class="email-body-pad" style="padding: 28px 32px; background-color: #ffffff;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{studentName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Congratulations! 🎊</strong> You've been accepted into the <strong>{{departmentName}} Department</strong> at MSP MIU!</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">We really enjoyed your interview and are excited to see what you'll bring to the team.</p>
-              <div style="margin: 30px 0; padding: 20px; background-color: #f9f9f9; border-radius: 6px; border-left: 4px solid #25D366;">
-                <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">Join the Department WhatsApp Group</h2>
-                <p style="margin: 0 0 15px 0; color: #666666; font-size: 14px; line-height: 1.6;">Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:</p>
+              <div class="email-msg-box" style="margin: 24px 0; padding: 16px 18px; background-color: #f9f9f9; border-radius: 6px; border-left: 4px solid #25D366;">
+                <h2 style="margin: 0 0 12px 0; color: #333333; font-size: 17px; font-weight: 600;">Join the Department WhatsApp Group</h2>
+                <p style="margin: 0 0 12px 0; color: #666666; font-size: 14px; line-height: 1.6;">Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:</p>
                 <p style="margin: 0;"><a href="{{departmentLink}}" class="email-btn" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; text-align: center;">Join {{departmentName}} WhatsApp Group</a></p>
               </div>
-              <div style="margin: 30px 0; padding: 20px; background-color: #fff9e6; border-radius: 6px; border-left: 4px solid #FFA500;">
-                <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">Opening Session</h2>
+              <div class="email-msg-box" style="margin: 24px 0; padding: 16px 18px; background-color: #fff9e6; border-radius: 6px; border-left: 4px solid #FFA500;">
+                <h2 style="margin: 0 0 12px 0; color: #333333; font-size: 17px; font-weight: 600;">Opening Session</h2>
                 <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">To kick things off, we'd love to see you at our Opening Session on <strong>Wednesday, November 12, 2025</strong>, from <strong>12:00 PM to 2:00 PM</strong> at the <strong>OOA Room, Main Building</strong>, followed by a special Orange Business Talk from <strong>2:00 PM to 3:00 PM</strong>.</p>
-                <p style="margin: 15px 0 10px 0; color: #333333; font-size: 14px; font-weight: 600;">Speakers from Orange Business:</p>
-                <ul style="margin: 0 0 0 20px; padding: 0; color: #666666; font-size: 14px; line-height: 1.8;">
+                <p style="margin: 12px 0 8px 0; color: #333333; font-size: 14px; font-weight: 600;">Speakers from Orange Business:</p>
+                <ul style="margin: 0 0 0 18px; padding: 0; color: #666666; font-size: 14px; line-height: 1.7;">
                   <li>Ahmed Galal Eldin, Operational Department Head</li>
                   <li>Sandy Elias George, Incident Management Specialist</li>
                   <li>Fady Sherif Saad, Incident Management Team Leader</li>
                 </ul>
               </div>
-              <div style="margin: 30px 0; padding: 20px; background-color: #f9f9f9; border-radius: 6px;">
-                <p style="margin: 0 0 15px 0; color: #666666; font-size: 14px; line-height: 1.6;">If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:</p>
-                <p style="margin: 10px 0;"><a href="{{instagramLink}}" style="color: #E4405F; text-decoration: none; font-size: 14px; font-weight: 600;">📷 Instagram</a></p>
-                <p style="margin: 10px 0;"><a href="{{tiktokLink}}" style="color: #000000; text-decoration: none; font-size: 14px; font-weight: 600;">🎵 TikTok</a></p>
+              <div class="email-msg-box" style="margin: 24px 0; padding: 16px 18px; background-color: #f9f9f9; border-radius: 6px;">
+                <p style="margin: 0 0 12px 0; color: #666666; font-size: 14px; line-height: 1.6;">If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:</p>
+                <p style="margin: 8px 0;"><a href="{{instagramLink}}" style="color: #E4405F; text-decoration: none; font-size: 14px; font-weight: 600;">📷 Instagram</a></p>
+                <p style="margin: 8px 0;"><a href="{{tiktokLink}}" style="color: #000000; text-decoration: none; font-size: 14px; font-weight: 600;">🎵 TikTok</a></p>
               </div>
-              <p style="margin: 30px 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">We're so glad to have you with us - <strong>welcome to the MSP MIU family!</strong></p>
-              <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Can't wait to see you at the Opening Session!</p>
+              <p style="margin: 24px 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;">We're so glad to have you with us - <strong>welcome to the MSP MIU family!</strong></p>
+              <p style="margin: 0 0 16px 0; color: #333333; font-size: 15px; line-height: 1.6;">Can't wait to see you at the Opening Session!</p>
             </td>
           </tr>
           <tr>
-            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 18px 32px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Cheers,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -419,14 +425,21 @@ MSP MIU · {{frontendUrl}}`,
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 20px !important; }
-      .email-title-pad { padding: 24px 20px 8px !important; }
-      .email-body-pad { padding: 12px 20px 24px !important; }
-      .email-cta-pad { padding: 0 20px 24px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-title-pad { padding: 16px 14px 4px !important; }
+      .email-body-pad { padding: 14px 12px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-cta-pad { padding: 0 12px 16px !important; }
+      .email-footer-pad { padding: 14px 12px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
-      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
-      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+      .email-kv-key { width: 34% !important; padding: 7px 6px !important; font-size: 13px !important; }
+      .email-kv-val { padding: 7px 6px !important; font-size: 13px !important; }
+      .email-wa-card { padding: 10px 10px !important; margin: 10px 0 !important; }
+      .email-wa-text { display: block !important; width: 100% !important; text-align: left !important; padding-bottom: 6px !important; }
+      .email-wa-btn-cell { display: block !important; width: 100% !important; text-align: center !important; padding-left: 0 !important; }
+      .email-wa-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
     }
   </style>
 </head>
@@ -434,33 +447,33 @@ MSP MIU · {{frontendUrl}}`,
   <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f4f4f4;opacity:0;">{{preheader}}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background-color:#f4f4f4;">
     <tr>
-      <td align="center" style="padding:16px 8px;">
+      <td class="email-outer-td" align="center" style="padding:12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
-            <td class="email-header-pad" style="padding:28px 36px;background:linear-gradient(135deg,#031C35 0%,#0D3159 50%,#1D4F82 100%);">
+            <td class="email-header-pad" style="padding:24px 30px;background:linear-gradient(135deg,#031C35 0%,#0D3159 50%,#1D4F82 100%);">
               <p style="margin:0;font-size:22px;font-weight:600;letter-spacing:0.3px;line-height:1.2;color:#ffffff;">MSP MIU</p>
               <p style="margin:10px 0 0;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8EC2F0;font-weight:600;">Announcement</p>
             </td>
           </tr>
           {{testBannerHtml}}
           <tr>
-            <td class="email-title-pad" style="padding:32px 36px 8px;">
+            <td class="email-title-pad" style="padding:24px 30px 6px;">
               <h1 style="margin:0;font-size:22px;font-weight:600;color:#031C35;line-height:1.35;">{{titleHtml}}</h1>
               {{metaHtml}}
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding:12px 36px 28px;">
-              <div style="padding:18px 20px;background-color:#eaf2ff;border-radius:6px;border-left:4px solid #03A9F4;font-size:15px;line-height:1.65;color:#333333;">{{descriptionHtml}}</div>
+            <td class="email-body-pad" style="padding:10px 30px 22px;">
+              <div class="email-msg-box" style="padding:14px 16px;background-color:#eaf2ff;border-radius:6px;border-left:4px solid #03A9F4;font-size:15px;line-height:1.65;color:#333333;">{{descriptionHtml}}</div>
             </td>
           </tr>
           <tr>
-            <td class="email-cta-pad" style="padding:0 36px 32px;text-align:center;">
+            <td class="email-cta-pad" style="padding:0 30px 24px;text-align:center;">
               {{ctaHtml}}
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 24px 22px;background-color:#f9f9f9;border-top:1px solid #eeeeee;font-size:13px;line-height:1.55;color:#666666;text-align:center;">
+            <td class="email-footer-pad" style="padding:16px 20px 18px;background-color:#f9f9f9;border-top:1px solid #eeeeee;font-size:13px;line-height:1.55;color:#666666;text-align:center;">
               <p style="margin:0 0 8px;"><a href="{{frontendUrl}}" style="color:#0d7bd8;text-decoration:none;font-weight:600;">{{frontendUrl}}</a></p>
               <p style="margin:0;">You receive these messages because you have an account with MSP MIU.</p>
             </td>
@@ -584,35 +597,43 @@ This is an automated message from MSP MIU Competition Management System.`,
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 20px !important; }
-      .email-body-pad { padding: 20px 16px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-body-pad { padding: 14px 12px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-cta-pad { padding: 0 12px 16px !important; }
+      .email-footer-pad { padding: 14px 12px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
-      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
-      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+      .email-kv-key { width: 34% !important; padding: 7px 6px !important; font-size: 13px !important; }
+      .email-kv-val { padding: 7px 6px !important; font-size: 13px !important; }
+      .email-wa-card { padding: 10px 10px !important; margin: 10px 0 !important; }
+      .email-wa-text { display: block !important; width: 100% !important; text-align: left !important; padding-bottom: 6px !important; }
+      .email-wa-btn-cell { display: block !important; width: 100% !important; text-align: center !important; padding-left: 0 !important; }
+      .email-wa-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
     }
   </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td class="email-outer-td" align="center" style="padding: 12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 24px 30px;">
               <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
               <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Competition Announcement</p>
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding: 28px 36px; background-color: white;">
+            <td class="email-body-pad" style="padding: 24px 30px; background-color: white;">
               <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{competitionTitleHtml}}</p>
               <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
-              <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+              <div class="email-msg-box" style="background-color: #eaf2ff; padding: 14px 16px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 20px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
               <div style="text-align: center;">
                 <a href="{{competitionLink}}" class="email-btn" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">View Competition</a>
               </div>
-              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+              <div class="email-footer-pad" style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
                 <p style="margin: 0 0 8px;">This is an automated message from MSP MIU Competition Management.</p>
                 <p style="margin: 0;">Please do not reply to this email.</p>
               </div>
@@ -982,34 +1003,43 @@ This is an automated message from MSP MIU Course Management.`,
     table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
     img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
     @media only screen and (max-width: 600px) {
-      .email-container { width: 100% !important; max-width: 100% !important; }
-      .email-header-pad { padding: 22px 20px !important; }
-      .email-body-pad { padding: 20px 16px !important; }
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 18px 14px !important; border-radius: 0 !important; }
+      .email-title-pad { padding: 16px 14px 4px !important; }
+      .email-body-pad { padding: 14px 12px !important; }
+      .email-msg-box { padding: 12px 10px !important; margin: 0 0 16px !important; }
+      .email-cta-pad { padding: 0 12px 16px !important; }
+      .email-footer-pad { padding: 14px 12px !important; border-radius: 0 !important; }
       .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
-      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
-      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+      .email-kv-key { width: 34% !important; padding: 7px 6px !important; font-size: 13px !important; }
+      .email-kv-val { padding: 7px 6px !important; font-size: 13px !important; }
+      .email-wa-card { padding: 10px 10px !important; margin: 10px 0 !important; }
+      .email-wa-text { display: block !important; width: 100% !important; text-align: left !important; padding-bottom: 6px !important; }
+      .email-wa-btn-cell { display: block !important; width: 100% !important; text-align: center !important; padding-left: 0 !important; }
+      .email-wa-btn { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
     }
   </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 16px 8px;">
+      <td class="email-outer-td" align="center" style="padding: 12px 0;">
         <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 24px 30px;">
               <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
               <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Course Communication</p>
             </td>
           </tr>
           <tr>
-            <td class="email-body-pad" style="padding: 28px 36px; background-color: white;">
+            <td class="email-body-pad" style="padding: 24px 30px; background-color: white;">
               <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{courseTitleHtml}}</p>
               <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
               <p style="margin: 0 0 16px; font-size: 15px; color: #555555;">Hello <strong>{{studentNameHtml}}</strong>,</p>
-              <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+              <div class="email-msg-box" style="background-color: #eaf2ff; padding: 14px 16px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 20px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
               {{ctaButtonHtml}}
-              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+              <div class="email-footer-pad" style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
                 <p style="margin: 0 0 8px;">This is an automated communication from MSP MIU Course Management.</p>
                 <p style="margin: 0;">Please do not reply directly to this email.</p>
               </div>
