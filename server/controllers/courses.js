@@ -989,6 +989,53 @@ const listEnrollments = async (req, res) => {
     const courseId = req.params.id || req.query.course_id;
     if (courseId) where.course_id = parseInt(courseId, 10);
 
+    // Search filter
+    if (req.query.search) {
+      const searchVal = String(req.query.search).trim();
+      if (searchVal) {
+        const like = `%${searchVal}%`;
+        where[Op.or] = [
+          { full_name: { [Op.like]: like } },
+          { email: { [Op.like]: like } },
+          { phone_number: { [Op.like]: like } },
+          { university_id: { [Op.like]: like } },
+          { '$course.title$': { [Op.like]: like } }
+        ];
+      }
+    }
+
+    // Attended filter
+    if (req.query.attended === 'true' || req.query.attended === 'false') {
+      where.attended = req.query.attended === 'true';
+    }
+
+    // Certificate eligibility filter
+    if (req.query.eligible === 'true' || req.query.eligible === 'false') {
+      const isEligible = req.query.eligible === 'true';
+      
+      const totalLessonsSubquery = `(SELECT COUNT(*) FROM course_lessons WHERE course_lessons.course_id = \`CourseEnrollment\`.\`course_id\` AND course_lessons.is_published = 1)`;
+      const attendedCountSubquery = `(SELECT COUNT(*) FROM course_lesson_attendance WHERE course_lesson_attendance.enrollment_id = \`CourseEnrollment\`.\`enrollment_id\` AND course_lesson_attendance.attended = 1)`;
+      const maxAttendanceVal = `COALESCE((SELECT max_attendance FROM courses WHERE courses.course_id = \`CourseEnrollment\`.\`course_id\`), 0)`;
+
+      if (isEligible) {
+        where[Op.and] = [
+          ...(where[Op.and] || []),
+          {
+            [Op.or]: [
+              CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} = 0`),
+              CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} - ${attendedCountSubquery} <= ${maxAttendanceVal}`)
+            ]
+          }
+        ];
+      } else {
+        where[Op.and] = [
+          ...(where[Op.and] || []),
+          CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} > 0`),
+          CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} - ${attendedCountSubquery} > ${maxAttendanceVal}`)
+        ];
+      }
+    }
+
     const { count, rows } = await CourseEnrollment.findAndCountAll({
       where,
       include: [
