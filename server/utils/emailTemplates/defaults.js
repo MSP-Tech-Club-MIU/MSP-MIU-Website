@@ -10,24 +10,36 @@ const MEMBER_ACTIVATION_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Activate Your Account - MSP MIU</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 18px !important; }
+      .email-body-pad { padding: 20px 16px !important; }
+      .email-footer-pad { padding: 16px 16px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 20px 0;">
-        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); border-top-left-radius: 8px; border-top-right-radius: 8px;">
+            <td class="email-header-pad" style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding: 40px;">
+            <td class="email-body-pad" style="padding: 36px 40px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{studentName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to MSP MIU! 🎉</strong></p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">To complete your account setup and activate your account on the MSP-MIU website, please click on the activation button below:</p>
               <div style="margin: 30px 0; text-align: center;">
-                <a href="{{activationLink}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Account</a>
+                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Account</a>
               </div>
               <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 6px;">
                 <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">If the button doesn't work, copy and paste this link into your browser:</p>
@@ -49,7 +61,7 @@ const MEMBER_ACTIVATION_HTML = `<!DOCTYPE html>
             </td>
           </tr>
           <tr>
-            <td style="padding: 20px 40px; background-color: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Best regards,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -67,25 +79,37 @@ const BOARD_ACTIVATION_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Activate Your Board Account - MSP MIU</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 18px !important; }
+      .email-body-pad { padding: 20px 16px !important; }
+      .email-footer-pad { padding: 16px 16px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 20px 0;">
-        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); border-top-left-radius: 8px; border-top-right-radius: 8px;">
+            <td class="email-header-pad" style="padding: 30px 40px; background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU Board</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding: 40px;">
+            <td class="email-body-pad" style="padding: 36px 40px;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{boardMemberName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Welcome to MSP MIU Board! 🎉</strong></p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">As a <strong>{{position}}</strong> of MSP MIU, we're excited to have you on board!</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">To complete your account setup and activate your account on the MSP-MIU website, please click on the activation button below:</p>
               <div style="margin: 30px 0; text-align: center;">
-                <a href="{{activationLink}}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Board Account</a>
+                <a href="{{activationLink}}" class="email-btn" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">Activate Your Board Account</a>
               </div>
               <div style="margin: 20px 0; padding: 15px; background-color: #f9f9f9; border-radius: 6px;">
                 <p style="margin: 0 0 10px 0; color: #666666; font-size: 14px; line-height: 1.6;">If the button doesn't work, copy and paste this link into your browser:</p>
@@ -108,7 +132,7 @@ const BOARD_ACTIVATION_HTML = `<!DOCTYPE html>
             </td>
           </tr>
           <tr>
-            <td style="padding: 20px 40px; background-color: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Best regards,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -126,26 +150,38 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>Welcome to MSP MIU - {{departmentName}} Department</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 18px !important; }
+      .email-body-pad { padding: 20px 16px !important; }
+      .email-footer-pad { padding: 16px 16px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
     <tr>
-      <td align="center" style="padding: 20px 0;">
-        <table role="presentation" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           <tr>
-            <td style="padding: 30px 40px; background-color: #ffffff; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-              <h1 style="margin: 0; color: #333333; font-size: 24px; font-weight: 600;">MSP MIU</h1>
+            <td class="email-header-pad" style="padding: 30px 40px; background-color: #031C35;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">MSP MIU</h1>
             </td>
           </tr>
           <tr>
-            <td style="padding: 30px 40px; background-color: #ffffff;">
+            <td class="email-body-pad" style="padding: 30px 40px; background-color: #ffffff;">
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">Hi {{studentName}},</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;"><strong>Congratulations! 🎊</strong> You've been accepted into the <strong>{{departmentName}} Department</strong> at MSP MIU!</p>
               <p style="margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;">We really enjoyed your interview and are excited to see what you'll bring to the team.</p>
               <div style="margin: 30px 0; padding: 20px; background-color: #f9f9f9; border-radius: 6px; border-left: 4px solid #25D366;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">Join the Department WhatsApp Group</h2>
                 <p style="margin: 0 0 15px 0; color: #666666; font-size: 14px; line-height: 1.6;">Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:</p>
-                <p style="margin: 0;"><a href="{{departmentLink}}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">Join {{departmentName}} WhatsApp Group</a></p>
+                <p style="margin: 0;"><a href="{{departmentLink}}" class="email-btn" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; text-align: center;">Join {{departmentName}} WhatsApp Group</a></p>
               </div>
               <div style="margin: 30px 0; padding: 20px; background-color: #fff9e6; border-radius: 6px; border-left: 4px solid #FFA500;">
                 <h2 style="margin: 0 0 15px 0; color: #333333; font-size: 18px; font-weight: 600;">Opening Session</h2>
@@ -167,7 +203,7 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
             </td>
           </tr>
           <tr>
-            <td style="padding: 20px 40px; background-color: #f9f9f9; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; border-top: 1px solid #eeeeee;">
+            <td class="email-footer-pad" style="padding: 20px 40px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
               <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.5;">Cheers,<br><strong>MSP MIU Team</strong></p>
             </td>
           </tr>
@@ -378,38 +414,53 @@ MSP MIU · {{frontendUrl}}`,
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>{{title}}</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 20px !important; }
+      .email-title-pad { padding: 24px 20px 8px !important; }
+      .email-body-pad { padding: 12px 20px 24px !important; }
+      .email-cta-pad { padding: 0 20px 24px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
+      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f4;-webkit-text-size-adjust:100%;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f4f4f4;opacity:0;">{{preheader}}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background-color:#f4f4f4;">
     <tr>
-      <td align="center" style="padding:24px 12px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);overflow:hidden;">
+      <td align="center" style="padding:16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);overflow:hidden;">
           <tr>
-            <td style="padding:28px 36px;background:linear-gradient(135deg,#031C35 0%,#0D3159 50%,#1D4F82 100%);">
+            <td class="email-header-pad" style="padding:28px 36px;background:linear-gradient(135deg,#031C35 0%,#0D3159 50%,#1D4F82 100%);">
               <p style="margin:0;font-size:22px;font-weight:600;letter-spacing:0.3px;line-height:1.2;color:#ffffff;">MSP MIU</p>
               <p style="margin:10px 0 0;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:#8EC2F0;font-weight:600;">Announcement</p>
             </td>
           </tr>
           {{testBannerHtml}}
           <tr>
-            <td style="padding:32px 36px 8px;">
+            <td class="email-title-pad" style="padding:32px 36px 8px;">
               <h1 style="margin:0;font-size:22px;font-weight:600;color:#031C35;line-height:1.35;">{{titleHtml}}</h1>
               {{metaHtml}}
             </td>
           </tr>
           <tr>
-            <td style="padding:12px 36px 28px;">
+            <td class="email-body-pad" style="padding:12px 36px 28px;">
               <div style="padding:18px 20px;background-color:#eaf2ff;border-radius:6px;border-left:4px solid #03A9F4;font-size:15px;line-height:1.65;color:#333333;">{{descriptionHtml}}</div>
             </td>
           </tr>
           <tr>
-            <td style="padding:0 36px 32px;text-align:center;">
+            <td class="email-cta-pad" style="padding:0 36px 32px;text-align:center;">
               {{ctaHtml}}
             </td>
           </tr>
           <tr>
-            <td style="padding:18px 36px 22px;background-color:#f9f9f9;border-top:1px solid #eeeeee;font-size:13px;line-height:1.55;color:#666666;text-align:center;">
+            <td style="padding:18px 24px 22px;background-color:#f9f9f9;border-top:1px solid #eeeeee;font-size:13px;line-height:1.55;color:#666666;text-align:center;">
               <p style="margin:0 0 8px;"><a href="{{frontendUrl}}" style="color:#0d7bd8;text-decoration:none;font-weight:600;">{{frontendUrl}}</a></p>
               <p style="margin:0;">You receive these messages because you have an account with MSP MIU.</p>
             </td>
@@ -444,17 +495,31 @@ MSP MIU · {{frontendUrl}}`,
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>{{title}}</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 18px 18px !important; }
+      .email-title-pad { padding: 18px 18px 6px !important; }
+      .email-body-pad { padding: 10px 18px 20px !important; }
+      .email-cta-pad { padding: 0 18px 22px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background:#091a2c;-webkit-text-size-adjust:100%;">
   <div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#091a2c;opacity:0;">{{preheader}}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#091a2c;">
     <tr>
-      <td align="center" style="padding:28px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0e2744;border:1px solid #1e3a52;border-radius:18px;overflow:hidden;">
+      <td align="center" style="padding:16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0e2744;border:1px solid #1e3a52;border-radius:18px;overflow:hidden;">
           <tr><td style="height:4px;line-height:4px;font-size:0;background:#3DDC84;">&nbsp;</td></tr>
           <tr>
-            <td style="background:#031c35;padding:20px 26px 18px;border-bottom:1px solid rgba(255,255,255,0.08);">
+            <td class="email-header-pad" style="background:#031c35;padding:20px 26px 18px;border-bottom:1px solid rgba(255,255,255,0.08);">
               <p style="margin:0;font-family:Inter,system-ui,sans-serif;font-size:20px;font-weight:700;letter-spacing:0.5px;line-height:1.2;">
                 <span style="color:#8EC2F0;">MSP</span><span style="color:#eaf2ff;"> · MIU</span>
               </p>
@@ -462,17 +527,17 @@ MSP MIU · {{frontendUrl}}`,
             </td>
           </tr>
           <tr>
-            <td style="padding:22px 26px 8px;font-family:Inter,system-ui,sans-serif;">
+            <td class="email-title-pad" style="padding:22px 26px 8px;font-family:Inter,system-ui,sans-serif;">
               <h1 style="margin:0;font-size:19px;font-weight:600;letter-spacing:0.4px;color:#ffffff;line-height:1.35;">{{titleHtml}}</h1>
               <p style="margin:10px 0 0;font-size:13px;color:#3DDC84;font-weight:600;">Version {{versionNameHtml}}</p>
             </td>
           </tr>
           <tr>
-            <td style="padding:10px 26px 26px;font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.55;color:#8EC2F0;">{{notesHtml}}</td>
+            <td class="email-body-pad" style="padding:10px 26px 26px;font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.55;color:#8EC2F0;">{{notesHtml}}</td>
           </tr>
           <tr>
-            <td style="padding:0 26px 28px;font-family:Inter,system-ui,sans-serif;" align="center">
-              <a href="{{downloadUrl}}" style="display:inline-block;padding:12px 26px;background:#3DDC84;color:#031c35;text-decoration:none;border-radius:12px;font-weight:700;font-size:13px;letter-spacing:0.35px;">Download update</a>
+            <td class="email-cta-pad" style="padding:0 26px 28px;font-family:Inter,system-ui,sans-serif;" align="center">
+              <a href="{{downloadUrl}}" class="email-btn" style="display:inline-block;padding:12px 26px;background:#3DDC84;color:#031c35;text-decoration:none;border-radius:12px;font-weight:700;font-size:13px;letter-spacing:0.35px;">Download update</a>
             </td>
           </tr>
           <tr>
@@ -509,32 +574,54 @@ View the competition: {{competitionLink}}
 ---
 This is an automated message from MSP MIU Competition Management System.`,
     `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 20px !important; }
+      .email-body-pad { padding: 20px 16px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
+      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 24px 12px;">
-    <div style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
-    <div style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
-      <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
-      <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Competition Announcement</p>
-    </div>
-    <div style="padding: 28px 36px; background-color: white;">
-      <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{competitionTitleHtml}}</p>
-      <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
-      <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; white-space: pre-wrap; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
-      <div style="text-align: center;">
-        <a href="{{competitionLink}}" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">View Competition</a>
-      </div>
-      <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
-        <p style="margin: 0 0 8px;">This is an automated message from MSP MIU Competition Management.</p>
-        <p style="margin: 0;">Please do not reply to this email.</p>
-      </div>
-    </div>
-    </div>
-  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          <tr>
+            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+              <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
+              <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Competition Announcement</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-body-pad" style="padding: 28px 36px; background-color: white;">
+              <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{competitionTitleHtml}}</p>
+              <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
+              <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+              <div style="text-align: center;">
+                <a href="{{competitionLink}}" class="email-btn" style="display: inline-block; background: linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%); color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 8px rgba(13, 123, 216, 0.3);">View Competition</a>
+              </div>
+              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+                <p style="margin: 0 0 8px;">This is an automated message from MSP MIU Competition Management.</p>
+                <p style="margin: 0;">Please do not reply to this email.</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`,
     ['competitionTitle', 'announcementTitle', 'announcementMessage', 'competitionLink', 'competitionTitleHtml', 'announcementTitleHtml', 'announcementMessageHtml']
@@ -885,31 +972,53 @@ Message:
 ---
 This is an automated message from MSP MIU Course Management.`,
     `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 600px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-header-pad { padding: 22px 20px !important; }
+      .email-body-pad { padding: 20px 16px !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+      .email-wa-table td { display: block !important; width: 100% !important; text-align: center !important; padding: 6px 0 !important; }
+      .email-wa-table a { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; }
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif; color: #333; line-height: 1.6;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 24px 12px;">
-    <div style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
-      <div style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
-        <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
-        <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Course Communication</p>
-      </div>
-      <div style="padding: 28px 36px; background-color: white;">
-        <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{courseTitleHtml}}</p>
-        <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
-        <p style="margin: 0 0 16px; font-size: 15px; color: #555555;">Hello <strong>{{studentNameHtml}}</strong>,</p>
-        <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
-        {{ctaButtonHtml}}
-        <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
-          <p style="margin: 0 0 8px;">This is an automated communication from MSP MIU Course Management.</p>
-          <p style="margin: 0;">Please do not reply directly to this email.</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 16px 8px;">
+        <table role="presentation" class="email-container" width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          <tr>
+            <td class="email-header-pad" style="background: linear-gradient(135deg, #031C35 0%, #0D3159 50%, #1D4F82 100%); color: white; padding: 28px 36px;">
+              <p style="margin: 0; font-size: 22px; font-weight: 600; color: #ffffff;">MSP MIU</p>
+              <p style="margin: 10px 0 0; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #8EC2F0; font-weight: 600;">Course Communication</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-body-pad" style="padding: 28px 36px; background-color: white;">
+              <p style="margin: 0 0 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: #0d7bd8;">{{courseTitleHtml}}</p>
+              <h1 style="margin: 0 0 16px; font-size: 22px; font-weight: 600; color: #031C35; line-height: 1.35;">{{announcementTitleHtml}}</h1>
+              <p style="margin: 0 0 16px; font-size: 15px; color: #555555;">Hello <strong>{{studentNameHtml}}</strong>,</p>
+              <div style="background-color: #eaf2ff; padding: 18px 20px; border-left: 4px solid #03A9F4; border-radius: 6px; margin: 0 0 24px; word-wrap: break-word; font-size: 15px; line-height: 1.65; color: #333333;">{{announcementMessageHtml}}</div>
+              {{ctaButtonHtml}}
+              <div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #eeeeee; font-size: 13px; color: #666666; text-align: center;">
+                <p style="margin: 0 0 8px;">This is an automated communication from MSP MIU Course Management.</p>
+                <p style="margin: 0;">Please do not reply directly to this email.</p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`,
     ['courseTitle', 'announcementTitle', 'announcementMessage', 'studentName', 'courseUrl', 'ctaLabel', 'ctaUrl', 'courseTitleHtml', 'announcementTitleHtml', 'announcementMessageHtml', 'studentNameHtml', 'ctaButtonHtml', 'ctaBlockText']
