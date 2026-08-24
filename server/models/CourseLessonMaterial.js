@@ -21,7 +21,7 @@ const CourseLessonMaterial = sequelize.define('CourseLessonMaterial', {
     validate: { notEmpty: true }
   },
   material_type: {
-    type: DataTypes.ENUM('youtube', 'document', 'zip', 'code', 'other'),
+    type: DataTypes.ENUM('youtube', 'meeting', 'document', 'zip', 'code', 'other'),
     allowNull: false
   },
   youtube_url: {

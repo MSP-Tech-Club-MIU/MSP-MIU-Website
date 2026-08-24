@@ -191,6 +191,12 @@ const AdminPanel = () => {
         title: '', description: '', department: '', announcement_date: '', priority: false,
         send_email: false, cta_label: '', cta_url: ''
     });
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewAnnouncement, setReviewAnnouncement] = useState(null);
+    const [reviewForm, setReviewForm] = useState({
+        title: '', description: '', department: '', announcement_date: '', priority: false,
+        cta_label: '', cta_url: '', rejection_reason: ''
+    });
 
     // Suggestions & Feedback state
     const [suggestions, setSuggestions] = useState([]);
@@ -592,6 +598,11 @@ const AdminPanel = () => {
                             ? 'Broadcast created — sending emails in the background.'
                             : 'Posted — sending emails in the background.'
                     });
+                } else if (result?.data?.approval_status === 'pending') {
+                    setAlert({
+                        type: 'info',
+                        message: 'Announcement submitted! Queued for President / Vice-President approval before email broadcast.'
+                    });
                 } else {
                     setAlert({ type: 'success', message: 'Website announcement posted!' });
                 }
@@ -601,6 +612,84 @@ const AdminPanel = () => {
         } catch (err) {
             setAlert({ type: 'error', message: err.message || 'Failed to save announcement' });
         }
+    };
+
+    const openReviewModal = (announcement) => {
+        if (!announcement) return;
+        setReviewAnnouncement(announcement);
+        setReviewForm({
+            title: announcement.title || '',
+            description: announcement.description || '',
+            department: announcement.department || '',
+            announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
+            priority: !!announcement.priority,
+            cta_label: announcement.cta_label || '',
+            cta_url: announcement.cta_url || '',
+            rejection_reason: announcement.rejection_reason || ''
+        });
+        setShowReviewModal(true);
+    };
+
+    const handleApproveAnnouncement = async () => {
+        if (!reviewAnnouncement) return;
+        try {
+            const editPayload = {
+                title: reviewForm.title,
+                description: reviewForm.description,
+                department: reviewForm.department,
+                announcement_date: reviewForm.announcement_date,
+                priority: reviewForm.priority,
+                cta_label: reviewForm.cta_label,
+                cta_url: reviewForm.cta_url
+            };
+            const result = await ApiService.approveAnnouncement(reviewAnnouncement.announcement_id, editPayload);
+            setShowReviewModal(false);
+            setReviewAnnouncement(null);
+            fetchAnnouncementsAdmin(false);
+
+            if (result?.emailJob?.id) {
+                setEmailSendJob({
+                    id: result.emailJob.id,
+                    title: result.data?.title || editPayload.title
+                });
+            }
+            setAlert({
+                type: 'success',
+                message: 'Announcement approved and email broadcast started!'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to approve announcement' });
+        }
+    };
+
+    const handleRejectAnnouncement = async () => {
+        if (!reviewAnnouncement) return;
+        try {
+            await ApiService.rejectAnnouncement(
+                reviewAnnouncement.announcement_id,
+                reviewForm.rejection_reason || ''
+            );
+            setShowReviewModal(false);
+            setReviewAnnouncement(null);
+            fetchAnnouncementsAdmin(false);
+            setAlert({
+                type: 'info',
+                message: 'Announcement email broadcast refused.'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to refuse announcement' });
+        }
+    };
+
+    const announcementApprovalBadge = (a) => {
+        const status = a.approval_status || 'approved';
+        if (status === 'pending') {
+            return { label: 'Pending approval', className: 'warning' };
+        }
+        if (status === 'rejected') {
+            return { label: 'Refused', className: 'completed' };
+        }
+        return { label: 'Approved', className: 'active' };
     };
 
     const announcementChannelBadge = (a) => {
@@ -1231,12 +1320,14 @@ const AdminPanel = () => {
                                                 <th>Date</th>
                                                 <th>Priority</th>
                                                 <th>Channel</th>
+                                                <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {announcements.map((a) => {
                                                 const channel = announcementChannelBadge(a);
+                                                const approval = announcementApprovalBadge(a);
                                                 return (
                                                 <tr key={a.announcement_id}>
                                                     <td style={{ fontWeight: 600 }}>
@@ -1258,6 +1349,20 @@ const AdminPanel = () => {
                                                         </span>
                                                     </td>
                                                     <td>
+                                                        <span className={`AdminPanel__badge AdminPanel__badge--${approval.className}`}>
+                                                            {approval.label}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        {isPresidentOrVP && a.approval_status === 'pending' && (
+                                                            <button
+                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                                                                style={{ backgroundColor: '#2e7d32', color: '#fff' }}
+                                                                onClick={() => openReviewModal(a)}
+                                                            >
+                                                                Review & Send
+                                                            </button>
+                                                        )}
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--edit" onClick={() => openAnnouncementModal(a)}>Edit</button>
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--delete" onClick={() => deleteAnnouncement(a.announcement_id)}>Delete</button>
                                                     </td>
@@ -1300,6 +1405,11 @@ const AdminPanel = () => {
                                                         ? 'Editing a website feed post.'
                                                         : 'Short copy for the website feed. Optionally email members (off by default).')}
                                             </p>
+                                            {!isPresidentOrVP && (announcementModalKind === 'email' || announcementForm.send_email) && (
+                                                <div style={{ background: '#fff3cd', color: '#856404', padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: '0.875rem' }}>
+                                                    <strong>Notice:</strong> Email broadcasts require President or Vice-President review before being dispatched.
+                                                </div>
+                                            )}
                                             <div className="AdminPanel__formGroup">
                                                 <label htmlFor="announcement-title">Title *</label>
                                                 <input
@@ -1393,6 +1503,123 @@ const AdminPanel = () => {
                                                     {editingAnnouncement
                                                         ? 'Save'
                                                         : (announcementModalKind === 'email' ? 'Send email' : 'Post to website')}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>,
+                                    document.body
+                                )
+                                : null}
+
+                            {/* === REVIEW / APPROVE MODAL (President / Vice President) === */}
+                            {showReviewModal && reviewAnnouncement
+                                ? createPortal(
+                                    <div
+                                        className="AdminPanel__modal"
+                                        onClick={() => setShowReviewModal(false)}
+                                        role="presentation"
+                                    >
+                                        <div
+                                            className="AdminPanel__modalContent AdminPanel__modalContent--large"
+                                            onClick={e => e.stopPropagation()}
+                                            role="dialog"
+                                            aria-modal="true"
+                                        >
+                                            <h3 className="AdminPanel__modalTitle">
+                                                Review Announcement Email Broadcast
+                                            </h3>
+                                            <p className="AdminPanel__emailNote" role="note">
+                                                Review, edit, and approve or refuse this announcement email broadcast before sending to members.
+                                            </p>
+                                            <div className="AdminPanel__formGroup">
+                                                <label htmlFor="review-title">Title / Subject *</label>
+                                                <input
+                                                    id="review-title"
+                                                    value={reviewForm.title}
+                                                    onChange={e => setReviewForm({ ...reviewForm, title: e.target.value })}
+                                                    placeholder="Announcement title"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label htmlFor="review-description">Message Body *</label>
+                                                <textarea
+                                                    id="review-description"
+                                                    value={reviewForm.description}
+                                                    onChange={e => setReviewForm({ ...reviewForm, description: e.target.value })}
+                                                    rows={8}
+                                                    placeholder="Announcement message"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Department</label>
+                                                <input
+                                                    value={reviewForm.department}
+                                                    onChange={e => setReviewForm({ ...reviewForm, department: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={reviewForm.announcement_date}
+                                                    onChange={e => setReviewForm({ ...reviewForm, announcement_date: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={reviewForm.priority}
+                                                        onChange={e => setReviewForm({ ...reviewForm, priority: e.target.checked })}
+                                                    />
+                                                    {' '}Priority
+                                                </label>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>CTA Button Label</label>
+                                                <input
+                                                    value={reviewForm.cta_label}
+                                                    onChange={e => setReviewForm({ ...reviewForm, cta_label: e.target.value })}
+                                                    placeholder="Optional button label"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>CTA Button URL</label>
+                                                <input
+                                                    type="url"
+                                                    value={reviewForm.cta_url}
+                                                    onChange={e => setReviewForm({ ...reviewForm, cta_url: e.target.value })}
+                                                    placeholder="https://..."
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Refusal Reason (if refusing)</label>
+                                                <input
+                                                    value={reviewForm.rejection_reason}
+                                                    onChange={e => setReviewForm({ ...reviewForm, rejection_reason: e.target.value })}
+                                                    placeholder="Reason for refusing this email broadcast"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__modalActions">
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                                                    onClick={() => setShowReviewModal(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--danger"
+                                                    style={{ backgroundColor: '#c62828', color: '#fff' }}
+                                                    onClick={handleRejectAnnouncement}
+                                                >
+                                                    Refuse Email Broadcast
+                                                </button>
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+                                                    style={{ backgroundColor: '#2e7d32', color: '#fff' }}
+                                                    onClick={handleApproveAnnouncement}
+                                                >
+                                                    Approve & Send Emails
                                                 </button>
                                             </div>
                                         </div>

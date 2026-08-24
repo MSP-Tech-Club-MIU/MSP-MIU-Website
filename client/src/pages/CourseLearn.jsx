@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { FiDownload, FiCheckCircle } from 'react-icons/fi';
+import { FiDownload, FiCheckCircle, FiVideo } from 'react-icons/fi';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
@@ -100,7 +100,8 @@ export default function CourseLearn() {
     [lessons, activeLessonId]
   );
   const youtubeMaterials = (activeLesson?.materials || []).filter((m) => m.material_type === 'youtube');
-  const fileMaterials = (activeLesson?.materials || []).filter((m) => m.material_type !== 'youtube');
+  const meetingMaterials = (activeLesson?.materials || []).filter((m) => m.material_type === 'meeting');
+  const fileMaterials = (activeLesson?.materials || []).filter((m) => m.material_type !== 'youtube' && m.material_type !== 'meeting');
 
   const markComplete = async () => {
     if (!accessToken || !activeLesson) return;
@@ -206,13 +207,36 @@ export default function CourseLearn() {
                 <h2>{activeLesson.title}</h2>
                 {activeLesson.description ? <p>{activeLesson.description}</p> : null}
 
-                {youtubeMaterials.map((m) => (
+                 {youtubeMaterials.map((m) => (
                   <CourseYouTubePlayer
                     key={m.material_id}
                     url={m.youtube_url}
                     title={m.title}
                   />
                 ))}
+
+                {meetingMaterials.length > 0 ? (
+                  <div className="CourseDetails__files" style={{ marginBottom: 20 }}>
+                    {meetingMaterials.map((m) => (
+                      <a
+                        key={m.material_id}
+                        className="CourseDetails__file"
+                        href={m.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          borderColor: 'rgba(235, 94, 40, 0.4)',
+                          background: 'rgba(235, 94, 40, 0.1)',
+                          color: '#FFAC81'
+                        }}
+                      >
+                        <FiVideo style={{ fontSize: '1.2rem' }} />
+                        <span style={{ fontWeight: 600 }}>{m.title || 'Join Live Meeting'}</span>
+                        <small style={{ marginLeft: 'auto', opacity: 0.8 }}>(Live Session)</small>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
 
                 {fileMaterials.length > 0 ? (
                   <div className="CourseDetails__files">

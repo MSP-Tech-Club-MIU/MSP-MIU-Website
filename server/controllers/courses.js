@@ -17,7 +17,7 @@ const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
 const VALID_STATUSES = ['draft', 'coming_soon', 'published', 'archived'];
-const VALID_MATERIAL_TYPES = ['youtube', 'document', 'zip', 'code', 'other'];
+const VALID_MATERIAL_TYPES = ['youtube', 'meeting', 'document', 'zip', 'code', 'other'];
 const PUBLIC_LIST_STATUSES = ['coming_soon', 'published'];
 
 function makeAccessToken() {
@@ -532,10 +532,10 @@ const createMaterial = async (req, res) => {
         error: `material_type must be one of: ${VALID_MATERIAL_TYPES.join(', ')}`
       });
     }
-    if (material_type === 'youtube' && !youtube_url) {
-      return res.status(400).json({ success: false, error: 'youtube_url is required for youtube materials' });
+    if ((material_type === 'youtube' || material_type === 'meeting') && !youtube_url) {
+      return res.status(400).json({ success: false, error: `${material_type === 'youtube' ? 'youtube_url' : 'meeting link'} is required for ${material_type} materials` });
     }
-    if (material_type !== 'youtube' && !file_url) {
+    if (material_type !== 'youtube' && material_type !== 'meeting' && !file_url) {
       return res.status(400).json({ success: false, error: 'file_url is required for file materials' });
     }
 
@@ -549,8 +549,8 @@ const createMaterial = async (req, res) => {
       lesson_id: lesson.lesson_id,
       title: String(title).trim(),
       material_type,
-      youtube_url: material_type === 'youtube' ? youtube_url : null,
-      file_url: material_type !== 'youtube' ? file_url : null,
+      youtube_url: (material_type === 'youtube' || material_type === 'meeting') ? youtube_url : null,
+      file_url: (material_type !== 'youtube' && material_type !== 'meeting') ? file_url : null,
       file_name: file_name || null,
       sort_order: Number(order) || 0
     });
