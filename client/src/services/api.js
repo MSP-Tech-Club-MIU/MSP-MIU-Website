@@ -1327,6 +1327,52 @@ class ApiService {
     return result.data;
   }
 
+  // Approve an announcement and dispatch email broadcast (President/VP only)
+  static async approveAnnouncement(id, editData = {}) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}/approve`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify(editData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to approve announcement');
+      }
+
+      this.clearCache('announcements');
+      return result;
+    } catch (error) {
+      console.error('Error approving announcement:', error);
+      throw error;
+    }
+  }
+
+  // Refuse / reject an announcement email broadcast (President/VP only)
+  static async rejectAnnouncement(id, reason = '') {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}/reject`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ reason }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to refuse announcement');
+      }
+
+      this.clearCache('announcements');
+      return result;
+    } catch (error) {
+      console.error('Error refusing announcement:', error);
+      throw error;
+    }
+  }
+
   // Update an announcement (admin/board only)
   static async updateAnnouncement(id, announcementData) {
     try {

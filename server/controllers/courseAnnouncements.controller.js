@@ -5,6 +5,7 @@ const {
 } = require('../services/courseAnnouncementBroadcast');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { logAdminAction } = require('../utils/adminNotification');
+const { checkIsPresidentOrVicePresident } = require('../middlewares/adminAuth');
 const logger = require('../utils/logger');
 
 /**
@@ -18,7 +19,7 @@ const getCourseAnnouncements = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid course id' });
     }
 
-    const { includeInactive, target_type } = req.query;
+    const { includeInactive, target_type, approval_status } = req.query;
     const isAdmin = Boolean(req.user && ['admin', 'board'].includes(req.user.role));
 
     // Verify course exists
@@ -29,9 +30,17 @@ const getCourseAnnouncements = async (req, res) => {
 
     const whereClause = { course_id: courseId };
 
-    // Only show active announcements by default (unless admin/board requests all)
-    if (!isAdmin || includeInactive !== 'true') {
+    // Public feed: active + approved only
+    if (!isAdmin) {
       whereClause.is_active = true;
+      whereClause.approval_status = 'approved';
+    } else {
+      if (includeInactive !== 'true') {
+        whereClause.is_active = true;
+      }
+      if (approval_status) {
+        whereClause.approval_status = approval_status;
+      }
     }
 
     if (target_type) {
@@ -46,6 +55,12 @@ const getCourseAnnouncements = async (req, res) => {
         {
           model: User,
           as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
           attributes: ['user_id', 'full_name', 'email'],
           required: false
         },
@@ -99,6 +114,12 @@ const getCourseAnnouncementById = async (req, res) => {
         {
           model: User,
           as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
           attributes: ['user_id', 'full_name', 'email'],
           required: false
         },
@@ -225,6 +246,34 @@ const createCourseAnnouncement = async (req, res) => {
     }
 
     const willSendEmail = send_email === true || send_email === 'true' || send_email === 1;
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+
+    // Approval status decision:
+    // Individual single member sends are always immediately approved.
+    // Broadcasts (non-individual) require President/VP approval to dispatch immediately.
+    let approvalStatus = 'approved';
+    let approvedBy = userId;
+    let emailSent = false;
+    let shouldBroadcastNow = false;
+
+    if (willSendEmail) {
+      if (target_type === 'individual') {
+        approvalStatus = 'approved';
+        approvedBy = userId;
+        emailSent = true;
+        shouldBroadcastNow = true;
+      } else if (isPresidentOrVP) {
+        approvalStatus = 'approved';
+        approvedBy = userId;
+        emailSent = true;
+        shouldBroadcastNow = true;
+      } else {
+        approvalStatus = 'pending';
+        approvedBy = null;
+        emailSent = false;
+        shouldBroadcastNow = false;
+      }
+    }
 
     // Create announcement
     const announcement = await CourseAnnouncement.create({
@@ -238,12 +287,15 @@ const createCourseAnnouncement = async (req, res) => {
       target_email: target_email ? String(target_email).trim() : null,
       cta_label: cta_label ? String(cta_label).trim() : null,
       cta_url: cta_url ? String(cta_url).trim() : null,
+      approval_status: approvalStatus,
+      approved_by: approvedBy,
+      email_sent: emailSent,
       is_active: true
     });
 
-    // Broadcast email if requested
+    // Broadcast email if approved for immediate send
     let emailStats = null;
-    if (willSendEmail) {
+    if (shouldBroadcastNow) {
       try {
         emailStats = await broadcastCourseAnnouncementEmails(announcement, course);
       } catch (emailError) {
@@ -261,6 +313,12 @@ const createCourseAnnouncement = async (req, res) => {
           required: false
         },
         {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
           model: CourseEnrollment,
           as: 'targetEnrollment',
           attributes: ['enrollment_id', 'full_name', 'email', 'status', 'university_id'],
@@ -271,18 +329,27 @@ const createCourseAnnouncement = async (req, res) => {
 
     await logAdminAction(
       'course_announcement_created',
-      `Created announcement "${createdAnnouncement.title}" for course "${course.title}"`,
+      `Created announcement "${createdAnnouncement.title}" for course "${course.title}" (${approvalStatus})`,
       req,
       'course',
       course.course_id,
       course.season_id
     );
 
+    let responseMessage = 'Course announcement created successfully';
+    if (willSendEmail) {
+      if (shouldBroadcastNow) {
+        responseMessage = target_type === 'individual'
+          ? 'Course message sent to member'
+          : 'Course announcement created and broadcast emails dispatched';
+      } else {
+        responseMessage = 'Course announcement submitted and queued for President / Vice-President approval before email broadcast.';
+      }
+    }
+
     return res.status(201).json({
       success: true,
-      message: willSendEmail
-        ? 'Course announcement created and emails dispatched'
-        : 'Course announcement created successfully',
+      message: responseMessage,
       data: createdAnnouncement,
       emailStats
     });
@@ -291,6 +358,195 @@ const createCourseAnnouncement = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to create course announcement'
+    });
+  }
+};
+
+/**
+ * Approve course announcement and dispatch email broadcast (allows optional edits)
+ * PUT /api/courses/:courseId/announcements/:announcementId/approve
+ * Requires: President or Vice President role
+ */
+const approveCourseAnnouncement = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.courseId || req.params.id, 10);
+    const announcementId = parseInt(req.params.announcementId, 10);
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Course announcement approval is restricted to President and Vice President roles.'
+      });
+    }
+
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    const announcement = await CourseAnnouncement.findOne({
+      where: {
+        announcement_id: announcementId,
+        course_id: courseId
+      }
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ success: false, error: 'Announcement not found' });
+    }
+
+    const {
+      title,
+      message,
+      target_type,
+      cta_label,
+      cta_url
+    } = req.body;
+
+    if (title !== undefined) announcement.title = String(title).trim();
+    if (message !== undefined) announcement.message = String(message).trim();
+    if (target_type !== undefined) announcement.target_type = target_type;
+    if (cta_label !== undefined) announcement.cta_label = cta_label || null;
+    if (cta_url !== undefined) announcement.cta_url = cta_url || null;
+
+    announcement.approval_status = 'approved';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = null;
+    announcement.email_sent = true;
+    announcement.is_active = true;
+
+    await announcement.save();
+
+    let emailStats = null;
+    if (announcement.send_email) {
+      try {
+        emailStats = await broadcastCourseAnnouncementEmails(announcement, course);
+      } catch (emailError) {
+        logger.error('Error broadcasting approved course announcement emails:', emailError);
+      }
+    }
+
+    const updatedAnnouncement = await CourseAnnouncement.findByPk(announcementId, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: CourseEnrollment,
+          as: 'targetEnrollment',
+          attributes: ['enrollment_id', 'full_name', 'email', 'status', 'university_id'],
+          required: false
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'course_announcement_approved',
+      `Approved course announcement "${updatedAnnouncement.title}" for course "${course.title}"`,
+      req,
+      'course',
+      courseId,
+      course.season_id
+    );
+
+    return res.json({
+      success: true,
+      message: 'Course announcement approved and email broadcast dispatched',
+      data: updatedAnnouncement,
+      emailStats
+    });
+  } catch (error) {
+    logger.error('Error approving course announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to approve course announcement'
+    });
+  }
+};
+
+/**
+ * Refuse course announcement email broadcast
+ * PUT /api/courses/:courseId/announcements/:announcementId/reject
+ * Requires: President or Vice President role
+ */
+const rejectCourseAnnouncement = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.courseId || req.params.id, 10);
+    const announcementId = parseInt(req.params.announcementId, 10);
+    const { reason } = req.body;
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Course announcement refusal is restricted to President and Vice President roles.'
+      });
+    }
+
+    const announcement = await CourseAnnouncement.findOne({
+      where: {
+        announcement_id: announcementId,
+        course_id: courseId
+      }
+    });
+
+    if (!announcement) {
+      return res.status(404).json({ success: false, error: 'Announcement not found' });
+    }
+
+    announcement.approval_status = 'rejected';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = reason ? String(reason).trim() : null;
+
+    await announcement.save();
+
+    const updatedAnnouncement = await CourseAnnouncement.findByPk(announcementId, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'course_announcement_rejected',
+      `Refused course announcement "${updatedAnnouncement.title}"${reason ? `: ${reason}` : ''}`,
+      req,
+      'course',
+      courseId
+    );
+
+    return res.json({
+      success: true,
+      message: 'Course announcement email broadcast refused',
+      data: updatedAnnouncement
+    });
+  } catch (error) {
+    logger.error('Error rejecting course announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to refuse course announcement'
     });
   }
 };
@@ -402,6 +658,12 @@ const updateCourseAnnouncement = async (req, res) => {
           required: false
         },
         {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email'],
+          required: false
+        },
+        {
           model: CourseEnrollment,
           as: 'targetEnrollment',
           attributes: ['enrollment_id', 'full_name', 'email', 'status', 'university_id'],
@@ -409,14 +671,6 @@ const updateCourseAnnouncement = async (req, res) => {
         }
       ]
     });
-
-    await logAdminAction(
-      'course_announcement_updated',
-      `Updated announcement "${updatedAnnouncement.title}" in course #${courseId}`,
-      req,
-      'course',
-      courseId
-    );
 
     return res.json({
       success: true,
@@ -495,7 +749,7 @@ const deleteCourseAnnouncement = async (req, res) => {
 /**
  * Resend announcement emails to targeted course members
  * POST /api/courses/:courseId/announcements/:announcementId/resend-emails
- * Requires: admin or board role
+ * Requires: admin or board role (President/VP required if broadcast target)
  */
 const resendCourseAnnouncementEmails = async (req, res) => {
   try {
@@ -516,6 +770,16 @@ const resendCourseAnnouncementEmails = async (req, res) => {
 
     if (!announcement) {
       return res.status(404).json({ success: false, error: 'Announcement not found' });
+    }
+
+    if (announcement.target_type !== 'individual') {
+      const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+      if (!isPresidentOrVP) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. Resending broadcast course announcement emails requires President or Vice President approval.'
+        });
+      }
     }
 
     const emailStats = await broadcastCourseAnnouncementEmails(announcement, course);
@@ -551,6 +815,8 @@ module.exports = {
   getCourseAnnouncementById,
   getCourseRecipientsPreview,
   createCourseAnnouncement,
+  approveCourseAnnouncement,
+  rejectCourseAnnouncement,
   sendDirectCourseMemberMessage,
   updateCourseAnnouncement,
   deleteCourseAnnouncement,

@@ -155,7 +155,7 @@ const presidentOrVicePresidentAuth = async (req, res, next) => {
 
         return res.status(403).json({
             success: false,
-            error: 'Access denied. Notifications are restricted to President and Vice President roles.'
+            error: 'Access denied. Restricted to President and Vice President roles.'
         });
     } catch (error) {
         logger.error('President/VP auth middleware error:', error);
@@ -166,10 +166,34 @@ const presidentOrVicePresidentAuth = async (req, res, next) => {
     }
 };
 
+/**
+ * Check if the request is from a President or Vice President (returns boolean).
+ */
+const checkIsPresidentOrVicePresident = async (req) => {
+    try {
+        if (!req || !req.user || !req.user.user_id) return false;
+        let boardMember = req.boardMember;
+        if (!boardMember) {
+            const loaded = await loadCurrentSeasonBoardMember(req.user.user_id);
+            boardMember = loaded.boardMember;
+            if (boardMember) {
+                req.boardMember = boardMember;
+            }
+        }
+        if (!boardMember) return false;
+        const position = String(boardMember.position || '').trim();
+        return position === 'President' || position === 'Vice President';
+    } catch (error) {
+        logger.error('Error checking President/VP status:', error);
+        return false;
+    }
+};
+
 module.exports = {
     adminAuth,
     adminOrProgramsAuth,
     presidentOrVicePresidentAuth,
-    loadCurrentSeasonBoardMember
+    loadCurrentSeasonBoardMember,
+    checkIsPresidentOrVicePresident
 };
 

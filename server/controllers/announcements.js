@@ -9,6 +9,7 @@ const {
   createAnnouncementEmailJob
 } = require('../services/announcementEmailJob');
 const { logAdminAction } = require('../utils/adminNotification');
+const { checkIsPresidentOrVicePresident } = require('../middlewares/adminAuth');
 const logger = require('../utils/logger');
 
 const WEBSITE_TITLE_MAX = 50;
@@ -86,19 +87,32 @@ const getAllAnnouncements = async (req, res) => {
     const whereClause = { ...seasonFilter.where };
     const adminView = req.query.forAdmin === 'true' || includeInactive === 'true';
 
-    // Public feed: active + published to website only
+    // Public feed: active + published to website + approved only
     if (!adminView) {
       whereClause.is_active = true;
       whereClause.publish_to_website = true;
-    } else if (includeInactive !== 'true') {
-      whereClause.is_active = true;
+      whereClause.approval_status = 'approved';
+    } else {
+      if (includeInactive !== 'true') {
+        whereClause.is_active = true;
+      }
+      if (req.query.approval_status) {
+        whereClause.approval_status = req.query.approval_status;
+      }
     }
 
-    const include = [{
-      model: User,
-      as: 'creator',
-      attributes: ['user_id', 'full_name', 'email']
-    }];
+    const include = [
+      {
+        model: User,
+        as: 'creator',
+        attributes: ['user_id', 'full_name', 'email']
+      },
+      {
+        model: User,
+        as: 'approver',
+        attributes: ['user_id', 'full_name', 'email']
+      }
+    ];
     if (seasonFilter.includeSeason) {
       include.push(seasonInclude());
     }
@@ -144,11 +158,18 @@ const getAnnouncementById = async (req, res) => {
     const { id } = req.params;
 
     const announcement = await Announcement.findByPk(id, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email']
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email']
+        }
+      ]
     });
 
     if (!announcement) {
@@ -256,9 +277,27 @@ const addAnnouncement = async (req, res) => {
       });
     }
 
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+
+    let approvalStatus = 'approved';
+    let approvedBy = userId;
+    let emailSent = false;
+
+    if (shouldSendEmail) {
+      if (isPresidentOrVP) {
+        approvalStatus = 'approved';
+        approvedBy = userId;
+        emailSent = true;
+      } else {
+        approvalStatus = 'pending';
+        approvedBy = null;
+        emailSent = false;
+      }
+    }
+
     const announcement = await Announcement.create({
-      title,
-      description,
+      title: String(title).trim(),
+      description: String(description).trim(),
       department,
       announcement_date,
       priority: parseBool(priority, false),
@@ -267,28 +306,38 @@ const addAnnouncement = async (req, res) => {
       cta_label: cta.cta_label,
       cta_url: cta.cta_url,
       created_by: userId,
+      approval_status: approvalStatus,
+      approved_by: approvedBy,
+      email_sent: emailSent,
       is_active: true,
       season_id: await resolveSeasonIdForWrite(req.body, req.query)
     });
 
     const createdAnnouncement = await Announcement.findByPk(announcement.announcement_id, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email']
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email']
+        }
+      ]
     });
 
     await logAdminAction(
       'announcement_created',
-      `Created announcement "${createdAnnouncement.title}"`,
+      `Created announcement "${createdAnnouncement.title}" (${approvalStatus})`,
       req,
       'announcement',
       createdAnnouncement.announcement_id,
       createdAnnouncement.season_id
     );
 
-    if (createdAnnouncement.send_email) {
+    if (createdAnnouncement.send_email && isPresidentOrVP) {
       const emailJob = startAnnouncementEmailBroadcast(createdAnnouncement);
       let message = 'Website announcement posted; sending emails…';
       if (!publishToWebsite) {
@@ -299,6 +348,14 @@ const addAnnouncement = async (req, res) => {
         message,
         data: createdAnnouncement,
         emailJob
+      });
+    }
+
+    if (createdAnnouncement.send_email && !isPresidentOrVP) {
+      return res.status(201).json({
+        success: true,
+        message: 'Announcement submitted and queued for President / Vice-President approval before email broadcast.',
+        data: createdAnnouncement
       });
     }
 
@@ -316,6 +373,212 @@ const addAnnouncement = async (req, res) => {
     return res.status(500).json({
       success: false,
       error: detail
+    });
+  }
+};
+
+/**
+ * Approve announcement and trigger email broadcast (allows optional edits)
+ * PUT /api/announcements/:id/approve
+ * Requires: President or Vice President role
+ */
+const approveAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Announcement approval is restricted to President and Vice President roles.'
+      });
+    }
+
+    const announcement = await Announcement.findByPk(id);
+    if (!announcement) {
+      return res.status(404).json({
+        success: false,
+        error: 'Announcement not found'
+      });
+    }
+
+    const {
+      title,
+      description,
+      department,
+      announcement_date,
+      priority,
+      cta_label,
+      cta_url
+    } = req.body;
+
+    if (title !== undefined) announcement.title = String(title).trim();
+    if (description !== undefined) announcement.description = String(description).trim();
+    if (department !== undefined) announcement.department = department;
+    if (announcement_date !== undefined) {
+      const announcementDate = new Date(announcement_date);
+      if (isNaN(announcementDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid announcement_date format'
+        });
+      }
+      announcement.announcement_date = announcement_date;
+    }
+    if (priority !== undefined) {
+      announcement.priority = parseBool(priority, false);
+    }
+    if (cta_label !== undefined || cta_url !== undefined) {
+      const cta = normalizeCta(
+        cta_label !== undefined ? cta_label : announcement.cta_label,
+        cta_url !== undefined ? cta_url : announcement.cta_url
+      );
+      if (cta.cta_url && !isValidHttpUrl(cta.cta_url)) {
+        return res.status(400).json({
+          success: false,
+          error: 'CTA button URL must be a valid http(s) link'
+        });
+      }
+      announcement.cta_label = cta.cta_label;
+      announcement.cta_url = cta.cta_url;
+    }
+
+    const isWebsite = announcement.publish_to_website !== false;
+    const titleMax = isWebsite ? WEBSITE_TITLE_MAX : EMAIL_TITLE_MAX;
+    const descMax = isWebsite ? WEBSITE_DESC_MAX : EMAIL_DESC_MAX;
+    if (String(announcement.title || '').trim().length > titleMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Title must be at most ${titleMax} characters for this announcement type`
+      });
+    }
+    if (String(announcement.description || '').trim().length > descMax) {
+      return res.status(400).json({
+        success: false,
+        error: `Description must be at most ${descMax} characters for this announcement type`
+      });
+    }
+
+    announcement.approval_status = 'approved';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = null;
+    announcement.email_sent = true;
+    announcement.is_active = true;
+
+    await announcement.save();
+
+    const updatedAnnouncement = await Announcement.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email']
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email']
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'announcement_approved',
+      `Approved announcement "${updatedAnnouncement.title}" and initiated email broadcast`,
+      req,
+      'announcement',
+      id,
+      updatedAnnouncement.season_id
+    );
+
+    let emailJob = null;
+    if (updatedAnnouncement.send_email || !updatedAnnouncement.publish_to_website) {
+      emailJob = startAnnouncementEmailBroadcast(updatedAnnouncement);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Announcement approved and email broadcast started',
+      data: updatedAnnouncement,
+      emailJob
+    });
+  } catch (error) {
+    logger.error('Error approving announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to approve announcement'
+    });
+  }
+};
+
+/**
+ * Refuse / reject announcement email broadcast
+ * PUT /api/announcements/:id/reject
+ * Requires: President or Vice President role
+ */
+const rejectAnnouncement = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const userId = req.user.user_id;
+
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Announcement refusal is restricted to President and Vice President roles.'
+      });
+    }
+
+    const announcement = await Announcement.findByPk(id);
+    if (!announcement) {
+      return res.status(404).json({
+        success: false,
+        error: 'Announcement not found'
+      });
+    }
+
+    announcement.approval_status = 'rejected';
+    announcement.approved_by = userId;
+    announcement.rejection_reason = reason ? String(reason).trim() : null;
+
+    await announcement.save();
+
+    const updatedAnnouncement = await Announcement.findByPk(id, {
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email']
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email']
+        }
+      ]
+    });
+
+    await logAdminAction(
+      'announcement_rejected',
+      `Refused announcement "${updatedAnnouncement.title}"${reason ? `: ${reason}` : ''}`,
+      req,
+      'announcement',
+      id,
+      updatedAnnouncement.season_id
+    );
+
+    return res.json({
+      success: true,
+      message: 'Announcement email broadcast refused',
+      data: updatedAnnouncement
+    });
+  } catch (error) {
+    logger.error('Error rejecting announcement:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to refuse announcement'
     });
   }
 };
@@ -419,11 +682,18 @@ const updateAnnouncement = async (req, res) => {
     await announcement.save();
 
     const updatedAnnouncement = await Announcement.findByPk(id, {
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email']
-      }]
+      include: [
+        {
+          model: User,
+          as: 'creator',
+          attributes: ['user_id', 'full_name', 'email']
+        },
+        {
+          model: User,
+          as: 'approver',
+          attributes: ['user_id', 'full_name', 'email']
+        }
+      ]
     });
 
     await logAdminAction(
@@ -500,6 +770,8 @@ module.exports = {
   getAllAnnouncements,
   getAnnouncementById,
   addAnnouncement,
+  approveAnnouncement,
+  rejectAnnouncement,
   updateAnnouncement,
   deleteAnnouncement
 };

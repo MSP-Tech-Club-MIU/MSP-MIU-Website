@@ -69,6 +69,28 @@ const CompetitionAnnouncement = sequelize.define('CompetitionAnnouncement', {
       key: 'user_id'
     }
   },
+  approval_status: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    defaultValue: 'approved',
+    allowNull: false
+  },
+  approved_by: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'users',
+      key: 'user_id'
+    }
+  },
+  rejection_reason: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  email_sent: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+    allowNull: false
+  },
   created_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

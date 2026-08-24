@@ -8,6 +8,11 @@ const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Foun
  * with a linked user account.
  * Technical Training Head is not full-admin (same Programs access as Co-Head).
  */
+function isPresidentOrVicePresident(member = {}) {
+  const position = String(member.position || '').trim();
+  return position === 'President' || position === 'Vice President';
+}
+
 function isAdminEligibleBoardMember(member = {}) {
   const userId = member.user_id != null && member.user_id !== ''
     ? Number(member.user_id)
@@ -143,6 +148,7 @@ async function seasonHasAdminEligibleBoard(seasonId, { transaction } = {}) {
 
 module.exports = {
   POSITION_VALUES,
+  isPresidentOrVicePresident,
   isAdminEligibleBoardMember,
   normalizeBoardMemberInput,
   validateInitialBoardMembers,
