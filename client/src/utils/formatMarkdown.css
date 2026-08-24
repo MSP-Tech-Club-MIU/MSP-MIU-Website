@@ -164,67 +164,71 @@
 }
 
 .FormattedText__kvKey {
-  padding: 7px 12px 7px 0;
+  padding: 6px 8px;
   font-weight: 700;
   color: #03a9f4;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   white-space: nowrap;
-  vertical-align: top;
-  width: 32%;
+  vertical-align: middle;
+  text-align: center;
+  width: 20%;
 }
 
 .FormattedText__kvVal {
-  padding: 7px 0;
+  padding: 6px 10px;
   color: #eaf2ff;
-  font-size: 0.86rem;
-  vertical-align: top;
+  font-size: 0.84rem;
+  vertical-align: middle;
 }
 
 /* WhatsApp Group Callout Card */
 .FormattedText__waCard {
-  margin: 14px 0;
-  padding: 12px 16px;
+  margin: 8px 0;
+  padding: 6px 10px;
   background: rgba(37, 211, 102, 0.12);
   border: 1px solid rgba(37, 211, 102, 0.35);
   border-left: 4px solid #25D366;
-  border-radius: 10px;
+  border-radius: 6px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .FormattedText__waLeft {
   flex: 1;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 .FormattedText__waTitle {
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 700;
   color: #25D366;
   display: flex;
   align-items: center;
   margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .FormattedText__waDesc {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: rgba(234, 242, 255, 0.8);
+  line-height: 1.25;
 }
 
 .FormattedText__waBtn {
   display: inline-flex;
   align-items: center;
-  padding: 7px 16px;
+  padding: 5px 12px;
   background: #25D366;
   color: #042010 !important;
-  border-radius: 6px;
+  border-radius: 5px;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
+  line-height: 1.2;
   text-decoration: none !important;
-  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  box-shadow: 0 1px 4px rgba(37, 211, 102, 0.25);
   transition: all 0.15s ease;
   white-space: nowrap;
 }
@@ -232,7 +236,7 @@
 .FormattedText__waBtn:hover {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.45);
+  box-shadow: 0 3px 8px rgba(37, 211, 102, 0.4);
 }
 
 .FormattedText__link--whatsapp {
@@ -242,8 +246,8 @@
 
 /* Live Preview Container for Admin Composers */
 .FormattedText__livePreviewBox {
-  min-height: 180px;
-  padding: 16px 20px;
+  min-height: 160px;
+  padding: 10px 10px;
   background: rgba(6, 18, 32, 0.9);
   border: 1px solid rgba(142, 194, 240, 0.25);
   border-bottom-left-radius: 8px;
@@ -257,46 +261,47 @@
   color: rgba(142, 194, 240, 0.6);
   font-style: italic;
   text-align: center;
-  padding: 24px;
+  padding: 20px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 680px) {
   .EmailComposerToolbar {
-    padding: 6px 8px;
-    gap: 4px;
+    padding: 5px 6px;
+    gap: 3px;
   }
 
   .EmailComposerToolbar__btn {
-    padding: 4px 7px;
-    font-size: 0.74rem;
+    padding: 3px 6px;
+    font-size: 0.72rem;
   }
 
   .FormattedText__livePreviewBox {
-    padding: 10px 12px;
-    font-size: 0.86rem;
+    padding: 8px 8px;
+    font-size: 0.84rem;
   }
 
   .FormattedText__kvCard {
-    padding: 8px 10px;
-    margin: 8px 0;
+    padding: 6px 8px;
+    margin: 6px 0;
   }
 
   .FormattedText__kvKey {
-    width: 36%;
-    padding: 5px 6px 5px 0;
-    font-size: 0.8rem;
+    width: 24%;
+    padding: 4px 4px;
+    font-size: 0.76rem;
+    text-align: center;
   }
 
   .FormattedText__kvVal {
-    padding: 5px 0;
-    font-size: 0.8rem;
+    padding: 4px 6px;
+    font-size: 0.78rem;
   }
 
   .FormattedText__waCard {
     flex-direction: column;
     align-items: stretch;
-    padding: 10px 12px;
-    gap: 8px;
+    padding: 6px 8px;
+    gap: 6px;
     text-align: center;
   }
 
@@ -308,5 +313,6 @@
     justify-content: center;
     width: 100%;
     box-sizing: border-box;
+    padding: 6px 12px;
   }
 }

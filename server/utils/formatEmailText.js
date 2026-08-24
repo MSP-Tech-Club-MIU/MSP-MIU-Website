@@ -106,17 +106,17 @@ function formatEmailBodyHtml(rawText) {
           const isLast = idx === keyValueItems.length - 1;
           const borderStyle = isLast ? '' : 'border-bottom: 1px solid #eef4fc;';
           return `<tr>
-            <td class="email-kv-key" style="padding: 8px 10px; font-weight: 700; color: #031C35; font-size: 14px; width: 34%; vertical-align: top; background-color: #f8fbfe; word-break: break-word; ${borderStyle}">
+            <td class="email-kv-key" style="padding: 6px 8px; font-weight: 700; color: #031C35; font-size: 13px; width: 20%; text-align: center; vertical-align: middle; background-color: #f8fbfe; word-break: break-word; ${borderStyle}">
               ${escapeHtml(item.key)}:
             </td>
-            <td class="email-kv-val" style="padding: 8px 10px; color: #333333; font-size: 14px; vertical-align: top; word-break: break-word; ${borderStyle}">
+            <td class="email-kv-val" style="padding: 6px 10px; color: #333333; font-size: 14px; vertical-align: middle; word-break: break-word; ${borderStyle}">
               ${formatInlineMarkdown(item.value)}
             </td>
           </tr>`;
         })
         .join('');
 
-      return `<div class="email-kv-card" style="margin: 12px 0; background-color: #ffffff; border-radius: 8px; border: 1px solid #d0e3f7; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      return `<div class="email-kv-card" style="margin: 8px 0; background-color: #ffffff; border-radius: 6px; border: 1px solid #d0e3f7; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-kv-table" style="width: 100%; border-collapse: separate; border-spacing: 0;">
           ${rowsHtml}
         </table>
@@ -128,15 +128,15 @@ function formatEmailBodyHtml(rawText) {
     const waMatch = fullBlockText.match(/https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9?=&_\-]+/);
     if (waMatch) {
       const waUrl = waMatch[0];
-      return `<div class="email-wa-card" style="margin: 12px 0; padding: 12px 14px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #25D366; border-radius: 8px;">
+      return `<div class="email-wa-card" style="margin: 8px 0; padding: 6px 10px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #25D366; border-radius: 6px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="email-wa-table" style="width: 100%; border-collapse: collapse;">
           <tr>
-            <td class="email-wa-text" style="vertical-align: middle; padding: 2px 0;">
-              <p style="margin: 0 0 4px; font-weight: 700; color: #166534; font-size: 14px;">💬 Course WhatsApp Group</p>
-              <p style="margin: 0; font-size: 13px; color: #15803d; line-height: 1.4;">Join for instant session updates and live meeting links.</p>
+            <td class="email-wa-text" style="vertical-align: middle; padding: 1px 0;">
+              <p style="margin: 0 0 2px; font-weight: 700; color: #166534; font-size: 13px; line-height: 1.2;">💬 Course WhatsApp Group</p>
+              <p style="margin: 0; font-size: 12px; color: #15803d; line-height: 1.25;">Join for instant session updates and live meeting links.</p>
             </td>
-            <td class="email-wa-btn-cell" align="right" style="vertical-align: middle; padding: 4px 0 2px 10px;">
-              <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer" class="email-wa-btn" style="display: inline-block; padding: 9px 16px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 13px; white-space: nowrap; box-shadow: 0 2px 6px rgba(37,211,102,0.3); text-align: center;">Join WhatsApp</a>
+            <td class="email-wa-btn-cell" align="right" style="vertical-align: middle; padding: 0 0 0 8px; width: 1%; white-space: nowrap;">
+              <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer" class="email-wa-btn" style="display: inline-block; padding: 5px 12px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 700; font-size: 12px; white-space: nowrap; box-shadow: 0 1px 3px rgba(37,211,102,0.25); text-align: center; line-height: 1.2;">Join WhatsApp</a>
             </td>
           </tr>
         </table>
