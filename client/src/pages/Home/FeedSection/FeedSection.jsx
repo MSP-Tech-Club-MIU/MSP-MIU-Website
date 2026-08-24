@@ -7,6 +7,7 @@ import Pagination from '../../../components/Pagination';
 import SeasonBadge from '../../../components/SeasonBadge';
 import EmailSendProgress from '../../../components/EmailSendProgress';
 import { useSeason } from '../../../context/SeasonContext';
+import { FormattedText, EmailComposerToolbar } from '../../../utils/formatMarkdown';
 import { FiPlus, FiMail, FiX } from 'react-icons/fi';
 
 const WEBSITE_TITLE_MAX = 50;
@@ -38,6 +39,7 @@ const FeedSection = memo(() => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [emailSendJob, setEmailSendJob] = useState(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   const isEmailModal = modalKind === 'email';
   const titleMax = isEmailModal ? EMAIL_TITLE_MAX : WEBSITE_TITLE_MAX;
@@ -180,12 +182,23 @@ const FeedSection = memo(() => {
     setModalKind(null);
     setFormData(emptyForm());
     setSubmitError(null);
+    setPreviewMode(false);
+  };
+
+  const handleInsertMarkdown = (snippet) => {
+    setFormData((prev) => ({
+      ...prev,
+      description: (prev.description ? `${prev.description}\n` : '') + snippet
+    }));
   };
 
   return (
-    <section className="Feed" aria-labelledby="feed-heading">
+    <section className="Feed" id="announcements">
       <div className="Feed__head">
-        <h2 id="feed-heading" className="Feed__title">Announcements & Updates</h2>
+        <div>
+          <h2 id="feed-heading" className="Feed__title">Announcements & Updates</h2>
+          <p className="Feed__subtitle">Stay updated with the latest news, opportunities, and milestones from MSP MIU.</p>
+        </div>
         {canCreateAnnouncements && (
           <div className="Feed__createActions">
             <motion.button
@@ -244,9 +257,9 @@ const FeedSection = memo(() => {
                 <> {' '}<SeasonBadge season={a.season} /></>
               )}
             </h3>
-            <p className="FeedCard__desc">
-              {a.desc && a.desc.length > 280 ? `${a.desc.slice(0, 279)}…` : a.desc}
-            </p>
+            <div className="FeedCard__desc">
+              <FormattedText text={a.desc} />
+            </div>
           </motion.article>
           ))
         )}
@@ -314,20 +327,44 @@ const FeedSection = memo(() => {
                   </div>
 
                   <div className="Feed__formGroup">
-                    <label htmlFor="description">{isEmailModal ? 'Email body *' : 'Description *'}</label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleInputChange}
-                      required
-                      rows={isEmailModal ? 10 : 4}
-                      maxLength={descMax}
-                      placeholder={isEmailModal ? 'Full email message…' : 'Brief description for the feed'}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <label htmlFor="description" style={{ margin: 0 }}>
+                        {isEmailModal ? 'Email body *' : 'Description *'}
+                      </label>
+                      <span className={`Feed__charCount${formData.description.length >= descMax ? ' is-max' : ''}`} style={{ margin: 0 }}>
+                        {formData.description.length}/{descMax}
+                      </span>
+                    </div>
+
+                    <EmailComposerToolbar
+                      onInsert={handleInsertMarkdown}
+                      isPreview={previewMode}
+                      onTogglePreview={() => setPreviewMode((p) => !p)}
                     />
-                    <span className={`Feed__charCount${formData.description.length >= descMax ? ' is-max' : ''}`}>
-                      {formData.description.length}/{descMax}
-                    </span>
+
+                    {previewMode ? (
+                      <div className="FormattedText__livePreviewBox">
+                        {formData.description.trim() ? (
+                          <FormattedText text={formData.description} />
+                        ) : (
+                          <div className="FormattedText__livePreviewEmpty">
+                            Type your text or use the toolbar to insert formatted event details.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        required
+                        rows={isEmailModal ? 10 : 4}
+                        maxLength={descMax}
+                        placeholder={isEmailModal ? 'Full email message…' : 'Brief description for the feed'}
+                        style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                      />
+                    )}
                   </div>
 
                   <div className="Feed__formGroup">

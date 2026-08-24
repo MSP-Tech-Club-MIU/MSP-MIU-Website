@@ -16,7 +16,8 @@ import {
   MdLock,
   MdLink,
   MdPhoneAndroid,
-  MdMenuBook
+  MdMenuBook,
+  MdTrackChanges
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { useSeason } from '../../context/SeasonContext';
@@ -550,6 +551,22 @@ export default function EmailManagementAdminTab({ onAlert }) {
             <span className="EmailMgmt__hubBody">
               <strong>Department WhatsApp links</strong>
               <span>Group links used in member acceptance emails</span>
+            </span>
+            <MdChevronRight className="EmailMgmt__hubChevron" />
+          </button>
+
+          <button
+            type="button"
+            className="EmailMgmt__hubCard EmailMgmt__hubCard--whatsapp"
+            style={{ marginBottom: '1rem' }}
+            onClick={() => navigate('/admin/email-tracker')}
+          >
+            <span className="EmailMgmt__hubIcon">
+              <MdTrackChanges />
+            </span>
+            <span className="EmailMgmt__hubBody">
+              <strong>Email dispatch tracker & anti-spam monitor</strong>
+              <span>View live dispatch progress, throttle countdowns, and delivery logs</span>
             </span>
             <MdChevronRight className="EmailMgmt__hubChevron" />
           </button>

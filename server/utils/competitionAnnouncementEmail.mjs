@@ -4,7 +4,7 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { renderTemplate, escapeHtml } = require('./emailTemplates/render');
+const { renderTemplate, escapeHtml, formatEmailBodyHtml } = require('./emailTemplates/render');
 
 /**
  * @param {Object} announcement - CompetitionAnnouncement object
@@ -27,6 +27,6 @@ export async function buildCompetitionAnnouncementEmail(announcement, competitio
     competitionLink,
     competitionTitleHtml: escapeHtml(competitionTitle),
     announcementTitleHtml: escapeHtml(announcementTitle),
-    announcementMessageHtml: escapeHtml(announcementMessage)
+    announcementMessageHtml: formatEmailBodyHtml(announcementMessage)
   });
 }

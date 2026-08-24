@@ -1,14 +1,15 @@
 /**
- * In-memory announcement email broadcast jobs with progress tracking.
- * Suitable for single-instance Node deploys (e.g. one Render web service).
+ * In-memory email broadcast jobs with real-time progress and anti-spam pause tracking.
+ * Suitable for single-instance Node deploys (e.g. Render web service).
  */
 const { randomUUID } = require('crypto');
 const logger = require('../utils/logger');
 const { sendBulkEmails } = require('../utils/bulkEmailSend');
 
 const jobs = new Map();
-const JOB_TTL_MS = 60 * 60 * 1000;
+const JOB_TTL_MS = 24 * 60 * 60 * 1000; // Keep completed jobs in memory for 24h
 const MAX_FAILURES = 500;
+const MAX_RECIPIENTS_LOG = 1000;
 
 function pruneJobs() {
   const cutoff = Date.now() - JOB_TTL_MS;
@@ -19,64 +20,157 @@ function pruneJobs() {
   }
 }
 
-function createAnnouncementEmailJob({ announcementId, title }) {
+function createEmailJob({
+  id = null,
+  type = 'announcement',
+  title = 'Email broadcast',
+  announcementId = null,
+  total = 0,
+  metadata = {}
+}) {
   pruneJobs();
-  const id = randomUUID();
+  const jobId = id || randomUUID();
   const job = {
-    id,
+    id: jobId,
+    type,
+    title: title || 'Email broadcast',
     announcementId: announcementId ?? null,
-    title: title || 'Announcement',
-    status: 'queued', // queued | running | completed | failed
-    total: 0,
+    status: 'queued', // queued | running | paused | completed | failed | cancelled
+    total: total || 0,
     sent: 0,
     failed: 0,
     skipped: 0,
     failures: [],
+    recipients: [], // Array of { email, status: 'sent'|'failed'|'skipped', reason, at }
     error: null,
+    isPaused: false,
+    pausedUntil: null,
+    pauseDurationMs: null,
+    pauseReason: null,
+    batchNumber: 1,
+    totalBatches: 1,
+    batchSize: 40,
+    isCancelled: false,
+    metadata: metadata || {},
     createdAt: Date.now(),
     startedAt: null,
     finishedAt: null
   };
-  jobs.set(id, job);
+  jobs.set(jobId, job);
   return job;
 }
 
-function getAnnouncementEmailJob(jobId) {
+function createAnnouncementEmailJob({ announcementId, title }) {
+  return createEmailJob({
+    type: 'announcement',
+    title: title || 'Announcement',
+    announcementId: announcementId ?? null
+  });
+}
+
+function getEmailJob(jobId) {
   pruneJobs();
   return jobs.get(jobId) || null;
 }
 
+function getAnnouncementEmailJob(jobId) {
+  return getEmailJob(jobId);
+}
+
+function cancelEmailJob(jobId) {
+  const job = jobs.get(jobId);
+  if (!job) return null;
+  if (job.status === 'running' || job.status === 'queued' || job.status === 'paused') {
+    job.isCancelled = true;
+    job.status = 'cancelled';
+    job.finishedAt = Date.now();
+    job.isPaused = false;
+    job.pausedUntil = null;
+  }
+  return publicJobView(job);
+}
+
+function listAllEmailJobs({ limit = 50, status = null } = {}) {
+  pruneJobs();
+  const list = Array.from(jobs.values());
+  list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  let filtered = list;
+  if (status) {
+    filtered = filtered.filter((j) => j.status === status);
+  }
+  return filtered.slice(0, limit).map(publicJobView);
+}
+
 function publicJobView(job) {
   if (!job) return null;
+  const now = Date.now();
+  const isCurrentlyPaused = Boolean(
+    job.pausedUntil && job.pausedUntil > now && job.status !== 'completed' && job.status !== 'failed' && job.status !== 'cancelled'
+  );
+  const pauseRemainingMs = isCurrentlyPaused ? Math.max(0, job.pausedUntil - now) : 0;
+  const effectiveStatus = job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled'
+    ? job.status
+    : isCurrentlyPaused
+      ? 'paused'
+      : (job.status || 'queued');
+
+  const processed = (job.sent || 0) + (job.failed || 0);
   const percent = job.total > 0
-    ? Math.min(100, Math.round(((job.sent + job.failed) / job.total) * 100))
+    ? Math.min(100, Math.round((processed / job.total) * 100))
     : (job.status === 'completed' || job.status === 'failed' ? 100 : 0);
+
   return {
     id: job.id,
+    type: job.type || 'announcement',
     announcementId: job.announcementId,
     title: job.title,
-    status: job.status,
+    status: effectiveStatus,
     total: job.total,
     sent: job.sent,
     failed: job.failed,
     skipped: job.skipped || 0,
-    failures: Array.isArray(job.failures) ? job.failures : [],
     percent,
+    failures: Array.isArray(job.failures) ? job.failures : [],
+    recipients: Array.isArray(job.recipients) ? job.recipients : [],
     error: job.error,
+    isPaused: isCurrentlyPaused,
+    pausedUntil: job.pausedUntil,
+    pauseDurationMs: job.pauseDurationMs,
+    pauseRemainingMs,
+    pauseReason: job.pauseReason || (isCurrentlyPaused ? 'spam_prevention' : null),
+    batchNumber: job.batchNumber || 1,
+    totalBatches: job.totalBatches || 1,
+    batchSize: job.batchSize || 40,
+    metadata: job.metadata || {},
     createdAt: job.createdAt,
     startedAt: job.startedAt,
     finishedAt: job.finishedAt
   };
 }
 
-function pushFailure(job, email, reason) {
-  if (!Array.isArray(job.failures)) job.failures = [];
-  if (job.failures.length >= MAX_FAILURES) return;
-  job.failures.push({
-    email,
-    reason: reason || 'send_failed',
+function pushRecipientEvent(job, email, status, reason = null) {
+  if (!Array.isArray(job.recipients)) job.recipients = [];
+  if (job.recipients.length >= MAX_RECIPIENTS_LOG) {
+    job.recipients.shift();
+  }
+  job.recipients.push({
+    email: String(email || '').trim(),
+    status, // 'sent' | 'failed' | 'skipped'
+    reason: reason || null,
     at: Date.now()
   });
+
+  if (status === 'failed') {
+    if (!Array.isArray(job.failures)) job.failures = [];
+    if (job.failures.length < MAX_FAILURES) {
+      job.failures.push({
+        email: String(email || '').trim(),
+        reason: reason || 'send_failed',
+        at: Date.now()
+      });
+    }
+  }
 }
 
 /**
@@ -121,6 +215,7 @@ async function runAnnouncementEmailJob(jobId, announcement) {
   job.status = 'running';
   job.startedAt = Date.now();
   job.failures = [];
+  job.recipients = [];
 
   try {
     const { recipients, skipped } = await loadAnnouncementRecipients();
@@ -173,12 +268,36 @@ async function runAnnouncementEmailJob(jobId, announcement) {
       onProgress: ({ sent, failed, last }) => {
         job.sent = sent;
         job.failed = failed;
-        if (last && last.ok === false && last.email) {
-          pushFailure(job, last.email, last.reason);
+        if (last && last.email) {
+          pushRecipientEvent(job, last.email, last.status || (last.ok ? 'sent' : 'failed'), last.reason);
         }
-      }
+      },
+      onPause: ({ pauseUntil, pauseDurationMs, batchNumber, totalBatches, batchSize }) => {
+        job.isPaused = true;
+        job.pausedUntil = pauseUntil;
+        job.pauseDurationMs = pauseDurationMs;
+        job.pauseReason = 'spam_prevention';
+        job.batchNumber = batchNumber;
+        job.totalBatches = totalBatches;
+        job.batchSize = batchSize;
+        job.status = 'paused';
+        logger.info(
+          `Announcement email job ${jobId}: anti-spam throttle pause until ${new Date(pauseUntil).toISOString()} (Batch ${batchNumber}/${totalBatches})`
+        );
+      },
+      onResume: ({ batchNumber, totalBatches }) => {
+        job.isPaused = false;
+        job.pausedUntil = null;
+        job.status = 'running';
+        job.batchNumber = batchNumber;
+        job.totalBatches = totalBatches;
+        logger.info(`Announcement email job ${jobId}: resumed sending (Batch ${batchNumber}/${totalBatches})`);
+      },
+      isCancelled: () => job.isCancelled
     });
 
+    job.isPaused = false;
+    job.pausedUntil = null;
     job.sent = result.sent;
     job.failed = result.failed;
     job.failures = (result.failures || []).map((f) => ({
@@ -187,15 +306,21 @@ async function runAnnouncementEmailJob(jobId, announcement) {
       at: Date.now()
     }));
 
-    job.status = job.failed > 0 && job.sent === 0 ? 'failed' : 'completed';
-    if (job.status === 'failed') {
-      job.error = 'All email sends failed';
+    if (job.isCancelled) {
+      job.status = 'cancelled';
+    } else {
+      job.status = job.failed > 0 && job.sent === 0 ? 'failed' : 'completed';
+      if (job.status === 'failed') {
+        job.error = 'All email sends failed';
+      }
     }
     job.finishedAt = Date.now();
     logger.info(
       `Announcement email job ${jobId}: done sent=${job.sent} failed=${job.failed} skipped=${job.skipped} total=${job.total}`
     );
   } catch (err) {
+    job.isPaused = false;
+    job.pausedUntil = null;
     job.status = 'failed';
     job.error = err.message || 'Email broadcast failed';
     job.finishedAt = Date.now();
@@ -221,10 +346,15 @@ function startAnnouncementEmailBroadcast(announcement) {
 }
 
 module.exports = {
+  createEmailJob,
   createAnnouncementEmailJob,
+  getEmailJob,
   getAnnouncementEmailJob,
+  cancelEmailJob,
+  listAllEmailJobs,
   publicJobView,
   runAnnouncementEmailJob,
   startAnnouncementEmailBroadcast,
-  loadAnnouncementRecipients
+  loadAnnouncementRecipients,
+  pushRecipientEvent
 };

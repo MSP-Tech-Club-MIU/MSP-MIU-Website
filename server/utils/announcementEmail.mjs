@@ -5,7 +5,7 @@
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { renderTemplate, escapeHtml } = require('./emailTemplates/render');
+const { renderTemplate, escapeHtml, formatEmailBodyHtml } = require('./emailTemplates/render');
 
 /**
  * @param {object} announcement — Sequelize instance or plain { title, description, ... }
@@ -24,7 +24,7 @@ export async function buildAnnouncementEmail(announcement, options = {}) {
   const rawDate = announcement.announcement_date || '';
 
   const titleHtml = escapeHtml(title);
-  const descriptionHtml = escapeHtml(description).replace(/\n/g, '<br/>');
+  const descriptionHtml = formatEmailBodyHtml(description);
   const preheader = escapeHtml(plainPreview(description, 140) || title);
 
   const dateLabel = formatAnnouncementDate(rawDate);

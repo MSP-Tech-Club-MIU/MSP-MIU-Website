@@ -66,6 +66,8 @@ tags:
   -
     name: courses
   -
+    name: email-jobs
+  -
     name: email
 components:
   securitySchemes:
@@ -2875,6 +2877,53 @@ paths:
       responses:
         '200':
           description: Deleted
+  /email-jobs:
+    get:
+      summary: 'Get /email-jobs'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - email-jobs
+      security:
+        -
+          bearerAuth: []
+  '/email-jobs/{id}':
+    get:
+      summary: 'Get /email-jobs/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - email-jobs
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/email-jobs/{id}/cancel':
+    post:
+      summary: 'Create/submit /email-jobs/{id}/cancel'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - email-jobs
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   /email-templates:
     get:
       tags:

@@ -1,0 +1,347 @@
+.EmailTracker {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* KPI Stats Grid */
+.EmailTracker__statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.EmailTracker__statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(14, 39, 68, 0.6);
+  border: 1px solid rgba(142, 194, 240, 0.22);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.EmailTracker__statCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(3, 169, 244, 0.45);
+}
+
+.EmailTracker__statIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.EmailTracker__statIcon--active {
+  background: rgba(3, 169, 244, 0.15);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.3);
+}
+
+.EmailTracker__statIcon--sent {
+  background: rgba(129, 199, 132, 0.15);
+  color: #81c784;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+}
+
+.EmailTracker__statIcon--rate {
+  background: rgba(186, 104, 200, 0.15);
+  color: #ba68c8;
+  border: 1px solid rgba(186, 104, 200, 0.3);
+}
+
+.EmailTracker__statIcon--failed {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef5350;
+  border: 1px solid rgba(239, 83, 80, 0.3);
+}
+
+.EmailTracker__statContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.EmailTracker__statValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.EmailTracker__activePulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #03a9f4;
+  box-shadow: 0 0 10px #03a9f4;
+  animation: EmailTracker-pulse 1.4s infinite;
+}
+
+@keyframes EmailTracker-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.4; }
+}
+
+.EmailTracker__statLabel {
+  font-size: 0.78rem;
+  color: rgba(234, 242, 255, 0.65);
+  margin-top: 2px;
+}
+
+/* Active Section */
+.EmailTracker__activeSection {
+  margin-top: 4px;
+}
+
+.EmailTracker__sectionHeading {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #8ec2f0;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.EmailTracker__liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #03a9f4;
+  box-shadow: 0 0 8px #03a9f4;
+  animation: EmailTracker-pulse 1.2s infinite;
+}
+
+.EmailTracker__activeCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.EmailTracker__activeCard {
+  background: linear-gradient(145deg, rgba(14, 39, 68, 0.85), rgba(8, 24, 44, 0.9));
+  border: 1px solid rgba(3, 169, 244, 0.35);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.EmailTracker__activeCard:hover {
+  transform: translateY(-2px);
+  border-color: #03a9f4;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 0 20px rgba(3, 169, 244, 0.2);
+}
+
+.EmailTracker__activeCard.is-paused {
+  border-color: rgba(255, 183, 77, 0.5);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 20px rgba(255, 183, 77, 0.15);
+}
+
+.EmailTracker__activeCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.EmailTracker__activeBadge {
+  margin-bottom: 6px;
+}
+
+.EmailTracker__activeBadge span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+
+.EmailTracker__activeBadge .badge-running {
+  background: rgba(3, 169, 244, 0.18);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.35);
+}
+
+.EmailTracker__activeBadge .badge-paused {
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 183, 77, 0.45);
+}
+
+.EmailTracker__activeTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.EmailTracker__openModalBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(3, 169, 244, 0.15);
+  border: 1px solid rgba(3, 169, 244, 0.35);
+  color: #03a9f4;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.EmailTracker__openModalBtn:hover {
+  background: rgba(3, 169, 244, 0.3);
+  color: #ffffff;
+}
+
+.EmailTracker__activePauseBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 183, 77, 0.15);
+  border: 1px solid rgba(255, 183, 77, 0.3);
+  font-size: 0.78rem;
+  color: #ffe082;
+}
+
+.EmailTracker__activeProgress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.EmailTracker__activeProgressText {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: rgba(234, 242, 255, 0.85);
+  font-weight: 600;
+}
+
+.EmailTracker__activeTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.EmailTracker__activeFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d7bd8, #03a9f4);
+  transition: width 0.35s ease;
+}
+
+.EmailTracker__activeFill.is-paused {
+  background: linear-gradient(90deg, #f57c00, #ffb74d);
+}
+
+/* Filter Bar */
+.EmailTracker__filterBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.EmailTracker__filterTabs {
+  display: flex;
+  gap: 8px;
+}
+
+.EmailTracker__filterTab {
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  background: rgba(14, 39, 68, 0.5);
+  color: rgba(234, 242, 255, 0.75);
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.EmailTracker__filterTab:hover {
+  background: rgba(14, 39, 68, 0.8);
+  color: #ffffff;
+}
+
+.EmailTracker__filterTab.is-active {
+  background: rgba(3, 169, 244, 0.2);
+  color: #03a9f4;
+  border-color: rgba(3, 169, 244, 0.45);
+}
+
+.EmailTracker__searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 28, 49, 0.8);
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-width: 260px;
+}
+
+.EmailTracker__searchIcon {
+  color: rgba(142, 194, 240, 0.6);
+  font-size: 1.1rem;
+}
+
+.EmailTracker__searchInput {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.86rem;
+  outline: none;
+  width: 100%;
+}
+
+.EmailTracker__pulseDot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 4px;
+  animation: EmailTracker-pulse 1.2s infinite;
+}
+
+@media (max-width: 768px) {
+  .EmailTracker__filterBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .EmailTracker__searchBox {
+    min-width: 100%;
+  }
+}

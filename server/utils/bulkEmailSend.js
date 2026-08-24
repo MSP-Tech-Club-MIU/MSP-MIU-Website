@@ -40,7 +40,10 @@ async function sendBulkEmails({
   batchSize = envInt('MAIL_BULK_BATCH_SIZE', DEFAULT_BATCH_SIZE),
   batchPauseMs = envInt('MAIL_BULK_BATCH_PAUSE_MS', DEFAULT_BATCH_PAUSE_MS),
   onProgress,
-  shouldSkip
+  onPause,
+  onResume,
+  shouldSkip,
+  isCancelled
 }) {
   const list = Array.isArray(recipients) ? recipients : [];
   const total = list.length;
@@ -49,6 +52,8 @@ async function sendBulkEmails({
   let skipped = 0;
   const failures = [];
   let processedInBatch = 0;
+  let currentBatch = 1;
+  const totalBatches = batchSize > 0 ? Math.ceil(total / batchSize) : 1;
 
   const report = (last) => {
     if (typeof onProgress === 'function') {
@@ -57,25 +62,30 @@ async function sendBulkEmails({
   };
 
   for (let i = 0; i < list.length; i += 1) {
+    if (typeof isCancelled === 'function' && isCancelled()) {
+      logger.info(`Bulk email cancelled after processing ${i} of ${total}`);
+      break;
+    }
+
     const recipient = list[i];
     const email = String(recipient?.email || '').trim();
     if (!email) {
       skipped += 1;
-      report({ email: '', reason: 'missing_email' });
+      report({ email: '', reason: 'missing_email', ok: false, status: 'skipped' });
       continue;
     }
 
     try {
       if (shouldSkip && (await shouldSkip(recipient))) {
         skipped += 1;
-        report({ email, reason: 'skipped' });
+        report({ email, reason: 'skipped', ok: false, status: 'skipped' });
         continue;
       }
 
       const payload = await buildPayload(recipient);
       await sendFn(payload);
       sent += 1;
-      report({ email, ok: true });
+      report({ email, ok: true, status: 'sent' });
     } catch (err) {
       failed += 1;
       const reason = err?.message || String(err) || 'send_failed';
@@ -83,7 +93,7 @@ async function sendBulkEmails({
         failures.push({ email, reason });
       }
       logger.error(`Bulk email failed for ${email}:`, err);
-      report({ email, reason, ok: false });
+      report({ email, reason, ok: false, status: 'failed' });
     }
 
     processedInBatch += 1;
@@ -91,7 +101,32 @@ async function sendBulkEmails({
     if (!isLast) {
       if (batchSize > 0 && processedInBatch >= batchSize) {
         processedInBatch = 0;
+        currentBatch += 1;
+        const pauseUntil = Date.now() + batchPauseMs;
+        if (typeof onPause === 'function') {
+          onPause({
+            pauseUntil,
+            pauseDurationMs: batchPauseMs,
+            batchNumber: currentBatch,
+            totalBatches,
+            batchSize,
+            sent,
+            failed,
+            skipped,
+            total
+          });
+        }
         await sleep(batchPauseMs);
+        if (typeof onResume === 'function') {
+          onResume({
+            batchNumber: currentBatch,
+            totalBatches,
+            sent,
+            failed,
+            skipped,
+            total
+          });
+        }
       } else {
         await sleep(delayMs);
       }
