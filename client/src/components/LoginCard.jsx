@@ -277,7 +277,7 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
                     }}>
                       <p style={{ margin: 0, fontWeight: 'bold' }}>✓ Email Sent!</p>
                       <p style={{ margin: '10px 0 0 0' }}>
-                        If an account exists with this information, a password reset link has been sent to your email.
+                        A password reset link has been sent to your email.
                         Please check your inbox and follow the instructions.
                       </p>
                     </div>

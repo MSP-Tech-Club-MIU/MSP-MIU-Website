@@ -1084,6 +1084,12 @@ const forgotPassword = async (req, res) => {
                 });
             }
             user = await User.findOne({ where: { university_id } });
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No account found with this University ID'
+                });
+            }
         } else {
             // Validate email format
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1094,102 +1100,101 @@ const forgotPassword = async (req, res) => {
                 });
             }
             user = await User.findOne({ where: { email } });
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No account found with this email address'
+                });
+            }
         }
 
-        // Always return success message (security best practice - don't reveal if user exists)
-        // But only send email if user exists
-        if (user && user.email) {
-            // Generate JWT token for password reset (expires in 1 hour)
-            const resetTokenResult = generateJWTToken({
+        // Generate JWT token for password reset (expires in 1 hour)
+        const resetTokenResult = generateJWTToken({
+            user_id: user.user_id,
+            email: user.email,
+            type: 'password_reset'
+        }, '1h'); // Override default expiration to 1 hour
+
+        if (!resetTokenResult.success) {
+            logError('auth.forgotPassword', new Error(resetTokenResult.error), {
                 user_id: user.user_id,
-                email: user.email,
-                type: 'password_reset'
-            }, '1h'); // Override default expiration to 1 hour
-
-            if (!resetTokenResult.success) {
-                logError('auth.forgotPassword', new Error(resetTokenResult.error), {
-                    user_id: user.user_id,
-                    university_id: user.university_id || 'unknown',
-                    email: user.email
-                }, req);
-                
-                // Still return success to user (security best practice)
-                return res.json({
-                    success: true,
-                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
-                });
-            }
-
-            // Store token in database for tracking (optional but recommended)
-            const expiresAt = new Date();
-            expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
-
-            try {
-                // Invalidate any existing unused reset tokens for this user
-                await PasswordToken.update(
-                    { used: true },
-                    { where: { user_id: user.user_id, used: false } }
-                );
-
-                // Hash the token before storing (security best practice)
-                const saltRounds = 10;
-                const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
-
-                // Create new password reset token record with hashed token
-                await PasswordToken.create({
-                    user_id: user.user_id,
-                    token: tokenHash,
-                    expires_at: expiresAt,
-                    used: false
-                });
-            } catch (tokenError) {
-                // Log but don't fail - token generation succeeded
-                logError('auth.forgotPassword.tokenStorage', tokenError, {
-                    user_id: user.user_id
-                }, req);
-            }
-
-            // Generate reset link
-            const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
-
-            // Send password reset email (using dynamic import for ES module)
-            try {
-                const { sendEmail } = await import('../utils/email.mjs');
-                const { renderTemplate } = require('../utils/emailTemplates/render');
-                const rendered = await renderTemplate('password_reset', {
-                    fullName: user.full_name || 'User',
-                    resetLink
-                });
-                await sendEmail({
-                    to: user.email,
-                    subject: rendered.subject,
-                    html: rendered.html,
-                    text: rendered.text
-                });
-
-                logAuditEvent('PASSWORD_RESET_REQUESTED', {
-                    user_id: user.user_id,
-                    university_id: user.university_id || 'unknown',
-                    email: user.email
-                }, req);
-            } catch (emailError) {
-                logError('auth.forgotPassword.email', emailError, {
-                    user_id: user.user_id,
-                    email: user.email
-                }, req);
-                
-                // Still return success to user (security best practice)
-                return res.json({
-                    success: true,
-                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
-                });
-            }
+                university_id: user.university_id || 'unknown',
+                email: user.email
+            }, req);
+            
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to generate reset token'
+            });
         }
 
-        // Always return success (security best practice - don't reveal if user exists)
+        // Store token in database for tracking (optional but recommended)
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+
+        try {
+            // Invalidate any existing unused reset tokens for this user
+            await PasswordToken.update(
+                { used: true },
+                { where: { user_id: user.user_id, used: false } }
+            );
+
+            // Hash the token before storing (security best practice)
+            const saltRounds = 10;
+            const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
+
+            // Create new password reset token record with hashed token
+            await PasswordToken.create({
+                user_id: user.user_id,
+                token: tokenHash,
+                expires_at: expiresAt,
+                used: false
+            });
+        } catch (tokenError) {
+            // Log but don't fail - token generation succeeded
+            logError('auth.forgotPassword.tokenStorage', tokenError, {
+                user_id: user.user_id
+            }, req);
+        }
+
+        // Generate reset link
+        const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
+
+        // Send password reset email (using dynamic import for ES module)
+        try {
+            const { sendEmail } = await import('../utils/email.mjs');
+            const { renderTemplate } = require('../utils/emailTemplates/render');
+            const rendered = await renderTemplate('password_reset', {
+                fullName: user.full_name || 'User',
+                resetLink
+            });
+            await sendEmail({
+                to: user.email,
+                subject: rendered.subject,
+                html: rendered.html,
+                text: rendered.text
+            });
+
+            logAuditEvent('PASSWORD_RESET_REQUESTED', {
+                user_id: user.user_id,
+                university_id: user.university_id || 'unknown',
+                email: user.email
+            }, req);
+        } catch (emailError) {
+            logError('auth.forgotPassword.email', emailError, {
+                user_id: user.user_id,
+                email: user.email
+            }, req);
+            
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to send password reset email'
+            });
+        }
+
         res.json({
             success: true,
-            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+            message: 'Password reset link has been sent to your email.'
         });
 
     } catch (error) {
@@ -1198,10 +1203,9 @@ const forgotPassword = async (req, res) => {
             email: req.body?.email || 'unknown'
         }, req);
         
-        // Still return success to user (security best practice)
-        res.json({
-            success: true,
-            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
         });
     }
 };
