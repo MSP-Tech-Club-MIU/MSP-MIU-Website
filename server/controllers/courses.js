@@ -958,6 +958,7 @@ const getMyProgress = async (req, res) => {
       success: true,
       data: {
         enrollment_id: enrollment.enrollment_id,
+        full_name: enrollment.full_name,
         status: enrollment.status,
         attended: enrollment.attended,
         completed_lesson_ids: completed.map((p) => p.lesson_id),
@@ -1096,6 +1097,67 @@ const updateEnrollment = async (req, res) => {
   } catch (error) {
     logger.error('updateEnrollment:', error);
     res.status(500).json({ success: false, error: 'Failed to update enrollment' });
+  }
+};
+
+const updateEnrollmentName = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const { token, full_name } = req.body;
+
+    if (!token || !full_name || !String(full_name).trim()) {
+      return res.status(400).json({ success: false, error: 'token and full_name are required' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { course_id: courseId, access_token: token }
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    if (course.status !== 'coming_soon') {
+      return res.status(400).json({
+        success: false,
+        error: 'You can only edit the certificate name before the course opens.'
+      });
+    }
+
+    const trimmedName = String(full_name).trim();
+
+    const blacklistStatus = await checkBlacklist({
+      name: trimmedName,
+      university_id: enrollment.university_id,
+      phone_number: enrollment.phone_number,
+      email: enrollment.email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Name update rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
+    enrollment.full_name = trimmedName;
+    await enrollment.save();
+
+    res.json({
+      success: true,
+      message: 'Certificate name updated successfully',
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        full_name: enrollment.full_name
+      }
+    });
+  } catch (error) {
+    logger.error('updateEnrollmentName:', error);
+    res.status(500).json({ success: false, error: 'Failed to update certificate name' });
   }
 };
 
@@ -1509,6 +1571,7 @@ module.exports = {
   deleteMaterial,
   enrollInCourse,
   enrollWithAccount,
+  updateEnrollmentName,
   markLessonComplete,
   getMyProgress,
   listEnrollments,

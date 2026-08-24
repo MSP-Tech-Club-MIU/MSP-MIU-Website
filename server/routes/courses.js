@@ -19,6 +19,7 @@ const {
   deleteMaterial,
   enrollInCourse,
   enrollWithAccount,
+  updateEnrollmentName,
   markLessonComplete,
   getMyProgress,
   listEnrollments,
@@ -38,6 +39,7 @@ router.get('/', listCourses);
 router.get('/:id/my-progress', getMyProgress);
 router.post('/:id/enroll/me', authenticateToken, enrollWithAccount);
 router.post('/:id/enroll', enrollInCourse);
+router.put('/:id/enrollment/name', updateEnrollmentName);
 router.post('/:id/progress', markLessonComplete);
 
 // Admin list / enrollments (before :id to avoid conflicts where needed)
