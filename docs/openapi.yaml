@@ -2335,6 +2335,21 @@ paths:
       security:
         -
           bearerAuth: []
+  '/courses/{id}/enrollment/name':
+    put:
+      summary: 'Update /courses/{id}/enrollment/name'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
   '/courses/{id}/enrollments':
     get:
       summary: 'Get /courses/{id}/enrollments'

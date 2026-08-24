@@ -2103,6 +2103,17 @@ class ApiService {
     return result.data || result;
   }
 
+  static async updateCourseEnrollmentName(courseId, { token, full_name }) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enrollment/name`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ token, full_name })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to update certificate name');
+    return result;
+  }
+
   static async getCourseEnrollments(filters = {}) {
     const queryParams = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {

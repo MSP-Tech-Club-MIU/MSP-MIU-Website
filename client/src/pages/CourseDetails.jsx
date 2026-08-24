@@ -40,6 +40,11 @@ export default function CourseDetails() {
   const [authChecked, setAuthChecked] = useState(false);
   const [starting, setStarting] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
+  const [registeredName, setRegisteredName] = useState('');
+  const [fetchingEnrollment, setFetchingEnrollment] = useState(false);
+  const [updatingName, setUpdatingName] = useState(false);
+  const [nameEditMsg, setNameEditMsg] = useState(null);
+  const [nameEditError, setNameEditError] = useState(null);
 
   useEffect(() => {
     const fromQuery = searchParams.get('token');
@@ -172,6 +177,50 @@ export default function CourseDetails() {
       setFormError(err.message || 'Could not start with your MSP account');
     } finally {
       setStarting(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    if (Number.isFinite(courseId) && accessToken) {
+      (async () => {
+        try {
+          setFetchingEnrollment(true);
+          const progress = await ApiService.getCourseMyProgress(courseId, accessToken);
+          if (!cancelled && progress?.full_name) {
+            setRegisteredName(progress.full_name);
+          }
+        } catch (err) {
+          console.error('Failed to fetch enrollment progress:', err);
+        } finally {
+          if (!cancelled) setFetchingEnrollment(false);
+        }
+      })();
+    }
+    return () => { cancelled = true; };
+  }, [courseId, accessToken]);
+
+  const handleUpdateName = async (e) => {
+    e.preventDefault();
+    setNameEditMsg(null);
+    setNameEditError(null);
+
+    if (!registeredName.trim()) {
+      setNameEditError('Name cannot be empty');
+      return;
+    }
+
+    setUpdatingName(true);
+    try {
+      const result = await ApiService.updateCourseEnrollmentName(courseId, {
+        token: accessToken,
+        full_name: registeredName
+      });
+      setNameEditMsg(result.message || 'Certificate name updated successfully');
+    } catch (err) {
+      setNameEditError(err.message || 'Failed to update certificate name');
+    } finally {
+      setUpdatingName(false);
     }
   };
 
@@ -343,9 +392,41 @@ export default function CourseDetails() {
             ) : null}
 
             {registrationOpen && accessToken && course.status === 'coming_soon' ? (
-              <p className="CourseDetails__formMsg" style={{ marginTop: 16 }}>
-                You&apos;re on the notify list. We&apos;ll email you when this course is published.
-              </p>
+              <div style={{ marginTop: 16, width: '100%' }}>
+                <p className="CourseDetails__formMsg">
+                  You&apos;re on the notify list. We&apos;ll email you when this course is published.
+                </p>
+                <div className="CourseDetails__form" style={{ marginTop: 24 }}>
+                  <h3>Certificate Name</h3>
+                  <p className="CourseDetails__formLead">
+                    This name will be printed on your course certificate. You can edit it before the course opens.
+                  </p>
+                  {fetchingEnrollment ? (
+                    <p className="CourseDetails__formMsg">Loading registration details...</p>
+                  ) : (
+                    <form onSubmit={handleUpdateName}>
+                      <div className="CourseDetails__formGrid" style={{ marginBottom: 12 }}>
+                        <label>
+                          Full Name
+                          <input
+                            required
+                            type="text"
+                            value={registeredName}
+                            onChange={(e) => setRegisteredName(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <button type="submit" disabled={updatingName || !registeredName.trim()}>
+                        {updatingName ? 'Saving...' : 'Update Name'}
+                      </button>
+                      {nameEditMsg ? <p className="CourseDetails__formMsg" style={{ color: '#4caf50' }}>{nameEditMsg}</p> : null}
+                      {nameEditError ? (
+                        <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{nameEditError}</p>
+                      ) : null}
+                    </form>
+                  )}
+                </div>
+              </div>
             ) : null}
           </div>
         </div>
