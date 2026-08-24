@@ -72,6 +72,9 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
 
       const params = { page, limit: LIMIT };
       if (filters.course_id) params.course_id = filters.course_id;
+      if (filters.attended !== '') params.attended = filters.attended;
+      if (filters.eligible !== '') params.eligible = filters.eligible;
+      if (debouncedSearch) params.search = debouncedSearch;
 
       const result = await ApiService.getCourseEnrollments(params);
       setRows(Array.isArray(result?.data) ? result.data : []);
@@ -86,7 +89,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
       setLoading(false);
       setIsFiltering(false);
     }
-  }, [page, filters.course_id, onAlert]);
+  }, [page, filters.course_id, filters.attended, filters.eligible, debouncedSearch, onAlert]);
 
   useEffect(() => {
     fetchEnrollments();
