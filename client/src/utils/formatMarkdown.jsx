@@ -6,7 +6,8 @@ import {
   MdLink,
   MdFormatListBulleted,
   MdVisibility,
-  MdEdit
+  MdEdit,
+  MdForum
 } from 'react-icons/md';
 import './formatMarkdown.css';
 
@@ -33,13 +34,32 @@ export function parseKeyValueLine(line) {
 }
 
 /**
+ * Smart pre-processor to normalize inline pasted blocks into structured lines:
+ * - Separates inline **Date:** ... **Time:** ... into distinct lines
+ * - Separates instructions and sign-offs into distinct paragraphs
+ */
+export function normalizeEmailText(raw) {
+  let text = String(raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+
+  // 1. Separate consecutive inline key-values like **Date:** ... **Time:** ...
+  text = text.replace(/([^\n])\s*\*\*(Date|Time|Session|Presented by|Location|Speaker|Topic|Instructor|Room|Platform|Prerequisites):\*\*\s*/gi, '$1\n\n**$2:** ');
+
+  // 2. Separate notes and instructions that follow a key-value row
+  text = text.replace(/(\*\*[A-Za-z\s]+:\*\*[^\n]+?)\s+(Please note|Note:|Important:|Don't forget|Make sure|The meeting link|Meeting link)/gi, '$1\n\n$2');
+
+  // 3. Separate sign-offs
+  text = text.replace(/\s*(See you soon!?|Best regards,?\s*|Sincerely,?\s*|Cheers,?\s*)\s*\*\*/gi, '\n\n$1\n**');
+
+  return text;
+}
+
+/**
  * Renders inline markdown tokens (bold, italic, code, links) as React nodes
  */
 export function renderInlineMarkdown(str) {
   if (!str) return null;
 
   // Simple token parser for **bold**, *italic*, `code`, and [link](url)
-  // Split by markdown delimiters while keeping matches
   const regex = /(\*\*.*?\*\*|__.*?__|\*.*?\*|_.*?_|`.*?`|\[.*?\]\(https?:\/\/[^\s)]+\))/g;
   const parts = str.split(regex);
 
@@ -61,15 +81,18 @@ export function renderInlineMarkdown(str) {
     // Markdown Link: [Label](url)
     const linkMatch = part.match(/^\[(.*?)\]\((https?:\/\/[^\s)]+)\)$/);
     if (linkMatch) {
+      const label = linkMatch[1];
+      const url = linkMatch[2];
+      const isWhatsApp = url.includes('chat.whatsapp.com');
       return (
         <a
           key={index}
-          href={linkMatch[2]}
+          href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="FormattedText__link"
+          className={`FormattedText__link${isWhatsApp ? ' FormattedText__link--whatsapp' : ''}`}
         >
-          {linkMatch[1]}
+          {label}
         </a>
       );
     }
@@ -85,11 +108,11 @@ export function renderInlineMarkdown(str) {
 }
 
 /**
- * Render multi-line rich text with key-value highlight blocks, bullet lists, and paragraphs.
+ * Render multi-line rich text with key-value highlight blocks, bullet lists, WhatsApp callouts, and paragraphs.
  */
 export function FormattedText({ text, className = '' }) {
   if (!text) return null;
-  const clean = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const clean = normalizeEmailText(text);
   if (!clean) return null;
 
   const blocks = clean.split(/\n\s*\n+/);
@@ -121,7 +144,34 @@ export function FormattedText({ text, className = '' }) {
           );
         }
 
-        // 2. Check if bullet list
+        // 2. Check if this block contains a WhatsApp Group link callout
+        const fullBlockText = rawLines.join(' ');
+        const waMatch = fullBlockText.match(/https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9?=&_\-]+/);
+        if (waMatch) {
+          const waUrl = waMatch[0];
+          return (
+            <div key={bIdx} className="FormattedText__waCard">
+              <div className="FormattedText__waLeft">
+                <div className="FormattedText__waTitle">
+                  <MdForum style={{ marginRight: 6 }} /> Course WhatsApp Group
+                </div>
+                <div className="FormattedText__waDesc">
+                  Join for instant session updates and meeting links.
+                </div>
+              </div>
+              <a
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="FormattedText__waBtn"
+              >
+                Join WhatsApp
+              </a>
+            </div>
+          );
+        }
+
+        // 3. Check if bullet list
         const isBulletList = rawLines.every((l) => /^[-*•]\s+/.test(l));
         if (isBulletList) {
           return (
@@ -138,7 +188,7 @@ export function FormattedText({ text, className = '' }) {
           );
         }
 
-        // 3. Regular paragraph
+        // 4. Regular paragraph
         return (
           <p key={bIdx} className="FormattedText__paragraph">
             {rawLines.map((line, lIdx) => {

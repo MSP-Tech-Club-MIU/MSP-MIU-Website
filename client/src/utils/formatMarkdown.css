@@ -180,6 +180,66 @@
   vertical-align: top;
 }
 
+/* WhatsApp Group Callout Card */
+.FormattedText__waCard {
+  margin: 14px 0;
+  padding: 12px 16px;
+  background: rgba(37, 211, 102, 0.12);
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  border-left: 4px solid #25D366;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.FormattedText__waLeft {
+  flex: 1;
+  min-width: 200px;
+}
+
+.FormattedText__waTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #25D366;
+  display: flex;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.FormattedText__waDesc {
+  font-size: 0.78rem;
+  color: rgba(234, 242, 255, 0.8);
+}
+
+.FormattedText__waBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 16px;
+  background: #25D366;
+  color: #042010 !important;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-decoration: none !important;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.FormattedText__waBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.45);
+}
+
+.FormattedText__link--whatsapp {
+  color: #25D366 !important;
+  font-weight: 700;
+}
+
 /* Live Preview Container for Admin Composers */
 .FormattedText__livePreviewBox {
   min-height: 180px;

@@ -1,6 +1,6 @@
 /**
  * Utility for formatting email body and markdown text into email-safe, high-contrast HTML.
- * Handles key-value highlight blocks (e.g. **Date:** 25/08/2026), bold, italic, lists, links, and code.
+ * Handles key-value highlight blocks (e.g. **Date:** 25/08/2026), WhatsApp group links, bold, italic, lists, and links.
  */
 
 function escapeHtml(text) {
@@ -24,7 +24,7 @@ function formatInlineMarkdown(str) {
   escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #031C35; font-weight: 700;">$1</strong>');
   escaped = escaped.replace(/__(.+?)__/g, '<strong style="color: #031C35; font-weight: 700;">$1</strong>');
 
-  // Italic: *text* or _text_ (ensure not touching existing tags)
+  // Italic: *text* or _text_
   escaped = escaped.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
   escaped = escaped.replace(/(^|[^_])_([^_]+)_([^_]|$)/g, '$1<em>$2</em>$3');
 
@@ -32,7 +32,13 @@ function formatInlineMarkdown(str) {
   escaped = escaped.replace(/`([^`]+)`/g, '<code style="background-color: rgba(3, 169, 244, 0.1); color: #0d7bd8; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px;">$1</code>');
 
   // Markdown links: [Label](url)
-  escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #0d7bd8; text-decoration: underline; font-weight: 600;">$1</a>');
+  escaped = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+    // Special WhatsApp styling if WhatsApp group link
+    if (url.includes('chat.whatsapp.com')) {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #25D366; font-weight: 700; text-decoration: underline;">${label}</a>`;
+    }
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #0d7bd8; text-decoration: underline; font-weight: 600;">${label}</a>`;
+  });
 
   return escaped;
 }
@@ -53,6 +59,26 @@ function parseKeyValueLine(line) {
 }
 
 /**
+ * Smart pre-processor to normalize inline pasted blocks into structured lines:
+ * - Separates inline **Date:** ... **Time:** ... into distinct lines
+ * - Separates instructions and sign-offs into distinct paragraphs
+ */
+function normalizeEmailText(raw) {
+  let text = String(raw || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+
+  // 1. Separate consecutive inline key-values like **Date:** ... **Time:** ...
+  text = text.replace(/([^\n])\s*\*\*(Date|Time|Session|Presented by|Location|Speaker|Topic|Instructor|Room|Platform|Prerequisites):\*\*\s*/gi, '$1\n\n**$2:** ');
+
+  // 2. Separate notes and instructions that follow a key-value row
+  text = text.replace(/(\*\*[A-Za-z\s]+:\*\*[^\n]+?)\s+(Please note|Note:|Important:|Don't forget|Make sure|The meeting link|Meeting link)/gi, '$1\n\n$2');
+
+  // 3. Separate sign-offs
+  text = text.replace(/\s*(See you soon!?|Best regards,?\s*|Sincerely,?\s*|Cheers,?\s*)\s*\*\*/gi, '\n\n$1\n**');
+
+  return text;
+}
+
+/**
  * Convert plain text / markdown description into styled email HTML.
  *
  * @param {string} rawText - Raw input text from the admin composer
@@ -60,7 +86,7 @@ function parseKeyValueLine(line) {
  */
 function formatEmailBodyHtml(rawText) {
   if (!rawText) return '';
-  const text = String(rawText).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const text = normalizeEmailText(rawText);
   if (!text) return '';
 
   // Split into block chunks by double newlines
@@ -71,7 +97,6 @@ function formatEmailBodyHtml(rawText) {
     if (rawLines.length === 0) return '';
 
     // 1. Check if the entire block is a series of Key-Value items
-    // (e.g. **Date:** 25/08/2026 \n **Time:** 1:00-3:00 PM \n **Session:** ... \n **Presented by:** ...)
     const keyValueItems = rawLines.map(parseKeyValueLine);
     const isKeyValueBlock = keyValueItems.every((item) => item !== null);
 
@@ -98,7 +123,27 @@ function formatEmailBodyHtml(rawText) {
       </div>`;
     }
 
-    // 2. Check if bullet list
+    // 2. Check if this block contains a WhatsApp Group link callout
+    const fullBlockText = rawLines.join(' ');
+    const waMatch = fullBlockText.match(/https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9?=&_\-]+/);
+    if (waMatch) {
+      const waUrl = waMatch[0];
+      return `<div style="margin: 16px 0; padding: 14px 18px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #25D366; border-radius: 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle;">
+              <p style="margin: 0 0 4px; font-weight: 700; color: #166534; font-size: 14px;">💬 Course WhatsApp Group</p>
+              <p style="margin: 0; font-size: 13px; color: #15803d; line-height: 1.4;">Join for instant session updates and live meeting links.</p>
+            </td>
+            <td align="right" style="vertical-align: middle; padding-left: 12px;">
+              <a href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 10px 18px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 13px; white-space: nowrap; box-shadow: 0 2px 6px rgba(37,211,102,0.3);">Join WhatsApp</a>
+            </td>
+          </tr>
+        </table>
+      </div>`;
+    }
+
+    // 3. Check if bullet list
     const isBulletList = rawLines.every((l) => /^[-*•]\s+/.test(l));
     if (isBulletList) {
       const itemsHtml = rawLines
@@ -110,7 +155,7 @@ function formatEmailBodyHtml(rawText) {
       return `<ul style="margin: 12px 0 16px 20px; padding: 0;">${itemsHtml}</ul>`;
     }
 
-    // 3. Check if numbered list
+    // 4. Check if numbered list
     const isNumberedList = rawLines.every((l) => /^\d+\.\s+/.test(l));
     if (isNumberedList) {
       const itemsHtml = rawLines
@@ -122,9 +167,8 @@ function formatEmailBodyHtml(rawText) {
       return `<ol style="margin: 12px 0 16px 20px; padding: 0;">${itemsHtml}</ol>`;
     }
 
-    // 4. Regular paragraph: format inline markdown and handle single newlines as <br/>
+    // 5. Regular paragraph: format inline markdown and handle single newlines as <br/>
     const renderedLines = rawLines.map((line) => {
-      // If a single line happens to be a key-value line inside a mixed paragraph
       const kv = parseKeyValueLine(line);
       if (kv) {
         return `<strong style="color: #031C35; font-weight: 700;">${escapeHtml(kv.key)}:</strong> ${formatInlineMarkdown(kv.value)}`;
@@ -142,5 +186,6 @@ module.exports = {
   escapeHtml,
   formatInlineMarkdown,
   parseKeyValueLine,
+  normalizeEmailText,
   formatEmailBodyHtml
 };

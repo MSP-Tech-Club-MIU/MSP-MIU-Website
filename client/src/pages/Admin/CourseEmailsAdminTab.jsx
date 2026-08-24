@@ -647,9 +647,14 @@ export default function CourseEmailsAdminTab({ onAlert }) {
 
         {/* Message Body */}
         <div className="AdminPanel__formGroup" style={{ marginBottom: '1.15rem' }}>
-          <label style={{ fontWeight: 600, color: '#eaf2ff', marginBottom: '0.4rem', display: 'block' }}>
-            Email Body Content * (supports plain text, markdown & highlighted event details)
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <label style={{ fontWeight: 600, color: '#eaf2ff', margin: 0 }}>
+              Email Body Content * (supports plain text, markdown & highlighted event details)
+            </label>
+            <span style={{ fontSize: '0.78rem', color: form.message.length >= 4000 ? '#ef5350' : 'rgba(142, 194, 240, 0.7)' }}>
+              {form.message.length}/4000
+            </span>
+          </div>
 
           <EmailComposerToolbar
             onInsert={handleInsertMarkdown}
@@ -671,9 +676,10 @@ export default function CourseEmailsAdminTab({ onAlert }) {
             <textarea
               required
               rows={8}
+              maxLength={4000}
               placeholder={`Dear {{studentName}},\n\nPlease review the updated syllabus and submission deadline for {{courseTitle}}.\n\n**Date:** 25/08/2026\n**Time:** 1:00–3:00 PM sharp\n**Session:** Introduction to Cybersecurity\n**Presented by:** MSP Cybersecurity Team\n\nBest regards,\nMSP Tech Club Team`}
               value={form.message}
-              onChange={(e) => setForm((s) => ({ ...s, message: e.target.value }))}
+              onChange={(e) => setForm((s) => ({ ...s, message: e.target.value.slice(0, 4000) }))}
               style={{
                 width: '100%',
                 padding: '0.75rem 0.9rem',
