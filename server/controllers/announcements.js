@@ -764,6 +764,56 @@ const deleteAnnouncement = async (req, res) => {
   }
 };
 
+/**
+ * Resend emails for an announcement
+ * POST /api/announcements/:id/resend-emails
+ * Requires: President or Vice President role
+ */
+const resendAnnouncementEmails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const isPresidentOrVP = await checkIsPresidentOrVicePresident(req);
+    if (!isPresidentOrVP) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Resending announcement emails requires President or Vice President approval.'
+      });
+    }
+
+    const announcement = await Announcement.findByPk(id);
+    if (!announcement) {
+      return res.status(404).json({
+        success: false,
+        error: 'Announcement not found'
+      });
+    }
+
+    const emailJob = startAnnouncementEmailBroadcast(announcement);
+
+    await logAdminAction(
+      'announcement_emails_resent',
+      `Resent emails for announcement "${announcement.title}"`,
+      req,
+      'announcement',
+      id,
+      announcement.season_id
+    );
+
+    return res.json({
+      success: true,
+      message: 'Announcement email broadcast started',
+      data: announcement,
+      emailJob
+    });
+  } catch (error) {
+    logger.error('Error resending announcement emails:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to resend announcement emails'
+    });
+  }
+};
+
 module.exports = {
   broadcastNewAnnouncementEmails,
   getAnnouncementEmailJobStatus,
@@ -773,5 +823,7 @@ module.exports = {
   approveAnnouncement,
   rejectAnnouncement,
   updateAnnouncement,
-  deleteAnnouncement
+  deleteAnnouncement,
+  resendAnnouncementEmails
 };
+

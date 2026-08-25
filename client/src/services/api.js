@@ -1416,6 +1416,28 @@ class ApiService {
     }
   }
 
+  // Resend announcement emails (President/VP only)
+  static async resendAnnouncementEmails(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${id}/resend-emails`, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to resend announcement emails');
+      }
+
+      this.clearCache('announcements');
+      return result;
+    } catch (error) {
+      console.error('Error resending announcement emails:', error);
+      throw error;
+    }
+  }
+
   // Update an announcement (admin/board only)
   static async updateAnnouncement(id, announcementData) {
     try {

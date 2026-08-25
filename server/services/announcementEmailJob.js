@@ -329,6 +329,140 @@ async function runAnnouncementEmailJob(jobId, announcement) {
 }
 
 /**
+ * Universal runner for tracked bulk email broadcast jobs.
+ * Executes sendBulkEmails while updating the job object in real-time.
+ *
+ * @param {object} options
+ * @param {string} [options.id] - Optional custom job ID
+ * @param {string} options.type - Job type: 'announcement' | 'course_announcement' | 'competition_announcement' | 'android_app_update' | 'member_activation' | 'board_activation' | 'member_acceptance'
+ * @param {string} options.title - Human-readable broadcast title
+ * @param {number} [options.announcementId]
+ * @param {Array<object>} options.recipients - Array of recipient objects (each must have .email)
+ * @param {number} [options.skipped=0] - Pre-skipped (e.g. unsubscribed) count
+ * @param {function} options.sendFn - Dynamic sendEmail function
+ * @param {function} options.buildPayload - async (recipient) => mailOptions payload
+ * @param {object} [options.metadata] - Extra metadata (courseId, target_type, etc.)
+ * @param {boolean} [options.sync=false] - Whether to await completion before returning
+ * @returns {object|Promise<object>} Public view of the job
+ */
+function startTrackedBulkEmailJob({
+  id = null,
+  type = 'announcement',
+  title = 'Email broadcast',
+  announcementId = null,
+  recipients = [],
+  skipped = 0,
+  sendFn,
+  buildPayload,
+  metadata = {},
+  sync = false
+}) {
+  const job = createEmailJob({
+    id,
+    type,
+    title,
+    announcementId,
+    total: Array.isArray(recipients) ? recipients.length : 0,
+    metadata
+  });
+  job.skipped = skipped || 0;
+
+  const runner = async () => {
+    job.status = 'running';
+    job.startedAt = Date.now();
+    job.failures = [];
+    job.recipients = [];
+
+    const list = Array.isArray(recipients) ? recipients : [];
+    if (list.length === 0) {
+      job.status = 'completed';
+      job.finishedAt = Date.now();
+      logger.info(`Email job ${job.id} (${type}): no recipients to send (skipped=${skipped})`);
+      return;
+    }
+
+    try {
+      const result = await sendBulkEmails({
+        recipients: list,
+        sendFn,
+        buildPayload,
+        onProgress: ({ sent, failed, last }) => {
+          job.sent = sent;
+          job.failed = failed;
+          if (last && last.email) {
+            pushRecipientEvent(job, last.email, last.status || (last.ok ? 'sent' : 'failed'), last.reason);
+          }
+        },
+        onPause: ({ pauseUntil, pauseDurationMs, batchNumber, totalBatches, batchSize }) => {
+          job.isPaused = true;
+          job.pausedUntil = pauseUntil;
+          job.pauseDurationMs = pauseDurationMs;
+          job.pauseReason = 'spam_prevention';
+          job.batchNumber = batchNumber;
+          job.totalBatches = totalBatches;
+          job.batchSize = batchSize;
+          job.status = 'paused';
+          logger.info(
+            `Email job ${job.id} (${type}): anti-spam throttle pause until ${new Date(pauseUntil).toISOString()} (Batch ${batchNumber}/${totalBatches})`
+          );
+        },
+        onResume: ({ batchNumber, totalBatches }) => {
+          job.isPaused = false;
+          job.pausedUntil = null;
+          job.status = 'running';
+          job.batchNumber = batchNumber;
+          job.totalBatches = totalBatches;
+          logger.info(`Email job ${job.id} (${type}): resumed sending (Batch ${batchNumber}/${totalBatches})`);
+        },
+        isCancelled: () => job.isCancelled
+      });
+
+      job.isPaused = false;
+      job.pausedUntil = null;
+      job.sent = result.sent;
+      job.failed = result.failed;
+      job.failures = (result.failures || []).map((f) => ({
+        email: f.email,
+        reason: f.reason,
+        at: Date.now()
+      }));
+
+      if (job.isCancelled) {
+        job.status = 'cancelled';
+      } else {
+        job.status = job.failed > 0 && job.sent === 0 ? 'failed' : 'completed';
+        if (job.status === 'failed') {
+          job.error = 'All email sends failed';
+        }
+      }
+      job.finishedAt = Date.now();
+      logger.info(
+        `Email job ${job.id} (${type}): finished sent=${job.sent} failed=${job.failed} skipped=${job.skipped} total=${job.total}`
+      );
+    } catch (err) {
+      job.isPaused = false;
+      job.pausedUntil = null;
+      job.status = 'failed';
+      job.error = err.message || 'Email broadcast failed';
+      job.finishedAt = Date.now();
+      logger.error(`Email job ${job.id} (${type}) failed:`, err);
+    }
+  };
+
+  if (sync) {
+    return runner().then(() => publicJobView(job));
+  }
+
+  setImmediate(() => {
+    runner().catch((err) => {
+      logger.error(`Unhandled error in email job ${job.id}:`, err);
+    });
+  });
+
+  return publicJobView(job);
+}
+
+/**
  * Create job + kick off background send (does not await completion).
  */
 function startAnnouncementEmailBroadcast(announcement) {
@@ -355,6 +489,8 @@ module.exports = {
   publicJobView,
   runAnnouncementEmailJob,
   startAnnouncementEmailBroadcast,
+  startTrackedBulkEmailJob,
   loadAnnouncementRecipients,
   pushRecipientEvent
 };
+

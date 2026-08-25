@@ -111,27 +111,28 @@ async function getCourseRecipientsCount(courseId, targetType = 'all', targetEnro
 
 /**
  * Broadcast course announcement emails to targeted course members
- * @param {Object} announcement - CourseAnnouncement instance
+ * @param {Object} announcement - CourseAnnouncement instance or plain object
  * @param {Object} [course] - Optional Course instance (will fetch if not provided)
- * @returns {Promise<{ sent: number, failed: number, skipped: number, total: number, failures: Array }>}
+ * @returns {Promise<{ sent: number, failed: number, skipped: number, total: number, failures: Array, emailJob: Object }>}
  */
 async function broadcastCourseAnnouncementEmails(announcement, course = null) {
   try {
+    const plain = typeof announcement?.toJSON === 'function' ? announcement.toJSON() : announcement;
     let courseRecord = course;
-    if (!courseRecord && announcement.course_id) {
-      courseRecord = await Course.findByPk(announcement.course_id);
+    if (!courseRecord && plain.course_id) {
+      courseRecord = await Course.findByPk(plain.course_id);
     }
 
-    const recipients = await getCourseRecipients(announcement, announcement.course_id);
+    const recipients = await getCourseRecipients(plain, plain.course_id);
 
     if (recipients.length === 0) {
-      logger.info(`Course announcement: no recipients found for announcement ${announcement.announcement_id}`);
-      return { sent: 0, failed: 0, skipped: 0, total: 0, failures: [] };
+      logger.info(`Course announcement: no recipients found for announcement ${plain.announcement_id}`);
+      return { sent: 0, failed: 0, skipped: 0, total: 0, failures: [], emailJob: null };
     }
 
     const { sendEmail } = await import('../utils/email.mjs');
     const { buildCourseAnnouncementEmail } = await import('../utils/courseAnnouncementEmail.mjs');
-    const { sendBulkEmails } = require('../utils/bulkEmailSend');
+    const { startTrackedBulkEmailJob } = require('./announcementEmailJob');
 
     // Deduplicate by email while retaining recipient info
     const recipientMap = new Map();
@@ -172,17 +173,21 @@ async function broadcastCourseAnnouncementEmails(announcement, course = null) {
 
     if (validRecipients.length === 0) {
       logger.info(
-        `Course announcement: all recipients unsubscribed for announcement ${announcement.announcement_id} (skipped=${skipped})`
+        `Course announcement: all recipients unsubscribed for announcement ${plain.announcement_id} (skipped=${skipped})`
       );
-      return { sent: 0, failed: 0, skipped, total: uniqueEmails.length, failures: [] };
+      return { sent: 0, failed: 0, skipped, total: uniqueEmails.length, failures: [], emailJob: null };
     }
 
-    const result = await sendBulkEmails({
+    const emailJob = startTrackedBulkEmailJob({
+      type: 'course_announcement',
+      title: `${courseRecord?.title || 'Course'}: ${plain.title || 'Course Notice'}`,
+      announcementId: plain.announcement_id || null,
       recipients: validRecipients,
+      skipped,
       sendFn: sendEmail,
       buildPayload: async (item) => {
         const emailContent = await buildCourseAnnouncementEmail(
-          announcement,
+          plain,
           courseRecord,
           item.enrollment,
           { frontendUrl: process.env.FRONTEND_URL || process.env.WEBSITE_URL }
@@ -197,19 +202,25 @@ async function broadcastCourseAnnouncementEmails(announcement, course = null) {
           fromName: `${courseRecord?.title || 'MSP'} Course Team`,
           category: 'marketing'
         };
+      },
+      metadata: {
+        course_id: plain.course_id,
+        course_title: courseRecord?.title || null,
+        target_type: plain.target_type || 'all'
       }
     });
 
     logger.info(
-      `Course announcement emails sent for announcement ${announcement.announcement_id}: sent=${result.sent} failed=${result.failed} skipped=${skipped + (result.skipped || 0)} course=${announcement.course_id}`
+      `Course announcement email broadcast started for announcement ${plain.announcement_id} (Job ${emailJob.id}): target=${plain.target_type || 'all'} recipients=${validRecipients.length} skipped=${skipped}`
     );
 
     return {
-      sent: result.sent,
-      failed: result.failed,
-      skipped: skipped + (result.skipped || 0),
-      total: uniqueEmails.length,
-      failures: result.failures || []
+      sent: emailJob.sent || 0,
+      failed: emailJob.failed || 0,
+      skipped: skipped || 0,
+      total: validRecipients.length,
+      failures: emailJob.failures || [],
+      emailJob
     };
   } catch (error) {
     logger.error('Error broadcasting course announcement emails:', error);
@@ -222,3 +233,4 @@ module.exports = {
   getCourseRecipientsCount,
   broadcastCourseAnnouncementEmails
 };
+

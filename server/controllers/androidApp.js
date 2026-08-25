@@ -82,12 +82,12 @@ async function broadcastAndroidAppUpdateEmails(release) {
 
   if (recipients.length === 0) {
     logger.info(`Android app update email: no recipients (skipped=${skipped})`);
-    return { sent: 0, failed: 0, skipped };
+    return { sent: 0, failed: 0, skipped, emailJob: null };
   }
 
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildAndroidAppUpdateEmail } = await import('../utils/androidAppUpdateEmail.mjs');
-  const { sendBulkEmails } = require('../utils/bulkEmailSend');
+  const { startTrackedBulkEmailJob } = require('../services/announcementEmailJob');
 
   const publicRelease = toPublicPayload(release);
   const { subject, text, html } = await buildAndroidAppUpdateEmail({
@@ -98,8 +98,11 @@ async function broadcastAndroidAppUpdateEmails(release) {
     frontendUrl: process.env.FRONTEND_URL
   });
 
-  const result = await sendBulkEmails({
+  const emailJob = startTrackedBulkEmailJob({
+    type: 'android_app_update',
+    title: `Android App Update (v${publicRelease.versionName || 'Release'})`,
     recipients,
+    skipped,
     sendFn: sendEmail,
     buildPayload: async (recipient) => ({
       to: recipient.email,
@@ -109,14 +112,25 @@ async function broadcastAndroidAppUpdateEmails(release) {
       html,
       fromName: 'MSP MIU',
       category: 'marketing'
-    })
+    }),
+    metadata: {
+      versionName: publicRelease.versionName,
+      versionCode: publicRelease.versionCode
+    }
   });
 
   logger.info(
-    `Android app update emails: sent=${result.sent} failed=${result.failed} skipped=${skipped}`
+    `Android app update email broadcast started (Job ${emailJob.id}): sent=${emailJob.sent} failed=${emailJob.failed} skipped=${skipped}`
   );
-  return { ...result, skipped };
+  return {
+    sent: emailJob.sent || 0,
+    failed: emailJob.failed || 0,
+    skipped,
+    total: recipients.length,
+    emailJob
+  };
 }
+
 
 /**
  * GET /android-app — public release metadata
@@ -216,6 +230,7 @@ const publishAndroidAppUpdate = async (req, res) => {
         ? `Android app updated and notified ${emailResult.sent} user(s)`
         : 'Android app updated (emails not sent)',
       data: toPublicPayload(contentValue),
+      emailJob: emailResult?.emailJob || null,
       emails: emailResult
     });
   } catch (error) {
@@ -253,6 +268,7 @@ const notifyAndroidAppUpdate = async (req, res) => {
       success: true,
       message: `Update email sent to ${emailResult.sent} user(s)`,
       data: toPublicPayload(release),
+      emailJob: emailResult?.emailJob || null,
       emails: emailResult
     });
   } catch (error) {

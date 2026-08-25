@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FaAndroid } from 'react-icons/fa';
 import { FiDownload, FiSend, FiUpload } from 'react-icons/fi';
 import ApiService from '../../services/api';
+import EmailSendProgress from '../../components/EmailSendProgress';
 import './AndroidAppAdminTab.css';
 
-const AndroidAppAdminTab = ({ onAlert }) => {
+const AndroidAppAdminTab = ({ onAlert, onOpenJob }) => {
   const [current, setCurrent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
@@ -15,6 +16,7 @@ const AndroidAppAdminTab = ({ onAlert }) => {
   const [versionCode, setVersionCode] = useState('');
   const [releaseNotes, setReleaseNotes] = useState('');
   const [notifyUsers, setNotifyUsers] = useState(true);
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,6 +77,14 @@ const AndroidAppAdminTab = ({ onAlert }) => {
         releaseNotes: releaseNotes.trim(),
         notifyUsers
       });
+      const job = result?.emailJob || result?.emails?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: `Android App Update (v${versionName.trim()})` });
+        } else {
+          setEmailSendJob({ id: job.id, title: `Android App Update (v${versionName.trim()})` });
+        }
+      }
       setCurrent(result.data || null);
       setFile(null);
       const fileInput = document.getElementById('android-apk-file');
@@ -100,6 +110,14 @@ const AndroidAppAdminTab = ({ onAlert }) => {
     setError('');
     try {
       const result = await ApiService.notifyAndroidAppUpdate();
+      const job = result?.emailJob || result?.emails?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: `Android App Update (v${current?.versionName || 'Release'})` });
+        } else {
+          setEmailSendJob({ id: job.id, title: `Android App Update (v${current?.versionName || 'Release'})` });
+        }
+      }
       onAlert?.({
         type: 'success',
         message: result.message || 'Update emails sent'
@@ -253,8 +271,17 @@ const AndroidAppAdminTab = ({ onAlert }) => {
           </button>
         </div>
       </form>
+
+      {emailSendJob && (
+        <EmailSendProgress
+          jobId={emailSendJob.id}
+          title={emailSendJob.title}
+          onClear={() => setEmailSendJob(null)}
+        />
+      )}
     </div>
   );
 };
 
 export default AndroidAppAdminTab;
+

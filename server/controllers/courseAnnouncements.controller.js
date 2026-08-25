@@ -351,6 +351,7 @@ const createCourseAnnouncement = async (req, res) => {
       success: true,
       message: responseMessage,
       data: createdAnnouncement,
+      emailJob: emailStats?.emailJob || null,
       emailStats
     });
   } catch (error) {
@@ -464,6 +465,7 @@ const approveCourseAnnouncement = async (req, res) => {
       success: true,
       message: 'Course announcement approved and email broadcast dispatched',
       data: updatedAnnouncement,
+      emailJob: emailStats?.emailJob || null,
       emailStats
     });
   } catch (error) {
@@ -799,7 +801,9 @@ const resendCourseAnnouncementEmails = async (req, res) => {
       data: {
         announcement_id: announcementId,
         emailStats
-      }
+      },
+      emailJob: emailStats?.emailJob || null,
+      emailStats
     });
   } catch (error) {
     logger.error('Error resending course announcement emails:', error);
