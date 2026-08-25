@@ -62,12 +62,6 @@ function getEmailSubPath(pathname) {
   return parts[2] || null;
 }
 
-export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { seasonFilters } = useSeason();
-  const [emailSendJob, setEmailSendJob] = useState(null);
-
 function TemplateEditor({
   template,
   form,
@@ -285,10 +279,11 @@ function applyWhatsAppPayload(payload, setters) {
   );
 }
 
-export default function EmailManagementAdminTab({ onAlert }) {
+export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { seasonFilters } = useSeason();
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
   const page = getEmailSubPath(location.pathname);
   const isWhatsAppPage = page === 'whatsapp';
