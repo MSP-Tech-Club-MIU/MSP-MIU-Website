@@ -14,6 +14,8 @@ const {
   getTeamMemberEmails,
   formatDateForEmail
 } = require('../services/competitionTimeslotService');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 function toCompetitionModeContext(competition) {
   if (!competition) return null;
@@ -35,7 +37,7 @@ function handleTimeslotError(res, error, fallback = 'Timeslot operation failed')
     });
   }
 
-  console.error(fallback, error);
+  logger.error(fallback, error);
   return res.status(500).json({
     success: false,
     error: fallback
@@ -56,7 +58,7 @@ async function sendSelectionLinksEmailBatch({ competition, slotCount, links }) {
         continue;
       }
 
-      const emailPayload = buildCompetitionTimeslotSelectionEmail({
+      const emailPayload = await buildCompetitionTimeslotSelectionEmail({
         competitionTitle: competition.title,
         teamName: linkData.team_name,
         slotCount,
@@ -87,7 +89,7 @@ async function sendAssignmentEmail({ competition, team, slot, isAdminAssignment 
   const { sendEmail } = await import('../utils/email.mjs');
   const { buildCompetitionTimeslotAssignedEmail } = await import('../utils/competitionTimeslotEmail.mjs');
 
-  const emailPayload = buildCompetitionTimeslotAssignedEmail({
+  const emailPayload = await buildCompetitionTimeslotAssignedEmail({
     competitionTitle: competition.title,
     teamName: team.team_name,
     startAt: formatDateForEmail(slot.start_at),
@@ -111,11 +113,16 @@ const getAdminCompetitionTimeslots = async (req, res) => {
   try {
     const competitionId = Number(req.params.id);
     const competition = await assertProjectCompetition(competitionId);
+    const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+    const { page, limit, offset } = parsePagination(req.query);
     const timeslots = await listCompetitionTimeslots(competitionId);
+    const { rows, total } = paginateArray(timeslots, { page, limit, offset });
     return res.json({
       success: true,
       competition: toCompetitionModeContext(competition),
-      data: timeslots
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
     return handleTimeslotError(res, error, 'Failed to fetch competition timeslots');
@@ -143,6 +150,15 @@ const createAdminCompetitionTimeslot = async (req, res) => {
 
     const competition = await assertProjectCompetition(competitionId);
 
+    await logAdminAction(
+      'timeslot_created',
+      `Created timeslot for competition "${competition.title}"`,
+      req,
+      'competition',
+      competition.competition_id,
+      competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       competition: toCompetitionModeContext(competition),
@@ -169,6 +185,15 @@ const updateAdminCompetitionTimeslot = async (req, res) => {
 
     const competition = await assertProjectCompetition(competitionId);
 
+    await logAdminAction(
+      'timeslot_updated',
+      `Updated timeslot #${timeslotId} for competition "${competition.title}"`,
+      req,
+      'competition',
+      competition.competition_id,
+      competition.season_id
+    );
+
     return res.json({
       success: true,
       competition: toCompetitionModeContext(competition),
@@ -185,6 +210,15 @@ const deleteAdminCompetitionTimeslot = async (req, res) => {
     const timeslotId = Number(req.params.timeslotId);
 
     await deleteTimeslot({ competitionId, timeslotId });
+
+    await logAdminAction(
+      'timeslot_deleted',
+      `Deleted timeslot #${timeslotId} from competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
+
     return res.json({ success: true, message: 'Timeslot deleted successfully' });
   } catch (error) {
     return handleTimeslotError(res, error, 'Failed to delete timeslot');
@@ -196,6 +230,15 @@ const publishCompetitionTimeslotSelectionLinks = async (req, res) => {
     const competitionId = Number(req.params.id);
     const payload = await buildTeamSelectionLinks(competitionId);
     const failures = await sendSelectionLinksEmailBatch(payload);
+
+    await logAdminAction(
+      'timeslot_selection_links_published',
+      `Published timeslot selection links to ${payload.links.length} team(s) for "${payload.competition?.title || competitionId}"`,
+      req,
+      'competition',
+      competitionId,
+      payload.competition?.season_id
+    );
 
     return res.json({
       success: true,
@@ -239,8 +282,17 @@ const assignCompetitionTimeslotByAdmin = async (req, res) => {
         isAdminAssignment: true
       });
     } catch (mailErr) {
-      console.error('Timeslot assignment email failed:', mailErr);
+      logger.error('Timeslot assignment email failed:', mailErr);
     }
+
+    await logAdminAction(
+      'timeslot_assigned',
+      `Assigned team "${result.team?.team_name || teamId}" to timeslot in "${result.competition?.title || competitionId}"`,
+      req,
+      'competition',
+      competitionId,
+      result.competition?.season_id
+    );
 
     return res.json({
       success: true,
@@ -263,6 +315,14 @@ const unassignCompetitionTimeslotByAdmin = async (req, res) => {
     const timeslotId = Number(req.params.timeslotId);
 
     await unassignTimeslotByAdmin({ competitionId, timeslotId });
+
+    await logAdminAction(
+      'timeslot_unassigned',
+      `Unassigned team from timeslot #${timeslotId} in competition #${competitionId}`,
+      req,
+      'competition',
+      competitionId
+    );
 
     return res.json({
       success: true,
@@ -328,7 +388,7 @@ const submitCompetitionTimeslotSelection = async (req, res) => {
         isAdminAssignment: false
       });
     } catch (mailErr) {
-      console.error('Timeslot confirmation email failed:', mailErr);
+      logger.error('Timeslot confirmation email failed:', mailErr);
     }
 
     return res.json({
@@ -405,7 +465,7 @@ const submitCompetitionWorkspaceTimeslotSelection = async (req, res) => {
         isAdminAssignment: false
       });
     } catch (mailErr) {
-      console.error('Workspace timeslot confirmation email failed:', mailErr);
+      logger.error('Workspace timeslot confirmation email failed:', mailErr);
     }
 
     return res.json({

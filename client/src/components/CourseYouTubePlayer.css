@@ -1,0 +1,62 @@
+.CourseYouTubePlayer {
+  margin-bottom: 18px;
+}
+
+.CourseYouTubePlayer__title {
+  margin: 0 0 10px;
+  color: #C5DAE9;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.CourseYouTubePlayer--invalid {
+  padding: 24px;
+  border-radius: 14px;
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  color: #ffb4b0;
+  text-align: center;
+}
+
+.CourseYouTubePlayer .plyr {
+  --plyr-color-main: #03A9F4;
+  --plyr-video-background: #031C35;
+  --plyr-menu-background: rgba(9, 26, 44, 0.96);
+  --plyr-menu-color: #E8F4FC;
+  --plyr-control-radius: 10px;
+  --plyr-control-icon-size: 18px;
+  --plyr-range-fill-background: #03A9F4;
+  --plyr-video-control-color: #E8F4FC;
+  --plyr-video-control-background-hover: rgba(3, 169, 244, 0.28);
+  --plyr-audio-controls-background: rgba(3, 28, 53, 0.92);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(142, 194, 240, 0.18);
+}
+
+.CourseYouTubePlayer .plyr__control--overlaid {
+  background: linear-gradient(135deg, #1D4F82, #03A9F4);
+  padding: 22px;
+  border: 0;
+  box-shadow: 0 10px 28px rgba(3, 169, 244, 0.35);
+}
+
+.CourseYouTubePlayer .plyr__control--overlaid:hover,
+.CourseYouTubePlayer .plyr__control--overlaid:focus {
+  background: linear-gradient(135deg, #03A9F4, #8EC2F0);
+}
+
+.CourseYouTubePlayer .plyr__controls {
+  background: linear-gradient(180deg, transparent, rgba(3, 28, 53, 0.92));
+  padding: 12px 14px 14px;
+}
+
+.CourseYouTubePlayer .plyr__progress__buffer {
+  color: rgba(142, 194, 240, 0.35);
+}
+
+.CourseYouTubePlayer .plyr__tooltip {
+  background: #091a2c;
+  color: #E8F4FC;
+}

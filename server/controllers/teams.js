@@ -2,17 +2,15 @@ const db = require('../config/db');
 const crypto = require('crypto');
 const path = require('path');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { checkBlacklist } = require('../utils/blacklistCheck');
+const logger = require('../utils/logger');
 
 // Import email templates
 const {
-    generateNewUserInvitationEmailHTML,
-    generateExistingUserInvitationEmailHTML,
-    generateNewUserInvitationEmailText,
-    generateExistingUserInvitationEmailText,
-    getInvitationEmailSubject,
-    generateGuestLeaderTeamCreatedEmailHTML,
-    generateGuestLeaderTeamCreatedEmailText,
-    getGuestLeaderTeamCreatedSubject
+    generateNewUserInvitationEmail,
+    generateExistingUserInvitationEmail,
+    generateGuestLeaderTeamCreatedEmail
 } = require('../scripts/teamInvitationEmail');
 
 // Import sendEmail utility (using dynamic import for ESM)
@@ -318,6 +316,35 @@ const createTeam = async (req, res) => {
             });
         }
 
+        // Check leader blacklist status
+        const leaderBlacklist = await checkBlacklist({
+            user_id: leaderUserId,
+            name: leaderName,
+            university_id: leaderUniversityId,
+            email: leaderEmail
+        });
+        if (leaderBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Team creation blocked: Team leader is restricted from participating in club activities. Reason: ${leaderBlacklist.reason}`
+            });
+        }
+
+        // Check invited members blacklist status
+        for (const member of normalizedMembers) {
+            const memberBlacklist = await checkBlacklist({
+                name: member.name,
+                university_id: member.university_id,
+                email: member.email
+            });
+            if (memberBlacklist.isBlacklisted) {
+                return res.status(403).json({
+                    success: false,
+                    error: `Team creation blocked: Member "${member.name || member.university_id || member.email}" is restricted from participating in club activities. Reason: ${memberBlacklist.reason}`
+                });
+            }
+        }
+
         // Create team (created_by_user_id can be NULL for pending teams)
         const teamResult = await db.query(
             `INSERT INTO teams (competition_id, team_name, created_by_user_id, is_locked)
@@ -366,17 +393,18 @@ const createTeam = async (req, res) => {
                             workspaceUrl,
                             email: leaderEmail
                         };
+                        const guestEmail = await generateGuestLeaderTeamCreatedEmail(leaderCreatedPayload);
                         await mail({
                             to: leaderEmail,
                             fromName: 'MSP MIU - Competitions',
-                            subject: getGuestLeaderTeamCreatedSubject(team_name, competition.title),
-                            text: generateGuestLeaderTeamCreatedEmailText(leaderCreatedPayload),
-                            html: generateGuestLeaderTeamCreatedEmailHTML(leaderCreatedPayload)
+                            subject: guestEmail.subject,
+                            text: guestEmail.text,
+                            html: guestEmail.html
                         });
-                        console.log(`✅ Guest leader team-created email sent to ${leaderEmail}`);
+                        logger.info(`✅ Guest leader team-created email sent to ${leaderEmail}`);
                     }
                 } catch (emailErr) {
-                    console.error('Failed to send guest leader team-created email:', emailErr);
+                    logger.error('Failed to send guest leader team-created email:', emailErr);
                 }
             }
         } else {
@@ -427,23 +455,22 @@ const createTeam = async (req, res) => {
             try {
                 const mail = await ensureSendEmail();
                 if (mail) {
-                    const htmlContent = generateNewUserInvitationEmailHTML(emailData);
-                    const textContent = generateNewUserInvitationEmailText(emailData);
+                    const inviteEmail = await generateNewUserInvitationEmail(emailData);
 
                     await mail({
                         to: leader_email,
                         fromName: 'MSP MIU - Competitions',
-                        subject: `🎯 Team Leader Invitation: Create Account for "${team_name}" - MSP MIU`,
-                        text: textContent,
-                        html: htmlContent
+                        subject: inviteEmail.subject,
+                        text: inviteEmail.text,
+                        html: inviteEmail.html
                     });
 
-                    console.log(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
+                    logger.info(`✅ Team leader invitation email sent to ${leader_email} (new user)`);
                 } else {
-                    console.warn('sendEmail unavailable: leader invitation not sent');
+                    logger.warn('sendEmail unavailable: leader invitation not sent');
                 }
             } catch (emailError) {
-                console.error('Failed to send leader invitation email:', emailError);
+                logger.error('Failed to send leader invitation email:', emailError);
             }
         }
 
@@ -532,15 +559,16 @@ const createTeam = async (req, res) => {
                             email: memberEmail
                         };
 
+                            const existingInvite = await generateExistingUserInvitationEmail(existingEmailData);
                             await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
-                                subject: getInvitationEmailSubject(team_name, competition.title, true),
-                                text: generateExistingUserInvitationEmailText(existingEmailData),
-                                html: generateExistingUserInvitationEmailHTML(existingEmailData)
+                                subject: existingInvite.subject,
+                                text: existingInvite.text,
+                                html: existingInvite.html
                             });
                     } catch (emailErr) {
-                        console.error('Failed to send member notification email (existing user):', emailErr);
+                        logger.error('Failed to send member notification email (existing user):', emailErr);
                     }
                 } else {
                     const token = crypto.randomBytes(32).toString('hex');
@@ -586,15 +614,16 @@ const createTeam = async (req, res) => {
                             invitedUniversityId: memberUniversityId
                         };
 
+                            const newInvite = await generateNewUserInvitationEmail(newUserEmailData);
                             await mail({
                                 to: memberEmail,
                                 fromName: 'MSP MIU - Competitions',
-                                subject: getInvitationEmailSubject(team_name, competition.title, false),
-                                text: generateNewUserInvitationEmailText(newUserEmailData),
-                                html: generateNewUserInvitationEmailHTML(newUserEmailData)
+                                subject: newInvite.subject,
+                                text: newInvite.text,
+                                html: newInvite.html
                             });
                     } catch (emailErr) {
-                        console.error('Failed to send member invitation email (new user):', emailErr);
+                        logger.error('Failed to send member invitation email (new user):', emailErr);
                     }
                 }
             }
@@ -623,7 +652,7 @@ const createTeam = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating team:', error);
+        logger.error('Error creating team:', error);
 
         // Convert common DB constraint issues into user-friendly responses.
         const sqlCode = error?.original?.code || error?.parent?.code;
@@ -720,7 +749,7 @@ const getTeamById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching team:', error);
+        logger.error('Error fetching team:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch team'
@@ -736,6 +765,16 @@ const getTeamById = async (req, res) => {
 const getCompetitionTeams = async (req, res) => {
     try {
         const { competitionId } = req.params;
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM teams WHERE competition_id = ?`,
+            {
+                replacements: [competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
 
         const teams = await db.query(
             `SELECT t.team_id, t.team_name, t.is_locked, t.created_at,
@@ -746,20 +785,23 @@ const getCompetitionTeams = async (req, res) => {
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE t.competition_id = ?
              GROUP BY t.team_id
-             ORDER BY t.created_at DESC`,
+             ORDER BY t.created_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [competitionId],
+                replacements: [competitionId, limit, offset],
                 type: db.QueryTypes.SELECT
             }
         );
 
         res.status(200).json({
             success: true,
-            data: teams
+            data: teams,
+            count: teams.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch teams'
@@ -799,6 +841,19 @@ const inviteToTeam = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid University ID format (must be YYYY/XXXXX, e.g., 2023/98765)'
+            });
+        }
+
+        // Check if invited person is blacklisted
+        const inviteeBlacklist = await checkBlacklist({
+            name,
+            university_id,
+            email
+        });
+        if (inviteeBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Invitation blocked: This person is restricted from participating in club activities. Reason: ${inviteeBlacklist.reason}`
             });
         }
 
@@ -986,15 +1041,9 @@ const inviteToTeam = async (req, res) => {
         }
 
         // Generate email HTML and text based on user existence
-        let htmlContent, textContent;
-        
-        if (userExists) {
-            htmlContent = generateExistingUserInvitationEmailHTML(emailData);
-            textContent = generateExistingUserInvitationEmailText(emailData);
-        } else {
-            htmlContent = generateNewUserInvitationEmailHTML(emailData);
-            textContent = generateNewUserInvitationEmailText(emailData);
-        }
+        const invitePayload = userExists
+            ? await generateExistingUserInvitationEmail(emailData)
+            : await generateNewUserInvitationEmail(emailData);
 
         // Send email
         try {
@@ -1003,17 +1052,17 @@ const inviteToTeam = async (req, res) => {
                 await mail({
                     to: email,
                     fromName: 'MSP MIU - Competitions',
-                    subject: getInvitationEmailSubject(details.team_name, details.title, userExists),
-                    text: textContent,
-                    html: htmlContent
+                    subject: invitePayload.subject,
+                    text: invitePayload.text,
+                    html: invitePayload.html
                 });
 
-                console.log(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);
+                logger.info(`✅ Team invitation email sent to ${email} (${userExists ? 'existing' : 'new'} user)`);
             } else {
-                console.warn('⚠️  sendEmail not available, email not sent');
+                logger.warn('⚠️  sendEmail not available, email not sent');
             }
         } catch (emailError) {
-            console.error('Failed to send invitation email:', emailError);
+            logger.error('Failed to send invitation email:', emailError);
             // Don't fail the whole operation if email sending fails
         }
 
@@ -1030,7 +1079,7 @@ const inviteToTeam = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error sending invitation:', error);
+        logger.error('Error sending invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to send invitation',
@@ -1085,6 +1134,18 @@ const acceptInvitation = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 error: 'This invitation was sent to a different email address'
+            });
+        }
+
+        // Check if accepting user is blacklisted
+        const userBlacklist = await checkBlacklist({
+            user_id: userId,
+            email: userEmail
+        });
+        if (userBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Cannot accept invitation: You are restricted from participating in club activities. Reason: ${userBlacklist.reason}`
             });
         }
 
@@ -1190,7 +1251,7 @@ const acceptInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error accepting invitation:', error);
+        logger.error('Error accepting invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to accept invitation',
@@ -1256,7 +1317,7 @@ const declineInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error declining invitation:', error);
+        logger.error('Error declining invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to decline invitation'
@@ -1357,7 +1418,7 @@ const verifyInvitation = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error verifying invitation:', error);
+        logger.error('Error verifying invitation:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to verify invitation'
@@ -1417,6 +1478,19 @@ const acceptInvitationNewUser = async (req, res) => {
             return res.status(registrationGate.status).json({
                 success: false,
                 error: registrationGate.error
+            });
+        }
+
+        // Check if invited user is blacklisted
+        const inviteeBlacklist = await checkBlacklist({
+            name: invitation.invited_name,
+            university_id: invitation.invited_university_id,
+            email: invitation.invited_email
+        });
+        if (inviteeBlacklist.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Cannot accept invitation: You are restricted from participating in club activities. Reason: ${inviteeBlacklist.reason}`
             });
         }
 
@@ -1577,7 +1651,7 @@ const acceptInvitationNewUser = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error accepting invitation (new user):', error);
+        logger.error('Error accepting invitation (new user):', error);
         const sqlCode = error?.original?.code || error?.parent?.code;
         if (sqlCode === 'ER_DUP_ENTRY' || error?.name === 'SequelizeUniqueConstraintError') {
             return res.status(400).json({

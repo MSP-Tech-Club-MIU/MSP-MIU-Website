@@ -9,17 +9,23 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "nodemon app.js",
+    "dev:server": "nodemon --exec \"node --use-system-ca\" app.js",
     "dev:client": "cd client && npm run dev",
     "build": "npm run build:client",
     "build:client": "cd client && npm install --include=dev && npm run build",
-    "start": "node app.js",
-    "start:server": "node app.js",
+    "start": "node --use-system-ca app.js",
+    "start:server": "node --use-system-ca app.js",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install",
     "clean": "rm -rf node_modules client/node_modules server/node_modules",
     "deploy": "npm run build && npm run start",
     "test": "cd client && npm test",
-    "lint": "cd client && npm run lint"
+    "lint": "cd client && npm run lint",
+    "patch:season-schema": "node server/scripts/patchSeasonSchema.js",
+    "patch:cms-schema": "node server/scripts/patchCmsSchema.js",
+    "patch:board-multi-season": "node server/scripts/patchBoardMultiSeason.js",
+    "cleanup:users-indexes": "node server/scripts/cleanupUsersIndexes.js",
+    "docs:openapi": "node server/scripts/generateOpenApi.js",
+    "prepare": "node scripts/install-git-hooks.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
@@ -37,7 +43,9 @@
     "mysql2": "^3.11.3",
     "node-fetch": "^3.3.2",
     "ogl": "^1.0.11",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

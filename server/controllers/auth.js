@@ -1,7 +1,11 @@
 const bcrypt = require('bcrypt');
 const { User, Member, Board, PasswordToken } = require('../models');
 const { generateToken: generateJWTToken, verifyToken: verifyJWTToken } = require('../utils/jwt');
-const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAuditEvent, logError, logSecurityEvent } = logger;
+const { resolveSeasonIdForWrite, getDefaultSeasonId } = require('../utils/seasonFilter');
+const { findMemberByEmailPreferCurrentSeason } = require('../utils/memberEnrollment');
+const { checkBlacklist } = require('../utils/blacklistCheck');
 
 /**
  * Login user
@@ -113,6 +117,30 @@ const login = async (req, res) => {
             });
         }
 
+        // Check if user is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            user_id: user.user_id,
+            name: user.full_name,
+            university_id: user.university_id,
+            phone_number: user.phone_number,
+            email: user.email
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            loginAttempt.error_type = 'USER_BLACKLISTED';
+            loginAttempt.user_id = user.user_id;
+            logSecurityEvent('LOGIN_BLOCKED', {
+                reason: 'User blacklisted',
+                user_id: user.user_id,
+                university_id
+            }, req);
+
+            return res.status(403).json({
+                success: false,
+                error: `Account restricted: You are blocked from participating in club activities. Reason: ${blacklistStatus.reason}`
+            });
+        }
+
         // Generate token with user id, role, and department_id
         const tokenResult = generateJWTToken({
             id: user.user_id,
@@ -210,6 +238,21 @@ const register = async (req, res) => {
             });
         }
 
+        // Check if user/applicant is blacklisted
+        const blacklistStatus = await checkBlacklist({
+            email,
+            university_id: req.body.university_id,
+            name: req.body.full_name || req.body.name,
+            phone_number: req.body.phone_number
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            return res.status(403).json({
+                success: false,
+                error: `Registration blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+            });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ where: { email } });
 
@@ -228,12 +271,20 @@ const register = async (req, res) => {
         const validRoles = ['member', 'board', 'admin'];
         const userRole = role && validRoles.includes(role) ? role : 'member';
 
+        let season_id;
+        try {
+            season_id = await resolveSeasonIdForWrite(req.body, req.query);
+        } catch (_) {
+            season_id = await getDefaultSeasonId();
+        }
+
         // Create user (default to inactive, admin must activate)
         const user = await User.create({
             email,
             password_hash,
             role: userRole,
-            is_active: false // Default to inactive, require admin activation
+            is_active: false, // Default to inactive, require admin activation
+            season_id
         });
 
         // Generate token
@@ -681,8 +732,12 @@ const activateAccount = async (req, res) => {
                 }
             } else if (decoded.type === 'member_activation' || decoded.type === 'activation') {
                 activationEmail = decoded.email;
-                // Find member by email
-                member = await Member.findOne({ where: { email: activationEmail } });
+                if (decoded.member_id) {
+                    member = await Member.findByPk(decoded.member_id);
+                }
+                if (!member) {
+                    member = await findMemberByEmailPreferCurrentSeason(activationEmail);
+                }
                 
                 if (!member) {
                     logSecurityEvent('ACCOUNT_ACTIVATION_FAILED', {
@@ -699,8 +754,8 @@ const activateAccount = async (req, res) => {
                 // Legacy token format - just has email
                 activationEmail = decoded.email;
                 
-                // Look up member or board member by email
-                member = await Member.findOne({ where: { email: activationEmail } });
+                // Look up member or board member by email (prefer current season)
+                member = await findMemberByEmailPreferCurrentSeason(activationEmail);
                 
                 if (!member) {
                     // If not a member, check if it's a board member
@@ -734,8 +789,8 @@ const activateAccount = async (req, res) => {
             activationEmail = email;
 
             // Find member or board member by email
-            // First check if it's a member
-            member = await Member.findOne({ where: { email: activationEmail } });
+            // Prefer the current/default season when multiple member rows exist
+            member = await findMemberByEmailPreferCurrentSeason(activationEmail);
 
             // If not a member, check if it's a board member
             if (!member) {
@@ -756,6 +811,27 @@ const activateAccount = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'No account found. Please contact the administrator.'
+            });
+        }
+
+        // Check if member or board member is blacklisted
+        const targetPerson = member || boardMember;
+        const blacklistStatus = await checkBlacklist({
+            email: activationEmail,
+            university_id: targetPerson?.university_id,
+            name: targetPerson?.full_name,
+            phone_number: targetPerson?.phone_number
+        });
+
+        if (blacklistStatus.isBlacklisted) {
+            logSecurityEvent('ACCOUNT_ACTIVATION_BLOCKED', {
+                reason: 'User blacklisted',
+                email: activationEmail
+            }, req);
+
+            return res.status(403).json({
+                success: false,
+                error: `Account activation blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
             });
         }
 
@@ -817,6 +893,10 @@ const activateAccount = async (req, res) => {
             // Always set role to 'board' if it's a board member
             if (isBoardMember) {
                 updateData.role = 'board';
+                if (boardMember) {
+                    updateData.department_id = boardMember.department_id;
+                    updateData.season_id = boardMember.season_id;
+                }
             } else {
                 updateData.role = role;
             }
@@ -875,7 +955,7 @@ const activateAccount = async (req, res) => {
                         }
                     } catch (appError) {
                         // If Application model doesn't exist or query fails, just continue with null university_id
-                        console.warn('Could not fetch university_id from Application:', appError.message);
+                        logger.warn('Could not fetch university_id from Application:', appError);
                     }
                 }
                 
@@ -886,7 +966,8 @@ const activateAccount = async (req, res) => {
                     password_hash,
                     department_id: boardMember.department_id,
                     role: 'board', // Ensure role is set to 'board'
-                    is_active: true
+                    is_active: true,
+                    season_id: boardMember.season_id || (await getDefaultSeasonId())
                 });
 
                 // Link board member to user
@@ -909,7 +990,8 @@ const activateAccount = async (req, res) => {
                     password_hash,
                     department_id: member.department_id,
                     role: 'member',
-                    is_active: true
+                    is_active: true,
+                    season_id: member.season_id || (await getDefaultSeasonId())
                 });
 
                 // Link member to user
@@ -1002,6 +1084,12 @@ const forgotPassword = async (req, res) => {
                 });
             }
             user = await User.findOne({ where: { university_id } });
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No account found with this University ID'
+                });
+            }
         } else {
             // Validate email format
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1012,165 +1100,101 @@ const forgotPassword = async (req, res) => {
                 });
             }
             user = await User.findOne({ where: { email } });
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'No account found with this email address'
+                });
+            }
         }
 
-        // Always return success message (security best practice - don't reveal if user exists)
-        // But only send email if user exists
-        if (user && user.email) {
-            // Generate JWT token for password reset (expires in 1 hour)
-            const resetTokenResult = generateJWTToken({
+        // Generate JWT token for password reset (expires in 1 hour)
+        const resetTokenResult = generateJWTToken({
+            user_id: user.user_id,
+            email: user.email,
+            type: 'password_reset'
+        }, '1h'); // Override default expiration to 1 hour
+
+        if (!resetTokenResult.success) {
+            logError('auth.forgotPassword', new Error(resetTokenResult.error), {
                 user_id: user.user_id,
-                email: user.email,
-                type: 'password_reset'
-            }, '1h'); // Override default expiration to 1 hour
-
-            if (!resetTokenResult.success) {
-                logError('auth.forgotPassword', new Error(resetTokenResult.error), {
-                    user_id: user.user_id,
-                    university_id: user.university_id || 'unknown',
-                    email: user.email
-                }, req);
-                
-                // Still return success to user (security best practice)
-                return res.json({
-                    success: true,
-                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
-                });
-            }
-
-            // Store token in database for tracking (optional but recommended)
-            const expiresAt = new Date();
-            expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
-
-            try {
-                // Invalidate any existing unused reset tokens for this user
-                await PasswordToken.update(
-                    { used: true },
-                    { where: { user_id: user.user_id, used: false } }
-                );
-
-                // Hash the token before storing (security best practice)
-                const saltRounds = 10;
-                const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
-
-                // Create new password reset token record with hashed token
-                await PasswordToken.create({
-                    user_id: user.user_id,
-                    token: tokenHash,
-                    expires_at: expiresAt,
-                    used: false
-                });
-            } catch (tokenError) {
-                // Log but don't fail - token generation succeeded
-                logError('auth.forgotPassword.tokenStorage', tokenError, {
-                    user_id: user.user_id
-                }, req);
-            }
-
-            // Generate reset link
-            const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
-
-            // Send password reset email (using dynamic import for ES module)
-            try {
-                const { sendEmail } = await import('../utils/email.mjs');
-                await sendEmail({
-                    to: user.email,
-                    subject: 'Password Reset Request - MSP MIU',
-                    html: `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="utf-8">
-                            <style>
-                                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                                .header { background-color: #4a90e2; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-                                .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
-                                .button { display: inline-block; padding: 12px 30px; background-color: #4a90e2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                                .button:hover { background-color: #357abd; }
-                                .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-                                .warning { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 20px 0; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="header">
-                                    <h1>Password Reset Request</h1>
-                                </div>
-                                <div class="content">
-                                    <p>Hello ${user.full_name || 'User'},</p>
-                                    <p>We received a request to reset your password for your MSP MIU account.</p>
-                                    <p>Click the button below to reset your password:</p>
-                                    <p style="text-align: center;">
-                                        <a href="${resetLink}" class="button">Reset Password</a>
-                                    </p>
-                                    <p>Or copy and paste this link into your browser:</p>
-                                    <p style="word-break: break-all; color: #4a90e2;">${resetLink}</p>
-                                    <div class="warning">
-                                        <strong>⚠️ Security Notice:</strong>
-                                        <ul>
-                                            <li>This link will expire in 1 hour</li>
-                                            <li>If you didn't request this reset, please ignore this email</li>
-                                            <li>Never share this link with anyone</li>
-                                        </ul>
-                                    </div>
-                                    <p>If you didn't request a password reset, you can safely ignore this email.</p>
-                                </div>
-                                <div class="footer">
-                                    <p>MSP MIU Website</p>
-                                    <p>This is an automated email, please do not reply.</p>
-                                </div>
-                            </div>
-                        </body>
-                        </html>
-                    `,
-                    text: `
-Password Reset Request - MSP MIU
-
-Hello ${user.full_name || 'User'},
-
-We received a request to reset your password for your MSP MIU account.
-
-Click the following link to reset your password:
-${resetLink}
-
-This link will expire in 1 hour.
-
-If you didn't request a password reset, you can safely ignore this email.
-
-Security Notice:
-- This link will expire in 1 hour
-- If you didn't request this reset, please ignore this email
-- Never share this link with anyone
-
-MSP MIU Website
-This is an automated email, please do not reply.
-                    `
-                });
-
-                logAuditEvent('PASSWORD_RESET_REQUESTED', {
-                    user_id: user.user_id,
-                    university_id: user.university_id || 'unknown',
-                    email: user.email
-                }, req);
-            } catch (emailError) {
-                logError('auth.forgotPassword.email', emailError, {
-                    user_id: user.user_id,
-                    email: user.email
-                }, req);
-                
-                // Still return success to user (security best practice)
-                return res.json({
-                    success: true,
-                    message: 'If an account exists with this information, a password reset link has been sent to your email.'
-                });
-            }
+                university_id: user.university_id || 'unknown',
+                email: user.email
+            }, req);
+            
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to generate reset token'
+            });
         }
 
-        // Always return success (security best practice - don't reveal if user exists)
+        // Store token in database for tracking (optional but recommended)
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1); // 1 hour from now
+
+        try {
+            // Invalidate any existing unused reset tokens for this user
+            await PasswordToken.update(
+                { used: true },
+                { where: { user_id: user.user_id, used: false } }
+            );
+
+            // Hash the token before storing (security best practice)
+            const saltRounds = 10;
+            const tokenHash = await bcrypt.hash(resetTokenResult.token, saltRounds);
+
+            // Create new password reset token record with hashed token
+            await PasswordToken.create({
+                user_id: user.user_id,
+                token: tokenHash,
+                expires_at: expiresAt,
+                used: false
+            });
+        } catch (tokenError) {
+            // Log but don't fail - token generation succeeded
+            logError('auth.forgotPassword.tokenStorage', tokenError, {
+                user_id: user.user_id
+            }, req);
+        }
+
+        // Generate reset link
+        const resetLink = `${process.env.FRONTEND_URL + '/reset-password?token=' + resetTokenResult.token}`;
+
+        // Send password reset email (using dynamic import for ES module)
+        try {
+            const { sendEmail } = await import('../utils/email.mjs');
+            const { renderTemplate } = require('../utils/emailTemplates/render');
+            const rendered = await renderTemplate('password_reset', {
+                fullName: user.full_name || 'User',
+                resetLink
+            });
+            await sendEmail({
+                to: user.email,
+                subject: rendered.subject,
+                html: rendered.html,
+                text: rendered.text
+            });
+
+            logAuditEvent('PASSWORD_RESET_REQUESTED', {
+                user_id: user.user_id,
+                university_id: user.university_id || 'unknown',
+                email: user.email
+            }, req);
+        } catch (emailError) {
+            logError('auth.forgotPassword.email', emailError, {
+                user_id: user.user_id,
+                email: user.email
+            }, req);
+            
+            return res.status(500).json({
+                success: false,
+                error: 'Failed to send password reset email'
+            });
+        }
+
         res.json({
             success: true,
-            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+            message: 'Password reset link has been sent to your email.'
         });
 
     } catch (error) {
@@ -1179,10 +1203,9 @@ This is an automated email, please do not reply.
             email: req.body?.email || 'unknown'
         }, req);
         
-        // Still return success to user (security best practice)
-        res.json({
-            success: true,
-            message: 'If an account exists with this information, a password reset link has been sent to your email.'
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
         });
     }
 };

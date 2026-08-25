@@ -2,10 +2,12 @@ const path = require('path');
 const multer = require('multer');
 const { Competition, CompetitionTask, Quiz } = require('../models');
 const { uploadToR2 } = require('../config/cloud');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 const TASK_ASSET_R2_PREFIX = 'competitions_tasks_assets/';
 const ASSETS_URL_MAX_LEN = 2048;
-
 function num(v, fallback = 0) {
   if (v == null) return fallback;
   if (typeof v === 'bigint') return Number(v);
@@ -95,7 +97,13 @@ async function getCompetitionTasksPublic(req, res) {
       return res.status(404).json({ success: false, error: 'Competition not found' });
     }
     if (competition.type !== 'task_quiz') {
-      return res.status(200).json({ success: true, data: [] });
+      const { page, limit } = parsePagination(req.query);
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
+      });
     }
 
     // Task quiz access rule: allow only after quiz unlocks
@@ -111,9 +119,12 @@ async function getCompetitionTasksPublic(req, res) {
       return res.status(403).json({ success: false, error: 'Task quiz is not open yet.' });
     }
 
-    const tasks = await CompetitionTask.findAll({
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows: tasks, count: total } = await CompetitionTask.findAndCountAll({
       where: { competition_id: competition.competition_id },
-      order: [['position', 'ASC'], ['task_id', 'ASC']]
+      order: [['position', 'ASC'], ['task_id', 'ASC']],
+      limit,
+      offset
     });
     return res.status(200).json({
       success: true,
@@ -124,10 +135,12 @@ async function getCompetitionTasksPublic(req, res) {
         description: t.description,
         position: num(t.position, 0),
         assets_url: t.assets_url || null
-      }))
+      })),
+      count: tasks.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
-    console.error('getCompetitionTasksPublic:', err);
+    logger.error('getCompetitionTasksPublic:', err);
     return res.status(500).json({ success: false, error: 'Failed to load tasks' });
   }
 }
@@ -143,13 +156,22 @@ async function getAdminCompetitionTasks(req, res) {
       return res.status(404).json({ success: false, error: 'Competition not found' });
     }
     if (competition.type !== 'task_quiz') {
-      return res.status(200).json({ success: true, data: [] });
+      const { page, limit } = parsePagination(req.query);
+      return res.status(200).json({
+        success: true,
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
+      });
     }
 
     // Admin endpoint: no unlock gate, return all tasks
-    const tasks = await CompetitionTask.findAll({
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows: tasks, count: total } = await CompetitionTask.findAndCountAll({
       where: { competition_id: competition.competition_id },
-      order: [['position', 'ASC'], ['task_id', 'ASC']]
+      order: [['position', 'ASC'], ['task_id', 'ASC']],
+      limit,
+      offset
     });
     return res.status(200).json({
       success: true,
@@ -160,10 +182,12 @@ async function getAdminCompetitionTasks(req, res) {
         description: t.description,
         position: num(t.position, 0),
         assets_url: t.assets_url || null
-      }))
+      })),
+      count: tasks.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (err) {
-    console.error('getAdminCompetitionTasks:', err);
+    logger.error('getAdminCompetitionTasks:', err);
     return res.status(500).json({ success: false, error: 'Failed to load tasks' });
   }
 }
@@ -195,6 +219,16 @@ async function postAdminCompetitionTask(req, res) {
       position: pos,
       assets_url: normAssetsUrl(assets_url)
     });
+
+    await logAdminAction(
+      'competition_task_created',
+      `Created task "${task.title}" for competition "${loaded.competition.title}"`,
+      req,
+      'competition',
+      loaded.competition.competition_id,
+      loaded.competition.season_id
+    );
+
     return res.status(201).json({
       success: true,
       data: {
@@ -207,7 +241,7 @@ async function postAdminCompetitionTask(req, res) {
       }
     });
   } catch (err) {
-    console.error('postAdminCompetitionTask:', err);
+    logger.error('postAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to create task' });
   }
 }
@@ -253,6 +287,16 @@ async function putAdminCompetitionTask(req, res) {
     }
     await task.update(updates);
     await task.reload();
+
+    await logAdminAction(
+      'competition_task_updated',
+      `Updated task "${task.title}" for competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({
       success: true,
       data: {
@@ -265,7 +309,7 @@ async function putAdminCompetitionTask(req, res) {
       }
     });
   } catch (err) {
-    console.error('putAdminCompetitionTask:', err);
+    logger.error('putAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to update task' });
   }
 }
@@ -302,6 +346,16 @@ async function postAdminCompetitionTaskAsset(req, res) {
     const url = publicUrlForR2Key(key);
     await task.update({ assets_url: normAssetsUrl(url) });
     await task.reload();
+
+    await logAdminAction(
+      'competition_task_asset_uploaded',
+      `Uploaded asset for task "${task.title}" in competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({
       success: true,
       url: task.assets_url,
@@ -316,7 +370,7 @@ async function postAdminCompetitionTaskAsset(req, res) {
       }
     });
   } catch (err) {
-    console.error('postAdminCompetitionTaskAsset:', err);
+    logger.error('postAdminCompetitionTaskAsset:', err);
     const msg = err?.message ? String(err.message) : '';
     return res.status(500).json({
       success: false,
@@ -339,10 +393,21 @@ async function deleteAdminCompetitionTask(req, res) {
     if (!comp || comp.type !== 'task_quiz') {
       return res.status(400).json({ success: false, error: 'Invalid competition for task' });
     }
+    const taskTitle = task.title;
     await task.destroy();
+
+    await logAdminAction(
+      'competition_task_deleted',
+      `Deleted task "${taskTitle}" from competition "${comp.title}"`,
+      req,
+      'competition',
+      comp.competition_id,
+      comp.season_id
+    );
+
     return res.status(200).json({ success: true, message: 'Task deleted' });
   } catch (err) {
-    console.error('deleteAdminCompetitionTask:', err);
+    logger.error('deleteAdminCompetitionTask:', err);
     return res.status(500).json({ success: false, error: 'Failed to delete task' });
   }
 }

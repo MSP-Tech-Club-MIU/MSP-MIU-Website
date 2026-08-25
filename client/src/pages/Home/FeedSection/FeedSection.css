@@ -104,6 +104,13 @@
 }
 
 /* Create Button */
+.Feed__createActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
 .Feed__createBtn {
     display: inline-flex;
     align-items: center;
@@ -135,20 +142,32 @@
     font-size: 1rem;
 }
 
+.Feed__createBtn--secondary {
+    background: transparent;
+    border: 1px solid rgba(142, 194, 240, 0.4);
+    color: #8EC2F0;
+    box-shadow: none;
+}
+
+.Feed__createBtn--secondary:hover {
+    background: rgba(3, 169, 244, 0.12);
+    border-color: rgba(3, 169, 244, 0.5);
+    box-shadow: none;
+}
+
 /* Modal */
 .Feed__modalOverlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    inset: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 12000;
     padding: 20px;
+    box-sizing: border-box;
+    overflow: auto;
 }
 
 .Feed__modalContent {
@@ -157,12 +176,18 @@
     border-radius: 20px;
     padding: 32px;
     width: 100%;
-    max-width: 600px;
+    max-width: 520px;
     max-height: 90vh;
     overflow-y: auto;
+    margin: auto;
+    flex-shrink: 0;
     backdrop-filter: blur(14px) saturate(160%);
     box-shadow: 0 8px 32px rgba(0, 0, 0, .3);
     position: relative;
+}
+
+.Feed__modalContent--large {
+    max-width: 720px;
 }
 
 .Feed__modalClose {
@@ -269,6 +294,29 @@
     cursor: pointer;
 }
 
+.Feed__formHint {
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    background: rgba(3, 169, 244, 0.12);
+    border: 1px solid rgba(3, 169, 244, 0.28);
+    border-radius: 10px;
+    color: #8EC2F0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+.Feed__charCount {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #5AA0E6;
+    text-align: right;
+}
+
+.Feed__charCount.is-max {
+    color: #ffb4b4;
+}
+
 .Feed__formError {
     padding: 12px 16px;
     background: rgba(255, 87, 87, .15);
@@ -352,6 +400,11 @@
     .Feed__createBtn {
         width: 100%;
         justify-content: center;
+    }
+
+    .Feed__createActions {
+        width: 100%;
+        flex-direction: column;
     }
 
     .Feed__modalContent {

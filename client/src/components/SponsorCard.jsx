@@ -116,7 +116,7 @@ function normalizeSocialLinks(rawValue) {
   return Array.from(unique.values());
 }
 
-export default function SponsorCard({ sponsor }) {
+export default function SponsorCard({ sponsor, seasonBadge = null }) {
   const {
     sponsor_id: id,
     name,
@@ -165,6 +165,7 @@ export default function SponsorCard({ sponsor }) {
             <div className="SponsorsPage__headline">
               <h2 id={`sponsor-title-${id}`} className="SponsorsPage__name">
                 {name}
+                {seasonBadge ? <> {' '}{seasonBadge}</> : null}
               </h2>
               {tagline ? <p className="SponsorsPage__tagline">{tagline}</p> : null}
             </div>

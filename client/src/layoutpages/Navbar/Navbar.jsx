@@ -3,8 +3,8 @@ import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserCog, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
-import { MdGroups, MdEmojiEvents } from 'react-icons/md';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
+import { MdGroups, MdEmojiEvents, MdFeedback, MdMenuBook } from 'react-icons/md';
 import './Navbar.css';
 import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
@@ -203,21 +203,20 @@ const Navbar = memo(() => {
     const primary = [
       { to: '/', label: 'Home', icon: <FaHome /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
+      { to: '/courses', label: 'Courses', icon: <MdMenuBook /> },
       { to: '/competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
     ];
     const extended = [
       { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
+      { to: '/suggestions', label: 'Suggestions', icon: <MdFeedback /> },
     ];
     if (!isCapacitor()) {
       extended.push({ to: '/download-android', label: 'Download App', icon: <FaAndroid /> });
     }
     if (!isAuthenticated) {
       extended.push({ to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> });
-    }
-    if (isAuthenticated && user && (user.role === 'admin' || user.role === 'board' || user.department_id === 5)) {
-      extended.push({ to: '/registration-admin', label: 'Registration Admin', icon: <FaUserCog /> });
     }
     const account = [];
     if (isAuthenticated) {
@@ -226,7 +225,7 @@ const Navbar = memo(() => {
       account.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
     }
     return { primary, extended, account };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
   const extendedHasActive = useMemo(
     () => navSections.extended.some((l) => pathMatchesNavTarget(location.pathname, l.to)),

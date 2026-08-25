@@ -88,6 +88,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .EventsPage__sortLabel {
@@ -167,6 +168,25 @@
     min-height: 50vh;
     gap: 20px;
     color: #C5DAE9;
+}
+
+.EventsPage__pageLoader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    gap: 16px;
+    color: #C5DAE9;
+    margin: 12px 0 8px;
+}
+
+.EventsPage__pageLoader p {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+    color: #8AA3C6;
 }
 
 .EventsPage__spinner {

@@ -13,16 +13,15 @@ const {
   computeFinalScore,
   normalizeTo100
 } = require('../utils/scoreCalculator');
-const { logAuditEvent, logError } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAdminAction } = require('../utils/adminNotification');
+const { logAuditEvent, logError } = logger;
 
 /** Local DBs may omit `score` / `feedback` on `submissions`; exclude so Sequelize does not SELECT them. */
 const submissionAttributesNoScore = { exclude: ['score', 'feedback'] };
 
 function evalLog(message, data) {
-  console.log(
-    '[EVALUATION]',
-    JSON.stringify({ message, ...data, t: new Date().toISOString() })
-  );
+  logger.info('[EVALUATION]', { message, ...data, t: new Date().toISOString() });
 }
 
 /**
@@ -59,6 +58,14 @@ const runEvaluation = async (req, res) => {
       'EVALUATION_RUN_SUCCESS',
       { submissionId, evaluation_id: result.evaluation.evaluation_id },
       req
+    );
+
+    await logAdminAction(
+      'evaluation_run',
+      `Triggered automated evaluation for submission #${submissionId}`,
+      req,
+      'competition',
+      submission.competition_id
     );
 
     return res.status(200).json({
@@ -175,6 +182,14 @@ const submitJudgeScore = async (req, res) => {
       'EVALUATION_JUDGE_SCORE',
       { submissionId, judgeId, judge_score_id: updated.judge_score_id },
       req
+    );
+
+    await logAdminAction(
+      'judge_score_submitted',
+      `${created ? 'Submitted' : 'Updated'} judge score for submission #${submissionId}`,
+      req,
+      'competition',
+      submission.competition_id
     );
 
     return res.status(200).json({

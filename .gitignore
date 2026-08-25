@@ -1,19 +1,23 @@
 # Environment variables
-/.env
-/server/.env
-/client/.env
-/server/scripts/.env
+.env
+.env.*
+!.env.example
+/.agent
+
+# Local toolchains (JDK, Android SDK, etc.)
+.tools/
 
 # Dependencies
-/node_modules
-/server/node_modules
-/client/node_modules
+node_modules/
 
 # Build outputs
 /client/public
 /client/dist
 /client/.vite
 /client/static
+
+# Mobile release artifacts
+/client/releases/
 
 # Mobile app build artifacts (Capacitor)
 /client/android/app/build
@@ -22,6 +26,9 @@
 /client/android/.gradle
 /client/android/gradle
 /client/android/local.properties
+/client/android/keystore.properties
+/client/android/*.jks
+/client/android/*.keystore
 /client/android/capacitor.settings.gradle
 /client/android/.idea
 /client/android/*.iml
@@ -81,6 +88,7 @@ Desktop.ini
 /client/Back-End
 
 # Certificates (Front-end course)
-certificates/ 
+certificates/
 Certificates Names - Front End Course .csv
 test_names.csv
+client/android/gradle/wrapper/gradle-wrapper.properties

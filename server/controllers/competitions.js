@@ -4,6 +4,10 @@ const { Submission, Team, Evaluation, JudgeScore } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const { meanJudgeScore, computeFinalScore } = require('../utils/scoreCalculator');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+const { resolveSeasonFilter, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 const VALID_COMP_TYPES = ['project', 'quiz', 'external', 'task_quiz'];
 const VALID_SUBMISSION_MODES = ['none', 'upload', 'link', 'both'];
@@ -54,15 +58,8 @@ const getAllCompetitions = async (req, res) => {
     try {
         const { status } = req.query;
         const userRole = req.user?.role; // From JWT if authenticated
-
-        let whereClause = {};
-
-        // If user is not admin/board, only show non-draft competitions
-        if (userRole !== 'admin' && userRole !== 'board') {
-            whereClause.status = {
-                [Op.ne]: 'draft'
-            };
-        }
+        const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
 
         // Apply status filter if provided
         if (status) {
@@ -73,7 +70,6 @@ const getAllCompetitions = async (req, res) => {
                     error: `Status must be one of: ${validStatuses.join(', ')}`
                 });
             }
-            whereClause.status = status;
         }
 
         // Build WHERE clause for SQL
@@ -81,50 +77,104 @@ const getAllCompetitions = async (req, res) => {
         let replacements = [];
 
         if (userRole !== 'admin' && userRole !== 'board' && !status) {
-            sqlWhere = 'status != ?';
+            sqlWhere = 'competitions.status != ?';
             replacements.push('draft');
         } else if (status) {
-            sqlWhere = 'status = ?';
+            sqlWhere = 'competitions.status = ?';
             replacements.push(status);
         }
 
-        const competitions = await db.query(
-            `SELECT 
-                competition_id,
-                title,
-                description,
-                rules,
-                start_at,
-                end_at,
-                max_team_size,
-                min_team_size,
-                is_team_based,
-                status,
-                location_type,
-                location_details,
-                type,
-                submission_mode,
-                evaluation_mode,
-                config,
-                created_by,
-                created_at
-            FROM competitions
-            WHERE ${sqlWhere}
-            ORDER BY start_at DESC`,
+        if (seasonFilter.where.season_id != null) {
+            sqlWhere += ' AND competitions.season_id = ?';
+            replacements.push(seasonFilter.where.season_id);
+        }
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM competitions WHERE ${sqlWhere}`,
             {
                 replacements: replacements,
                 type: db.QueryTypes.SELECT
             }
         );
+        const total = Number(countRows[0]?.total) || 0;
 
-        const normalizedCompetitions = competitions.map(parseCompetitionConfig);
+        const seasonJoin = seasonFilter.includeSeason
+            ? 'LEFT JOIN seasons s ON s.season_id = competitions.season_id'
+            : '';
+        const seasonSelect = seasonFilter.includeSeason
+            ? `,
+                s.season_id AS season_season_id,
+                s.label AS season_label,
+                s.start_year AS season_start_year,
+                s.end_year AS season_end_year,
+                s.is_default AS season_is_default`
+            : '';
+
+        const competitions = await db.query(
+            `SELECT 
+                competitions.competition_id,
+                competitions.title,
+                competitions.description,
+                competitions.rules,
+                competitions.start_at,
+                competitions.end_at,
+                competitions.max_team_size,
+                competitions.min_team_size,
+                competitions.is_team_based,
+                competitions.status,
+                competitions.location_type,
+                competitions.location_details,
+                competitions.type,
+                competitions.submission_mode,
+                competitions.evaluation_mode,
+                competitions.config,
+                competitions.created_by,
+                competitions.created_at,
+                competitions.season_id
+                ${seasonSelect}
+            FROM competitions
+            ${seasonJoin}
+            WHERE ${sqlWhere}
+            ORDER BY competitions.start_at DESC
+            LIMIT ? OFFSET ?`,
+            {
+                replacements: [...replacements, limit, offset],
+                type: db.QueryTypes.SELECT
+            }
+        );
+
+        const normalizedCompetitions = competitions.map((row) => {
+            const competition = parseCompetitionConfig(row);
+            if (seasonFilter.includeSeason) {
+                competition.season = row.season_season_id
+                    ? {
+                        season_id: row.season_season_id,
+                        label: row.season_label,
+                        start_year: row.season_start_year,
+                        end_year: row.season_end_year,
+                        is_default: !!row.season_is_default
+                    }
+                    : null;
+                delete competition.season_season_id;
+                delete competition.season_label;
+                delete competition.season_start_year;
+                delete competition.season_end_year;
+                delete competition.season_is_default;
+            }
+            return competition;
+        });
         res.status(200).json({
             success: true,
-            data: normalizedCompetitions
+            data: normalizedCompetitions,
+            count: normalizedCompetitions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
-        console.error('Error fetching competitions:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competitions'
@@ -187,7 +237,7 @@ const getCompetitionById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching competition:', error);
+        logger.error('Error fetching competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competition'
@@ -235,7 +285,7 @@ const getUserTeamForCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching user team:', error);
+        logger.error('Error fetching user team:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch team information'
@@ -375,12 +425,13 @@ const createCompetition = async (req, res) => {
         }
 
         const serializedConfig = normalizeConfigForWrite(config || null);
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
         // Insert competition
         const result = await db.query(
             `INSERT INTO competitions 
-            (title, description, rules, start_at, end_at, max_team_size, min_team_size, is_team_based, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            (title, description, rules, start_at, end_at, max_team_size, min_team_size, is_team_based, status, location_type, location_details, type, submission_mode, evaluation_mode, config, created_by, season_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
                 replacements: [
                     title,
@@ -398,7 +449,8 @@ const createCompetition = async (req, res) => {
                     resolvedSubmissionMode,
                     resolvedEvaluationMode,
                     serializedConfig,
-                    created_by
+                    created_by,
+                    season_id
                 ],
                 type: db.QueryTypes.INSERT
             }
@@ -430,6 +482,16 @@ const createCompetition = async (req, res) => {
 
         const normalizedCompetition = parseCompetitionConfig(newCompetitions[0]);
         await ensureQuizForCompetition(normalizedCompetition, created_by);
+
+        await logAdminAction(
+            'competition_created',
+            `Created competition "${normalizedCompetition.title}"`,
+            req,
+            'competition',
+            normalizedCompetition.competition_id,
+            normalizedCompetition.season_id
+        );
+
         res.status(201).json({
             success: true,
             message: 'Competition created successfully',
@@ -437,7 +499,10 @@ const createCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating competition:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create competition',
@@ -682,6 +747,16 @@ const updateCompetition = async (req, res) => {
 
         const normalizedCompetition = parseCompetitionConfig(updated[0]);
         await ensureQuizForCompetition(normalizedCompetition, req.user.user_id);
+
+        await logAdminAction(
+            'competition_updated',
+            `Updated competition "${normalizedCompetition.title}"`,
+            req,
+            'competition',
+            normalizedCompetition.competition_id,
+            normalizedCompetition.season_id
+        );
+
         res.status(200).json({
             success: true,
             message: 'Competition updated successfully',
@@ -689,7 +764,7 @@ const updateCompetition = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating competition:', error);
+        logger.error('Error updating competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update competition',
@@ -709,7 +784,7 @@ const deleteCompetition = async (req, res) => {
 
         // Check if competition exists
         const existing = await db.query(
-            `SELECT competition_id, type, evaluation_mode FROM competitions WHERE competition_id = ?`,
+            `SELECT competition_id, title, type, evaluation_mode, season_id FROM competitions WHERE competition_id = ?`,
             {
                 replacements: [id],
                 type: db.QueryTypes.SELECT
@@ -749,13 +824,22 @@ const deleteCompetition = async (req, res) => {
             }
         );
 
+        await logAdminAction(
+            'competition_deleted',
+            `Deleted competition "${existing[0].title || id}"`,
+            req,
+            'competition',
+            id,
+            existing[0].season_id
+        );
+
         res.status(200).json({
             success: true,
             message: 'Competition deleted successfully'
         });
 
     } catch (error) {
-        console.error('Error deleting competition:', error);
+        logger.error('Error deleting competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete competition',
@@ -795,6 +879,18 @@ const getCompetitionLeaderboard = async (req, res) => {
         }
 
         const competition = existing[0];
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const respondPaged = (fullData) => {
+            const { rows, total } = paginateArray(fullData, { page, limit, offset });
+            return res.status(200).json({
+                success: true,
+                data: rows,
+                count: rows.length,
+                pagination: paginationMeta({ page, limit, total })
+            });
+        };
+
         if (competition.type === 'quiz') {
             const quizRows = await db.query(
                 `SELECT
@@ -818,7 +914,7 @@ const getCompetitionLeaderboard = async (req, res) => {
                 participant_name: row.participant_name,
                 final_score: row.final_score != null ? parseFloat(row.final_score) : null
             }));
-            return res.status(200).json({ success: true, data });
+            return respondPaged(data);
         }
 
         if (competition.type === 'task_quiz') {
@@ -846,7 +942,7 @@ const getCompetitionLeaderboard = async (req, res) => {
                 team_name: row.team_name,
                 final_score: row.final_score != null ? parseFloat(row.final_score) : 0
             }));
-            return res.status(200).json({ success: true, data });
+            return respondPaged(data);
         }
 
         const rows = await db.query(
@@ -943,12 +1039,15 @@ const getCompetitionLeaderboard = async (req, res) => {
             row.rank = i + 1;
         });
 
+        const { rows: pageRows, total } = paginateArray(leaderboard, { page, limit, offset });
         res.status(200).json({
             success: true,
-            data: leaderboard
+            data: pageRows,
+            count: pageRows.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching competition leaderboard:', error);
+        logger.error('Error fetching competition leaderboard:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch leaderboard'

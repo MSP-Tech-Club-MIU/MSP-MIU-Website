@@ -1,0 +1,296 @@
+/* Dark-theme styles for Registration Admin inside AdminPanel */
+
+.RegistrationsAdmin {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.RegistrationsAdmin__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.RegistrationsAdmin__toolbar .AdminPanel__actionBtn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.RegistrationsAdmin__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 20px;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.7));
+}
+
+.RegistrationsAdmin__empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--admin-surface, rgba(15, 42, 69, 0.45));
+    border: 1px dashed var(--admin-border, rgba(255, 255, 255, 0.12));
+    border-radius: 14px;
+}
+
+.RegistrationsAdmin__empty h3 {
+    margin: 0 0 8px;
+    color: var(--admin-text, #eaf2ff);
+    font-size: 1.05rem;
+}
+
+.RegistrationsAdmin__empty p {
+    margin: 0 0 16px;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+    font-size: 0.88rem;
+}
+
+.RegistrationsAdmin__footerCounts {
+    margin: 0;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.55));
+    font-size: 0.85rem;
+}
+
+/* Charts */
+.RegAdmin__charts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 16px;
+    padding: 18px;
+    background: var(--admin-surface, rgba(15, 42, 69, 0.45));
+    border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+}
+
+.RegAdmin__pie {
+    text-align: center;
+    margin: 8px;
+    color: var(--admin-text, #eaf2ff);
+}
+
+.RegAdmin__pieTitle {
+    margin: 0 0 12px;
+    color: var(--admin-accent, #4aa6ff);
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+.RegAdmin__pieEmpty {
+    text-align: center;
+    margin: 20px;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.55));
+}
+
+.RegAdmin__pieCenter {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--admin-text, #eaf2ff);
+}
+
+.RegAdmin__pieLegend {
+    margin-top: 12px;
+    text-align: left;
+    max-width: 250px;
+}
+
+.RegAdmin__pieLegendItem {
+    display: flex;
+    align-items: center;
+    margin: 6px 0;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.75));
+}
+
+.RegAdmin__pieSwatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+/* Filters */
+.RegAdmin__filters {
+    padding: 18px;
+    background: var(--admin-surface, rgba(15, 42, 69, 0.45));
+    border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+    border-radius: 14px;
+}
+
+.RegAdmin__filtersTitle {
+    margin: 0 0 14px;
+    color: var(--admin-accent, #4aa6ff);
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+.RegAdmin__searchWrap {
+    margin-bottom: 14px;
+}
+
+.RegAdmin__input,
+.RegAdmin__select {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.12));
+    background: rgba(0, 0, 0, 0.22);
+    color: var(--admin-text, #eaf2ff);
+    font-size: 0.85rem;
+    outline: none;
+    min-width: 140px;
+}
+
+.RegAdmin__input {
+    width: min(100%, 320px);
+}
+
+.RegAdmin__input:focus,
+.RegAdmin__select:focus {
+    border-color: rgba(74, 166, 255, 0.45);
+    box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.1);
+}
+
+.RegAdmin__select option {
+    background: #0c2240;
+    color: #eaf2ff;
+}
+
+.RegAdmin__filterRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    margin-bottom: 14px;
+}
+
+.RegAdmin__field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.7));
+}
+
+.RegAdmin__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.RegAdmin__meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.55));
+}
+
+/* Table */
+.RegAdmin__tableWrap {
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.08));
+    background: var(--admin-surface, rgba(15, 42, 69, 0.35));
+    -webkit-overflow-scrolling: touch;
+}
+
+.RegAdmin__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    color: var(--admin-text, #eaf2ff);
+    min-width: 1100px;
+}
+
+.RegAdmin__table thead th {
+    padding: 12px 10px;
+    text-align: left;
+    background: rgba(13, 123, 216, 0.22);
+    color: #bfe0ff;
+    font-weight: 650;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--admin-border, rgba(255, 255, 255, 0.1));
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.RegAdmin__table thead th:first-child,
+.RegAdmin__table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #0a1a2e;
+}
+
+.RegAdmin__table thead th:first-child {
+    z-index: 3;
+    background: #0d2a4a;
+}
+
+.RegAdmin__table tbody td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: top;
+}
+
+.RegAdmin__table tbody tr:hover td {
+    background: rgba(74, 166, 255, 0.06);
+}
+
+.RegAdmin__table tbody tr:hover td:first-child {
+    background: #0d2438;
+}
+
+.RegAdmin__hint {
+    font-size: 0.65rem;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.45));
+    margin-top: 2px;
+    font-style: italic;
+}
+
+.RegAdmin__linkish {
+    cursor: pointer;
+    text-decoration: underline;
+    font-weight: 500;
+    color: inherit;
+}
+
+.RegAdmin__statusSelect {
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Portaled modals — sit above AdminPanel (z-index: 10) and center on the viewport */
+.RegAdmin__modal {
+    z-index: 12000;
+    align-items: center;
+    justify-content: center;
+}
+
+.RegAdmin__modalContent {
+    max-width: 720px;
+    margin: auto;
+}
+
+.RegAdmin__modalContent--text {
+    max-width: 600px;
+}
+
+.RegAdmin__modalBodyText {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: var(--admin-text, #eaf2ff);
+    font-size: 0.9rem;
+}

@@ -4,7 +4,8 @@ import BackButton from '../components/BackButton'
 import miuLogo from '../assets/Images/miu-logo.png'
 import mspLogo from '../assets/Images/msp-logo.png'
 import ApiService from '../services/api'
-import { departments, getDepartmentIdByName } from '../data/departments'
+import { departments as defaultDepartments, getDepartmentIdByName, isBoardPosition } from '../data/departments'
+import useSiteContent from '../hooks/useSiteContent'
 
 // Memoized constants to prevent recreation
 const palette = {
@@ -22,7 +23,7 @@ const palette = {
   blue300: '#8EC2F0',
 }
 
-const faculties = [
+const DEFAULT_FACULTIES = [
   'Computer Science',
   'Engineering Sciences & Arts - ECE',
   'Mass Communication',
@@ -33,16 +34,13 @@ const faculties = [
   'Alsun',
 ]
 
-// Year mapping to integers (matches database schema)
-const years = [
+const DEFAULT_YEARS = [
   { value: 1, label: 'Freshman' },
   { value: 2, label: 'Sophomore' },
   { value: 3, label: 'Junior' },
   { value: 4, label: 'Senior' },
   { value: 5, label: 'Senior 2' }
 ]
-
-// Departments are now imported from data/departments.js
 
 const Stepper = memo(({ step }) => {
   const items = useMemo(() => [0,1,2,3,4], []);
@@ -69,6 +67,34 @@ const BecomeMember = memo(() => {
   const [screen, setScreen] = useState('welcome')
   const [step, setStep] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const { data: content } = useSiteContent(['lookups'], {})
+  const lookups = content.lookups || {}
+
+  const faculties = useMemo(() => {
+    if (Array.isArray(lookups.faculties) && lookups.faculties.length) return lookups.faculties
+    return DEFAULT_FACULTIES
+  }, [lookups.faculties])
+
+  const years = useMemo(() => {
+    if (Array.isArray(lookups.years) && lookups.years.length) {
+      return lookups.years.map((label, idx) =>
+        typeof label === 'object' && label?.value != null
+          ? label
+          : { value: idx + 1, label: String(label) }
+      )
+    }
+    return DEFAULT_YEARS
+  }, [lookups.years])
+
+  const departments = useMemo(() => {
+    if (Array.isArray(lookups.departments) && lookups.departments.length) {
+      return lookups.departments.map((d) => ({
+        id: d.id ?? d.department_id,
+        name: d.name
+      }))
+    }
+    return defaultDepartments
+  }, [lookups.departments])
 
   const [form, setForm] = useState({
     name: '',
@@ -85,6 +111,9 @@ const BecomeMember = memo(() => {
   })
 
   const [errors, setErrors] = useState({})
+  // null | { eligible, reason, message, warning }
+  const [eligibilityStatus, setEligibilityStatus] = useState(null)
+  const [checkingEligibility, setCheckingEligibility] = useState(false)
 
   // Memoize computed values
   const canGoBack = useMemo(() => step > 0, [step]);
@@ -92,6 +121,10 @@ const BecomeMember = memo(() => {
 
   const updateField = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    // Clear eligibility status whenever step-0 fields are edited so user re-checks
+    if (key === 'name' || key === 'email' || key === 'studentId') {
+      setEligibilityStatus(null)
+    }
   }, []);
 
   // When faculty changes, if current departments are not allowed for the selected faculty, clear them
@@ -142,14 +175,47 @@ const BecomeMember = memo(() => {
     return Object.keys(e).length === 0
   }
 
-  function onNext() {
+  async function onNext() {
     if (!validateCurrentStep()) return
+
+    // After step 0 — run server-side eligibility check before advancing
+    if (step === 0) {
+      // If we already have a hard-block status, don't advance
+      if (eligibilityStatus && !eligibilityStatus.eligible) return
+
+      // If no status yet (or warning was dismissed and fields are unchanged), run the check
+      if (!eligibilityStatus) {
+        setCheckingEligibility(true)
+        try {
+          const result = await ApiService.checkApplicationEligibility({
+            university_id: form.studentId,
+            full_name: form.name,
+            email: form.email,
+          })
+          setEligibilityStatus(result)
+          // Only advance if eligible (warnings still allow advancing)
+          if (!result.eligible) return
+        } catch {
+          // Network/server error — set a generic warning and allow advancing
+          // so a transient error doesn't permanently block the user
+          setEligibilityStatus({
+            eligible: true,
+            warning: 'check_failed',
+            message: 'Could not verify eligibility right now. Please proceed — we will validate on submission.'
+          })
+        } finally {
+          setCheckingEligibility(false)
+        }
+      }
+    }
+
     setStep(s => Math.min(s + 1, totalSteps - 1))
   }
 
   function onBack() {
     setStep(s => Math.max(s - 1, 0))
   }
+
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -165,8 +231,8 @@ const BecomeMember = memo(() => {
         faculty: form.faculty,
         year: parseInt(form.year),
         phone_number: `+20${form.phone}`,
-        first_choice: getDepartmentIdByName(form.dept1),
-        second_choice: getDepartmentIdByName(form.dept2),
+        first_choice: departments.find((d) => d.name === form.dept1)?.id ?? getDepartmentIdByName(form.dept1),
+        second_choice: departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2),
         skills: form.skills,
         motivation: form.motivation,
         interview: form.interview
@@ -265,8 +331,61 @@ const BecomeMember = memo(() => {
                   {errors.studentId && <small className="error">{errors.studentId}</small>}
                 </label>
               </div>
+
+              {/* Eligibility feedback card */}
+              {eligibilityStatus && !eligibilityStatus.eligible && (
+                <div style={{
+                  marginTop: 20,
+                  padding: '14px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(220, 38, 38, 0.12)',
+                  border: '1px solid rgba(220, 38, 38, 0.45)',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start'
+                }}>
+                  <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>🚫</span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#f87171', fontSize: 14 }}>
+                      {eligibilityStatus.reason === 'blacklisted' && 'Access Restricted'}
+                      {eligibilityStatus.reason === 'already_member' && 'Already a Member'}
+                      {eligibilityStatus.reason === 'pending_application' && 'Application Already Submitted'}
+                      {eligibilityStatus.reason === 'approved_application' && 'Application Approved'}
+                      {eligibilityStatus.reason === 'rejected_application' && 'Application Not Accepted'}
+                      {eligibilityStatus.reason === 'no_season' && 'Applications Closed'}
+                      {eligibilityStatus.reason === 'existing_application' && 'Application on File'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#fca5a5', fontSize: 13 }}>{eligibilityStatus.message}</p>
+                  </div>
+                </div>
+              )}
+
+              {eligibilityStatus && eligibilityStatus.eligible && eligibilityStatus.warning && (
+                <div style={{
+                  marginTop: 20,
+                  padding: '14px 18px',
+                  borderRadius: 12,
+                  background: 'rgba(251, 191, 36, 0.10)',
+                  border: '1px solid rgba(251, 191, 36, 0.40)',
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start'
+                }}>
+                  <span style={{ fontSize: 20, lineHeight: 1, flexShrink: 0 }}>
+                    {eligibilityStatus.warning === 'check_failed' ? '⚠️' : '👋'}
+                  </span>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#fbbf24', fontSize: 14 }}>
+                      {eligibilityStatus.warning === 'returning_member' && 'Welcome Back!'}
+                      {eligibilityStatus.warning === 'check_failed' && 'Verification Unavailable'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', color: '#fde68a', fontSize: 13 }}>{eligibilityStatus.message}</p>
+                  </div>
+                </div>
+              )}
             </section>
           )}
+
 
           {step === 1 && (
             <section className="step animate-in">
@@ -344,8 +463,8 @@ const BecomeMember = memo(() => {
                     <option value="">Select department</option>
                     {departments
                       .filter(d => {
-                        // exclude board positions
-                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                        // exclude board positions (Founder / President / VP are display-only)
+                        if (isBoardPosition(d)) {
                           return false
                         }
                         // hide software & technical unless faculty is CS or ECE
@@ -366,8 +485,7 @@ const BecomeMember = memo(() => {
                     <option value="">Select department (optional)</option>
                     {departments
                       .filter(d => {
-                        // exclude board positions
-                        if (d.name === 'Vice President' || d.name === 'President' || d.name === 'Founder') {
+                        if (isBoardPosition(d)) {
                           return false
                         }
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {
@@ -426,7 +544,29 @@ const BecomeMember = memo(() => {
           <div className="actions">
             <button type="button" className="btn ghost" onClick={onBack} disabled={!canGoBack}>Previous</button>
             {canGoNext && step < 4 && (
-              <button type="button" className="btn" onClick={onNext}>Next →</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={onNext}
+                disabled={checkingEligibility || (step === 0 && eligibilityStatus && !eligibilityStatus.eligible)}
+              >
+                {checkingEligibility ? (
+                  <>
+                    <span style={{ display: 'inline-block', marginRight: '8px' }}>
+                      <div style={{
+                        width: '14px',
+                        height: '14px',
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        borderTop: '2px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        display: 'inline-block'
+                      }} />
+                    </span>
+                    Checking…
+                  </>
+                ) : 'Next →'}
+              </button>
             )}
             {step === 4 && (
               <button type="button" className="btn" onClick={() => { if (validateCurrentStep()) setStep(5) }}>Review</button>

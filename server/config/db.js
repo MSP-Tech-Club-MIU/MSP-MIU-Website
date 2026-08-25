@@ -1,4 +1,5 @@
 const { Sequelize } = require("sequelize");
+const logger = require("../utils/logger");
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -9,8 +10,7 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     database: process.env.DB_NAME,
     dialect: "mysql",
-    logging: false,
-      logging: console.log,
+    logging: (msg) => logger.debug(msg, { module: "sequelize" }),
     dialectOptions: {
       ssl: {
         require: true,
@@ -26,10 +26,18 @@ const sequelize = new Sequelize(
 (async () => {
   try {
     await sequelize.authenticate();
-    console.log("Database connection has been established successfully.");
+    logger.info("Database connection has been established successfully.", {
+      module: "db"
+    });
   } catch (error) {
-    console.warn("Database connection failed:", error.message);
-    console.log("Server will continue running without database. Create a .env file with DB credentials to enable database features.");
+    logger.warn("Database connection failed", {
+      module: "db",
+      message: error.message
+    });
+    logger.info(
+      "Server will continue running without database. Create a .env file with DB credentials to enable database features.",
+      { module: "db" }
+    );
   }
 })();
 

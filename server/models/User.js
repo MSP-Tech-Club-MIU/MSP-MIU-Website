@@ -45,6 +45,10 @@ const User = sequelize.define('User', {
       isEmail: true
     }
   },
+  email_unsubscribed_at: {
+    type: DataTypes.DATE,
+    allowNull: true
+  },
   password_hash: {
     type: DataTypes.STRING(255),
     allowNull: true
@@ -58,6 +62,14 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
     allowNull: false
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
   },
   created_at: {
     type: DataTypes.DATE,

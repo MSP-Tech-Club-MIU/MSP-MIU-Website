@@ -1,0 +1,1632 @@
+const crypto = require('crypto');
+const { Op } = require('sequelize');
+const {
+  Course,
+  CourseLesson,
+  CourseLessonMaterial,
+  CourseEnrollment,
+  CourseLessonProgress,
+  CourseAnnouncement,
+  CourseLessonAttendance
+} = require('../models');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { notifyCourseEnrollments } = require('../utils/courseAvailableEmail');
+const { checkBlacklist } = require('../utils/blacklistCheck');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
+
+const VALID_STATUSES = ['draft', 'coming_soon', 'published', 'archived'];
+const VALID_MATERIAL_TYPES = ['youtube', 'meeting', 'document', 'zip', 'code', 'other'];
+const PUBLIC_LIST_STATUSES = ['coming_soon', 'published'];
+
+function makeAccessToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function computeCertificateEligibility({ totalLessons, attendedCount, maxAttendance }) {
+  const total = Number(totalLessons) || 0;
+  const attended = Number(attendedCount) || 0;
+  const missedCount = Math.max(0, total - attended);
+  const hasMax = maxAttendance !== null && maxAttendance !== undefined && Number.isFinite(Number(maxAttendance));
+  const maxMissed = hasMax ? Math.max(0, parseInt(maxAttendance, 10)) : 0;
+  const eligible = total > 0 ? (missedCount <= maxMissed) : true;
+  return {
+    total_lessons: total,
+    attended_count: attended,
+    missed_count: missedCount,
+    max_attendance: hasMax ? parseInt(maxAttendance, 10) : null,
+    max_missed_allowed: maxMissed,
+    certificate_eligible: eligible
+  };
+}
+
+function lessonInclude(publishedOnly = false) {
+  const lessonWhere = publishedOnly ? { is_published: true } : undefined;
+  return {
+    model: CourseLesson,
+    as: 'lessons',
+    where: lessonWhere,
+    required: false,
+    separate: true,
+    order: [['sort_order', 'ASC'], ['lesson_id', 'ASC']],
+    include: [{
+      model: CourseLessonMaterial,
+      as: 'materials',
+      separate: true,
+      order: [['sort_order', 'ASC'], ['material_id', 'ASC']]
+    }]
+  };
+}
+
+async function findCourseOr404(id, res, options = {}) {
+  const course = await Course.findByPk(id, options);
+  if (!course) {
+    res.status(404).json({ success: false, error: 'Course not found' });
+    return null;
+  }
+  return course;
+}
+
+/**
+ * GET /courses — public list (coming_soon + published)
+ * Admin with ?admin=1 or Authorization sees all statuses when using admin list route.
+ */
+const listCourses = async (req, res) => {
+  try {
+    const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 12 });
+    const season = await resolveSeasonFilter(req.query);
+    const where = { ...season.where };
+
+    const status = req.query.status;
+    const isAdminList = req.query.admin === '1' || req.isAdminCoursesList;
+    if (isAdminList) {
+      if (status && VALID_STATUSES.includes(status)) where.status = status;
+    } else if (status && PUBLIC_LIST_STATUSES.includes(status)) {
+      where.status = status;
+    } else {
+      where.status = { [Op.in]: PUBLIC_LIST_STATUSES };
+    }
+
+    const include = [];
+    if (season.includeSeason) {
+      include.push(seasonInclude());
+    }
+
+    const { count, rows } = await Course.findAndCountAll({
+      where,
+      include,
+      order: [['created_at', 'DESC'], ['course_id', 'DESC']],
+      limit,
+      offset,
+      distinct: true
+    });
+
+    res.json({
+      success: true,
+      data: rows,
+      pagination: paginationMeta({ page, limit, total: count })
+    });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
+    logger.error('listCourses:', error);
+    res.status(500).json({ success: false, error: 'Failed to list courses' });
+  }
+};
+
+const listCoursesAdmin = async (req, res) => {
+  req.isAdminCoursesList = true;
+  return listCourses(req, res);
+};
+
+/**
+ * GET /courses/:id
+ */
+const getCourseById = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid course id' });
+    }
+
+    const isAdmin = Boolean(req.user && ['admin', 'board'].includes(req.user.role));
+    const course = await Course.findByPk(id, {
+      include: [
+        seasonInclude(false),
+        lessonInclude(!(isAdmin && req.query.admin === '1'))
+      ].filter(Boolean)
+    });
+
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    const adminDetail = isAdmin && req.query.admin === '1';
+    if (!adminDetail && !PUBLIC_LIST_STATUSES.includes(course.status) && course.status !== 'archived') {
+      // draft hidden from public
+      if (course.status === 'draft') {
+        return res.status(404).json({ success: false, error: 'Course not found' });
+      }
+    }
+    if (!adminDetail && course.status === 'draft') {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    const payload = course.toJSON();
+    // coming_soon: hide lesson content from public (metadata only)
+    if (!adminDetail && course.status === 'coming_soon') {
+      payload.lessons = [];
+      payload.lessons_locked = true;
+    } else if (!adminDetail && course.status === 'published') {
+      payload.lessons = (payload.lessons || []).filter((l) => l.is_published !== false);
+    }
+
+    res.json({ success: true, data: payload });
+  } catch (error) {
+    logger.error('getCourseById:', error);
+    res.status(500).json({ success: false, error: 'Failed to get course' });
+  }
+};
+
+/**
+ * GET /courses/:id/admin — full admin detail with all lessons
+ */
+const getCourseAdmin = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const course = await Course.findByPk(id, {
+      include: [seasonInclude(false), lessonInclude(false)].filter(Boolean)
+    });
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+    res.json({ success: true, data: course });
+  } catch (error) {
+    logger.error('getCourseAdmin:', error);
+    res.status(500).json({ success: false, error: 'Failed to get course' });
+  }
+};
+
+/**
+ * POST /courses
+ */
+const createCourse = async (req, res) => {
+  try {
+    const { title, description, thumbnail_url, status, max_attendance } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+    const nextStatus = status && VALID_STATUSES.includes(status) ? status : 'draft';
+    const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
+    const parsedMaxAttendance = (max_attendance !== undefined && max_attendance !== null && String(max_attendance).trim() !== '')
+      ? Math.max(0, parseInt(max_attendance, 10))
+      : null;
+
+    const course = await Course.create({
+      title: String(title).trim(),
+      description: description || null,
+      thumbnail_url: thumbnail_url || null,
+      status: nextStatus,
+      season_id,
+      max_attendance: Number.isFinite(parsedMaxAttendance) ? parsedMaxAttendance : null,
+      published_at: nextStatus === 'published' ? new Date() : null
+    });
+
+    await logAdminAction(
+      'course_created',
+      `Created course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
+    res.status(201).json({ success: true, message: 'Course created', data: course });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
+    logger.error('createCourse:', error);
+    res.status(500).json({ success: false, error: 'Failed to create course' });
+  }
+};
+
+/**
+ * PUT /courses/:id
+ */
+const updateCourse = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    const { title, description, thumbnail_url, season_id, max_attendance } = req.body;
+    if (title !== undefined) {
+      if (!String(title).trim()) {
+        return res.status(400).json({ success: false, error: 'title cannot be empty' });
+      }
+      course.title = String(title).trim();
+    }
+    if (description !== undefined) course.description = description || null;
+    if (thumbnail_url !== undefined) course.thumbnail_url = thumbnail_url || null;
+    if (season_id !== undefined || req.body.season !== undefined) {
+      course.season_id = await resolveSeasonIdForWrite(req.body, req.query);
+    }
+    if (max_attendance !== undefined) {
+      const parsedMaxAttendance = (max_attendance !== null && String(max_attendance).trim() !== '')
+        ? Math.max(0, parseInt(max_attendance, 10))
+        : null;
+      course.max_attendance = Number.isFinite(parsedMaxAttendance) ? parsedMaxAttendance : null;
+    }
+
+    await course.save();
+
+    await logAdminAction(
+      'course_updated',
+      `Updated course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
+    res.json({ success: true, message: 'Course updated', data: course });
+  } catch (error) {
+    if (error.status) {
+      return res.status(error.status).json({ success: false, error: error.message });
+    }
+    logger.error('updateCourse:', error);
+    res.status(500).json({ success: false, error: 'Failed to update course' });
+  }
+};
+
+/**
+ * PUT /courses/:id/status — publish triggers notify once
+ */
+const updateCourseStatus = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    const { status } = req.body;
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: `status must be one of: ${VALID_STATUSES.join(', ')}`
+      });
+    }
+
+    const prev = course.status;
+    course.status = status;
+    if (status === 'published' && !course.published_at) {
+      course.published_at = new Date();
+    }
+
+    let notifyResult = null;
+    if (status === 'published' && !course.notify_sent_at) {
+      const enrollments = await CourseEnrollment.findAll({
+        where: {
+          course_id: course.course_id,
+          status: { [Op.in]: ['preordered', 'enrolled'] }
+        }
+      });
+      notifyResult = await notifyCourseEnrollments(course, enrollments);
+      course.notify_sent_at = new Date();
+      if (enrollments.length > 0) {
+        await CourseEnrollment.update(
+          { status: 'notified' },
+          {
+            where: {
+              course_id: course.course_id,
+              status: 'preordered'
+            }
+          }
+        );
+      }
+    }
+
+    await course.save();
+
+    await logAdminAction(
+      'course_status_updated',
+      `Updated status of course "${course.title}" from "${prev}" to "${status}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
+    res.json({
+      success: true,
+      message: `Course status updated from ${prev} to ${status}`,
+      data: course,
+      notify: notifyResult
+    });
+  } catch (error) {
+    logger.error('updateCourseStatus:', error);
+    res.status(500).json({ success: false, error: 'Failed to update course status' });
+  }
+};
+
+/**
+ * DELETE /courses/:id
+ */
+const deleteCourse = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+    const courseTitle = course.title;
+    const seasonId = course.season_id;
+    await course.destroy();
+
+    await logAdminAction(
+      'course_deleted',
+      `Deleted course "${courseTitle}"`,
+      req,
+      'course',
+      req.params.id,
+      seasonId
+    );
+
+    res.json({ success: true, message: 'Course deleted' });
+  } catch (error) {
+    logger.error('deleteCourse:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete course' });
+  }
+};
+
+/** Lessons */
+const createLesson = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    const { title, description, sort_order, is_published } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+
+    let order = sort_order;
+    if (order === undefined || order === null) {
+      const max = await CourseLesson.max('sort_order', { where: { course_id: course.course_id } });
+      order = (Number.isFinite(max) ? max : -1) + 1;
+    }
+
+    const lesson = await CourseLesson.create({
+      course_id: course.course_id,
+      title: String(title).trim(),
+      description: description || null,
+      sort_order: Number(order) || 0,
+      is_published: is_published === undefined ? true : Boolean(is_published)
+    });
+
+    await logAdminAction(
+      'course_lesson_created',
+      `Added lesson "${lesson.title}" to course "${course.title}"`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
+    res.status(201).json({ success: true, data: lesson });
+  } catch (error) {
+    logger.error('createLesson:', error);
+    res.status(500).json({ success: false, error: 'Failed to create lesson' });
+  }
+};
+
+const updateLesson = async (req, res) => {
+  try {
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: req.params.lessonId, course_id: req.params.id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const { title, description, sort_order, is_published } = req.body;
+    if (title !== undefined) {
+      if (!String(title).trim()) {
+        return res.status(400).json({ success: false, error: 'title cannot be empty' });
+      }
+      lesson.title = String(title).trim();
+    }
+    if (description !== undefined) lesson.description = description || null;
+    if (sort_order !== undefined) lesson.sort_order = Number(sort_order) || 0;
+    if (is_published !== undefined) lesson.is_published = Boolean(is_published);
+
+    await lesson.save();
+
+    await logAdminAction(
+      'course_lesson_updated',
+      `Updated lesson "${lesson.title}" in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
+    res.json({ success: true, data: lesson });
+  } catch (error) {
+    logger.error('updateLesson:', error);
+    res.status(500).json({ success: false, error: 'Failed to update lesson' });
+  }
+};
+
+const deleteLesson = async (req, res) => {
+  try {
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: req.params.lessonId, course_id: req.params.id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+    const lessonTitle = lesson.title;
+    await lesson.destroy();
+
+    await logAdminAction(
+      'course_lesson_deleted',
+      `Deleted lesson "${lessonTitle}" from course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
+    res.json({ success: true, message: 'Lesson deleted' });
+  } catch (error) {
+    logger.error('deleteLesson:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete lesson' });
+  }
+};
+
+const reorderLessons = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const order = Array.isArray(req.body?.order) ? req.body.order : null;
+    if (!order) {
+      return res.status(400).json({ success: false, error: 'order array required' });
+    }
+    await Promise.all(
+      order.map((lessonId, index) =>
+        CourseLesson.update(
+          { sort_order: index },
+          { where: { lesson_id: lessonId, course_id: courseId } }
+        )
+      )
+    );
+
+    await logAdminAction(
+      'course_lessons_reordered',
+      `Reordered lessons in course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
+
+    res.json({ success: true, message: 'Lessons reordered' });
+  } catch (error) {
+    logger.error('reorderLessons:', error);
+    res.status(500).json({ success: false, error: 'Failed to reorder lessons' });
+  }
+};
+
+/** Materials */
+const createMaterial = async (req, res) => {
+  try {
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: req.params.lessonId, course_id: req.params.id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const { title, material_type, youtube_url, file_url, file_name, sort_order } = req.body;
+    if (!title || !String(title).trim()) {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+    if (!VALID_MATERIAL_TYPES.includes(material_type)) {
+      return res.status(400).json({
+        success: false,
+        error: `material_type must be one of: ${VALID_MATERIAL_TYPES.join(', ')}`
+      });
+    }
+    if ((material_type === 'youtube' || material_type === 'meeting') && !youtube_url) {
+      return res.status(400).json({ success: false, error: `${material_type === 'youtube' ? 'youtube_url' : 'meeting link'} is required for ${material_type} materials` });
+    }
+    if (material_type !== 'youtube' && material_type !== 'meeting' && !file_url) {
+      return res.status(400).json({ success: false, error: 'file_url is required for file materials' });
+    }
+
+    let order = sort_order;
+    if (order === undefined || order === null) {
+      const max = await CourseLessonMaterial.max('sort_order', { where: { lesson_id: lesson.lesson_id } });
+      order = (Number.isFinite(max) ? max : -1) + 1;
+    }
+
+    const material = await CourseLessonMaterial.create({
+      lesson_id: lesson.lesson_id,
+      title: String(title).trim(),
+      material_type,
+      youtube_url: (material_type === 'youtube' || material_type === 'meeting') ? youtube_url : null,
+      file_url: (material_type !== 'youtube' && material_type !== 'meeting') ? file_url : null,
+      file_name: file_name || null,
+      sort_order: Number(order) || 0
+    });
+
+    await logAdminAction(
+      'course_material_created',
+      `Added material "${material.title}" to lesson #${lesson.lesson_id} in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
+    res.status(201).json({ success: true, data: material });
+  } catch (error) {
+    logger.error('createMaterial:', error);
+    res.status(500).json({ success: false, error: 'Failed to create material' });
+  }
+};
+
+const updateMaterial = async (req, res) => {
+  try {
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: req.params.lessonId, course_id: req.params.id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const material = await CourseLessonMaterial.findOne({
+      where: { material_id: req.params.materialId, lesson_id: lesson.lesson_id }
+    });
+    if (!material) {
+      return res.status(404).json({ success: false, error: 'Material not found' });
+    }
+
+    const { title, material_type, youtube_url, file_url, file_name, sort_order } = req.body;
+    if (title !== undefined) material.title = String(title).trim();
+    if (material_type !== undefined) {
+      if (!VALID_MATERIAL_TYPES.includes(material_type)) {
+        return res.status(400).json({ success: false, error: 'Invalid material_type' });
+      }
+      material.material_type = material_type;
+    }
+    if (youtube_url !== undefined) material.youtube_url = youtube_url || null;
+    if (file_url !== undefined) material.file_url = file_url || null;
+    if (file_name !== undefined) material.file_name = file_name || null;
+    if (sort_order !== undefined) material.sort_order = Number(sort_order) || 0;
+
+    await material.save();
+
+    await logAdminAction(
+      'course_material_updated',
+      `Updated material "${material.title}" in lesson #${lesson.lesson_id} of course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
+    res.json({ success: true, data: material });
+  } catch (error) {
+    logger.error('updateMaterial:', error);
+    res.status(500).json({ success: false, error: 'Failed to update material' });
+  }
+};
+
+const deleteMaterial = async (req, res) => {
+  try {
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: req.params.lessonId, course_id: req.params.id }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+    const material = await CourseLessonMaterial.findOne({
+      where: { material_id: req.params.materialId, lesson_id: lesson.lesson_id }
+    });
+    if (!material) {
+      return res.status(404).json({ success: false, error: 'Material not found' });
+    }
+    const matTitle = material.title;
+    await material.destroy();
+
+    await logAdminAction(
+      'course_material_deleted',
+      `Deleted material "${matTitle}" from lesson #${lesson.lesson_id} in course #${req.params.id}`,
+      req,
+      'course',
+      req.params.id
+    );
+
+    res.json({ success: true, message: 'Material deleted' });
+  } catch (error) {
+    logger.error('deleteMaterial:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete material' });
+  }
+};
+
+/**
+ * POST /courses/:id/enroll
+ */
+const enrollInCourse = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    if (!['coming_soon', 'published'].includes(course.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Registration is not open for this course'
+      });
+    }
+
+    const { full_name, email, phone_number, university_id } = req.body;
+    if (!full_name || !email || !phone_number || !university_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'full_name, email, phone_number, and university_id are required'
+      });
+    }
+
+    const blacklistStatus = await checkBlacklist({
+      name: full_name,
+      university_id,
+      phone_number,
+      email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Enrollment rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+    if (!miuEmailRegex.test(trimmedEmail)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only @miuegypt.edu.eg email addresses are allowed'
+      });
+    }
+
+    const existing = await CourseEnrollment.findOne({
+      where: {
+        course_id: course.course_id,
+        [Op.or]: [
+          { university_id: String(university_id).trim() },
+          { email: trimmedEmail }
+        ]
+      }
+    });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        error: 'You are already registered for this course',
+        data: { access_token: existing.access_token }
+      });
+    }
+
+    const enrollment = await CourseEnrollment.create({
+      course_id: course.course_id,
+      full_name: String(full_name).trim(),
+      email: trimmedEmail,
+      phone_number: String(phone_number).trim(),
+      university_id: String(university_id).trim(),
+      status: course.status === 'published' ? 'enrolled' : 'preordered',
+      access_token: makeAccessToken(),
+      attended: false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: course.status === 'coming_soon'
+        ? 'Interest registered. We will email you when the course is available.'
+        : 'Enrolled successfully',
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        access_token: enrollment.access_token,
+        status: enrollment.status
+      }
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ success: false, error: 'Already registered for this course' });
+    }
+    logger.error('enrollInCourse:', error);
+    res.status(500).json({ success: false, error: 'Failed to enroll' });
+  }
+};
+
+/**
+ * POST /courses/:id/enroll/me — enroll using the logged-in MSP account profile.
+ */
+const enrollWithAccount = async (req, res) => {
+  try {
+    const course = await findCourseOr404(req.params.id, res);
+    if (!course) return;
+
+    if (!['coming_soon', 'published'].includes(course.status)) {
+      return res.status(403).json({
+        success: false,
+        error: 'Registration is not open for this course'
+      });
+    }
+
+    const { User, Member } = require('../models');
+    const user = await User.findByPk(req.user.user_id, {
+      attributes: ['user_id', 'full_name', 'email', 'university_id']
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const email = String(user.email || '').trim().toLowerCase();
+    const university_id = String(user.university_id || '').trim();
+    const full_name = String(user.full_name || '').trim() || university_id || email;
+
+    if (!email || !university_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Your MSP account is missing email or university ID. Update your profile and try again.'
+      });
+    }
+
+    const blacklistStatus = await checkBlacklist({
+      user_id: user.user_id,
+      name: full_name,
+      university_id,
+      email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Enrollment rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
+    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
+    if (!miuEmailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only @miuegypt.edu.eg email addresses are allowed'
+      });
+    }
+
+    const existing = await CourseEnrollment.findOne({
+      where: {
+        course_id: course.course_id,
+        [Op.or]: [{ university_id }, { email }]
+      }
+    });
+    if (existing) {
+      return res.json({
+        success: true,
+        message: 'Already registered with your MSP account',
+        data: {
+          enrollment_id: existing.enrollment_id,
+          access_token: existing.access_token,
+          status: existing.status,
+          from_account: true
+        }
+      });
+    }
+
+    let phone_number = 'MSP-account';
+    try {
+      const member = await Member.findOne({
+        where: { user_id: user.user_id },
+        attributes: ['phone_number'],
+        order: [['member_id', 'DESC']]
+      });
+      if (member?.phone_number) phone_number = String(member.phone_number).trim();
+    } catch {
+      /* optional */
+    }
+
+    const enrollment = await CourseEnrollment.create({
+      course_id: course.course_id,
+      full_name,
+      email,
+      phone_number,
+      university_id,
+      status: course.status === 'published' ? 'enrolled' : 'preordered',
+      access_token: makeAccessToken(),
+      attended: false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: course.status === 'coming_soon'
+        ? 'You will be notified when the course is available.'
+        : 'Enrolled with your MSP account',
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        access_token: enrollment.access_token,
+        status: enrollment.status,
+        from_account: true
+      }
+    });
+  } catch (error) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ success: false, error: 'Already registered for this course' });
+    }
+    logger.error('enrollWithAccount:', error);
+    res.status(500).json({ success: false, error: 'Failed to enroll with account' });
+  }
+};
+
+/**
+ * POST /courses/:id/progress  body: { token, lesson_id }
+ */
+const markLessonComplete = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const token = String(req.body?.token || req.query?.token || '').trim();
+    const lessonId = parseInt(req.body?.lesson_id, 10);
+
+    if (!token || !Number.isFinite(lessonId)) {
+      return res.status(400).json({ success: false, error: 'token and lesson_id are required' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { course_id: courseId, access_token: token }
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId, is_published: true }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const [progress] = await CourseLessonProgress.findOrCreate({
+      where: {
+        enrollment_id: enrollment.enrollment_id,
+        lesson_id: lessonId
+      },
+      defaults: { completed_at: new Date() }
+    });
+
+    if (enrollment.status === 'preordered' || enrollment.status === 'notified') {
+      enrollment.status = 'enrolled';
+      await enrollment.save();
+    }
+
+    res.json({ success: true, data: progress });
+  } catch (error) {
+    logger.error('markLessonComplete:', error);
+    res.status(500).json({ success: false, error: 'Failed to mark lesson complete' });
+  }
+};
+
+/**
+ * GET /courses/:id/my-progress?token=
+ */
+const getMyProgress = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const token = String(req.query.token || '').trim();
+    if (!token) {
+      return res.status(400).json({ success: false, error: 'token is required' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { course_id: courseId, access_token: token },
+      include: [
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['course_id', 'title', 'status', 'max_attendance']
+        },
+        {
+          model: CourseLessonProgress,
+          as: 'lessonProgress'
+        },
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances'
+        }
+      ]
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    const lessonCount = await CourseLesson.count({
+      where: { course_id: courseId, is_published: true }
+    });
+    const completed = enrollment.lessonProgress || [];
+    const attendedRecords = (enrollment.lessonAttendances || []).filter((a) => a.attended);
+    const attendedLessonIds = attendedRecords.map((a) => a.lesson_id);
+
+    const certEligibility = computeCertificateEligibility({
+      totalLessons: lessonCount,
+      attendedCount: attendedRecords.length,
+      maxAttendance: enrollment.course?.max_attendance
+    });
+
+    res.json({
+      success: true,
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        full_name: enrollment.full_name,
+        status: enrollment.status,
+        attended: enrollment.attended,
+        completed_lesson_ids: completed.map((p) => p.lesson_id),
+        completed_count: completed.length,
+        lesson_count: lessonCount,
+        completion_percent: lessonCount === 0 ? 0 : Math.round((completed.length / lessonCount) * 100),
+        attended_lesson_ids: attendedLessonIds,
+        attended_count: certEligibility.attended_count,
+        missed_count: certEligibility.missed_count,
+        max_attendance: certEligibility.max_attendance,
+        max_missed_allowed: certEligibility.max_missed_allowed,
+        certificate_eligible: certEligibility.certificate_eligible
+      }
+    });
+  } catch (error) {
+    logger.error('getMyProgress:', error);
+    res.status(500).json({ success: false, error: 'Failed to get progress' });
+  }
+};
+
+/**
+ * GET /courses/:id/enrollments or /courses/enrollments
+ */
+const listEnrollments = async (req, res) => {
+  try {
+    const { page, limit, offset } = parsePagination(req.query);
+    const where = {};
+    const courseId = req.params.id || req.query.course_id;
+    if (courseId) where.course_id = parseInt(courseId, 10);
+
+    // Search filter
+    if (req.query.search) {
+      const searchVal = String(req.query.search).trim();
+      if (searchVal) {
+        const like = `%${searchVal}%`;
+        where[Op.or] = [
+          { full_name: { [Op.like]: like } },
+          { email: { [Op.like]: like } },
+          { phone_number: { [Op.like]: like } },
+          { university_id: { [Op.like]: like } },
+          { '$course.title$': { [Op.like]: like } }
+        ];
+      }
+    }
+
+    // Attended filter
+    if (req.query.attended === 'true' || req.query.attended === 'false') {
+      where.attended = req.query.attended === 'true';
+    }
+
+    // Certificate eligibility filter
+    if (req.query.eligible === 'true' || req.query.eligible === 'false') {
+      const isEligible = req.query.eligible === 'true';
+      
+      const totalLessonsSubquery = `(SELECT COUNT(*) FROM course_lessons WHERE course_lessons.course_id = \`CourseEnrollment\`.\`course_id\` AND course_lessons.is_published = 1)`;
+      const attendedCountSubquery = `(SELECT COUNT(*) FROM course_lesson_attendance WHERE course_lesson_attendance.enrollment_id = \`CourseEnrollment\`.\`enrollment_id\` AND course_lesson_attendance.attended = 1)`;
+      const maxAttendanceVal = `COALESCE((SELECT max_attendance FROM courses WHERE courses.course_id = \`CourseEnrollment\`.\`course_id\`), 0)`;
+
+      if (isEligible) {
+        where[Op.and] = [
+          ...(where[Op.and] || []),
+          {
+            [Op.or]: [
+              CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} = 0`),
+              CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} - ${attendedCountSubquery} <= ${maxAttendanceVal}`)
+            ]
+          }
+        ];
+      } else {
+        where[Op.and] = [
+          ...(where[Op.and] || []),
+          CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} > 0`),
+          CourseEnrollment.sequelize.literal(`${totalLessonsSubquery} - ${attendedCountSubquery} > ${maxAttendanceVal}`)
+        ];
+      }
+    }
+
+    const { count, rows } = await CourseEnrollment.findAndCountAll({
+      where,
+      include: [
+        {
+          model: Course,
+          as: 'course',
+          attributes: ['course_id', 'title', 'status', 'max_attendance']
+        },
+        {
+          model: CourseLessonProgress,
+          as: 'lessonProgress',
+          attributes: ['lesson_id', 'completed_at']
+        },
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances',
+          attributes: ['id', 'lesson_id', 'attended', 'attended_at']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
+      distinct: true
+    });
+
+    // Attach completion % and certificate eligibility using published lesson counts per course
+    const courseIds = [...new Set(rows.map((r) => r.course_id))];
+    const lessonCounts = {};
+    const courseLessonsMap = {};
+    await Promise.all(
+      courseIds.map(async (cid) => {
+        const lessons = await CourseLesson.findAll({
+          where: { course_id: cid, is_published: true },
+          attributes: ['lesson_id', 'title', 'sort_order'],
+          order: [['sort_order', 'ASC'], ['lesson_id', 'ASC']]
+        });
+        lessonCounts[cid] = lessons.length;
+        courseLessonsMap[cid] = lessons;
+      })
+    );
+
+    const data = rows.map((row) => {
+      const json = row.toJSON();
+      const total = lessonCounts[row.course_id] || 0;
+      const done = (json.lessonProgress || []).length;
+      const attendedList = (json.lessonAttendances || []).filter((a) => a.attended);
+      const attendedLessonIds = attendedList.map((a) => a.lesson_id);
+
+      const cert = computeCertificateEligibility({
+        totalLessons: total,
+        attendedCount: attendedList.length,
+        maxAttendance: row.course?.max_attendance
+      });
+
+      json.completed_count = done;
+      json.lesson_count = total;
+      json.completion_percent = total === 0 ? 0 : Math.round((done / total) * 100);
+      json.attended_lesson_ids = attendedLessonIds;
+      json.attended_count = cert.attended_count;
+      json.missed_count = cert.missed_count;
+      json.max_attendance = cert.max_attendance;
+      json.max_missed_allowed = cert.max_missed_allowed;
+      json.certificate_eligible = cert.certificate_eligible;
+      json.available_lessons = courseLessonsMap[row.course_id] || [];
+      return json;
+    });
+
+    res.json({
+      success: true,
+      data,
+      pagination: paginationMeta({ page, limit, total: count })
+    });
+  } catch (error) {
+    logger.error('listEnrollments:', error);
+    res.status(500).json({ success: false, error: 'Failed to list enrollments' });
+  }
+};
+
+const updateEnrollment = async (req, res) => {
+  try {
+    const enrollment = await CourseEnrollment.findByPk(req.params.enrollmentId);
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+    if (req.params.id && String(enrollment.course_id) !== String(req.params.id)) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    if (req.body.attended !== undefined) {
+      enrollment.attended = Boolean(req.body.attended);
+    }
+    if (req.body.status && ['preordered', 'notified', 'enrolled'].includes(req.body.status)) {
+      enrollment.status = req.body.status;
+    }
+    await enrollment.save();
+
+    await logAdminAction(
+      'course_enrollment_updated',
+      `Updated enrollment #${enrollment.enrollment_id} for "${enrollment.full_name}" in course #${enrollment.course_id}`,
+      req,
+      'course',
+      enrollment.course_id
+    );
+
+    res.json({ success: true, data: enrollment });
+  } catch (error) {
+    logger.error('updateEnrollment:', error);
+    res.status(500).json({ success: false, error: 'Failed to update enrollment' });
+  }
+};
+
+const updateEnrollmentName = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const { token, full_name } = req.body;
+
+    if (!token || !full_name || !String(full_name).trim()) {
+      return res.status(400).json({ success: false, error: 'token and full_name are required' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { course_id: courseId, access_token: token }
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    if (course.status !== 'coming_soon') {
+      return res.status(400).json({
+        success: false,
+        error: 'You can only edit the certificate name before the course opens.'
+      });
+    }
+
+    const trimmedName = String(full_name).trim();
+
+    const blacklistStatus = await checkBlacklist({
+      name: trimmedName,
+      university_id: enrollment.university_id,
+      phone_number: enrollment.phone_number,
+      email: enrollment.email
+    });
+
+    if (blacklistStatus.isBlacklisted) {
+      return res.status(403).json({
+        success: false,
+        error: `Name update rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      });
+    }
+
+    enrollment.full_name = trimmedName;
+    await enrollment.save();
+
+    res.json({
+      success: true,
+      message: 'Certificate name updated successfully',
+      data: {
+        enrollment_id: enrollment.enrollment_id,
+        full_name: enrollment.full_name
+      }
+    });
+  } catch (error) {
+    logger.error('updateEnrollmentName:', error);
+    res.status(500).json({ success: false, error: 'Failed to update certificate name' });
+  }
+};
+
+const deleteEnrollment = async (req, res) => {
+  try {
+    const enrollment = await CourseEnrollment.findByPk(req.params.enrollmentId);
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+    if (req.params.id && String(enrollment.course_id) !== String(req.params.id)) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+    const enrolleeName = enrollment.full_name;
+    const courseId = enrollment.course_id;
+    await enrollment.destroy();
+
+    await logAdminAction(
+      'course_enrollment_deleted',
+      `Deleted enrollment of "${enrolleeName}" from course #${courseId}`,
+      req,
+      'course',
+      courseId
+    );
+
+    res.json({ success: true, message: 'Enrollment deleted' });
+  } catch (error) {
+    logger.error('deleteEnrollment:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete enrollment' });
+  }
+};
+
+/**
+ * GET /courses/:id/lessons/:lessonId/attendance
+ * List attendance for a specific session/lesson
+ */
+const getLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const totalPublishedLessons = await CourseLesson.count({
+      where: { course_id: courseId, is_published: true }
+    });
+
+    const enrollments = await CourseEnrollment.findAll({
+      where: { course_id: courseId },
+      include: [
+        {
+          model: CourseLessonAttendance,
+          as: 'lessonAttendances',
+          attributes: ['id', 'lesson_id', 'attended', 'attended_at']
+        }
+      ],
+      order: [['full_name', 'ASC']]
+    });
+
+    let attendedCount = 0;
+    const roster = enrollments.map((enr) => {
+      const attendances = enr.lessonAttendances || [];
+      const thisLessonAtt = attendances.find((a) => a.lesson_id === lessonId);
+      const isAttendedThisLesson = Boolean(thisLessonAtt?.attended);
+      if (isAttendedThisLesson) attendedCount++;
+
+      const totalAttended = attendances.filter((a) => a.attended).length;
+      const cert = computeCertificateEligibility({
+        totalLessons: totalPublishedLessons,
+        attendedCount: totalAttended,
+        maxAttendance: course.max_attendance
+      });
+
+      return {
+        enrollment_id: enr.enrollment_id,
+        full_name: enr.full_name,
+        email: enr.email,
+        phone_number: enr.phone_number,
+        university_id: enr.university_id,
+        status: enr.status,
+        attended_this_lesson: isAttendedThisLesson,
+        attended_at: thisLessonAtt?.attended_at || null,
+        total_attended_lessons: totalAttended,
+        total_lessons: totalPublishedLessons,
+        missed_lessons: cert.missed_count,
+        max_attendance: cert.max_attendance,
+        certificate_eligible: cert.certificate_eligible
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        course: {
+          course_id: course.course_id,
+          title: course.title,
+          max_attendance: course.max_attendance
+        },
+        lesson: {
+          lesson_id: lesson.lesson_id,
+          title: lesson.title,
+          sort_order: lesson.sort_order,
+          is_published: lesson.is_published
+        },
+        roster,
+        summary: {
+          total_enrollees: enrollments.length,
+          attended_count: attendedCount,
+          absent_count: enrollments.length - attendedCount
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('getLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to get lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/lessons/:lessonId/attendance/:enrollmentId
+ * Update attendance for a single enrollee in a specific lesson
+ */
+const updateLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+    const enrollmentId = parseInt(req.params.enrollmentId, 10);
+    const attended = req.body.attended !== undefined ? Boolean(req.body.attended) : true;
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    const enrollment = await CourseEnrollment.findOne({
+      where: { enrollment_id: enrollmentId, course_id: courseId }
+    });
+    if (!enrollment) {
+      return res.status(404).json({ success: false, error: 'Enrollment not found' });
+    }
+
+    let record = await CourseLessonAttendance.findOne({
+      where: { lesson_id: lessonId, enrollment_id: enrollmentId }
+    });
+
+    if (record) {
+      record.attended = attended;
+      record.attended_at = new Date();
+      await record.save();
+    } else {
+      record = await CourseLessonAttendance.create({
+        course_id: courseId,
+        lesson_id: lessonId,
+        enrollment_id: enrollmentId,
+        attended,
+        attended_at: new Date()
+      });
+    }
+
+    if (attended && !enrollment.attended) {
+      enrollment.attended = true;
+      await enrollment.save();
+    }
+
+    const totalPublishedLessons = await CourseLesson.count({
+      where: { course_id: courseId, is_published: true }
+    });
+    const allAttended = await CourseLessonAttendance.count({
+      where: { enrollment_id: enrollmentId, attended: true }
+    });
+    const cert = computeCertificateEligibility({
+      totalLessons: totalPublishedLessons,
+      attendedCount: allAttended,
+      maxAttendance: course.max_attendance
+    });
+
+    await logAdminAction(
+      'course_attendance_updated',
+      `Updated attendance for "${enrollment.full_name}" in session "${lesson.title}" (${attended ? 'Present' : 'Absent'})`,
+      req,
+      'course',
+      courseId
+    );
+
+    res.json({
+      success: true,
+      message: 'Lesson attendance updated',
+      data: {
+        record,
+        attended_count: cert.attended_count,
+        missed_count: cert.missed_count,
+        certificate_eligible: cert.certificate_eligible
+      }
+    });
+  } catch (error) {
+    logger.error('updateLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to update lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/lessons/:lessonId/attendance
+ * Bulk update attendance for a specific session/lesson
+ */
+const bulkUpdateLessonAttendance = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const lessonId = parseInt(req.params.lessonId, 10);
+    const attendees = Array.isArray(req.body?.attendees) ? req.body.attendees : [];
+
+    const course = await findCourseOr404(courseId, res);
+    if (!course) return;
+
+    const lesson = await CourseLesson.findOne({
+      where: { lesson_id: lessonId, course_id: courseId }
+    });
+    if (!lesson) {
+      return res.status(404).json({ success: false, error: 'Lesson not found' });
+    }
+
+    await Promise.all(
+      attendees.map(async ({ enrollment_id, attended }) => {
+        const enrId = parseInt(enrollment_id, 10);
+        if (!Number.isFinite(enrId)) return;
+        const isAttended = Boolean(attended);
+        const [attRecord] = await CourseLessonAttendance.findOrCreate({
+          where: { lesson_id: lessonId, enrollment_id: enrId },
+          defaults: {
+            course_id: courseId,
+            lesson_id: lessonId,
+            enrollment_id: enrId,
+            attended: isAttended,
+            attended_at: new Date()
+          }
+        });
+        if (attRecord.attended !== isAttended) {
+          attRecord.attended = isAttended;
+          attRecord.attended_at = new Date();
+          await attRecord.save();
+        }
+        if (isAttended) {
+          await CourseEnrollment.update(
+            { attended: true },
+            { where: { enrollment_id: enrId, attended: false } }
+          );
+        }
+      })
+    );
+
+    await logAdminAction(
+      'course_bulk_attendance_updated',
+      `Bulk updated attendance for ${attendees.length} enrollees in session "${lesson.title}"`,
+      req,
+      'course',
+      courseId
+    );
+
+    res.json({ success: true, message: 'Lesson attendance updated successfully' });
+  } catch (error) {
+    logger.error('bulkUpdateLessonAttendance:', error);
+    res.status(500).json({ success: false, error: 'Failed to bulk update lesson attendance' });
+  }
+};
+
+/**
+ * PUT /courses/:id/enrollments/:enrollmentId/lessons/:lessonId/attendance
+ * Update attendance for a specific enrollment and lesson
+ */
+const updateEnrollmentLessonAttendance = async (req, res) => {
+  return updateLessonAttendance(req, res);
+};
+
+const exportEnrollmentsCSV = async (req, res) => {
+  try {
+    const where = {};
+    const courseId = req.params.id || req.query.course_id;
+    if (courseId) where.course_id = parseInt(courseId, 10);
+
+    const rows = await CourseEnrollment.findAll({
+      where,
+      include: [
+        { model: Course, as: 'course', attributes: ['course_id', 'title', 'max_attendance'] },
+        { model: CourseLessonProgress, as: 'lessonProgress', attributes: ['lesson_id'] },
+        { model: CourseLessonAttendance, as: 'lessonAttendances', attributes: ['lesson_id', 'attended'] }
+      ],
+      order: [['created_at', 'ASC']]
+    });
+
+    const courseIds = [...new Set(rows.map((r) => r.course_id))];
+    const lessonCounts = {};
+    const publishedLessonsMap = {};
+    await Promise.all(
+      courseIds.map(async (cid) => {
+        const lessons = await CourseLesson.findAll({
+          where: { course_id: cid, is_published: true },
+          attributes: ['lesson_id', 'title', 'sort_order'],
+          order: [['sort_order', 'ASC'], ['lesson_id', 'ASC']]
+        });
+        lessonCounts[cid] = lessons.length;
+        publishedLessonsMap[cid] = lessons;
+      })
+    );
+
+    const escapeCSV = (val) => {
+      const s = val == null ? '' : String(val);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const isSingleCourse = courseIds.length === 1;
+    const singleCourseLessons = isSingleCourse ? (publishedLessonsMap[courseIds[0]] || []) : [];
+
+    const headers = [
+      '#', 'Course', 'Full Name', 'Email', 'Phone', 'University ID',
+      'Status', 'Overall Attended', 'Sessions Attended', 'Sessions Missed',
+      'Max Allowed Missed', 'Certificate Eligible',
+      'Lessons Completed', 'Lesson Count', 'Completion %'
+    ];
+
+    if (isSingleCourse && singleCourseLessons.length > 0) {
+      singleCourseLessons.forEach((l, idx) => {
+        headers.push(`Session ${idx + 1}: ${l.title}`);
+      });
+    }
+
+    headers.push('Registered At');
+
+    const csvRows = rows.map((row, index) => {
+      const total = lessonCounts[row.course_id] || 0;
+      const done = (row.lessonProgress || []).length;
+      const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+      const attendedList = (row.lessonAttendances || []).filter((a) => a.attended);
+      const attendedIdsSet = new Set(attendedList.map((a) => a.lesson_id));
+
+      const cert = computeCertificateEligibility({
+        totalLessons: total,
+        attendedCount: attendedList.length,
+        maxAttendance: row.course?.max_attendance
+      });
+
+      const cols = [
+        index + 1,
+        row.course?.title || '',
+        row.full_name,
+        row.email,
+        row.phone_number,
+        row.university_id,
+        row.status,
+        row.attended ? 'Yes' : 'No',
+        cert.attended_count,
+        cert.missed_count,
+        cert.max_attendance != null ? cert.max_attendance : '0 (100%)',
+        cert.certificate_eligible ? 'Yes' : 'No',
+        done,
+        total,
+        pct
+      ];
+
+      if (isSingleCourse && singleCourseLessons.length > 0) {
+        singleCourseLessons.forEach((l) => {
+          cols.push(attendedIdsSet.has(l.lesson_id) ? 'Present' : 'Absent');
+        });
+      }
+
+      cols.push(row.created_at ? new Date(row.created_at).toISOString() : '');
+
+      return cols.map(escapeCSV).join(',');
+    });
+
+    const csvContent = [headers.map(escapeCSV).join(','), ...csvRows].join('\r\n');
+    const BOM = '\uFEFF';
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=course_enrollments_${new Date().toISOString().split('T')[0]}.csv`
+    );
+    res.send(Buffer.from(BOM + csvContent, 'utf8'));
+  } catch (error) {
+    logger.error('exportEnrollmentsCSV:', error);
+    res.status(500).json({ success: false, error: 'Failed to export enrollments' });
+  }
+};
+
+module.exports = {
+  listCourses,
+  listCoursesAdmin,
+  getCourseById,
+  getCourseAdmin,
+  createCourse,
+  updateCourse,
+  updateCourseStatus,
+  deleteCourse,
+  createLesson,
+  updateLesson,
+  deleteLesson,
+  reorderLessons,
+  createMaterial,
+  updateMaterial,
+  deleteMaterial,
+  enrollInCourse,
+  enrollWithAccount,
+  updateEnrollmentName,
+  markLessonComplete,
+  getMyProgress,
+  listEnrollments,
+  updateEnrollment,
+  deleteEnrollment,
+  getLessonAttendance,
+  updateLessonAttendance,
+  bulkUpdateLessonAttendance,
+  updateEnrollmentLessonAttendance,
+  exportEnrollmentsCSV
+};

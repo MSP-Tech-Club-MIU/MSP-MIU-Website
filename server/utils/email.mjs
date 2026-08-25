@@ -3,9 +3,13 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const logger = require('./logger');
+const { buildUnsubscribeUrl } = require('./emailUnsubscribe');
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// App often runs with cwd = server/; dotenv default misses Back-End/.env. Load known locations first.
 const envPaths = [
   path.join(__dirname, '../../.env'),
   path.join(__dirname, '../.env'),
@@ -20,95 +24,145 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
   host: process.env.MAIL_HOST,
   port: Number(process.env.MAIL_PORT),
-  secure: Number(process.env.MAIL_PORT) === 465, // true for SSL (465), false for TLS (587)
+  secure: Number(process.env.MAIL_PORT) === 465,
   auth: {
     user: process.env.MAIL_USERNAME,
     pass: process.env.MAIL_PASSWORD,
   },
-  // Allow self-signed certificates (common in development or certain SMTP servers)
   tls: {
     rejectUnauthorized: false
   }
 });
 
+const UNSUB_MARKER = '<!--msp-unsub-->';
+
+function appendUnsubscribeFooter(html, unsubscribeUrl) {
+  if (!html || !unsubscribeUrl) return html;
+  if (String(html).includes(UNSUB_MARKER)) return html;
+  const block = `${UNSUB_MARKER}
+<div style="margin-top:24px;padding-top:12px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.45;color:#999999;">
+  MSP MIU · <a href="${unsubscribeUrl}" style="color:#999999;text-decoration:underline;">Unsubscribe</a>
+</div>`;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${block}</body>`);
+  }
+  return `${html}${block}`;
+}
+
+/**
+ * Resolve user for unsubscribe footer. Prefer mailOptions.userId when provided.
+ */
+async function resolveUserForUnsubscribe(to, userIdHint) {
+  try {
+    const { User } = require('../models');
+    if (userIdHint != null && Number.isFinite(Number(userIdHint))) {
+      const byId = await User.findByPk(Number(userIdHint), {
+        attributes: ['user_id', 'email']
+      });
+      if (byId) return byId;
+    }
+    const email = String(to || '').trim();
+    if (!email) return null;
+    return await User.findOne({
+      where: { email },
+      attributes: ['user_id', 'email']
+    });
+  } catch (err) {
+    logger.warn('Could not resolve user for unsubscribe footer:', err.message || err);
+    return null;
+  }
+}
+
 /**
  * Send an email using the configured transporter
- * @param {Object} mailOptions - Email options (to, subject, text, html, etc.)
- * @param {string} mailOptions.fromName - Optional sender name (defaults to "MSP MIU Website")
- * @param {Array} mailOptions.attachments - Optional array of attachment objects
- * @returns {Promise} Promise that resolves with email info
+ * @param {Object} mailOptions
+ * @param {string} [mailOptions.category] - 'marketing' adds List-Unsubscribe headers
+ * @param {number} [mailOptions.userId] - preferred user for unsubscribe token
+ * @param {boolean} [mailOptions.skipUnsubscribeFooter]
  */
 export async function sendEmail(mailOptions) {
   try {
     const fromName = mailOptions.fromName || 'MSP MIU Website';
     const fromEmail = process.env.MAIL_FROM_ADDRESS || mailOptions.from || 'noreply@msp-miu.tech';
-    
+
     if (!process.env.MAIL_FROM_ADDRESS && !mailOptions.from) {
-      console.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
+      logger.warn('⚠️  Warning: MAIL_FROM_ADDRESS not set in .env file. Using default from address.');
     }
-    
-    // Extract domain from email address for proper Message-ID
+
     const emailDomain = fromEmail.split('@')[1] || process.env.MAIL_HOST || 'msp-miu.tech';
-    
-    // Escape quotes in the name and format from address
     const escapedName = fromName.replace(/"/g, '\\"');
     const fromAddress = `"${escapedName}" <${fromEmail}>`;
-    
-    // Generate a proper RFC-compliant Message-ID using the domain
+
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 15);
     const messageId = `<${timestamp}.${randomId}@${emailDomain}>`;
-    
-    // Get current date in RFC 2822 format
     const date = new Date().toUTCString();
-    
-    // Prepare email with advanced anti-spam best practices
+
+    let html = mailOptions.html;
+    let text = mailOptions.text;
+    let unsubscribeUrl = mailOptions.unsubscribeUrl || null;
+
+    if (!mailOptions.skipUnsubscribeFooter) {
+      const user = await resolveUserForUnsubscribe(mailOptions.to, mailOptions.userId);
+      if (user?.user_id && user?.email) {
+        unsubscribeUrl = buildUnsubscribeUrl(user.user_id, user.email);
+        html = appendUnsubscribeFooter(html, unsubscribeUrl);
+        if (text != null && text !== '' && !String(text).includes(unsubscribeUrl)) {
+          text = `${text}\n\nUnsubscribe: ${unsubscribeUrl}`;
+        }
+      }
+    }
+
+    const headers = {
+      'Message-ID': messageId,
+      Date: date,
+      'X-Mailer': 'MSP MIU Website',
+      'X-Priority': '3',
+      Importance: 'normal',
+      Precedence: 'bulk',
+      'Auto-Submitted': 'auto-generated',
+      'X-Auto-Response-Suppress': 'All',
+      'X-Entity-Ref-ID': `${timestamp}-${randomId}`,
+      ...mailOptions.headers
+    };
+
+    if (
+      (mailOptions.category === 'marketing' || mailOptions.listUnsubscribe) &&
+      unsubscribeUrl
+    ) {
+      headers['List-Unsubscribe'] = `<${unsubscribeUrl}>`;
+      headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click';
+    }
+
     const emailData = {
       from: fromAddress,
       replyTo: mailOptions.replyTo || fromEmail,
       to: mailOptions.to,
       subject: mailOptions.subject,
-      text: mailOptions.text, // Always include plain text version
-      html: mailOptions.html,
-      attachments: mailOptions.attachments || [], // Support attachments
-      // Advanced headers to improve deliverability and reduce spam
-      headers: {
-        'Message-ID': messageId,
-        'Date': date,
-        'X-Mailer': 'MSP MIU Website',
-        'X-Priority': '3', // Normal priority
-        'Importance': 'normal',
-        'Precedence': 'bulk', // Helps with automated emails
-        'Auto-Submitted': 'auto-generated', // Indicates automated email
-        'X-Auto-Response-Suppress': 'All', // Prevents auto-replies
-        'X-Entity-Ref-ID': `${timestamp}-${randomId}`, // Unique reference
-        ...mailOptions.headers, // Allow custom headers to override
-      },
+      text,
+      html,
+      attachments: mailOptions.attachments || [],
+      headers
     };
 
     const info = await transporter.sendMail(emailData);
-    console.log('Email sent successfully:', info.messageId);
+    logger.info('Email sent successfully:', { messageId: info.messageId });
     return info;
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', error);
     throw error;
   }
 }
 
-/**
- * Verify the email transporter configuration
- * @returns {Promise<boolean>} True if configuration is valid
- */
 export async function verifyEmailConfig() {
   try {
     await transporter.verify();
-    console.log('Email transporter is ready to send emails');
+    logger.info('Email transporter is ready to send emails');
     return true;
   } catch (error) {
-    console.error('Email transporter verification failed:', error);
+    logger.error('Email transporter verification failed:', error);
     return false;
   }
 }
 
 export default transporter;
-

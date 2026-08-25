@@ -10,7 +10,6 @@ const Member = sequelize.define('Member', {
   university_id: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    unique: true,
     validate: {
       notEmpty: true
     }
@@ -72,7 +71,7 @@ const Member = sequelize.define('Member', {
     allowNull: true,
     validate: {
       isValidJSON(value) {
-        if (value !== null && typeof value !== 'object') {
+        if (value != null && typeof value !== 'object') {
           throw new Error('Schedule must be a valid JSON object');
         }
       }
@@ -85,12 +84,27 @@ const Member = sequelize.define('Member', {
       model: 'users',
       key: 'user_id'
     }
+  },
+  season_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'seasons',
+      key: 'season_id'
+    }
   }
 }, {
   tableName: 'members',
   timestamps: false,
   createdAt: 'joined_at',
-  updatedAt: false
+  updatedAt: false,
+  indexes: [
+    {
+      unique: true,
+      fields: ['university_id', 'season_id'],
+      name: 'uniq_members_university_season'
+    }
+  ]
 });
 
 module.exports = Member;

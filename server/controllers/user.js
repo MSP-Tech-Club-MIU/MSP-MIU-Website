@@ -1,11 +1,13 @@
 const bcrypt = require('bcrypt');
-const { User } = require('../models');
+const { User, Season } = require('../models');
 const { Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
 const { generateToken: generateJWTToken } = require('../utils/jwt');
-const { logAuditEvent, logError, logSecurityEvent } = require('../utils/logger');
+const logger = require('../utils/logger');
+const { logAuditEvent, logError, logSecurityEvent } = logger;
 const { r2, PutObjectCommand } = require('../config/cloud');
+const { resolveSeasonIdForWrite, getDefaultSeasonId, serializeSeason, getDefaultSeason } = require('../utils/seasonFilter');
 
 /**
  * Register user (only through invitation)
@@ -61,6 +63,13 @@ const registerUser = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        let season_id;
+        try {
+            season_id = await resolveSeasonIdForWrite(req.body, req.query);
+        } catch (_) {
+            season_id = await getDefaultSeasonId();
+        }
+
         // Create user with role 'member' and is_active = true (since they're invited)
         const user = await User.create({
             full_name,
@@ -68,7 +77,8 @@ const registerUser = async (req, res) => {
             email,
             password_hash: hashedPassword,
             role: 'member',
-            is_active: true
+            is_active: true,
+            season_id
         });
 
         res.status(201).json({
@@ -305,7 +315,13 @@ const getProfile = async (req, res) => {
         const userId = req.user.user_id;
 
         const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password_hash'] }
+            attributes: { exclude: ['password_hash'] },
+            include: [{
+                model: Season,
+                as: 'season',
+                attributes: ['season_id', 'label', 'start_year', 'end_year', 'is_default'],
+                required: false
+            }]
         });
 
         if (!user) {
@@ -325,6 +341,18 @@ const getProfile = async (req, res) => {
                 userObj.profile_picture_url = `${process.env.R2_PUBLIC_DOMAIN || ''}/Profile_Pictures/${userObj.profile_picture}`;
             }
         }
+
+        const defaultSeason = await getDefaultSeason();
+        const userSeason = userObj.season
+            ? serializeSeason(userObj.season)
+            : null;
+        userObj.season = userSeason;
+        userObj.is_active_season = !!(
+            userSeason &&
+            defaultSeason &&
+            userSeason.season_id === defaultSeason.season_id
+        );
+        userObj.active_season = serializeSeason(defaultSeason);
 
         res.json({
             success: true,
@@ -359,7 +387,7 @@ const uploadToCloud = async (file, directory, filename) => {
         const publicURL = `${process.env.R2_PUBLIC_DOMAIN}/${key}`;
         return { key, url: publicURL };
     } catch (error) {
-        console.error('Cloud upload error:', error);
+        logger.error('Cloud upload error:', error);
         throw error;
     }
 };

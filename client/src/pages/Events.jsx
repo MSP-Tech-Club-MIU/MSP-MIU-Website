@@ -1,24 +1,39 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import Pagination from '../components/Pagination';
+import SeasonBadge from '../components/SeasonBadge';
+import SeasonSelector from '../components/SeasonSelector';
+import { useSeason } from '../context/SeasonContext';
 import './Events.css';
-import { FiCalendar, FiClock, FiMapPin, FiPlus, FiCheckSquare } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 
 // Import images
 import mspLogo from '../assets/Images/msp-logo.png';
 
+const PAGE_SIZE = 6;
+
+const FILTER_TO_CATEGORY = {
+  event: 'Workshop',
+  session: 'Session',
+  entertainment: 'Entertainment',
+};
+
 const Events = () => {
+  const { seasonFilters, isAll } = useSeason();
   const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('all'); // all, event, session, entertainment
   const [sort, setSort] = useState('desc'); // desc, asc
-  const [userRole, setUserRole] = useState(null);
-  const [userDepartment, setUserDepartment] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const hasLoadedOnceRef = useRef(false);
   const navigate = useNavigate();
 
   const structuredData = {
@@ -33,74 +48,93 @@ const Events = () => {
     }
   };
 
-  // Check user role and department
+  // Fetch one page of events at a time (never the full list)
   useEffect(() => {
-    const checkUserRole = async () => {
-      if (ApiService.isAuthenticated()) {
-        try {
-          const user = await ApiService.getProfile();
-          setUserRole(user.role);
-          setUserDepartment(user.department_id);
-        } catch (error) {
-          console.error('Error fetching user role:', error);
-          setUserRole(null);
-          setUserDepartment(null);
-        }
-      } else {
-        setUserRole(null);
-        setUserDepartment(null);
-      }
-    };
-    checkUserRole();
-  }, []);
+    let cancelled = false;
 
-  // Fetch events from API
-  useEffect(() => {
     const fetchEvents = async () => {
+      const isPageChange = hasLoadedOnceRef.current;
+
       try {
-        setLoading(true);
+        if (isPageChange) {
+          setPageLoading(true);
+          setEvents([]);
+          setPagination((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  page,
+                  hasPrev: page > 1,
+                  hasNext: page < prev.totalPages,
+                }
+              : prev
+          );
+        } else {
+          setInitialLoading(true);
+        }
         setError(null);
-        const data = await ApiService.getEvents();
-        // Map database fields to component fields
-        const mappedEvents = Array.isArray(data) ? data.map(event => ({
+
+        const filters = { page, limit: PAGE_SIZE, ...seasonFilters };
+        if (filter !== 'all' && FILTER_TO_CATEGORY[filter]) {
+          filters.category = FILTER_TO_CATEGORY[filter];
+        }
+
+        const result = await ApiService.getEvents(filters);
+        if (cancelled) return;
+
+        const list = Array.isArray(result) ? result : (result.data || []);
+        const mappedEvents = list.map((event) => ({
           event_id: event.event_id,
           name: event.name,
           description: event.description,
           event_date: event.event_date,
           place: event.location,
-          // Map category: Workshop -> event, Session -> session, Entertainment -> entertainment
-          event_type: event.category === 'Workshop' ? 'event' : 
-                     event.category === 'Session' ? 'session' : 
-                     event.category === 'Entertainment' ? 'entertainment' : 'event',
-          // Use main_image from database if available, otherwise fallback to MSP logo
-          image_url: (event.main_image && event.main_image.trim()) ? event.main_image : mspLogo,
-          category: event.category
-        })) : [];
+          event_type:
+            event.category === 'Workshop'
+              ? 'event'
+              : event.category === 'Session'
+                ? 'session'
+                : event.category === 'Entertainment'
+                  ? 'entertainment'
+                  : 'event',
+          image_url:
+            event.main_image && event.main_image.trim() ? event.main_image : mspLogo,
+          category: event.category,
+          season: event.season || null,
+          season_id: event.season_id ?? null,
+        }));
+
         setEvents(mappedEvents);
+
+        const meta = Array.isArray(result) ? null : result.pagination || null;
+        // One page of results → no pagination UI
+        if (!meta || meta.totalPages <= 1 || (typeof meta.total === 'number' && meta.total <= PAGE_SIZE)) {
+          setPagination(null);
+        } else {
+          setPagination(meta);
+        }
+        hasLoadedOnceRef.current = true;
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching events:', err);
         setError(err.message || 'Failed to load events');
         setEvents([]);
+        if (!hasLoadedOnceRef.current) {
+          setPagination(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setInitialLoading(false);
+          setPageLoading(false);
+        }
       }
     };
 
     fetchEvents();
-  }, []);
-
-  // Allow: board/admin roles OR department 6 (Event Planning)
-  // Validate role exists and is in allowed list
-  const isBoardOrAdmin = userRole === 'board' || userRole === 'admin';
-  
-  // Validate department_id - must be a number and equals 6
-  // Type check to prevent manipulation (coerce to number and validate)
-  const departmentId = typeof userDepartment === 'number' 
-    ? userDepartment 
-    : parseInt(userDepartment, 10);
-  const isEventPlanningDept = !isNaN(departmentId) && departmentId === 6;
-  
-  const canAccessAdminFeatures = isBoardOrAdmin || isEventPlanningDept;
+    return () => {
+      cancelled = true;
+    };
+  }, [page, filter, seasonFilters]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -110,18 +144,27 @@ const Events = () => {
   };
 
   const filteredEvents = useMemo(() => {
-    let filtered = events;
-    
-    if (filter !== 'all') {
-      filtered = events.filter(event => event.event_type === filter);
-    }
-    
-    return filtered.sort((a, b) => {
+    // Category filtering is handled server-side; sort current page client-side
+    return [...events].sort((a, b) => {
       const dateA = new Date(a.event_date);
       const dateB = new Date(b.event_date);
       return sort === 'desc' ? dateB - dateA : dateA - dateB;
     });
-  }, [events, filter, sort]);
+  }, [events, sort]);
+
+  const handleFilterChange = (nextFilter) => {
+    if (nextFilter === filter) return;
+    hasLoadedOnceRef.current = false;
+    setPagination(null);
+    setPage(1);
+    setFilter(nextFilter);
+  };
+
+  const handlePageChange = (nextPage) => {
+    if (pageLoading || nextPage === page) return;
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleEventClick = (eventId) => {
     navigate(`/events/${eventId}`);
@@ -148,90 +191,14 @@ const Events = () => {
         title="Events & Sessions"
         description="Discover upcoming MSP Tech Club events, workshops, sessions, and hackathons at MIU. Join us for tech talks, hands-on workshops, networking events, and more."
         keywords="MSP events, tech workshops, hackathons, MIU events, technology sessions, student tech events, Microsoft workshops"
-        url="https://msp-miu.tech/events"
+        url="/events"
         structuredData={structuredData}
       />
       <div className="EventsPage__container">
         <header className="EventsPage__header">
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: '1.5rem',
-            width: '100%'
-          }}>
-            {/* Title Section */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'flex-start',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <div style={{ flex: '1', minWidth: '200px' }}>
-                <h1 className="EventsPage__title">Events & Sessions</h1>
-                <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
-              </div>
-              {/* Action Buttons */}
-              {canAccessAdminFeatures && (
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '0.75rem', 
-                  alignItems: 'flex-start',
-                  flexWrap: 'wrap'
-                }}>
-                  <motion.button
-                    onClick={() => navigate('/attendance-review')}
-                    className="EventsPage__createBtn"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1.5rem',
-                      background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
-                      transition: 'all 0.3s ease',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    <FiCheckSquare />
-                    Attendance Review
-                  </motion.button>
-                  <motion.button
-                    onClick={() => navigate('/events/create')}
-                    className="EventsPage__createBtn"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1.5rem',
-                      background: 'linear-gradient(135deg, #03A9F4 0%, #0288D1 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      fontSize: '0.95rem',
-                      fontWeight: '600',
-                      boxShadow: '0 4px 12px rgba(3, 169, 244, 0.3)',
-                      transition: 'all 0.3s ease',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    <FiPlus />
-                    Create Event
-                  </motion.button>
-                </div>
-              )}
-            </div>
+          <div>
+            <h1 className="EventsPage__title">Events & Sessions</h1>
+            <p className="EventsPage__subtitle">Stay updated with our latest tech events, workshops, and sessions</p>
           </div>
         </header>
 
@@ -239,31 +206,32 @@ const Events = () => {
           <div className="EventsPage__filters">
             <button
               className={`EventsPage__filterBtn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
+              onClick={() => handleFilterChange('all')}
             >
               All
             </button>
             <button
               className={`EventsPage__filterBtn ${filter === 'event' ? 'active' : ''}`}
-              onClick={() => setFilter('event')}
+              onClick={() => handleFilterChange('event')}
             >
               Events
             </button>
             <button
               className={`EventsPage__filterBtn ${filter === 'session' ? 'active' : ''}`}
-              onClick={() => setFilter('session')}
+              onClick={() => handleFilterChange('session')}
             >
               Sessions
             </button>
             <button
               className={`EventsPage__filterBtn ${filter === 'entertainment' ? 'active' : ''}`}
-              onClick={() => setFilter('entertainment')}
+              onClick={() => handleFilterChange('entertainment')}
             >
               Entertainment
             </button>
           </div>
 
           <div className="EventsPage__sort">
+            <SeasonSelector />
             <label htmlFor="sort-select" className="EventsPage__sortLabel">
               Sort by:
             </label>
@@ -279,9 +247,9 @@ const Events = () => {
           </div>
         </div>
 
-        {loading && <PageLoader message="Loading events..." />}
+        {initialLoading && <PageLoader message="Loading events..." />}
 
-        {error && !loading && (
+        {error && !initialLoading && !pageLoading && (
           <div className="EventsPage__empty">
             <FiCalendar />
             <p>Error loading events</p>
@@ -289,7 +257,7 @@ const Events = () => {
           </div>
         )}
 
-        {!loading && !error && filteredEvents.length === 0 && (
+        {!initialLoading && !error && !pageLoading && filteredEvents.length === 0 && (
           <div className="EventsPage__empty">
             <FiCalendar />
             <p>No events found</p>
@@ -297,74 +265,95 @@ const Events = () => {
           </div>
         )}
 
-        {!loading && !error && (
-          <div className="EventsPage__grid">
-            <AnimatePresence mode="popLayout">
-              {filteredEvents.map((event) => (
-              <motion.article
-                key={event.event_id}
-                className="EventCard"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={animationVariants}
-                whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                onClick={() => handleEventClick(event.event_id)}
-              >
-                <div className="EventCard__media">
-                  {event.image_url ? (
-                    <img 
-                      src={getImageSrc(event.image_url)} 
-                      alt={event.name}
-                      className="EventCard__image"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'block';
-                      }}
-                    />
-                  ) : null}
-                  <div 
-                    className="EventCard__imagePlaceholder"
-                    style={{ display: event.image_url ? 'none' : 'block' }}
+        {!initialLoading && !error && (
+          <>
+            {pageLoading ? (
+              <div className="EventsPage__pageLoader" aria-live="polite" aria-busy="true">
+                <div className="EventsPage__spinner" />
+                <p>Loading page {page}...</p>
+              </div>
+            ) : (
+              <div className="EventsPage__grid">
+                <AnimatePresence mode="popLayout">
+                  {filteredEvents.map((event) => (
+                  <motion.article
+                    key={event.event_id}
+                    className="EventCard"
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    variants={animationVariants}
+                    whileHover={{ y: -6, transition: { duration: 0.2 } }}
+                    onClick={() => handleEventClick(event.event_id)}
                   >
-                    <FiCalendar />
-                  </div>
-                  <div className={`EventCard__badge EventCard__badge--${event.event_type}`}>
-                    {event.event_type}
-                  </div>
-                </div>
-                <div className="EventCard__body">
-                  <h3 className="EventCard__title">{event.name}</h3>
-                  <div className="EventCard__meta">
-                    <span className="EventCard__metaItem">
-                      <FiCalendar />
-                      {formatDate(event.event_date)}
-                    </span>
-                    {event.event_time && (
-                      <span className="EventCard__metaItem">
-                        <FiClock />
-                        {event.event_time}
-                      </span>
-                    )}
-                    {event.place && (
-                      <span className="EventCard__metaItem">
-                        <FiMapPin />
-                        {event.place}
-                      </span>
-                    )}
-                  </div>
-                  {event.description && (
-                    <p className="EventCard__description">
-                      {event.description.length > 100
-                        ? `${event.description.substring(0, 100)}...`
-                        : event.description}
-                    </p>
-                  )}
-                </div>
-              </motion.article>
-              ))}
-            </AnimatePresence>
-          </div>
+                    <div className="EventCard__media">
+                      {event.image_url ? (
+                        <img 
+                          src={getImageSrc(event.image_url)} 
+                          alt={event.name}
+                          className="EventCard__image"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <div 
+                        className="EventCard__imagePlaceholder"
+                        style={{ display: event.image_url ? 'none' : 'block' }}
+                      >
+                        <FiCalendar />
+                      </div>
+                      <div className={`EventCard__badge EventCard__badge--${event.event_type}`}>
+                        {event.event_type}
+                      </div>
+                    </div>
+                    <div className="EventCard__body">
+                      <h3 className="EventCard__title">
+                        {event.name}
+                        {isAll && (event.season || event.season_id) && (
+                          <> {' '}<SeasonBadge season={event.season} /></>
+                        )}
+                      </h3>
+                      <div className="EventCard__meta">
+                        <span className="EventCard__metaItem">
+                          <FiCalendar />
+                          {formatDate(event.event_date)}
+                        </span>
+                        {event.event_time && (
+                          <span className="EventCard__metaItem">
+                            <FiClock />
+                            {event.event_time}
+                          </span>
+                        )}
+                        {event.place && (
+                          <span className="EventCard__metaItem">
+                            <FiMapPin />
+                            {event.place}
+                          </span>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p className="EventCard__description">
+                          {event.description.length > 100
+                            ? `${event.description.substring(0, 100)}...`
+                            : event.description}
+                        </p>
+                      )}
+                    </div>
+                  </motion.article>
+                  ))}
+                </AnimatePresence>
+              </div>
+            )}
+            {pagination?.totalPages > 1 && (
+              <Pagination
+                pagination={pagination}
+                onPageChange={handlePageChange}
+                disabled={pageLoading}
+              />
+            )}
+          </>
         )}
       </div>
     </section>

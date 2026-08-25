@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const logger = require("./server/utils/logger");
+const requestLogger = require("./server/middlewares/requestLogger");
 const PORT = process.env.PORT;
 
 // Suppress util._extend deprecation warning from dependencies
@@ -25,12 +27,108 @@ app.use(cors());
 // Use Express built-in JSON parser instead of body-parser (removes util._extend deprecation warning)
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 // Import API routes from server
 const apiRoutes = require("./server/server");
 
+// OpenAPI / Swagger UI (canonical spec: docs/openapi.yaml)
+const swaggerUi = require("swagger-ui-express");
+const YAML = require("yamljs");
+const swaggerDocument = YAML.load(path.join(__dirname, "docs/openapi.yaml"));
+app.get("/api/docs.json", (req, res) => {
+  res.json(swaggerDocument);
+});
+app.use(
+  "/api/docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument, {
+    customSiteTitle: "MSP-MIU API Docs",
+    swaggerOptions: { persistAuthorization: true },
+    // Auto-authorize after successful login (functions cannot go in swaggerOptions JSON)
+    customJsStr: `
+(function () {
+  function authorize(token) {
+    if (!token || !window.ui) return;
+    try {
+      window.ui.preauthorizeApiKey("bearerAuth", token);
+    } catch (e) {}
+    try {
+      window.ui.authActions.authorize({
+        bearerAuth: {
+          name: "bearerAuth",
+          schema: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+          value: token
+        }
+      });
+    } catch (e2) {}
+  }
+  function tokenFromBody(text) {
+    try {
+      var data = JSON.parse(text);
+      return data.token || (data.data && data.data.token) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function maybeCapture(url, status, text) {
+    if (status < 200 || status >= 300) return;
+    if (!/\\/(auth|users)\\/login/i.test(String(url || ""))) return;
+    authorize(tokenFromBody(text));
+  }
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function () {
+      var input = arguments[0];
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      return origFetch.apply(this, arguments).then(function (response) {
+        if (/\\/(auth|users)\\/login/i.test(url) && response.ok) {
+          response.clone().text().then(function (text) { maybeCapture(url, response.status, text); });
+        }
+        return response;
+      });
+    };
+  }
+  var OrigXHR = window.XMLHttpRequest;
+  if (OrigXHR) {
+    window.XMLHttpRequest = function () {
+      var xhr = new OrigXHR();
+      var open = xhr.open;
+      xhr.open = function (method, url) {
+        xhr.__swaggerUrl = url;
+        return open.apply(xhr, arguments);
+      };
+      xhr.addEventListener("load", function () {
+        maybeCapture(xhr.__swaggerUrl, xhr.status, xhr.responseText);
+      });
+      return xhr;
+    };
+  }
+})();
+`,
+  })
+);
+
 // API routes
 app.use("/api", apiRoutes);
+
+const { sendOgImage, buildRobotsTxt, buildSitemapXml } = require("./server/utils/seo");
+const { sendSeoSpa } = require("./server/middlewares/spaSeo");
+
+// Stable social/SEO assets (crawlers do not execute JavaScript)
+app.get(["/og-image.png", "/og-image.jpg", "/og-image", "/msp-miu-logo.png"], sendOgImage);
+app.get("/robots.txt", (req, res) => {
+  res.type("text/plain").set("Cache-Control", "public, max-age=3600").send(buildRobotsTxt());
+});
+app.get("/sitemap.xml", async (req, res) => {
+  try {
+    const xml = await buildSitemapXml();
+    res.type("application/xml").set("Cache-Control", "public, max-age=1800").send(xml);
+  } catch (err) {
+    logger.error("[seo] sitemap failed", err);
+    res.status(500).type("text/plain").send("Failed to build sitemap");
+  }
+});
 
 // Serve uploaded files (profile pictures, etc.)
 app.use("/uploads", express.static(path.join(__dirname, "server/uploads")));
@@ -56,24 +154,33 @@ app.get("*", (req, res) => {
   if (/\.(js|mjs|cjs|css|map|json|woff2?|ttf|ico|png|jpe?g|gif|svg|webp|webmanifest)$/i.test(req.path)) {
     return res.status(404).type('text/plain').send('Not found');
   }
-  res.sendFile(path.join(__dirname, "client/public/index.html"));
+  return sendSeoSpa(req, res);
 });
 
 const { runAutoSubmitExpiredAttempts } = require("./server/services/quizAttemptLifecycle");
+const { syncModels } = require("./server/models");
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
-  setInterval(() => {
-    runAutoSubmitExpiredAttempts().catch((err) =>
-      console.error("[quiz-auto-submit]", err)
-    );
-  }, 60_000);
-  setTimeout(() => {
-    runAutoSubmitExpiredAttempts().catch((err) =>
-      console.error("[quiz-auto-submit]", err)
-    );
-  }, 10_000);
-});
+// Start server after DB sync / announcement column ensure
+(async () => {
+  try {
+    await syncModels();
+  } catch (err) {
+    logger.error("Database sync failed", err);
+  }
+
+  app.listen(PORT, () => {
+    logger.info("Server listening", { port: PORT });
+    setInterval(() => {
+      runAutoSubmitExpiredAttempts().catch((err) =>
+        logger.error("[quiz-auto-submit]", err)
+      );
+    }, 60_000);
+    setTimeout(() => {
+      runAutoSubmitExpiredAttempts().catch((err) =>
+        logger.error("[quiz-auto-submit]", err)
+      );
+    }, 10_000);
+  });
+})();
 
 module.exports = app;

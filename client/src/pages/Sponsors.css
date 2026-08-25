@@ -6,6 +6,19 @@
   padding-right: clamp(1rem, 4vw, 1.5rem);
 }
 
+.SponsorsPage__titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 0.75rem;
+}
+
+.SponsorsPage__titleRow h1 {
+  margin: 0;
+}
+
 .SponsorsPage__intro {
   margin: 0 0 2.25rem;
   color: rgba(234, 242, 255, 0.88);

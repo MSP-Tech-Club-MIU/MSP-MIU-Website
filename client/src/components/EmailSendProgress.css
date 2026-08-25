@@ -1,0 +1,791 @@
+/* ═══════════════════════════════════════════════════════════
+   1. MINIMIZED FLOATING OVERLAY BAR
+   ═══════════════════════════════════════════════════════════ */
+.EmailSendProgress__barOverlay {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 13000;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(14, 39, 68, 0.95), rgba(7, 20, 36, 0.96));
+  border: 1px solid rgba(142, 194, 240, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(3, 169, 244, 0.15);
+  color: #eaf2ff;
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+  animation: EmailSendProgress-slideUp 0.3s ease-out;
+}
+
+.EmailSendProgress__barOverlay:hover {
+  transform: translateY(-2px);
+  border-color: rgba(3, 169, 244, 0.6);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), 0 0 28px rgba(3, 169, 244, 0.28);
+}
+
+.EmailSendProgress__barOverlay--paused {
+  border-color: rgba(255, 183, 77, 0.5);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 20px rgba(255, 183, 77, 0.2);
+}
+
+.EmailSendProgress__barOverlay--completed {
+  border-color: rgba(129, 199, 132, 0.45);
+}
+
+.EmailSendProgress__barOverlay--failed {
+  border-color: rgba(239, 83, 80, 0.5);
+}
+
+.EmailSendProgress__barIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(3, 169, 244, 0.15);
+  font-size: 1.25rem;
+}
+
+.EmailSendProgress__barPauseIcon {
+  color: #ffb74d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: EmailSendProgress-pulse 1.6s ease-in-out infinite;
+}
+
+.EmailSendProgress__barDoneIcon {
+  color: #81c784;
+}
+
+.EmailSendProgress__barErrorIcon {
+  color: #ef5350;
+}
+
+.EmailSendProgress__barCancelIcon {
+  color: #b0bec5;
+}
+
+.EmailSendProgress__spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(142, 194, 240, 0.25);
+  border-top-color: #03a9f4;
+  border-radius: 50%;
+  animation: EmailSendProgress-spin 0.8s linear infinite;
+}
+
+@keyframes EmailSendProgress-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes EmailSendProgress-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.08); }
+}
+
+@keyframes EmailSendProgress-slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.EmailSendProgress__barInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.EmailSendProgress__barTitleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.EmailSendProgress__barTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.EmailSendProgress__barPercent {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #03a9f4;
+}
+
+.EmailSendProgress__barSubRow {
+  font-size: 0.76rem;
+  color: rgba(234, 242, 255, 0.75);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.EmailSendProgress__barPausedText {
+  color: #ffb74d;
+  font-weight: 600;
+}
+
+.EmailSendProgress__barErrorText {
+  color: #ef5350;
+}
+
+.EmailSendProgress__barMiniTrack {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.EmailSendProgress__barMiniFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d7bd8, #03a9f4);
+  transition: width 0.35s ease;
+}
+
+.EmailSendProgress__barOverlay--completed .EmailSendProgress__barMiniFill {
+  background: linear-gradient(90deg, #43a047, #81c784);
+}
+
+.EmailSendProgress__barOverlay--paused .EmailSendProgress__barMiniFill {
+  background: linear-gradient(90deg, #f57c00, #ffb74d);
+}
+
+.EmailSendProgress__barOverlay--failed .EmailSendProgress__barMiniFill {
+  background: linear-gradient(90deg, #e53935, #ef5350);
+}
+
+.EmailSendProgress__barActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.EmailSendProgress__barBtn {
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #8ec2f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 1rem;
+}
+
+.EmailSendProgress__barBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.EmailSendProgress__barBtn--close:hover {
+  background: rgba(239, 83, 80, 0.25);
+  color: #ef5350;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   2. FULL MODAL VIEW
+   ═══════════════════════════════════════════════════════════ */
+.EmailSendProgress__modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 14000;
+  background: rgba(4, 13, 24, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: EmailSendProgress-fadeIn 0.2s ease-out;
+}
+
+@keyframes EmailSendProgress-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.EmailSendProgress__modalCard {
+  width: 100%;
+  max-width: 680px;
+  max-height: calc(100vh - 36px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(150deg, #0e2744 0%, #081729 100%);
+  border: 1px solid rgba(142, 194, 240, 0.32);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.75), 0 0 40px rgba(3, 169, 244, 0.12);
+  color: #eaf2ff;
+  overflow: hidden;
+  animation: EmailSendProgress-scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes EmailSendProgress-scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Modal Header */
+.EmailSendProgress__modalHeader {
+  padding: 20px 24px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.15);
+}
+
+.EmailSendProgress__headerLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.EmailSendProgress__statusBadgeWrap {
+  margin-bottom: 8px;
+}
+
+.EmailSendProgress__statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.EmailSendProgress__statusBadge--running {
+  background: rgba(3, 169, 244, 0.18);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.35);
+}
+
+.EmailSendProgress__statusBadge--paused {
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 183, 77, 0.4);
+}
+
+.EmailSendProgress__statusBadge--completed {
+  background: rgba(129, 199, 132, 0.18);
+  color: #81c784;
+  border: 1px solid rgba(129, 199, 132, 0.35);
+}
+
+.EmailSendProgress__statusBadge--failed {
+  background: rgba(239, 83, 80, 0.18);
+  color: #ef5350;
+  border: 1px solid rgba(239, 83, 80, 0.35);
+}
+
+.EmailSendProgress__statusBadge--cancelled {
+  background: rgba(176, 190, 197, 0.18);
+  color: #b0bec5;
+  border: 1px solid rgba(176, 190, 197, 0.35);
+}
+
+.EmailSendProgress__pulseDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 6px;
+  animation: EmailSendProgress-pulseDot 1.4s infinite;
+}
+
+@keyframes EmailSendProgress-pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
+.EmailSendProgress__modalTitle {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.35;
+}
+
+.EmailSendProgress__headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.EmailSendProgress__headerBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  color: #8ec2f0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  transition: all 0.15s ease;
+}
+
+.EmailSendProgress__headerBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border-color: rgba(142, 194, 240, 0.4);
+}
+
+.EmailSendProgress__headerBtn--close:hover {
+  background: rgba(239, 83, 80, 0.2);
+  color: #ef5350;
+  border-color: rgba(239, 83, 80, 0.4);
+}
+
+/* Anti-Spam Throttle Notice */
+.EmailSendProgress__spamNotice {
+  margin: 16px 24px 0;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 183, 77, 0.14), rgba(245, 124, 0, 0.08));
+  border: 1px solid rgba(255, 183, 77, 0.35);
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  animation: EmailSendProgress-glow 2s infinite alternate;
+}
+
+@keyframes EmailSendProgress-glow {
+  from { box-shadow: 0 0 10px rgba(255, 183, 77, 0.1); }
+  to { box-shadow: 0 0 22px rgba(255, 183, 77, 0.25); }
+}
+
+.EmailSendProgress__spamNoticeIcon {
+  font-size: 1.6rem;
+  color: #ffb74d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.EmailSendProgress__spamNoticeBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.EmailSendProgress__spamNoticeTitle {
+  font-weight: 700;
+  font-size: 0.94rem;
+  color: #ffe082;
+  margin-bottom: 3px;
+}
+
+.EmailSendProgress__spamNoticeDesc {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 236, 179, 0.85);
+  line-height: 1.4;
+}
+
+.EmailSendProgress__spamNoticeCountdown {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.EmailSendProgress__timerValue {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffca28;
+  letter-spacing: 1px;
+}
+
+.EmailSendProgress__timerLabel {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Progress Section */
+.EmailSendProgress__progressSection {
+  padding: 16px 24px 12px;
+}
+
+.EmailSendProgress__progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.EmailSendProgress__progressLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #8ec2f0;
+}
+
+.EmailSendProgress__progressPercent {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #03a9f4;
+}
+
+.EmailSendProgress__mainTrack {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.EmailSendProgress__mainFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #0d7bd8, #03a9f4);
+  transition: width 0.35s ease;
+}
+
+.EmailSendProgress__mainFill--completed {
+  background: linear-gradient(90deg, #43a047, #81c784);
+}
+
+.EmailSendProgress__mainFill--failed {
+  background: linear-gradient(90deg, #e53935, #ef5350);
+}
+
+.EmailSendProgress__mainFill.is-paused {
+  background: linear-gradient(90deg, #f57c00, #ffb74d);
+}
+
+/* Metric Cards */
+.EmailSendProgress__metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 4px 24px 16px;
+}
+
+.EmailSendProgress__metricCard {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(10, 28, 49, 0.7);
+  border: 1px solid rgba(142, 194, 240, 0.18);
+  text-align: center;
+}
+
+.EmailSendProgress__metricValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.EmailSendProgress__metricLabel {
+  font-size: 0.72rem;
+  color: rgba(234, 242, 255, 0.65);
+  margin-top: 4px;
+}
+
+.EmailSendProgress__metricCard--sent .EmailSendProgress__metricValue {
+  color: #81c784;
+}
+
+.EmailSendProgress__metricCard--failed .EmailSendProgress__metricValue {
+  color: #ef5350;
+}
+
+.EmailSendProgress__metricCard--skipped .EmailSendProgress__metricValue {
+  color: #b0bec5;
+}
+
+/* Detailed Logs Section */
+.EmailSendProgress__logsSection {
+  flex: 1;
+  min-height: 180px;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  margin: 0 24px 16px;
+  border-radius: 12px;
+  background: rgba(6, 18, 32, 0.75);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  overflow: hidden;
+}
+
+.EmailSendProgress__logsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(14, 39, 68, 0.6);
+  border-bottom: 1px solid rgba(142, 194, 240, 0.15);
+  flex-wrap: wrap;
+}
+
+.EmailSendProgress__logsTabs {
+  display: flex;
+  gap: 6px;
+}
+
+.EmailSendProgress__logsTab {
+  border: none;
+  background: transparent;
+  color: rgba(234, 242, 255, 0.7);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.EmailSendProgress__logsTab:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.EmailSendProgress__logsTab.is-active {
+  background: rgba(3, 169, 244, 0.25);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.35);
+}
+
+.EmailSendProgress__logsTab--failed.is-active {
+  background: rgba(239, 83, 80, 0.25);
+  color: #ef5350;
+  border-color: rgba(239, 83, 80, 0.4);
+}
+
+.EmailSendProgress__logsSearch {
+  display: flex;
+  align-items: center;
+  background: rgba(4, 13, 24, 0.8);
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 6px;
+  padding: 2px 8px;
+  gap: 6px;
+  max-width: 220px;
+}
+
+.EmailSendProgress__searchIcon {
+  color: rgba(142, 194, 240, 0.6);
+  font-size: 1rem;
+}
+
+.EmailSendProgress__searchInput {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.78rem;
+  outline: none;
+  width: 100%;
+}
+
+.EmailSendProgress__searchClear {
+  background: transparent;
+  border: none;
+  color: rgba(142, 194, 240, 0.6);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  font-size: 0.9rem;
+}
+
+.EmailSendProgress__logsList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 12px;
+}
+
+.EmailSendProgress__logsEmpty {
+  padding: 28px 16px;
+  text-align: center;
+  color: rgba(142, 194, 240, 0.7);
+  font-size: 0.84rem;
+}
+
+.EmailSendProgress__logItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 0.8rem;
+}
+
+.EmailSendProgress__logItem:last-child {
+  border-bottom: none;
+}
+
+.EmailSendProgress__logStatusIcon {
+  font-size: 1.1rem;
+  margin-top: 1px;
+}
+
+.EmailSendProgress__logStatusIcon .icon-sent {
+  color: #81c784;
+}
+
+.EmailSendProgress__logStatusIcon .icon-failed {
+  color: #ef5350;
+}
+
+.EmailSendProgress__logStatusIcon .icon-skipped {
+  color: #b0bec5;
+}
+
+.EmailSendProgress__logContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.EmailSendProgress__logEmail {
+  font-weight: 500;
+  color: #ffffff;
+  word-break: break-all;
+}
+
+.EmailSendProgress__logReason {
+  font-size: 0.74rem;
+  color: #ef5350;
+  margin-top: 2px;
+}
+
+.EmailSendProgress__logTime {
+  font-size: 0.72rem;
+  color: rgba(142, 194, 240, 0.6);
+  flex-shrink: 0;
+}
+
+/* Modal Footer */
+.EmailSendProgress__modalFooter {
+  padding: 14px 24px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(142, 194, 240, 0.15);
+  background: rgba(7, 19, 34, 0.6);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.EmailSendProgress__footerRight {
+  display: flex;
+  gap: 10px;
+}
+
+.EmailSendProgress__minimizeBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  color: #8ec2f0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.EmailSendProgress__minimizeBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(142, 194, 240, 0.4);
+}
+
+.EmailSendProgress__cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(239, 83, 80, 0.15);
+  border: 1px solid rgba(239, 83, 80, 0.35);
+  color: #ef5350;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.EmailSendProgress__cancelBtn:hover:not(:disabled) {
+  background: rgba(239, 83, 80, 0.25);
+  border-color: #ef5350;
+}
+
+.EmailSendProgress__cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.EmailSendProgress__doneBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0d7bd8, #03a9f4);
+  border: none;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(3, 169, 244, 0.35);
+  transition: all 0.15s ease;
+}
+
+.EmailSendProgress__doneBtn:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(3, 169, 244, 0.5);
+}
+
+@media (max-width: 640px) {
+  .EmailSendProgress__metricsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .EmailSendProgress__logsHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .EmailSendProgress__logsSearch {
+    max-width: 100%;
+  }
+
+  .EmailSendProgress__modalFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .EmailSendProgress__footerRight {
+    flex-direction: column;
+  }
+}

@@ -22,4 +22,3 @@ const BoardHeader = memo(() => {
 
 BoardHeader.displayName = 'BoardHeader';
 export default BoardHeader;
-

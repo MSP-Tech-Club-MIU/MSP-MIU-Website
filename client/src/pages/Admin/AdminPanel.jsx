@@ -1,159 +1,103 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    MdDashboard, MdEmojiEvents, MdFactCheck, MdAppRegistration,
-    MdSearch, MdNotifications, MdLogout, MdHome, MdAdd, MdMenu,
-    MdClose, MdPeople, MdEvent, MdPendingActions, MdDescription,
-    MdTrendingUp, MdCalendarToday, MdCampaign, MdFeedback, MdPerson,
-    MdSettings
+    MdDashboard, MdEmojiEvents, MdAppRegistration,
+    MdNotifications, MdHome, MdAdd,
+    MdPeople, MdEvent, MdPendingActions, MdDescription,
+    MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
+    MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook,
+    MdBugReport, MdSend, MdBlock, MdTrackChanges
 } from 'react-icons/md';
+import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
-import mspLogo from '../../assets/Images/msp-logo.png';
+import Pagination from '../../components/Pagination';
+import SeasonBadge from '../../components/SeasonBadge';
+import EmailSendProgress from '../../components/EmailSendProgress';
+import { useSeason } from '../../context/SeasonContext';
+import AdminShell, { ParticleBackground } from './AdminShell';
+import RegistrationsTab from './RegistrationsTab';
+import SponsorsAdminTab from './SponsorsAdminTab';
+import BoardAdminTab from './BoardAdminTab';
+import DepartmentsAdminTab from './DepartmentsAdminTab';
+import MediaAdminTab from './MediaAdminTab';
+import SiteContentAdminTab from './SiteContentAdminTab';
+import MembersAdminTab from './MembersAdminTab';
+import EventsAdminTab from './EventsAdminTab';
+import CoursesAdminTab from './CoursesAdminTab';
+import SeasonsAdminTab from './SeasonsAdminTab';
+import EmailManagementAdminTab from './EmailManagementAdminTab';
+import EmailTrackerAdminTab from './EmailTrackerAdminTab';
+import CourseEmailsAdminTab from './CourseEmailsAdminTab';
+import AndroidAppAdminTab from './AndroidAppAdminTab';
+import LogsAdminTab from './LogsAdminTab';
+import BlacklistAdminTab from './BlacklistAdminTab';
+import { FormattedText, EmailComposerToolbar } from '../../utils/formatMarkdown';
+import { isProgramsEligibleDepartment, PROGRAMS_TAB_KEYS } from '../../data/programsAccess';
 import './AdminPanel.css';
 
-/* ═══════════════════════════════════════════════════════════
-   Antigravity-style Particle Background (Canvas)
-   ═══════════════════════════════════════════════════════════ */
-const ParticleBackground = () => {
-    const canvasRef = useRef(null);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let animationId;
-        let particles = [];
-
-        const resize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        };
-        resize();
-        window.addEventListener('resize', resize);
-
-        // Create particles
-        const PARTICLE_COUNT = 180;
-        const colors = [
-            'rgba(74, 166, 255, 0.4)',
-            'rgba(30, 198, 255, 0.35)',
-            'rgba(13, 123, 216, 0.3)',
-            'rgba(191, 224, 255, 0.2)',
-            'rgba(0, 51, 255, 0.25)',
-        ];
-
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            particles.push({
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height,
-                size: Math.random() * 2.2 + 0.3,
-                speedX: (Math.random() - 0.5) * 0.35,
-                speedY: (Math.random() - 0.5) * 0.35,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                pulse: Math.random() * Math.PI * 2,
-                pulseSpeed: Math.random() * 0.015 + 0.005,
-                depth: Math.random(),
-            });
-        }
-
-        // Mouse interaction
-        let mouse = { x: -1000, y: -1000 };
-        const handleMouseMove = (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-        };
-        window.addEventListener('mousemove', handleMouseMove);
-
-        const animate = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            particles.forEach((p, i) => {
-                p.pulse += p.pulseSpeed;
-                const sizeMod = Math.sin(p.pulse) * 0.5 + 0.5;
-                const currentSize = p.size * (0.6 + sizeMod * 0.6);
-
-                // Mouse repulsion (antigravity effect)
-                const dx = p.x - mouse.x;
-                const dy = p.y - mouse.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const magnetRadius = 120;
-
-                if (dist < magnetRadius && dist > 0) {
-                    const force = (1 - dist / magnetRadius) * 2.5;
-                    p.x += (dx / dist) * force;
-                    p.y += (dy / dist) * force;
-                }
-
-                // Movement
-                p.x += p.speedX * (0.5 + p.depth * 0.5);
-                p.y += p.speedY * (0.5 + p.depth * 0.5);
-
-                // Wrap around
-                if (p.x < -10) p.x = canvas.width + 10;
-                if (p.x > canvas.width + 10) p.x = -10;
-                if (p.y < -10) p.y = canvas.height + 10;
-                if (p.y > canvas.height + 10) p.y = -10;
-
-                // Draw particle
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, currentSize, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.fill();
-
-                // Draw connections
-                for (let j = i + 1; j < particles.length; j++) {
-                    const p2 = particles[j];
-                    const cdx = p.x - p2.x;
-                    const cdy = p.y - p2.y;
-                    const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
-                    const connectDist = 100 + p.depth * 40;
-
-                    if (cdist < connectDist) {
-                        const alpha = (1 - cdist / connectDist) * 0.12;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p2.x, p2.y);
-                        ctx.strokeStyle = `rgba(74, 166, 255, ${alpha})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-            });
-
-            animationId = requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        return () => {
-            cancelAnimationFrame(animationId);
-            window.removeEventListener('resize', resize);
-            window.removeEventListener('mousemove', handleMouseMove);
-        };
-    }, []);
-
-    return <canvas ref={canvasRef} className="AdminPanel__particleBg" />;
-};
+const LIST_LIMIT = 20;
+const NOTIFICATIONS_LIMIT = 50;
+/** Short copy for website feed cards */
+const WEBSITE_ANNOUNCEMENT_TITLE_MAX = 50;
+const WEBSITE_ANNOUNCEMENT_DESC_MAX = 220;
+/** Longer copy allowed for email broadcasts */
+const EMAIL_ANNOUNCEMENT_TITLE_MAX = 120;
+const EMAIL_ANNOUNCEMENT_DESC_MAX = 2000;
 
 const ADMIN_TAB_TO_ROUTE = {
     dashboard: 'dashboard',
+    events: 'events',
+    courses: 'courses',
     competitions: 'competitions',
-    attendance: 'attendance',
     registrations: 'registrations',
     notifications: 'notifications',
     announcements: 'announcements',
-    suggestions: 'suggestions'
+    suggestions: 'suggestions',
+    sponsors: 'sponsors',
+    board: 'board',
+    departments: 'departments',
+    media: 'media',
+    content: 'content',
+    members: 'members',
+    seasons: 'seasons',
+    emails: 'emails',
+    'email-tracker': 'email-tracker',
+    email_tracker: 'email-tracker',
+    'course-emails': 'course-emails',
+    course_emails: 'course-emails',
+    android: 'android',
+    blacklist: 'blacklist',
+    logs: 'logs'
 };
 
 const ADMIN_ROUTE_TO_TAB = {
     dashboard: 'dashboard',
+    events: 'events',
+    courses: 'courses',
     competitions: 'competitions',
-    attendance: 'attendance',
+    attendance: 'events',
     registrations: 'registrations',
     notifications: 'notifications',
     announcements: 'announcements',
-    suggestions: 'suggestions'
+    suggestions: 'suggestions',
+    sponsors: 'sponsors',
+    board: 'board',
+    departments: 'departments',
+    media: 'media',
+    content: 'content',
+    members: 'members',
+    seasons: 'seasons',
+    emails: 'emails',
+    'email-tracker': 'email-tracker',
+    email_tracker: 'email-tracker',
+    'course-emails': 'course-emails',
+    course_emails: 'course-emails',
+    android: 'android',
+    blacklist: 'blacklist',
+    logs: 'logs'
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -162,6 +106,7 @@ const ADMIN_ROUTE_TO_TAB = {
 const AdminPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { seasonFilters, isAll, selectedSeasonId } = useSeason();
 
     const getAdminTabFromPath = useCallback((pathname) => {
         if (!pathname.startsWith('/admin')) return 'dashboard';
@@ -173,46 +118,68 @@ const AdminPanel = () => {
     const [activeTab, setActiveTab] = useState(() => getAdminTabFromPath(location.pathname));
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    /** 'full' | 'programs' | 'registrations' */
+    const [accessLevel, setAccessLevel] = useState('full');
     const [alert, setAlert] = useState(null);
+    const [emailSendJob, setEmailSendJob] = useState(null); // { id, title }
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const canUseProgramsTabs = accessLevel === 'full' || accessLevel === 'programs';
 
-    // Hide Navbar and Footer when AdminPanel is mounted
     useEffect(() => {
         document.body.classList.add('admin-panel-active');
-        return () => {
-            document.body.classList.remove('admin-panel-active');
-        };
+        return () => document.body.classList.remove('admin-panel-active');
     }, []);
 
     useEffect(() => {
         if (location.pathname === '/admin' || location.pathname === '/admin/') {
-            navigate('/admin/dashboard', { replace: true });
+            const home =
+                accessLevel === 'registrations'
+                    ? '/admin/registrations'
+                    : accessLevel === 'programs'
+                      ? '/admin/events'
+                      : '/admin/dashboard';
+            navigate(home, { replace: true });
+            return;
+        }
+
+        // Attendance lives under Events now
+        if (location.pathname === '/admin/attendance') {
+            navigate('/admin/events?view=attendance', { replace: true });
             return;
         }
 
         const tabFromPath = getAdminTabFromPath(location.pathname);
+        if (accessLevel === 'registrations' && tabFromPath !== 'registrations') {
+            navigate('/admin/registrations', { replace: true });
+            setActiveTab('registrations');
+            return;
+        }
+        if (accessLevel === 'programs' && !PROGRAMS_TAB_KEYS.includes(tabFromPath)) {
+            navigate('/admin/events', { replace: true });
+            setActiveTab('events');
+            return;
+        }
         setActiveTab((prev) => (prev === tabFromPath ? prev : tabFromPath));
-    }, [location.pathname, navigate, getAdminTabFromPath]);
+    }, [location.pathname, navigate, getAdminTabFromPath, accessLevel]);
 
     // Dashboard state
     const [stats, setStats] = useState(null);
+    const [isExportingCsv, setIsExportingCsv] = useState(false);
 
     // Competitions state
     const [competitions, setCompetitions] = useState([]);
+    const [competitionsPage, setCompetitionsPage] = useState(1);
+    const [competitionsPagination, setCompetitionsPagination] = useState(null);
 
-    // Attendance state
-    const [attendance, setAttendance] = useState([]);
-    const [attendanceFilters, setAttendanceFilters] = useState({ event_id: '', attended: '' });
-
-    // Registrations state
-    const [registrations, setRegistrations] = useState([]);
-    const [regSearch, setRegSearch] = useState('');
-    const [regStatusFilter, setRegStatusFilter] = useState('');
+    // Attendance review is nested under Events tab
+    // Registrations handled by RegistrationsTab (rich FormAdmin UI)
 
     // Notifications state
     const [notifications, setNotifications] = useState([]);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
     const [notificationsError, setNotificationsError] = useState(null);
+    const [notificationsPage, setNotificationsPage] = useState(1);
+    const [notificationsPagination, setNotificationsPagination] = useState(null);
     const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
     const notificationsFetchedRef = useRef(false);
 
@@ -220,11 +187,24 @@ const AdminPanel = () => {
     const [announcements, setAnnouncements] = useState([]);
     const [announcementsLoading, setAnnouncementsLoading] = useState(false);
     const [announcementsError, setAnnouncementsError] = useState(null);
+    const [announcementsPage, setAnnouncementsPage] = useState(1);
+    const [announcementsPagination, setAnnouncementsPagination] = useState(null);
     const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+    /** 'website' | 'email' — create mode; edit keeps the original channel */
+    const [announcementModalKind, setAnnouncementModalKind] = useState('website');
     const [editingAnnouncement, setEditingAnnouncement] = useState(null);
     const [announcementForm, setAnnouncementForm] = useState({
-        title: '', description: '', department: '', announcement_date: '', priority: false
+        title: '', description: '', department: '', announcement_date: '', priority: false,
+        send_email: false, cta_label: '', cta_url: ''
     });
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewAnnouncement, setReviewAnnouncement] = useState(null);
+    const [reviewForm, setReviewForm] = useState({
+        title: '', description: '', department: '', announcement_date: '', priority: false,
+        cta_label: '', cta_url: '', rejection_reason: ''
+    });
+    const [announcementPreviewMode, setAnnouncementPreviewMode] = useState(false);
+    const [reviewPreviewMode, setReviewPreviewMode] = useState(false);
 
     // Suggestions & Feedback state
     const [suggestions, setSuggestions] = useState([]);
@@ -233,25 +213,71 @@ const AdminPanel = () => {
     const [suggestionsError, setSuggestionsError] = useState(null);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [feedbackError, setFeedbackError] = useState(null);
+    const [suggestionsPage, setSuggestionsPage] = useState(1);
+    const [suggestionsPagination, setSuggestionsPagination] = useState(null);
+    const [feedbackPage, setFeedbackPage] = useState(1);
+    const [feedbackPagination, setFeedbackPagination] = useState(null);
 
     // Admin profile for avatar
     const [adminProfile, setAdminProfile] = useState(null);
 
-    // Global search (top bar)
-    const [searchQuery, setSearchQuery] = useState('');
+    // Navigation items (category groups the admin sidebar)
+    const fullNavItems = useMemo(() => [
+        { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard />, category: 'Overview' },
+        { key: 'logs', label: 'Server logs', icon: <MdBugReport />, category: 'Overview' },
+        { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+        { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+        { key: 'members', label: 'Members', icon: <MdPeople />, category: 'Organization' },
+        { key: 'blacklist', label: 'Blacklist', icon: <MdBlock />, category: 'Organization' },
+        { key: 'sponsors', label: 'Sponsors', icon: <MdBusiness />, category: 'Organization' },
+        { key: 'board', label: 'Board', icon: <MdGroups />, category: 'Organization' },
+        { key: 'departments', label: 'Departments', icon: <MdAccountTree />, category: 'Organization' },
+        { key: 'seasons', label: 'Season', icon: <MdCalendarMonth />, category: 'Organization' },
+        { key: 'media', label: 'Media', icon: <MdPermMedia />, category: 'Content' },
+        { key: 'content', label: 'Site content', icon: <MdArticle />, category: 'Content' },
+        { key: 'android', label: 'Android app', icon: <MdPhoneAndroid />, category: 'Content' },
+        { key: 'emails', label: 'Email management', icon: <MdEmail />, category: 'Communications' },
+        { key: 'email-tracker', label: 'Email tracker', icon: <MdTrackChanges />, category: 'Communications' },
+        { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Communications' },
+        { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
+        { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
+        { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
+    ], []);
 
-    // Navigation items
-    const navItems = [
-        { key: 'dashboard', label: 'Dashboard', icon: <MdDashboard /> },
-        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
-        { key: 'attendance', label: 'Attendance', icon: <MdFactCheck /> },
-        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration /> },
-        { key: 'notifications', label: 'Notifications', icon: <MdNotifications /> },
-        { key: 'announcements', label: 'Announcements', icon: <MdCampaign /> },
-        { key: 'suggestions', label: 'Suggestions & Feedback', icon: <MdFeedback /> },
+    const registrationsOnlyNav = useMemo(() => [
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+    ], []);
+
+    const programsOnlyNav = useMemo(() => [
+        { key: 'events', label: 'Events', icon: <MdEvent />, category: 'Programs' },
+        { key: 'courses', label: 'Courses', icon: <MdMenuBook />, category: 'Programs' },
+        { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Programs' },
+        { key: 'competitions', label: 'Competitions', icon: <MdEmojiEvents />, category: 'Programs' },
+        { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+    ], []);
+
+    const adminPosition = stats?.adminInfo?.position || adminProfile?.position;
+    const isPresidentOrVP = adminPosition === 'President' || adminPosition === 'Vice President';
+
+    const navItems = useMemo(() => {
+        let baseItems =
+            accessLevel === 'registrations'
+                ? registrationsOnlyNav
+                : accessLevel === 'programs'
+                  ? programsOnlyNav
+                  : fullNavItems;
+        if (!isPresidentOrVP) {
+            baseItems = baseItems.filter((item) => item.key !== 'notifications');
+        }
+        return baseItems;
+    }, [accessLevel, registrationsOnlyNav, programsOnlyNav, fullNavItems, isPresidentOrVP]);
+
+    const bottomItems = useMemo(() => [
         { key: 'profile', label: 'Profile', icon: <MdPerson />, onClick: () => navigate('/profile') },
         { key: 'home', label: 'Home', icon: <MdHome />, onClick: () => navigate('/') },
-    ];
+    ], [navigate]);
 
     // Get greeting based on time
     const getGreeting = () => {
@@ -269,34 +295,76 @@ const AdminPanel = () => {
                 return;
             }
 
-            const result = await ApiService.checkAdminAccess();
-            if (!result.success) {
-                setHasAccess(false);
-                setLoading(false);
-                return;
-            }
-
-            setHasAccess(true);
-            setLoading(false);
-
-            // Load initial data for the admin
-            fetchDashboard();
-            fetchCompetitions();
-            fetchAttendance();
-            fetchRegistrations();
-            fetchNotifications();
-
-            // Load admin profile for avatar / initials
+            let profile = null;
             try {
-                const profile = await ApiService.getProfile();
+                profile = await ApiService.getProfile();
                 setAdminProfile(profile);
             } catch (err) {
                 console.error('Failed to load admin profile:', err);
             }
+
+            const result = await ApiService.checkAdminAccess();
+            if (result.success) {
+                setAccessLevel('full');
+                setHasAccess(true);
+                setLoading(false);
+                fetchDashboard();
+                fetchCompetitions();
+                return;
+            }
+
+            // SoftDev / Tech Training / AI / Cyber Security board → Programs tabs
+            let boardDeptId = null;
+            try {
+                const boardResult = await ApiService.getMyBoardMembership();
+                boardDeptId = boardResult?.data?.department_id;
+            } catch (err) {
+                console.error('Failed to load board membership:', err);
+            }
+
+            if (
+                profile?.role === 'board' &&
+                isProgramsEligibleDepartment(boardDeptId)
+            ) {
+                setAccessLevel('programs');
+                setHasAccess(true);
+                setLoading(false);
+                fetchCompetitions();
+                if (!PROGRAMS_TAB_KEYS.some((k) => location.pathname.includes(`/admin/${k}`))) {
+                    navigate('/admin/events', { replace: true });
+                }
+                return;
+            }
+
+            // Board or department 5 → registrations-only access
+            const deptRaw = profile?.department_id;
+            const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+            const hasRegAccess = profile?.role === 'board' || (!isNaN(deptId) && deptId === 5);
+
+            if (hasRegAccess) {
+                setAccessLevel('registrations');
+                setHasAccess(true);
+                setLoading(false);
+                if (!location.pathname.includes('/admin/registrations')) {
+                    navigate('/admin/registrations', { replace: true });
+                }
+                return;
+            }
+
+            setHasAccess(false);
+            setLoading(false);
         };
 
         checkAccess();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate]);
+
+    // Redirect away from notifications tab if user is not President or Vice President
+    useEffect(() => {
+        if (hasAccess && accessLevel === 'full' && stats?.adminInfo && !isPresidentOrVP && activeTab === 'notifications') {
+            navigate('/admin/dashboard', { replace: true });
+        }
+    }, [hasAccess, accessLevel, stats, isPresidentOrVP, activeTab, navigate]);
 
     // Auto dismiss alerts
     useEffect(() => {
@@ -308,116 +376,147 @@ const AdminPanel = () => {
     // Fetch functions
     const fetchDashboard = useCallback(async () => {
         try {
-            const data = await ApiService.getAdminDashboard();
+            const data = await ApiService.getAdminDashboard({ ...seasonFilters });
             setStats(data);
         } catch (err) {
             console.error('Failed to load dashboard:', err);
         }
-    }, []);
+    }, [seasonFilters]);
+
+    const exportMembersAndBoardCsv = useCallback(async () => {
+        try {
+            setIsExportingCsv(true);
+            await ApiService.exportMembersAndBoardToCSV({ ...seasonFilters });
+            setAlert({ type: 'success', message: 'Members/board CSV export started.' });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to export members/board.' });
+        } finally {
+            setIsExportingCsv(false);
+        }
+    }, [seasonFilters]);
 
     const fetchCompetitions = useCallback(async () => {
         try {
-            const data = await ApiService.getAdminCompetitions();
-            setCompetitions(data || []);
+            const result = await ApiService.getAdminCompetitions({
+                page: competitionsPage,
+                limit: LIST_LIMIT,
+                ...seasonFilters
+            });
+            setCompetitions(Array.isArray(result?.data) ? result.data : []);
+            setCompetitionsPagination(result?.pagination || null);
         } catch (err) {
             console.error('Failed to load competitions:', err);
+            setCompetitions([]);
+            setCompetitionsPagination(null);
         }
-    }, []);
+    }, [competitionsPage, seasonFilters]);
 
-    const fetchAttendance = useCallback(async () => {
-        try {
-            const data = await ApiService.getAdminAttendance(attendanceFilters);
-            setAttendance(data || []);
-        } catch (err) {
-            console.error('Failed to load attendance:', err);
-        }
-    }, [attendanceFilters]);
-
-    const fetchRegistrations = useCallback(async (overrideSearch) => {
-        try {
-            const filters = {};
-            if (regStatusFilter) filters.status = regStatusFilter;
-            const searchValue = overrideSearch !== undefined ? overrideSearch : regSearch;
-            if (searchValue) filters.search = searchValue;
-            const data = await ApiService.getAdminRegistrations(filters);
-            setRegistrations(data || []);
-        } catch (err) {
-            console.error('Failed to load registrations:', err);
-        }
-    }, [regStatusFilter, regSearch]);
-
-    const fetchNotifications = useCallback(async () => {
+    const fetchNotifications = useCallback(async (opts = {}) => {
+        if (!isPresidentOrVP) return;
+        const { forDropdown = false } = opts;
         try {
             setNotificationsLoading(true);
             setNotificationsError(null);
-            const data = await ApiService.getAdminNotifications(100);
-            setNotifications(Array.isArray(data) ? data : []);
+            const result = await ApiService.getAdminNotifications(
+                forDropdown
+                    ? { limit: 100, page: 1, ...seasonFilters }
+                    : { limit: NOTIFICATIONS_LIMIT, page: notificationsPage, ...seasonFilters }
+            );
+            setNotifications(Array.isArray(result?.data) ? result.data : []);
+            if (!forDropdown) {
+                setNotificationsPagination(result?.pagination || null);
+            }
         } catch (err) {
             console.error('Failed to load notifications:', err);
             setNotificationsError(err.message || 'Failed to load notifications');
             setNotifications([]);
+            if (!forDropdown) setNotificationsPagination(null);
         } finally {
             setNotificationsLoading(false);
             notificationsFetchedRef.current = true;
         }
-    }, []);
+    }, [isPresidentOrVP, notificationsPage, seasonFilters]);
 
     const fetchAnnouncementsAdmin = useCallback(async (showLoading = true) => {
         try {
             if (showLoading) setAnnouncementsLoading(true);
             setAnnouncementsError(null);
-            const data = await ApiService.getAnnouncements(false);
-            setAnnouncements(Array.isArray(data) ? data : []);
+            const result = await ApiService.getAnnouncements({
+                forAdmin: true,
+                page: announcementsPage,
+                limit: LIST_LIMIT,
+                ...seasonFilters
+            });
+            setAnnouncements(Array.isArray(result?.data) ? result.data : []);
+            setAnnouncementsPagination(result?.pagination || null);
         } catch (err) {
             console.error('Failed to load announcements:', err);
             setAnnouncementsError(err.message || 'Failed to load announcements');
             setAnnouncements([]);
+            setAnnouncementsPagination(null);
         } finally {
             setAnnouncementsLoading(false);
         }
-    }, []);
+    }, [announcementsPage, seasonFilters]);
 
-    // Load data when tab changes
+    const fetchSuggestionsAndFeedback = useCallback(async () => {
+        setSuggestionsLoading(true);
+        setSuggestionsError(null);
+        setFeedbackLoading(true);
+        setFeedbackError(null);
+        try {
+            const [sug, fb] = await Promise.all([
+                ApiService.getAdminSuggestions({ page: suggestionsPage, limit: LIST_LIMIT, ...seasonFilters }),
+                ApiService.getAdminFeedback({ page: feedbackPage, limit: LIST_LIMIT, ...seasonFilters })
+            ]);
+            setSuggestions(Array.isArray(sug?.data) ? sug.data : []);
+            setSuggestionsPagination(sug?.pagination || null);
+            setFeedbackList(Array.isArray(fb?.data) ? fb.data : []);
+            setFeedbackPagination(fb?.pagination || null);
+        } catch (err) {
+            console.error('Failed to load suggestions/feedback:', err);
+            setSuggestionsError(err.message || 'Failed to load');
+            setFeedbackError(err.message || 'Failed to load');
+            setSuggestions([]);
+            setFeedbackList([]);
+        } finally {
+            setSuggestionsLoading(false);
+            setFeedbackLoading(false);
+        }
+    }, [suggestionsPage, feedbackPage, seasonFilters]);
+
+    // Reset list page when switching tabs
+    useEffect(() => {
+        setCompetitionsPage(1);
+        setNotificationsPage(1);
+        setAnnouncementsPage(1);
+        setSuggestionsPage(1);
+        setFeedbackPage(1);
+    }, [activeTab]);
+
+    // Load data when tab / page changes
     useEffect(() => {
         if (!hasAccess) return;
-        if (activeTab === 'dashboard') fetchDashboard();
-        if (activeTab === 'competitions') fetchCompetitions();
-        if (activeTab === 'attendance') fetchAttendance();
-        if (activeTab === 'registrations') fetchRegistrations();
-        if (activeTab === 'notifications') fetchNotifications();
-        if (activeTab === 'announcements') fetchAnnouncementsAdmin(announcements.length === 0);
-        if (activeTab === 'suggestions') {
-            (async () => {
-                setSuggestionsLoading(true);
-                setSuggestionsError(null);
-                setFeedbackLoading(true);
-                setFeedbackError(null);
-                try {
-                    const [sug, fb] = await Promise.all([
-                        ApiService.getAdminSuggestions(),
-                        ApiService.getAdminFeedback()
-                    ]);
-                    setSuggestions(sug || []);
-                    setFeedbackList(fb || []);
-                } catch (err) {
-                    console.error('Failed to load suggestions/feedback:', err);
-                    setSuggestionsError(err.message || 'Failed to load');
-                    setFeedbackError(err.message || 'Failed to load');
-                } finally {
-                    setSuggestionsLoading(false);
-                    setFeedbackLoading(false);
-                }
-            })();
+        if (accessLevel === 'full') {
+            if (activeTab === 'dashboard') fetchDashboard();
+            if (activeTab === 'competitions') fetchCompetitions();
+            if (activeTab === 'notifications') fetchNotifications({ forDropdown: false });
+            if (activeTab === 'announcements') fetchAnnouncementsAdmin(true);
+            if (activeTab === 'suggestions') fetchSuggestionsAndFeedback();
+            return;
+        }
+        if (accessLevel === 'programs' && activeTab === 'competitions') {
+            fetchCompetitions();
         }
     }, [
         activeTab,
         hasAccess,
+        accessLevel,
         fetchDashboard,
         fetchCompetitions,
-        fetchAttendance,
-        fetchRegistrations,
         fetchNotifications,
-        fetchAnnouncementsAdmin
+        fetchAnnouncementsAdmin,
+        fetchSuggestionsAndFeedback
     ]);
 
     // Refresh list when returning from full-page competition editor
@@ -426,65 +525,225 @@ const AdminPanel = () => {
         if (location.pathname === '/admin/competitions') {
             fetchCompetitions();
         }
-    }, [location.pathname, hasAccess, fetchCompetitions]);
+        // Only re-run on path/access change — not when page-driven fetchCompetitions identity changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, hasAccess]);
 
-    // Attendance toggle
-    const toggleAttendance = async (id, current) => {
-        try {
-            await ApiService.updateAdminAttendance(id, !current);
-            setAlert({ type: 'success', message: 'Attendance updated!' });
-            fetchAttendance();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to update attendance' });
-        }
-    };
-
-    // Registration status
-    const updateRegStatus = async (id, status) => {
-        try {
-            await ApiService.updateAdminRegistration(id, status);
-            setAlert({ type: 'success', message: `Application ${status}!` });
-            fetchRegistrations();
-        } catch (err) {
-            setAlert({ type: 'error', message: err.message || 'Failed to update status' });
-        }
-    };
-
-    const openAnnouncementModal = (announcement = null) => {
+    const openAnnouncementModal = (announcement = null, kind = 'website') => {
+        setAnnouncementPreviewMode(false);
         if (announcement) {
+            const isEmailOnly = announcement.publish_to_website === false;
+            const titleMax = isEmailOnly ? EMAIL_ANNOUNCEMENT_TITLE_MAX : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
+            const descMax = isEmailOnly ? EMAIL_ANNOUNCEMENT_DESC_MAX : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+            setAnnouncementModalKind(isEmailOnly ? 'email' : 'website');
             setEditingAnnouncement(announcement);
             setAnnouncementForm({
-                title: announcement.title || '',
-                description: announcement.description || '',
+                title: (announcement.title || '').slice(0, titleMax),
+                description: (announcement.description || '').slice(0, descMax),
                 department: announcement.department || '',
                 announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
-                priority: !!announcement.priority
+                priority: !!announcement.priority,
+                send_email: !!announcement.send_email,
+                cta_label: announcement.cta_label || '',
+                cta_url: announcement.cta_url || ''
             });
         } else {
+            const isEmail = kind === 'email';
+            setAnnouncementModalKind(isEmail ? 'email' : 'website');
             setEditingAnnouncement(null);
             setAnnouncementForm({
                 title: '', description: '', department: '',
                 announcement_date: new Date().toISOString().split('T')[0],
-                priority: false
+                priority: false,
+                send_email: false,
+                cta_label: '',
+                cta_url: ''
             });
         }
         setShowAnnouncementModal(true);
     };
 
+    const handleInsertAnnouncementMarkdown = (snippet) => {
+        setAnnouncementForm(prev => ({
+            ...prev,
+            description: (prev.description ? `${prev.description}\n` : '') + snippet
+        }));
+    };
+
+    const handleInsertReviewMarkdown = (snippet) => {
+        setReviewForm(prev => ({
+            ...prev,
+            description: (prev.description ? `${prev.description}\n` : '') + snippet
+        }));
+    };
+
+    const announcementTitleMax = announcementModalKind === 'email'
+        ? EMAIL_ANNOUNCEMENT_TITLE_MAX
+        : WEBSITE_ANNOUNCEMENT_TITLE_MAX;
+    const announcementDescMax = announcementModalKind === 'email'
+        ? EMAIL_ANNOUNCEMENT_DESC_MAX
+        : WEBSITE_ANNOUNCEMENT_DESC_MAX;
+    const showCtaFields = announcementModalKind === 'email' || !!announcementForm.send_email;
+
     const saveAnnouncement = async () => {
         try {
+            const isEmailBroadcast = announcementModalKind === 'email';
+            const payload = {
+                title: announcementForm.title,
+                description: announcementForm.description,
+                department: announcementForm.department,
+                announcement_date: announcementForm.announcement_date,
+                priority: announcementForm.priority,
+                publish_to_website: !isEmailBroadcast,
+                send_email: isEmailBroadcast ? true : !!announcementForm.send_email,
+                cta_label: showCtaFields ? announcementForm.cta_label : '',
+                cta_url: showCtaFields ? announcementForm.cta_url : ''
+            };
+            if (!editingAnnouncement && typeof selectedSeasonId === 'number') {
+                payload.season_id = selectedSeasonId;
+            }
             if (editingAnnouncement) {
-                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, announcementForm);
+                const { send_email, publish_to_website, ...updatePayload } = payload;
+                await ApiService.updateAnnouncement(editingAnnouncement.announcement_id, updatePayload);
+                setShowAnnouncementModal(false);
                 setAlert({ type: 'success', message: 'Announcement updated!' });
             } else {
-                await ApiService.createAnnouncement(announcementForm);
-                setAlert({ type: 'success', message: 'Announcement created!' });
+                const result = await ApiService.createAnnouncement(payload);
+                setShowAnnouncementModal(false);
+                fetchAnnouncementsAdmin(false);
+                if (result?.emailJob?.id) {
+                    setEmailSendJob({
+                        id: result.emailJob.id,
+                        title: result.data?.title || payload.title
+                    });
+                    setAlert({
+                        type: 'success',
+                        message: isEmailBroadcast
+                            ? 'Broadcast created — sending emails in the background.'
+                            : 'Posted — sending emails in the background.'
+                    });
+                } else if (result?.data?.approval_status === 'pending') {
+                    setAlert({
+                        type: 'info',
+                        message: 'Announcement submitted! Queued for President / Vice-President approval before email broadcast.'
+                    });
+                } else {
+                    setAlert({ type: 'success', message: 'Website announcement posted!' });
+                }
+                return;
             }
-            setShowAnnouncementModal(false);
             fetchAnnouncementsAdmin(false);
         } catch (err) {
             setAlert({ type: 'error', message: err.message || 'Failed to save announcement' });
         }
+    };
+
+    const openReviewModal = (announcement) => {
+        if (!announcement) return;
+        setReviewPreviewMode(false);
+        setReviewAnnouncement(announcement);
+        setReviewForm({
+            title: announcement.title || '',
+            description: announcement.description || '',
+            department: announcement.department || '',
+            announcement_date: announcement.announcement_date ? announcement.announcement_date.split('T')[0] : '',
+            priority: !!announcement.priority,
+            cta_label: announcement.cta_label || '',
+            cta_url: announcement.cta_url || '',
+            rejection_reason: announcement.rejection_reason || ''
+        });
+        setShowReviewModal(true);
+    };
+
+    const handleApproveAnnouncement = async () => {
+        if (!reviewAnnouncement) return;
+        try {
+            const editPayload = {
+                title: reviewForm.title,
+                description: reviewForm.description,
+                department: reviewForm.department,
+                announcement_date: reviewForm.announcement_date,
+                priority: reviewForm.priority,
+                cta_label: reviewForm.cta_label,
+                cta_url: reviewForm.cta_url
+            };
+            const result = await ApiService.approveAnnouncement(reviewAnnouncement.announcement_id, editPayload);
+            setShowReviewModal(false);
+            setReviewAnnouncement(null);
+            fetchAnnouncementsAdmin(false);
+
+            if (result?.emailJob?.id) {
+                setEmailSendJob({
+                    id: result.emailJob.id,
+                    title: result.data?.title || editPayload.title
+                });
+            }
+            setAlert({
+                type: 'success',
+                message: 'Announcement approved and email broadcast started!'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to approve announcement' });
+        }
+    };
+
+    const handleRejectAnnouncement = async () => {
+        if (!reviewAnnouncement) return;
+        try {
+            await ApiService.rejectAnnouncement(
+                reviewAnnouncement.announcement_id,
+                reviewForm.rejection_reason || ''
+            );
+            setShowReviewModal(false);
+            setReviewAnnouncement(null);
+            fetchAnnouncementsAdmin(false);
+            setAlert({
+                type: 'info',
+                message: 'Announcement email broadcast refused.'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to refuse announcement' });
+        }
+    };
+
+    const handleResendAnnouncement = async (announcement) => {
+        if (!window.confirm(`Resend emails for "${announcement.title}" to all members?`)) return;
+        try {
+            const result = await ApiService.resendAnnouncementEmails(announcement.announcement_id);
+            if (result?.emailJob?.id) {
+                setEmailSendJob({
+                    id: result.emailJob.id,
+                    title: result.data?.title || announcement.title
+                });
+            }
+            setAlert({
+                type: 'success',
+                message: 'Announcement email broadcast started!'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to resend announcement emails' });
+        }
+    };
+
+    const announcementApprovalBadge = (a) => {
+        const status = a.approval_status || 'approved';
+        if (status === 'pending') {
+            return { label: 'Pending approval', className: 'warning' };
+        }
+        if (status === 'rejected') {
+            return { label: 'Refused', className: 'completed' };
+        }
+        return { label: 'Approved', className: 'active' };
+    };
+
+    const announcementChannelBadge = (a) => {
+        if (a.publish_to_website === false) {
+            return { label: 'Email only', active: true };
+        }
+        if (a.send_email) {
+            return { label: 'Website + email', active: true };
+        }
+        return { label: 'Website', active: false };
     };
 
     const deleteAnnouncement = async (id) => {
@@ -521,11 +780,8 @@ const AdminPanel = () => {
     };
 
     const handleTabChange = (key) => {
-        const item = navItems.find(n => n.key === key);
-        if (item?.onClick) {
-            item.onClick();
-            return;
-        }
+        if (accessLevel === 'registrations' && key !== 'registrations') return;
+        if (accessLevel === 'programs' && !PROGRAMS_TAB_KEYS.includes(key)) return;
         setActiveTab(key);
         setMobileMenuOpen(false);
 
@@ -540,17 +796,22 @@ const AdminPanel = () => {
 
     // Get current page title
     const getPageTitle = () => {
+        if (activeTab === 'emails') {
+            const sub = location.pathname.split('/')[3];
+            if (sub === 'whatsapp') return 'WhatsApp links';
+            if (sub) {
+                return sub
+                    .split('_')
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(' ');
+            }
+            return 'Email management';
+        }
         const item = navItems.find(n => n.key === activeTab);
         return item ? item.label : 'Dashboard';
     };
 
-    const handleSearchSubmit = () => {
-        if (activeTab === 'registrations') {
-            setRegSearch(searchQuery);
-            fetchRegistrations(searchQuery);
-        }
-        // Competitions and attendance filter client-side by searchQuery (state already drives the filter)
-    };
+    const handleRegAlert = useCallback((a) => setAlert(a), []);
 
     const adminName = stats?.adminInfo?.full_name || adminProfile?.full_name || 'Admin';
     const adminTitle = stats?.adminInfo?.title || 'Admin Panel';
@@ -563,6 +824,9 @@ const AdminPanel = () => {
         roleInitials = 'VP';
     } else if (position === 'Head') {
         roleInitials = 'H';
+    } else if (adminProfile?.full_name) {
+        const parts = adminProfile.full_name.trim().split(/\s+/);
+        roleInitials = ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'AD';
     }
 
     const avatarInitials = roleInitials;
@@ -587,7 +851,7 @@ const AdminPanel = () => {
                 <div className="AdminPanel__accessDenied">
                     <div style={{ fontSize: '3rem' }}>🔒</div>
                     <h2>Access Denied</h2>
-                    <p>Only the President, Vice President, and Head of Software Development can access the admin panel.</p>
+                    <p>Only authorized board members can access the admin panel. Registration managers need board role or HR department access.</p>
                     <button className="AdminPanel__accessDeniedBtn" onClick={() => navigate('/')}>
                         Go to Home
                     </button>
@@ -596,137 +860,116 @@ const AdminPanel = () => {
         );
     }
 
-    return (
-        <div className="AdminPanel">
-            <SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" />
-            <ParticleBackground />
+    const topRight = (
+        <>
+            {accessLevel === 'full' && isPresidentOrVP && (
+                <button
+                    className="AdminPanel__topBtn"
+                    aria-label="Notifications"
+                    onClick={() => {
+                        const open = !showNotificationsDropdown;
+                        setShowNotificationsDropdown(open);
+                        if (open && !notificationsFetchedRef.current) {
+                            fetchNotifications({ forDropdown: true });
+                        }
+                    }}
+                >
+                    <MdNotifications />
+                </button>
+            )}
+            <div className="AdminPanel__userAvatar">
+                {adminProfile?.profile_picture_url ? (
+                    <img
+                        src={adminProfile.profile_picture_url}
+                        alt={adminName}
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '8px',
+                            objectFit: 'cover'
+                        }}
+                    />
+                ) : (
+                    avatarInitials
+                )}
+            </div>
 
-            {/* Mobile overlay */}
-            <div
-                className={`AdminPanel__mobileOverlay ${mobileMenuOpen ? 'visible' : ''}`}
-                onClick={() => setMobileMenuOpen(false)}
-            />
-
-            {/* ── Sidebar ── */}
-            <aside className={`AdminPanel__sidebar ${mobileMenuOpen ? 'open' : ''}`}>
-                <img
-                    src={mspLogo}
-                    alt="MSP Logo"
-                    className="AdminPanel__sidebarLogo"
-                    onClick={() => navigate('/')}
-                />
-
-                <nav className="AdminPanel__sidebarNav">
-                    {navItems.map(item => (
-                        <button
-                            key={item.key}
-                            className={`AdminPanel__navItem ${activeTab === item.key ? 'active' : ''}`}
-                            onClick={() => handleTabChange(item.key)}
-                            aria-label={item.label}
-                        >
-                            {item.icon}
-                            <span className="AdminPanel__navTooltip">{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
-
-
-            </aside>
-
-            {/* ── Main Content ── */}
-            <main className="AdminPanel__main">
-                {/* Top Bar */}
-                <header className="AdminPanel__topBar">
-                    <div className="AdminPanel__topLeft">
-                        <h1 className="AdminPanel__pageTitle">
-                            <span className="AdminPanel__pageTitleIcon">
-                                {navItems.find(n => n.key === activeTab)?.icon}
-                            </span>
-                            {getPageTitle()}
-                        </h1>
+            {showNotificationsDropdown && accessLevel === 'full' && isPresidentOrVP && (
+                <div className="AdminPanel__notificationsDropdown">
+                    <div className="AdminPanel__notificationsHeader">
+                        <span>Recent activity</span>
                     </div>
-
-                    <div className="AdminPanel__topRight">
-                        <button
-                            className="AdminPanel__topBtn"
-                            aria-label="Notifications"
-                            onClick={() => {
-                                const open = !showNotificationsDropdown;
-                                setShowNotificationsDropdown(open);
-                                if (open && !notificationsFetchedRef.current) {
-                                    fetchNotifications();
-                                }
-                            }}
-                        >
-                            <MdNotifications />
-                        </button>
-                        <div className="AdminPanel__userAvatar">
-                            {adminProfile?.profile_picture_url ? (
-                                <img
-                                    src={adminProfile.profile_picture_url}
-                                    alt={adminName}
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        borderRadius: '8px',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ) : (
-                                avatarInitials
-                            )}
+                    {notificationsLoading ? (
+                        <div className="AdminPanel__notificationsEmpty">Loading...</div>
+                    ) : notificationsError ? (
+                        <div className="AdminPanel__notificationsEmpty">
+                            {notificationsError}
                         </div>
+                    ) : notifications.length === 0 ? (
+                        <div className="AdminPanel__notificationsEmpty">
+                            No notifications. When another admin takes an action (e.g. competition or registration), it will appear here.
+                        </div>
+                    ) : (
+                        <ul className="AdminPanel__notificationsList">
+                            {notifications.slice(0, 4).map((n) => (
+                                <li key={n.notification_id} className="AdminPanel__notificationItem">
+                                    <p className="AdminPanel__notificationMessage">{n.message}</p>
+                                    <span className="AdminPanel__notificationMeta">
+                                        {n.performer_position} •{' '}
+                                        {new Date(n.created_at).toLocaleString()}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    <button
+                        className="AdminPanel__notificationsViewAll"
+                        onClick={() => {
+                            setShowNotificationsDropdown(false);
+                            handleTabChange('notifications');
+                        }}
+                    >
+                        View all notifications
+                    </button>
+                </div>
+            )}
+        </>
+    );
 
-                        {showNotificationsDropdown && (
-                            <div className="AdminPanel__notificationsDropdown">
-                                <div className="AdminPanel__notificationsHeader">
-                                    <span>Recent activity</span>
+    return (
+        <AdminShell
+            seo={<SEO title="Admin Panel — MSP MIU" description="MSP MIU Admin Panel" noindex />}
+            navItems={navItems}
+            bottomItems={bottomItems}
+            activeKey={activeTab}
+            onNavClick={handleTabChange}
+            pageTitle={getPageTitle()}
+            pageIcon={navItems.find(n => n.key === activeTab)?.icon}
+            topRight={topRight}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
+        >
+                    {/* Greeting — dashboard only */}
+                    {activeTab === 'dashboard' && accessLevel === 'full' && (
+                        <div className="AdminPanel__greeting">
+                            <div className="AdminPanel__greetingTop">
+                                <div>
+                                    <p className="AdminPanel__greetingSub">{getGreeting()},</p>
+                                    <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
+                                    <p className="AdminPanel__greetingSub">{adminName}</p>
                                 </div>
-                                {notificationsLoading ? (
-                                    <div className="AdminPanel__notificationsEmpty">Loading...</div>
-                                ) : notificationsError ? (
-                                    <div className="AdminPanel__notificationsEmpty">
-                                        {notificationsError}
-                                    </div>
-                                ) : notifications.length === 0 ? (
-                                    <div className="AdminPanel__notificationsEmpty">
-                                        No notifications. When another admin takes an action (e.g. competition or registration), it will appear here.
-                                    </div>
-                                ) : (
-                                    <ul className="AdminPanel__notificationsList">
-                                        {notifications.slice(0, 4).map((n) => (
-                                            <li key={n.notification_id} className="AdminPanel__notificationItem">
-                                                <p className="AdminPanel__notificationMessage">{n.message}</p>
-                                                <span className="AdminPanel__notificationMeta">
-                                                    {n.performer_position} •{' '}
-                                                    {new Date(n.created_at).toLocaleString()}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
                                 <button
-                                    className="AdminPanel__notificationsViewAll"
-                                    onClick={() => {
-                                        setShowNotificationsDropdown(false);
-                                        setActiveTab('notifications');
-                                    }}
+                                    type="button"
+                                    className="AdminPanel__exportCsvBtn"
+                                    onClick={exportMembersAndBoardCsv}
+                                    disabled={isExportingCsv}
                                 >
-                                    View all notifications
+                                    <FiDownload />
+                                    {isExportingCsv ? 'Exporting…' : 'Export Members/Board to CSV'}
                                 </button>
                             </div>
-                        )}
-                    </div>
-                </header>
-
-                {/* Scrollable Content */}
-                <div className="AdminPanel__content">
-                    {/* Greeting */}
-                    <div className="AdminPanel__greeting">
-                        <p className="AdminPanel__greetingSub">{getGreeting()},</p>
-                        <h2 className="AdminPanel__greetingName">{adminTitle}</h2>
-                        <p className="AdminPanel__greetingSub">{adminName}</p>
-                    </div>
+                        </div>
+                    )}
 
                     {/* Alert */}
                     <AnimatePresence>
@@ -742,8 +985,34 @@ const AdminPanel = () => {
                         )}
                     </AnimatePresence>
 
+                    {emailSendJob && (
+                        <EmailSendProgress
+                            jobId={emailSendJob.id}
+                            title={emailSendJob.title}
+                            onDone={(job) => {
+                                if (job.status === 'completed' && !(job.failed > 0)) {
+                                    setAlert({
+                                        type: 'success',
+                                        message: `Emails sent (${job.sent}/${job.total}).`
+                                    });
+                                } else if (job.status === 'completed') {
+                                    setAlert({
+                                        type: 'error',
+                                        message: `Finished with issues: ${job.sent} sent, ${job.failed} failed.`
+                                    });
+                                } else {
+                                    setAlert({
+                                        type: 'error',
+                                        message: job.error || 'Email broadcast failed.'
+                                    });
+                                }
+                            }}
+                            onClear={() => setEmailSendJob(null)}
+                        />
+                    )}
+
                     {/* === DASHBOARD === */}
-                    {activeTab === 'dashboard' && stats && (
+                    {accessLevel === 'full' && activeTab === 'dashboard' && stats && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__stats">
                                 {[
@@ -815,8 +1084,29 @@ const AdminPanel = () => {
                         </motion.div>
                     )}
 
+                    {/* === SERVER LOGS (full admin only) === */}
+                    {accessLevel === 'full' && activeTab === 'logs' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <LogsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {/* === EVENTS === */}
+                    {canUseProgramsTabs && activeTab === 'events' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EventsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {/* === COURSES === */}
+                    {canUseProgramsTabs && activeTab === 'courses' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <CoursesAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
                     {/* === COMPETITIONS === */}
-                    {activeTab === 'competitions' && (
+                    {canUseProgramsTabs && activeTab === 'competitions' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
@@ -832,22 +1122,15 @@ const AdminPanel = () => {
                                 </div>
 
                                 {(() => {
-                                    const filtered = competitions.filter(comp => {
-                                        if (!searchQuery || activeTab !== 'competitions') return true;
-                                        const q = searchQuery.toLowerCase();
-                                        return (
-                                            comp.title?.toLowerCase().includes(q) ||
-                                            comp.status?.toLowerCase().includes(q)
-                                        );
-                                    });
-                                    if (filtered.length === 0) {
+                                    if (competitions.length === 0) {
                                         return (
                                             <div className="AdminPanel__empty">
-                                                <p>{searchQuery && activeTab === 'competitions' ? `No competitions match "${searchQuery}".` : 'No competitions yet.'}</p>
+                                                <p>No competitions yet.</p>
                                             </div>
                                         );
                                     }
                                     return (
+                                        <div className="AdminPanel__tableWrap">
                                         <table className="AdminPanel__table" key="comp-table">
                                             <thead>
                                                 <tr>
@@ -862,9 +1145,14 @@ const AdminPanel = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {filtered.map(comp => (
+                                                {competitions.map(comp => (
                                                     <tr key={comp.competition_id}>
-                                                        <td style={{ fontWeight: 600 }}>{comp.title}</td>
+                                                        <td style={{ fontWeight: 600 }}>
+                                                            {comp.title}
+                                                            {isAll && (comp.season || comp.season_id) && (
+                                                                <> {' '}<SeasonBadge season={comp.season} /></>
+                                                            )}
+                                                        </td>
                                                         <td>{formatCompetitionType(comp.type)}</td>
                                                         <td>
                                                             <span className={`AdminPanel__badge AdminPanel__badge--${comp.status || 'draft'}`}>
@@ -896,72 +1184,13 @@ const AdminPanel = () => {
                                                 ))}
                                             </tbody>
                                         </table>
+                                        </div>
                                     );
                                 })()}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* === ATTENDANCE === */}
-                    {activeTab === 'attendance' && (
-                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                            <div className="AdminPanel__section">
-                                <div className="AdminPanel__sectionHeader">
-                                    <h2 className="AdminPanel__sectionTitle">
-                                        <MdFactCheck /> Attendance Review
-                                    </h2>
-                                </div>
-
-                                <div className="AdminPanel__filters">
-                                    <select
-                                        className="AdminPanel__filterSelect"
-                                        value={attendanceFilters.attended}
-                                        onChange={e => setAttendanceFilters({ ...attendanceFilters, attended: e.target.value })}
-                                    >
-                                        <option value="">All Status</option>
-                                        <option value="true">Attended</option>
-                                        <option value="false">Not Attended</option>
-                                    </select>
-                                    <button
-                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                        onClick={fetchAttendance}
-                                    >
-                                        Apply Filter
-                                    </button>
-                                </div>
-
-                                {attendance.length === 0 ? (
-                                    <div className="AdminPanel__empty"><p>No attendance requests found.</p></div>
-                                ) : (
-                                    <table className="AdminPanel__table">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>University ID</th>
-                                                <th>Event</th>
-                                                <th>Date</th>
-                                                <th>Attended</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {attendance.map(req => (
-                                                <tr key={req.attendance_id}>
-                                                    <td style={{ fontWeight: 600 }}>{req.full_name}</td>
-                                                    <td>{req.university_id}</td>
-                                                    <td>{req.event_name || req.event_id}</td>
-                                                    <td>{formatDate(req.created_at)}</td>
-                                                    <td>
-                                                        <button
-                                                            className={`AdminPanel__toggle ${req.attended ? 'active' : ''}`}
-                                                            onClick={() => toggleAttendance(req.attendance_id, req.attended)}
-                                                            title={req.attended ? 'Attended' : 'Not attended'}
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                <Pagination
+                                    pagination={competitionsPagination}
+                                    onPageChange={(p) => { setCompetitionsPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
@@ -972,91 +1201,88 @@ const AdminPanel = () => {
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
                                     <h2 className="AdminPanel__sectionTitle">
-                                        <MdAppRegistration /> Registration Management
+                                        <MdAppRegistration /> Applications Dashboard
                                     </h2>
                                 </div>
-
-                                <div className="AdminPanel__filters">
-                                    <input
-                                        className="AdminPanel__filterInput"
-                                        placeholder="Search by name, email, or ID..."
-                                        value={regSearch}
-                                        onChange={e => setRegSearch(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && fetchRegistrations()}
-                                    />
-                                    <select
-                                        className="AdminPanel__filterSelect"
-                                        value={regStatusFilter}
-                                        onChange={e => setRegStatusFilter(e.target.value)}
-                                    >
-                                        <option value="">All Status</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
-                                    </select>
-                                    <button
-                                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                                        onClick={() => fetchRegistrations()}
-                                    >
-                                        Search
-                                    </button>
-                                </div>
-
-                                {registrations.length === 0 ? (
-                                    <div className="AdminPanel__empty"><p>No registrations found.</p></div>
-                                ) : (
-                                    <table className="AdminPanel__table">
-                                        <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Email</th>
-                                                <th>University ID</th>
-                                                <th>Status</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {registrations.map(reg => (
-                                                <tr key={reg.application_id}>
-                                                    <td style={{ fontWeight: 600 }}>{reg.full_name}</td>
-                                                    <td>{reg.email}</td>
-                                                    <td>{reg.university_id}</td>
-                                                    <td>
-                                                        <span className={`AdminPanel__badge AdminPanel__badge--${reg.status?.split('_')[0] || 'pending'}`}>
-                                                            {reg.status || 'pending'}
-                                                        </span>
-                                                    </td>
-                                                    <td>{formatDate(reg.created_at)}</td>
-                                                    <td>
-                                                        {reg.status !== 'approved' && (
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
-                                                                onClick={() => updateRegStatus(reg.application_id, 'approved')}
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                        )}
-                                                        {reg.status !== 'rejected' && (
-                                                            <button
-                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--reject"
-                                                                onClick={() => updateRegStatus(reg.application_id, 'rejected')}
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
+                                <RegistrationsTab onAlert={handleRegAlert} />
                             </div>
                         </motion.div>
                     )}
 
+                    {accessLevel === 'full' && activeTab === 'sponsors' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SponsorsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'board' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <BoardAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'departments' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <DepartmentsAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'seasons' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SeasonsAdminTab />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'media' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <MediaAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'content' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <SiteContentAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'android' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <AndroidAppAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'emails' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EmailManagementAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && (activeTab === 'email-tracker' || activeTab === 'email_tracker') && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <EmailTrackerAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
+                    {canUseProgramsTabs && (activeTab === 'course-emails' || activeTab === 'course_emails') && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <CourseEmailsAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'members' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <MembersAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
+                    {accessLevel === 'full' && activeTab === 'blacklist' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <BlacklistAdminTab onAlert={setAlert} />
+                        </motion.div>
+                    )}
+
                     {/* === NOTIFICATIONS (FULL LIST) === */}
-                    {activeTab === 'notifications' && (
+                    {accessLevel === 'full' && isPresidentOrVP && activeTab === 'notifications' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
@@ -1095,21 +1321,38 @@ const AdminPanel = () => {
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={notificationsPagination}
+                                    onPageChange={(p) => { setNotificationsPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
 
                     {/* === ANNOUNCEMENTS OVERVIEW === */}
-                    {activeTab === 'announcements' && (
+                    {accessLevel === 'full' && activeTab === 'announcements' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <div className="AdminPanel__sectionHeader">
                                     <h2 className="AdminPanel__sectionTitle">
                                         <MdCampaign /> Announcements
                                     </h2>
-                                    <button className="AdminPanel__addBtn" onClick={() => openAnnouncementModal()}>
-                                        <MdAdd /> Add Announcement
-                                    </button>
+                                    <div className="AdminPanel__headerActions">
+                                        <button
+                                            type="button"
+                                            className="AdminPanel__addBtn AdminPanel__addBtn--secondary"
+                                            onClick={() => openAnnouncementModal(null, 'website')}
+                                        >
+                                            <MdAdd /> Website post
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="AdminPanel__addBtn"
+                                            onClick={() => openAnnouncementModal(null, 'email')}
+                                        >
+                                            <MdEmail /> Email broadcast
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {announcementsLoading && announcements.length === 0 ? (
@@ -1126,13 +1369,23 @@ const AdminPanel = () => {
                                                 <th>Department</th>
                                                 <th>Date</th>
                                                 <th>Priority</th>
+                                                <th>Channel</th>
+                                                <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {announcements.map((a) => (
+                                            {announcements.map((a) => {
+                                                const channel = announcementChannelBadge(a);
+                                                const approval = announcementApprovalBadge(a);
+                                                return (
                                                 <tr key={a.announcement_id}>
-                                                    <td style={{ fontWeight: 600 }}>{a.title}</td>
+                                                    <td style={{ fontWeight: 600 }}>
+                                                        {a.title}
+                                                        {isAll && (a.season || a.season_id) && (
+                                                            <> {' '}<SeasonBadge season={a.season} /></>
+                                                        )}
+                                                    </td>
                                                     <td>{a.department}</td>
                                                     <td>{formatDate(a.announcement_date)}</td>
                                                     <td>
@@ -1141,54 +1394,344 @@ const AdminPanel = () => {
                                                         </span>
                                                     </td>
                                                     <td>
+                                                        <span className={`AdminPanel__badge AdminPanel__badge--${channel.active ? 'active' : 'completed'}`}>
+                                                            {channel.label}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`AdminPanel__badge AdminPanel__badge--${approval.className}`}>
+                                                            {approval.label}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        {isPresidentOrVP && a.approval_status === 'pending' && (
+                                                            <button
+                                                                className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                                                                style={{ backgroundColor: '#2e7d32', color: '#fff' }}
+                                                                onClick={() => openReviewModal(a)}
+                                                            >
+                                                                Review & Send
+                                                            </button>
+                                                        )}
+                                                        {isPresidentOrVP && a.approval_status === 'approved' && (a.send_email || !a.publish_to_website) && (
+                                                            <button
+                                                                className="AdminPanel__actionBtn"
+                                                                style={{ backgroundColor: 'rgba(3, 169, 244, 0.15)', color: '#03a9f4', border: '1px solid rgba(3, 169, 244, 0.3)' }}
+                                                                onClick={() => handleResendAnnouncement(a)}
+                                                                title="Resend email broadcast to members"
+                                                            >
+                                                                Resend Email
+                                                            </button>
+                                                        )}
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--edit" onClick={() => openAnnouncementModal(a)}>Edit</button>
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--delete" onClick={() => deleteAnnouncement(a.announcement_id)}>Delete</button>
                                                     </td>
                                                 </tr>
-                                            ))}
+                                                );
+                                            })}
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={announcementsPagination}
+                                    onPageChange={(p) => { setAnnouncementsPage(p); }}
+                                />
                             </div>
 
-                            {showAnnouncementModal && (
-                                <div className="AdminPanel__modal" onClick={() => setShowAnnouncementModal(false)}>
-                                    <div className="AdminPanel__modalContent" onClick={e => e.stopPropagation()}>
-                                        <h3 className="AdminPanel__modalTitle">{editingAnnouncement ? 'Edit Announcement' : 'Add Announcement'}</h3>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Title *</label>
-                                            <input value={announcementForm.title} onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })} placeholder="Title" />
+                            {showAnnouncementModal
+                                ? createPortal(
+                                    <div
+                                        className="AdminPanel__modal"
+                                        onClick={() => setShowAnnouncementModal(false)}
+                                        role="presentation"
+                                    >
+                                        <div
+                                            className={`AdminPanel__modalContent${announcementModalKind === 'email' ? ' AdminPanel__modalContent--large' : ''}`}
+                                            onClick={e => e.stopPropagation()}
+                                            role="dialog"
+                                            aria-modal="true"
+                                        >
+                                            <h3 className="AdminPanel__modalTitle">
+                                                {editingAnnouncement
+                                                    ? (announcementModalKind === 'email' ? 'Edit email broadcast' : 'Edit website announcement')
+                                                    : (announcementModalKind === 'email' ? 'Email broadcast' : 'Website announcement')}
+                                            </h3>
+                                            <p className="AdminPanel__emailNote" role="note">
+                                                {announcementModalKind === 'email'
+                                                    ? (editingAnnouncement
+                                                        ? 'Editing a mail-only broadcast. Saving does not resend the email.'
+                                                        : 'Mail only — sent to all members. Will not appear on the website feed. CTA button is required.')
+                                                    : (editingAnnouncement
+                                                        ? 'Editing a website feed post.'
+                                                        : 'Short copy for the website feed. Optionally email members (off by default).')}
+                                            </p>
+                                            {!isPresidentOrVP && (announcementModalKind === 'email' || announcementForm.send_email) && (
+                                                <div style={{ background: '#fff3cd', color: '#856404', padding: '8px 12px', borderRadius: 6, marginBottom: 16, fontSize: '0.875rem' }}>
+                                                    <strong>Notice:</strong> Email broadcasts require President or Vice-President review before being dispatched.
+                                                </div>
+                                            )}
+                                            <div className="AdminPanel__formGroup">
+                                                <label htmlFor="announcement-title">Title *</label>
+                                                <input
+                                                    id="announcement-title"
+                                                    value={announcementForm.title}
+                                                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value.slice(0, announcementTitleMax) })}
+                                                    placeholder={announcementModalKind === 'email' ? 'Email subject / title' : 'Short title'}
+                                                    maxLength={announcementTitleMax}
+                                                />
+                                                <span className={`AdminPanel__charCount${announcementForm.title.length >= announcementTitleMax ? ' is-max' : ''}`}>
+                                                    {announcementForm.title.length}/{announcementTitleMax}
+                                                </span>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                    <label htmlFor="announcement-description" style={{ margin: 0 }}>
+                                                        {announcementModalKind === 'email' ? 'Email body *' : 'Description *'}
+                                                    </label>
+                                                    <span className={`AdminPanel__charCount${announcementForm.description.length >= announcementDescMax ? ' is-max' : ''}`} style={{ margin: 0 }}>
+                                                        {announcementForm.description.length}/{announcementDescMax}
+                                                    </span>
+                                                </div>
+
+                                                <EmailComposerToolbar
+                                                    onInsert={handleInsertAnnouncementMarkdown}
+                                                    isPreview={announcementPreviewMode}
+                                                    onTogglePreview={() => setAnnouncementPreviewMode(p => !p)}
+                                                />
+
+                                                {announcementPreviewMode ? (
+                                                    <div className="FormattedText__livePreviewBox">
+                                                        {announcementForm.description.trim() ? (
+                                                            <FormattedText text={announcementForm.description} />
+                                                        ) : (
+                                                            <div className="FormattedText__livePreviewEmpty">
+                                                                Type your message or use the toolbar to insert formatted event details.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        id="announcement-description"
+                                                        value={announcementForm.description}
+                                                        onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value.slice(0, announcementDescMax) })}
+                                                        placeholder={announcementModalKind === 'email' ? 'Full email message…' : 'Brief description for the feed'}
+                                                        rows={announcementModalKind === 'email' ? 10 : 4}
+                                                        maxLength={announcementDescMax}
+                                                        style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Department *</label>
+                                                <input value={announcementForm.department} onChange={e => setAnnouncementForm({ ...announcementForm, department: e.target.value })} placeholder="e.g. Technical" />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Date *</label>
+                                                <input type="date" value={announcementForm.announcement_date} onChange={e => setAnnouncementForm({ ...announcementForm, announcement_date: e.target.value })} />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>
+                                                    <input type="checkbox" checked={announcementForm.priority} onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.checked })} />
+                                                    {' '}Priority
+                                                </label>
+                                            </div>
+                                            {announcementModalKind === 'website' && !editingAnnouncement && (
+                                                <div className="AdminPanel__formGroup">
+                                                    <label htmlFor="announcement-send-email">
+                                                        <input
+                                                            id="announcement-send-email"
+                                                            type="checkbox"
+                                                            checked={announcementForm.send_email}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, send_email: e.target.checked })}
+                                                        />
+                                                        {' '}Send email to members
+                                                    </label>
+                                                </div>
+                                            )}
+                                            {showCtaFields && (
+                                                <>
+                                                    <div className="AdminPanel__formGroup">
+                                                        <label htmlFor="announcement-cta-label">
+                                                            CTA button {announcementModalKind === 'email' ? '*' : '(optional)'}
+                                                        </label>
+                                                        <input
+                                                            id="announcement-cta-label"
+                                                            value={announcementForm.cta_label}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, cta_label: e.target.value.slice(0, 80) })}
+                                                            placeholder="Button label, e.g. Register now"
+                                                            maxLength={80}
+                                                            required={announcementModalKind === 'email'}
+                                                        />
+                                                    </div>
+                                                    <div className="AdminPanel__formGroup">
+                                                        <label htmlFor="announcement-cta-url">
+                                                            CTA button URL {announcementModalKind === 'email' ? '*' : '(optional)'}
+                                                        </label>
+                                                        <input
+                                                            id="announcement-cta-url"
+                                                            type="url"
+                                                            value={announcementForm.cta_url}
+                                                            onChange={e => setAnnouncementForm({ ...announcementForm, cta_url: e.target.value.slice(0, 512) })}
+                                                            placeholder="https://…"
+                                                            maxLength={512}
+                                                            required={announcementModalKind === 'email'}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+                                            <div className="AdminPanel__modalActions">
+                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
+                                                <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>
+                                                    {editingAnnouncement
+                                                        ? 'Save'
+                                                        : (announcementModalKind === 'email' ? 'Send email' : 'Post to website')}
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Description *</label>
-                                            <textarea value={announcementForm.description} onChange={e => setAnnouncementForm({ ...announcementForm, description: e.target.value })} placeholder="Description" rows={4} />
+                                    </div>,
+                                    document.body
+                                )
+                                : null}
+
+                            {/* === REVIEW / APPROVE MODAL (President / Vice President) === */}
+                            {showReviewModal && reviewAnnouncement
+                                ? createPortal(
+                                    <div
+                                        className="AdminPanel__modal"
+                                        onClick={() => setShowReviewModal(false)}
+                                        role="presentation"
+                                    >
+                                        <div
+                                            className="AdminPanel__modalContent AdminPanel__modalContent--large"
+                                            onClick={e => e.stopPropagation()}
+                                            role="dialog"
+                                            aria-modal="true"
+                                        >
+                                            <h3 className="AdminPanel__modalTitle">
+                                                Review Announcement Email Broadcast
+                                            </h3>
+                                            <p className="AdminPanel__emailNote" role="note">
+                                                Review, edit, and approve or refuse this announcement email broadcast before sending to members.
+                                            </p>
+                                            <div className="AdminPanel__formGroup">
+                                                <label htmlFor="review-title">Title / Subject *</label>
+                                                <input
+                                                    id="review-title"
+                                                    value={reviewForm.title}
+                                                    onChange={e => setReviewForm({ ...reviewForm, title: e.target.value })}
+                                                    placeholder="Announcement title"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label htmlFor="review-description">Message Body *</label>
+                                                <EmailComposerToolbar
+                                                    onInsert={handleInsertReviewMarkdown}
+                                                    isPreview={reviewPreviewMode}
+                                                    onTogglePreview={() => setReviewPreviewMode(p => !p)}
+                                                />
+                                                {reviewPreviewMode ? (
+                                                    <div className="FormattedText__livePreviewBox">
+                                                        {reviewForm.description.trim() ? (
+                                                            <FormattedText text={reviewForm.description} />
+                                                        ) : (
+                                                            <div className="FormattedText__livePreviewEmpty">
+                                                                Type your message or use the toolbar to insert formatted event details.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <textarea
+                                                        id="review-description"
+                                                        value={reviewForm.description}
+                                                        onChange={e => setReviewForm({ ...reviewForm, description: e.target.value })}
+                                                        rows={8}
+                                                        placeholder="Announcement message"
+                                                        style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Department</label>
+                                                <input
+                                                    value={reviewForm.department}
+                                                    onChange={e => setReviewForm({ ...reviewForm, department: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={reviewForm.announcement_date}
+                                                    onChange={e => setReviewForm({ ...reviewForm, announcement_date: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={reviewForm.priority}
+                                                        onChange={e => setReviewForm({ ...reviewForm, priority: e.target.checked })}
+                                                    />
+                                                    {' '}Priority
+                                                </label>
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>CTA Button Label</label>
+                                                <input
+                                                    value={reviewForm.cta_label}
+                                                    onChange={e => setReviewForm({ ...reviewForm, cta_label: e.target.value })}
+                                                    placeholder="Optional button label"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>CTA Button URL</label>
+                                                <input
+                                                    type="url"
+                                                    value={reviewForm.cta_url}
+                                                    onChange={e => setReviewForm({ ...reviewForm, cta_url: e.target.value })}
+                                                    placeholder="https://..."
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__formGroup">
+                                                <label>Refusal Reason (if refusing)</label>
+                                                <input
+                                                    value={reviewForm.rejection_reason}
+                                                    onChange={e => setReviewForm({ ...reviewForm, rejection_reason: e.target.value })}
+                                                    placeholder="Reason for refusing this email broadcast"
+                                                />
+                                            </div>
+                                            <div className="AdminPanel__modalActions">
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                                                    onClick={() => setShowReviewModal(false)}
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--danger"
+                                                    style={{ backgroundColor: '#c62828', color: '#fff' }}
+                                                    onClick={handleRejectAnnouncement}
+                                                >
+                                                    Refuse Email Broadcast
+                                                </button>
+                                                <button
+                                                    className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+                                                    style={{ backgroundColor: '#2e7d32', color: '#fff' }}
+                                                    onClick={handleApproveAnnouncement}
+                                                >
+                                                    Approve & Send Emails
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Department *</label>
-                                            <input value={announcementForm.department} onChange={e => setAnnouncementForm({ ...announcementForm, department: e.target.value })} placeholder="e.g. Technical" />
-                                        </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>Date *</label>
-                                            <input type="date" value={announcementForm.announcement_date} onChange={e => setAnnouncementForm({ ...announcementForm, announcement_date: e.target.value })} />
-                                        </div>
-                                        <div className="AdminPanel__formGroup">
-                                            <label>
-                                                <input type="checkbox" checked={announcementForm.priority} onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.checked })} />
-                                                {' '}Priority
-                                            </label>
-                                        </div>
-                                        <div className="AdminPanel__modalActions">
-                                            <button className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary" onClick={() => setShowAnnouncementModal(false)}>Cancel</button>
-                                            <button className="AdminPanel__modalBtn AdminPanel__modalBtn--primary" onClick={saveAnnouncement}>{editingAnnouncement ? 'Save' : 'Create'}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                    </div>,
+                                    document.body
+                                )
+                                : null}
                         </motion.div>
                     )}
 
                     {/* === SUGGESTIONS & FEEDBACK === */}
-                    {activeTab === 'suggestions' && (
+                    {accessLevel === 'full' && activeTab === 'suggestions' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <div className="AdminPanel__section">
                                 <h2 className="AdminPanel__sectionTitle"><MdFeedback /> Suggestions</h2>
@@ -1206,20 +1749,47 @@ const AdminPanel = () => {
                                                 <th>From</th>
                                                 <th>Suggestion</th>
                                                 <th>Anonymous</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {suggestions.map((s) => (
                                                 <tr key={s.suggestion_id}>
                                                     <td>{formatDate(s.created_at)}</td>
-                                                    <td>{s.anonymous ? '—' : (s.member?.full_name || s.member_id)}</td>
+                                                    <td>
+                                                        {s.anonymous
+                                                            ? '—'
+                                                            : (s.member?.full_name || s.name || s.email || s.member_id || 'Guest')}
+                                                    </td>
                                                     <td style={{ maxWidth: 320 }}>{s.suggestion}</td>
                                                     <td>{s.anonymous ? 'Yes' : 'No'}</td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Delete this suggestion?')) return;
+                                                                try {
+                                                                    await ApiService.deleteAdminSuggestion(s.suggestion_id);
+                                                                    setAlert({ type: 'success', message: 'Suggestion deleted.' });
+                                                                    fetchSuggestionsAndFeedback();
+                                                                } catch (err) {
+                                                                    setAlert({ type: 'error', message: err.message || 'Delete failed' });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={suggestionsPagination}
+                                    onPageChange={(p) => { setSuggestionsPage(p); }}
+                                />
                             </div>
                             <div className="AdminPanel__section" style={{ marginTop: 24 }}>
                                 <h2 className="AdminPanel__sectionTitle">Event Feedback</h2>
@@ -1236,6 +1806,7 @@ const AdminPanel = () => {
                                                 <th>Date</th>
                                                 <th>Event</th>
                                                 <th>Feedback</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1244,26 +1815,37 @@ const AdminPanel = () => {
                                                     <td>{formatDate(f.created_at)}</td>
                                                     <td>{f.event?.name || f.event_id}</td>
                                                     <td style={{ maxWidth: 400 }}>{f.feedback}</td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                                                            onClick={async () => {
+                                                                if (!window.confirm('Delete this feedback?')) return;
+                                                                try {
+                                                                    await ApiService.deleteAdminFeedback(f.feedback_id);
+                                                                    setAlert({ type: 'success', message: 'Feedback deleted.' });
+                                                                    fetchSuggestionsAndFeedback();
+                                                                } catch (err) {
+                                                                    setAlert({ type: 'error', message: err.message || 'Delete failed' });
+                                                                }
+                                                            }}
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 )}
+                                <Pagination
+                                    pagination={feedbackPagination}
+                                    onPageChange={(p) => { setFeedbackPage(p); }}
+                                />
                             </div>
                         </motion.div>
                     )}
-                </div>
-            </main>
-
-            {/* Mobile toggle button */}
-            <button
-                className="AdminPanel__mobileToggle"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Toggle menu"
-            >
-                {mobileMenuOpen ? <MdClose /> : <MdMenu />}
-            </button>
-        </div>
+        </AdminShell>
     );
 };
 

@@ -1,10 +1,6 @@
 const express = require("express");
-const { syncModels } = require("./models");
 
 const router = express.Router();
-
-// Initialize database models
-syncModels();
 
 // Auth routes (public)
 router.use("/auth", require("./routes/auth"));
@@ -17,9 +13,12 @@ router.use("/applications", require("./routes/applications"));
 router.use("/announcements", require("./routes/announcements"));
 router.use("/board", require("./routes/board"));
 router.use("/sponsors", require("./routes/sponsors"));
+router.use("/departments", require("./routes/departments"));
+router.use("/site-content", require("./routes/siteContent"));
 router.use("/members", require("./routes/members"));
 router.use("/attendance", require("./routes/attendance"));
 router.use("/events", require("./routes/events"));
+router.use("/courses", require("./routes/courses"));
 router.use("/competitions", require("./routes/competitions"));
 router.use("/teams", require("./routes/teams"));
 router.use("/submissions", require("./routes/submissions"));
@@ -29,5 +28,11 @@ router.use("/evaluation", require("./routes/evaluation.routes"));
 router.use("/cloud", require("./routes/cloud"));
 router.use("/upload", require("./routes/upload"));
 router.use("/admin", require("./routes/admin")); // This line is for Admin Routes which are President, VP, Head of SWD
+router.use("/suggestions", require("./routes/suggestions"));
+router.use("/seasons", require("./routes/seasons"));
+router.use("/email-templates", require("./routes/emailTemplates"));
+router.use("/email", require("./routes/emailPreferences"));
+router.use("/email-jobs", require("./routes/emailJobs"));
+router.use("/android-app", require("./routes/androidApp"));
 
 module.exports = router;

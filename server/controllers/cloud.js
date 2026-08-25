@@ -1,5 +1,43 @@
-const { r2 } = require('../config/cloud');
-const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { r2, PutObjectCommand } = require('../config/cloud');
+const { ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const path = require('path');
+const { Op } = require('sequelize');
+const Event = require('../models/Event');
+const Board = require('../models/Board');
+const { parsePagination, paginationMeta, paginateArray } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
+
+/** Extract R2 object key from a public URL (or return the path if already a key). */
+function r2KeyFromPublicUrl(urlOrKey) {
+  if (!urlOrKey || typeof urlOrKey !== 'string') return null;
+  const trimmed = urlOrKey.trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return trimmed.replace(/^\/+/, '');
+  }
+  try {
+    const { pathname } = new URL(trimmed);
+    return decodeURIComponent(pathname.replace(/^\/+/, ''));
+  } catch {
+    return null;
+  }
+}
+
+const CLOUD_DIRECTORY_PREFIXES = [
+  'Assets/',
+  'Board_Photos/',
+  'Codes/',
+  'Courses/',
+  'Events_Thumbnails/',
+  'Images/',
+  'Mobile Application/',
+  'Slides/',
+  'Profile_Pictures/',
+  'Student_Schedules/',
+  'Videos/',
+  'Documents/'
+];
 
 /**
  * Validates and sanitizes the base URL from environment variable
@@ -19,12 +57,12 @@ function validateBaseUrl(baseUrl) {
     const url = new URL(cleaned);
     // Only allow http and https protocols
     if (!['http:', 'https:'].includes(url.protocol)) {
-      console.error('Invalid protocol in R2_PUBLIC_DOMAIN:', url.protocol);
+      logger.error(`Invalid protocol in R2_PUBLIC_DOMAIN: ${url.protocol}`);
       return null;
     }
     return cleaned;
   } catch (error) {
-    console.error('Invalid URL format in R2_PUBLIC_DOMAIN:', error.message);
+    logger.error('Invalid URL format in R2_PUBLIC_DOMAIN:', error);
     return null;
   }
 }
@@ -75,7 +113,68 @@ function buildSafeUrl(baseUrl, objectKey) {
   return `${validatedBase}/${sanitizedKey}`;
 }
 
-// Get all images from cloud storage
+/**
+ * Normalize a stored media URL/path for comparison against R2 keys.
+ */
+function normalizeMediaRef(value) {
+  if (!value || typeof value !== 'string') return '';
+  let cleaned = value.trim().split('?')[0].split('#')[0];
+  try {
+    cleaned = decodeURIComponent(cleaned);
+  } catch {
+    // keep original if malformed encoding
+  }
+  return cleaned.replace(/\\/g, '/');
+}
+
+/**
+ * Whether a stored event media field references this cloud object.
+ */
+function mediaRefMatchesAsset(stored, asset) {
+  const ref = normalizeMediaRef(stored);
+  if (!ref || !asset?.key) return false;
+  if (asset.url && (ref === normalizeMediaRef(asset.url) || ref.endsWith(`/${asset.key}`))) {
+    return true;
+  }
+  return ref === asset.key || ref.endsWith(`/${asset.key}`) || ref.includes(asset.key);
+}
+
+/**
+ * Attach linked event(s) for slides (upload_file) / thumbnails (main_image).
+ */
+async function attachEventLinks(assets, type) {
+  if (!Array.isArray(assets) || assets.length === 0) return assets;
+  if (type !== 'slides' && type !== 'event-thumbnails') return assets;
+
+  const field = type === 'event-thumbnails' ? 'main_image' : 'upload_file';
+  const events = await Event.findAll({
+    attributes: ['event_id', 'name', 'event_date', field],
+    where: {
+      [field]: {
+        [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }]
+      }
+    },
+    order: [['event_date', 'DESC'], ['event_id', 'DESC']]
+  });
+
+  return assets.map((asset) => {
+    const linked = events
+      .filter((ev) => mediaRefMatchesAsset(ev[field], asset))
+      .map((ev) => ({
+        event_id: ev.event_id,
+        name: ev.name,
+        event_date: ev.event_date
+      }));
+
+    return {
+      ...asset,
+      events: linked,
+      event: linked[0] || null
+    };
+  });
+}
+
+// Get gallery dome images only (excludes Meet the Board portraits)
 const getImages = async (req, res) => {
   try {
     const bucket = process.env.R2_BUCKET;
@@ -86,16 +185,30 @@ const getImages = async (req, res) => {
       Prefix: prefix
     });
 
-    const response = await r2.send(command);
+    const [response, boardRows] = await Promise.all([
+      r2.send(command),
+      Board.findAll({
+        attributes: ['photo_url'],
+        where: { photo_url: { [Op.ne]: null } },
+        raw: true
+      })
+    ]);
+
+    const boardPhotoKeys = new Set(
+      boardRows
+        .map((row) => r2KeyFromPublicUrl(row.photo_url))
+        .filter((key) => key && key.startsWith(prefix))
+    );
     
-    // Filter out directories (objects ending with /) and get only image files
+    // Filter out directories, non-images, and Meet the Board portraits
     const imageFiles = (response.Contents || [])
       .filter(obj => {
-        // Exclude directories and ensure it's an image file
         const key = obj.Key;
         const isDirectory = key.endsWith('/');
         const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(key);
-        return !isDirectory && isImage;
+        const isLegacyBoardUpload = /^Images\/board_/i.test(key);
+        const isLinkedBoardPhoto = boardPhotoKeys.has(key);
+        return !isDirectory && isImage && !isLegacyBoardUpload && !isLinkedBoardPhoto;
       })
       .map(obj => {
         // Return the full URL to the image using secure URL construction
@@ -111,13 +224,18 @@ const getImages = async (req, res) => {
         };
       });
 
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = paginateArray(imageFiles, { page, limit, offset });
+
     res.json({
       success: true,
-      images: imageFiles,
-      count: imageFiles.length
+      images: rows,
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error('Error fetching images from R2:', error);
+    logger.error('Error fetching images from R2:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch images',
@@ -182,15 +300,18 @@ const getAssetsByType = async (req, res) => {
     
     // Validate response.Contents exists before mapping
     if (!response.Contents || !Array.isArray(response.Contents)) {
+      const { page, limit } = parsePagination(req.query);
       return res.json({
         success: true,
         [type]: [],
-        count: 0
+        data: [],
+        count: 0,
+        pagination: paginationMeta({ page, limit, total: 0 })
       });
     }
     
     // Filter and map assets
-    const assets = response.Contents
+    let assets = response.Contents
       .filter(obj => {
         const key = obj.Key;
         const isDirectory = key.endsWith('/');
@@ -213,13 +334,21 @@ const getAssetsByType = async (req, res) => {
         };
       });
 
+    // Link slides / event thumbnails to the events that use them
+    assets = await attachEventLinks(assets, type);
+
+    const { page, limit, offset } = parsePagination(req.query);
+    const { rows, total } = paginateArray(assets, { page, limit, offset });
+
     res.json({
       success: true,
-      [type]: assets,
-      count: assets.length
+      [type]: rows,
+      data: rows,
+      count: rows.length,
+      pagination: paginationMeta({ page, limit, total })
     });
   } catch (error) {
-    console.error(`Error fetching ${req.params.type} from R2:`, error);
+    logger.error(`Error fetching ${req.params.type} from R2:`, error);
     res.status(500).json({
       success: false,
       error: `Failed to fetch ${req.params.type}`,
@@ -259,9 +388,124 @@ const getDocuments = async (req, res) => {
   return getAssetsByType(req, res);
 };
 
+/**
+ * DELETE cloud object by key (admin/board).
+ * Body or query: { key: "Images/foo.jpg" }
+ */
+const deleteCloudObject = async (req, res) => {
+  try {
+    const rawKey = req.body?.key || req.query?.key;
+    const key = sanitizeObjectKey(rawKey);
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'key is required' });
+    }
+
+    const allowed = CLOUD_DIRECTORY_PREFIXES.some((prefix) => key.startsWith(prefix));
+    if (!allowed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Key is not in an allowed media directory'
+      });
+    }
+
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key
+      })
+    );
+
+    await logAdminAction(
+      'cloud_object_deleted',
+      `Deleted cloud asset "${key}"`,
+      req,
+      'cloud',
+      key
+    );
+
+    return res.json({ success: true, message: 'Object deleted', key });
+  } catch (error) {
+    logger.error('Error deleting cloud object:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to delete object'
+    });
+  }
+};
+
+/**
+ * REPLACE cloud object at an existing key (admin/board).
+ * Multipart: file + key (or query key). Overwrites the same R2 key so URLs stay stable.
+ */
+const replaceCloudObject = async (req, res) => {
+  try {
+    const rawKey = req.body?.key || req.query?.key;
+    const key = sanitizeObjectKey(rawKey);
+    const file = req.file;
+
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'key is required' });
+    }
+    if (!file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    const allowed = CLOUD_DIRECTORY_PREFIXES.some((prefix) => key.startsWith(prefix));
+    if (!allowed) {
+      return res.status(400).json({
+        success: false,
+        error: 'Key is not in an allowed media directory'
+      });
+    }
+
+    const existingExt = path.extname(key).toLowerCase();
+    const uploadExt = path.extname(file.originalname).toLowerCase();
+    if (existingExt && uploadExt && existingExt !== uploadExt) {
+      return res.status(400).json({
+        success: false,
+        error: `Replacement must use the same file extension (${existingExt})`
+      });
+    }
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype
+      })
+    );
+
+    const url = buildSafeUrl(process.env.R2_PUBLIC_DOMAIN, key);
+
+    await logAdminAction(
+      'cloud_object_replaced',
+      `Replaced cloud asset "${key}"`,
+      req,
+      'cloud',
+      key
+    );
+
+    return res.json({
+      success: true,
+      message: 'Object replaced',
+      key,
+      url: url || key
+    });
+  } catch (error) {
+    logger.error('Error replacing cloud object:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to replace object'
+    });
+  }
+};
+
 module.exports = {
   getImages,
   getAssetsByType,
+  deleteCloudObject,
+  replaceCloudObject,
   // Legacy functions for backward compatibility
   getSlides,
   getVideos,

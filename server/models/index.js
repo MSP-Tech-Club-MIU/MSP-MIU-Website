@@ -1,4 +1,5 @@
 const sequelize = require('../config/db');
+const logger = require('../utils/logger');
 const Application = require('./Application');
 const Department = require('./Department');
 const Board = require('./Board');
@@ -31,10 +32,22 @@ const QuizOption = require('./QuizOption');
 const QuizAttempt = require('./QuizAttempt');
 const QuizAnswer = require('./QuizAnswer');
 const AdminNotification = require('./AdminNotification');
+const SiteContent = require('./SiteContent');
+const Season = require('./Season');
+const EmailTemplate = require('./EmailTemplate');
+const Course = require('./Course');
+const CourseLesson = require('./CourseLesson');
+const CourseLessonMaterial = require('./CourseLessonMaterial');
+const CourseEnrollment = require('./CourseEnrollment');
+const CourseLessonProgress = require('./CourseLessonProgress');
+const CourseAnnouncement = require('./CourseAnnouncement');
+const CourseLessonAttendance = require('./CourseLessonAttendance');
+const Blacklist = require('./Blacklist');
 
 // Initialize models
 const models = {
   Application,
+  Blacklist,
   Department,
   Board,
   Member,
@@ -63,7 +76,17 @@ const models = {
   QuizOption,
   QuizAttempt,
   QuizAnswer,
-  AdminNotification
+  AdminNotification,
+  SiteContent,
+  Season,
+  EmailTemplate,
+  Course,
+  CourseLesson,
+  CourseLessonMaterial,
+  CourseEnrollment,
+  CourseLessonProgress,
+  CourseAnnouncement,
+  CourseLessonAttendance
 };
 
 // Set up associations
@@ -172,6 +195,10 @@ Announcement.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
 });
+Announcement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
+});
 
 // Leaderboard associations
 Leaderboard.belongsTo(Member, {
@@ -273,6 +300,10 @@ CompetitionAnnouncement.belongsTo(Competition, {
 CompetitionAnnouncement.belongsTo(User, {
   foreignKey: 'created_by',
   as: 'creator'
+});
+CompetitionAnnouncement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
 });
 User.hasMany(CompetitionAnnouncement, {
   foreignKey: 'created_by',
@@ -486,14 +517,363 @@ User.hasMany(AdminNotification, {
   as: 'adminNotifications'
 });
 
-// Sync models with database
+// Course associations
+Course.hasMany(CourseLesson, {
+  foreignKey: 'course_id',
+  as: 'lessons',
+  onDelete: 'CASCADE'
+});
+CourseLesson.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseLesson.hasMany(CourseLessonMaterial, {
+  foreignKey: 'lesson_id',
+  as: 'materials',
+  onDelete: 'CASCADE'
+});
+CourseLessonMaterial.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
+Course.hasMany(CourseEnrollment, {
+  foreignKey: 'course_id',
+  as: 'enrollments',
+  onDelete: 'CASCADE'
+});
+CourseEnrollment.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseEnrollment.hasMany(CourseLessonProgress, {
+  foreignKey: 'enrollment_id',
+  as: 'lessonProgress',
+  onDelete: 'CASCADE'
+});
+CourseLessonProgress.belongsTo(CourseEnrollment, {
+  foreignKey: 'enrollment_id',
+  as: 'enrollment'
+});
+
+CourseLesson.hasMany(CourseLessonProgress, {
+  foreignKey: 'lesson_id',
+  as: 'progressEntries',
+  onDelete: 'CASCADE'
+});
+CourseLessonProgress.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
+// CourseAnnouncement associations
+Course.hasMany(CourseAnnouncement, {
+  foreignKey: 'course_id',
+  as: 'announcements',
+  onDelete: 'CASCADE'
+});
+CourseAnnouncement.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course',
+  onDelete: 'CASCADE'
+});
+
+User.hasMany(CourseAnnouncement, {
+  foreignKey: 'created_by',
+  as: 'courseAnnouncements'
+});
+CourseAnnouncement.belongsTo(User, {
+  foreignKey: 'created_by',
+  as: 'creator'
+});
+CourseAnnouncement.belongsTo(User, {
+  foreignKey: 'approved_by',
+  as: 'approver'
+});
+
+CourseEnrollment.hasMany(CourseAnnouncement, {
+  foreignKey: 'target_enrollment_id',
+  as: 'announcements',
+  onDelete: 'SET NULL'
+});
+CourseAnnouncement.belongsTo(CourseEnrollment, {
+  foreignKey: 'target_enrollment_id',
+  as: 'targetEnrollment',
+  onDelete: 'SET NULL'
+});
+
+// CourseLessonAttendance associations
+Course.hasMany(CourseLessonAttendance, {
+  foreignKey: 'course_id',
+  as: 'lessonAttendances',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'course'
+});
+
+CourseLesson.hasMany(CourseLessonAttendance, {
+  foreignKey: 'lesson_id',
+  as: 'attendanceRecords',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(CourseLesson, {
+  foreignKey: 'lesson_id',
+  as: 'lesson'
+});
+
+CourseEnrollment.hasMany(CourseLessonAttendance, {
+  foreignKey: 'enrollment_id',
+  as: 'lessonAttendances',
+  onDelete: 'CASCADE'
+});
+CourseLessonAttendance.belongsTo(CourseEnrollment, {
+  foreignKey: 'enrollment_id',
+  as: 'enrollment'
+});
+
+// Season associations
+const seasonScoped = [
+  { model: Board, as: 'boardMembers' },
+  { model: Event, as: 'events' },
+  { model: Sponsor, as: 'sponsors' },
+  { model: Competition, as: 'competitions' },
+  { model: Announcement, as: 'announcements' },
+  { model: Application, as: 'applications' },
+  { model: Member, as: 'members' },
+  { model: AdminNotification, as: 'adminNotificationsBySeason' },
+  { model: User, as: 'users' },
+  { model: Course, as: 'courses' }
+];
+
+seasonScoped.forEach(({ model, as }) => {
+  model.belongsTo(Season, {
+    foreignKey: 'season_id',
+    as: 'season'
+  });
+  Season.hasMany(model, {
+    foreignKey: 'season_id',
+    as
+  });
+});
+
+// Blacklist associations
+Blacklist.belongsTo(User, {
+  foreignKey: 'created_by_user_id',
+  as: 'creator'
+});
+User.hasMany(Blacklist, {
+  foreignKey: 'created_by_user_id',
+  as: 'blacklistEntries'
+});
+
+// Sync models with database.
+// Prefer targeted patch scripts (patchCmsSchema / patchSeasonSchema) over alter:true.
+// MySQL InnoDB allows max 64 indexes per table; repeated alter sync piles up FKs/indexes
+// and can fail with ER_TOO_MANY_KEYS (seen on users after season_id).
+// Opt in only when needed: DB_SYNC_ALTER=true
+async function ensureAnnouncementColumns() {
+  const columns = [
+    ['send_email', 'send_email TINYINT(1) NOT NULL DEFAULT 0'],
+    ['publish_to_website', 'publish_to_website TINYINT(1) NOT NULL DEFAULT 1'],
+    ['cta_label', 'cta_label VARCHAR(80) NULL'],
+    ['cta_url', 'cta_url VARCHAR(512) NULL'],
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`announcements\` ADD COLUMN ${ddl}`);
+      logger.info(`Added announcements.${name}`);
+    } catch (err) {
+      logger.warn(`Could not ensure announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
+    }
+  }
+}
+
+async function ensureCourseAnnouncementColumns() {
+  const columns = [
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'course_announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`course_announcements\` ADD COLUMN ${ddl}`);
+      logger.info(`Added course_announcements.${name}`);
+    } catch (err) {
+      logger.warn(`Could not ensure course_announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
+    }
+  }
+}
+
+async function ensureCompetitionAnnouncementColumns() {
+  const columns = [
+    ['approval_status', "approval_status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'approved'"],
+    ['approved_by', 'approved_by INT NULL'],
+    ['rejection_reason', 'rejection_reason TEXT NULL'],
+    ['email_sent', 'email_sent TINYINT(1) NOT NULL DEFAULT 0']
+  ];
+  for (const [name, ddl] of columns) {
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT COUNT(*) AS c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'competition_announcements'
+           AND COLUMN_NAME = ?`,
+        { replacements: [name] }
+      );
+      if (Number(rows[0]?.c) > 0) continue;
+      await sequelize.query(`ALTER TABLE \`competition_announcements\` ADD COLUMN ${ddl}`);
+      logger.info(`Added competition_announcements.${name}`);
+    } catch (err) {
+      logger.warn(`Could not ensure competition_announcements.${name}:`, { message: err.parent?.sqlMessage || err.message });
+    }
+  }
+}
+
+async function ensureUserEmailColumns() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'users'
+         AND COLUMN_NAME = 'email_unsubscribed_at'`
+    );
+    if (Number(rows[0]?.c) > 0) return;
+    await sequelize.query(
+      'ALTER TABLE `users` ADD COLUMN email_unsubscribed_at DATETIME NULL'
+    );
+    logger.info('Added users.email_unsubscribed_at');
+  } catch (err) {
+    logger.warn('Could not ensure users.email_unsubscribed_at:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
+async function ensureCourseAnnouncementTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'course_announcements'`
+    );
+    if (Number(rows[0]?.c) > 0) return;
+    await CourseAnnouncement.sync();
+    logger.info('Created course_announcements table');
+  } catch (err) {
+    logger.warn('Could not ensure course_announcements table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
+async function ensureCourseColumnsAndAttendanceTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'courses'
+         AND COLUMN_NAME = 'max_attendance'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await sequelize.query(
+        'ALTER TABLE `courses` ADD COLUMN max_attendance INT NULL DEFAULT NULL'
+      );
+      logger.info('Added courses.max_attendance column');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure courses.max_attendance:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'course_lesson_attendance'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await CourseLessonAttendance.sync();
+      logger.info('Created course_lesson_attendance table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure course_lesson_attendance table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
+async function ensureBlacklistTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'blacklists'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await Blacklist.sync();
+      logger.info('Created blacklists table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure blacklists table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
-    await sequelize.sync({ alter: true });
-    console.log('Models synchronized with database successfully');
+    const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
+    if (useAlter) {
+      await sequelize.sync({ alter: true });
+      logger.info('Models synchronized with database successfully (alter: true)');
+    } else {
+      await sequelize.sync();
+      logger.info('Models synchronized with database successfully');
+    }
+    await ensureAnnouncementColumns();
+    await ensureCourseAnnouncementColumns();
+    await ensureCompetitionAnnouncementColumns();
+    await ensureUserEmailColumns();
+    await ensureCourseAnnouncementTable();
+    await ensureCourseColumnsAndAttendanceTable();
+    await ensureBlacklistTable();
   } catch (error) {
-    console.error('Error synchronizing models:', error);
-    console.log('Note: If you have existing data, you may need to manually adjust the schema');
+    logger.error('Error synchronizing models:', error);
+    logger.info('Note: If you have existing data, you may need to manually adjust the schema');
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoginCard from '../components/LoginCard';
 import ApiService from '../services/api';
+import SEO from '../components/SEO';
 import './PageBase.css';
 
 export const Login = () => {
@@ -22,7 +23,7 @@ export const Login = () => {
   const handleClose = () => {
     setShowLoginCard(false);
     // Check if user is authenticated after a brief delay
-    // If login was successful, LoginCard will redirect to /profile
+    // If login was successful, LoginCard redirects to admin (when allowed) or /profile
     // If user just closed the card, navigate to home
     setTimeout(() => {
       if (!ApiService.isAuthenticated()) {
@@ -33,6 +34,7 @@ export const Login = () => {
 
   return (
     <section className="PageBase">
+      <SEO title="Login" description="Sign in to your MSP Tech Club account." url="/login" noindex />
       <LoginCard isOpen={showLoginCard} onClose={handleClose} postLoginRedirect={postLoginRedirect} />
     </section>
   );

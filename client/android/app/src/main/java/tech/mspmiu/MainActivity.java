@@ -2,10 +2,10 @@ package tech.mspmiu;
 
 import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
-import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -49,24 +49,13 @@ public class MainActivity extends BridgeActivity {
     private void showSystemUI() {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.show(android.view.WindowInsets.Type.statusBars()
-                        | android.view.WindowInsets.Type.navigationBars());
-
-                controller.setSystemBarsBehavior(
-                        WindowInsetsController.BEHAVIOR_DEFAULT
-                );
-            }
-        } else {
-            View decorView = getWindow().getDecorView();
-            int uiOptions = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
-            decorView.setSystemUiVisibility(uiOptions);
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
+                getWindow(), getWindow().getDecorView());
+        if (controller != null) {
+            controller.show(WindowInsetsCompat.Type.statusBars()
+                    | WindowInsetsCompat.Type.navigationBars());
+            controller.setSystemBarsBehavior(
+                    WindowInsetsControllerCompat.BEHAVIOR_DEFAULT);
         }
-
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
 }

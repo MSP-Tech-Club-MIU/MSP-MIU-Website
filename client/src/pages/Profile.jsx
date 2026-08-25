@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SEO from '../components/SEO';
-import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, FaIdCard, FaBuilding, FaCalendar, FaFilePdf, FaCheckCircle, FaCog, FaUsers } from 'react-icons/fa';
 import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
+import SeasonBadge from '../components/SeasonBadge';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
@@ -20,7 +21,13 @@ const Profile = () => {
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [scheduleFile, setScheduleFile] = useState(null);
   const [scheduleFileName, setScheduleFileName] = useState(null);
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
+  const [boardMembership, setBoardMembership] = useState(null);
+  const [boardPhotoPreview, setBoardPhotoPreview] = useState(null);
+  const [boardPhotoFile, setBoardPhotoFile] = useState(null);
+  const [uploadingBoardPhoto, setUploadingBoardPhoto] = useState(false);
   const fileInputRef = useRef(null);
+  const boardPhotoInputRef = useRef(null);
   const scheduleInputRef = useRef(null);
 
   useEffect(() => {
@@ -33,6 +40,37 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
+  const resolveAdminAccess = async (userData) => {
+    try {
+      const adminAccess = await ApiService.checkAdminAccess();
+      if (adminAccess.success) {
+        setHasAdminAccess(true);
+        return;
+      }
+    } catch {
+      // Fall through to role/department check
+    }
+
+    const deptRaw = userData?.department_id;
+    const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+    const hasRegistrationsAccess =
+      userData?.role === 'board' ||
+      userData?.role === 'admin' ||
+      (!Number.isNaN(deptId) && deptId === 5);
+
+    setHasAdminAccess(Boolean(hasRegistrationsAccess));
+  };
+
+  const fetchBoardMembership = async () => {
+    try {
+      const result = await ApiService.getMyBoardMembership();
+      setBoardMembership(result?.data || null);
+    } catch (err) {
+      console.error('Error fetching board membership:', err);
+      setBoardMembership(null);
+    }
+  };
+
   const fetchProfile = async () => {
     try {
       setLoading(true);
@@ -42,6 +80,7 @@ const Profile = () => {
       setEditedData({
         full_name: userData.full_name || '',
       });
+      await Promise.all([resolveAdminAccess(userData), fetchBoardMembership()]);
     } catch (error) {
       console.error('Error fetching profile:', error);
       
@@ -84,10 +123,13 @@ const Profile = () => {
     });
     setProfileImagePreview(null);
     setProfileImageFile(null);
+    setBoardPhotoPreview(null);
+    setBoardPhotoFile(null);
     setScheduleFile(null);
     setScheduleFileName(null);
     // Reset file inputs
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (boardPhotoInputRef.current) boardPhotoInputRef.current.value = '';
     if (scheduleInputRef.current) scheduleInputRef.current.value = '';
   };
 
@@ -106,6 +148,12 @@ const Profile = () => {
         profileImageFile, // Profile picture file
         scheduleFile      // Schedule file
       );
+
+      if (boardMembership && boardPhotoFile) {
+        setUploadingBoardPhoto(true);
+        const boardResult = await ApiService.updateMyBoardPhoto(boardPhotoFile);
+        setBoardMembership(boardResult?.data || boardMembership);
+      }
       
       // Update local state with response from server
       setUser(updatedUser);
@@ -115,11 +163,14 @@ const Profile = () => {
       
       // Reset file input elements
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (boardPhotoInputRef.current) boardPhotoInputRef.current.value = '';
       if (scheduleInputRef.current) scheduleInputRef.current.value = '';
       
       // Clear temporary file states
       setProfileImagePreview(null);
       setProfileImageFile(null);
+      setBoardPhotoPreview(null);
+      setBoardPhotoFile(null);
       setScheduleFile(null);
       setScheduleFileName(null);
       
@@ -129,6 +180,7 @@ const Profile = () => {
       console.error('Error saving profile:', error);
       alert(error.message || 'Failed to save profile');
     } finally {
+      setUploadingBoardPhoto(false);
       setSaving(false);
     }
   };
@@ -163,6 +215,30 @@ const Profile = () => {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleBoardPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File too large (max 5MB)');
+      e.target.value = '';
+      return;
+    }
+
+    setBoardPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setBoardPhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleScheduleUpload = (e) => {
@@ -270,6 +346,16 @@ const Profile = () => {
           <div className="profile-actions">
             {!isEditing ? (
               <>
+                {hasAdminAccess && (
+                  <motion.button
+                    className="action-btn admin-btn"
+                    onClick={() => { window.location.href = '/admin'; }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FaCog /> Go to Admin Panel
+                  </motion.button>
+                )}
                 <motion.button 
                   className="action-btn edit-btn"
                   onClick={handleEdit}
@@ -354,9 +440,12 @@ const Profile = () => {
                 </motion.div>
               )}
               <h2 className="profile-name">{displayedName || 'No Name'}</h2>
-              <p className="profile-role-text">
-                {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Member'}
-              </p>
+              {boardMembership && (
+                <p className="profile-picture-separation-note">
+                  This is your regular profile picture only. It does not appear on Meet the Board —
+                  use the Meet the Board Photo section below for that.
+                </p>
+              )}
             </div>
 
             <div className="role-badge-container">
@@ -366,6 +455,9 @@ const Profile = () => {
               >
                 {user.role?.toUpperCase() || 'MEMBER'}
               </span>
+              {user.season?.label && (
+                <SeasonBadge season={user.season} muted={!user.is_active_season} />
+              )}
             </div>
           </div>
 
@@ -524,6 +616,73 @@ const Profile = () => {
                     )}
                   </div>
                 </div>
+
+                {boardMembership && (
+                  <div className="detail-card detail-card-full board-photo-card">
+                    <div className="detail-icon">
+                      <FaUsers />
+                    </div>
+                    <div className="detail-content">
+                      <label className="detail-label">Meet the Board Photo</label>
+                      <p className="board-photo-hint">
+                        Separate from your regular profile picture above — changing one does not
+                        change the other. This image appears only on the public Meet the Board page.
+                        Use a clear / transparent background (PNG preferred) so your portrait
+                        displays cleanly on the card.
+                      </p>
+                      <div className="board-photo-row">
+                        <div className="board-photo-preview">
+                          {(boardPhotoPreview || boardMembership.photo_url) ? (
+                            <img
+                              src={boardPhotoPreview || boardMembership.photo_url}
+                              alt="Meet the Board"
+                            />
+                          ) : (
+                            <span className="board-photo-placeholder">No photo yet</span>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <div className="board-photo-upload">
+                            <input
+                              type="file"
+                              ref={boardPhotoInputRef}
+                              onChange={handleBoardPhotoUpload}
+                              accept="image/*"
+                              style={{ display: 'none' }}
+                            />
+                            <button
+                              type="button"
+                              className="upload-schedule-btn"
+                              disabled={saving || uploadingBoardPhoto}
+                              onClick={() => boardPhotoInputRef.current?.click()}
+                            >
+                              <FaUpload />{' '}
+                              {boardPhotoFile
+                                ? 'Change Meet the Board Photo'
+                                : boardMembership.photo_url
+                                  ? 'Replace Meet the Board Photo'
+                                  : 'Upload Meet the Board Photo'}
+                            </button>
+                            {boardPhotoFile && (
+                              <div className="file-selected-info">
+                                <FaCheckCircle className="file-check-icon" />
+                                <p className="file-name" title={boardPhotoFile.name}>
+                                  {boardPhotoFile.name}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="detail-value">
+                            {boardMembership.photo_url
+                              ? 'Photo set for Meet the Board'
+                              : 'No Meet the Board photo yet — edit your profile to add one'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>

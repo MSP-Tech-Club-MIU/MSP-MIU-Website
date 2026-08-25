@@ -1,0 +1,365 @@
+/* Server logs — matches dark admin glass theme */
+
+.LogsAdmin .AdminPanel__sectionHeader .LogsAdmin__hint,
+.LogsAdmin__hint {
+  margin: 0.35rem 0 1.15rem;
+  opacity: 1;
+  color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 52rem;
+}
+
+.LogsAdmin__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.LogsAdmin__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  align-items: flex-end;
+}
+
+.LogsAdmin__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(159, 208, 255, 0.75);
+}
+
+.LogsAdmin__field select,
+.LogsAdmin__settingsRow select,
+.LogsAdmin__search input {
+  min-height: 2.35rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--admin-text, #eaf2ff);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.LogsAdmin__field select option,
+.LogsAdmin__settingsRow select option {
+  background: var(--admin-surface-solid, #0a1a2e);
+  color: var(--admin-text, #eaf2ff);
+}
+
+.LogsAdmin__field select:focus,
+.LogsAdmin__settingsRow select:focus,
+.LogsAdmin__search input:focus {
+  outline: none;
+  border-color: rgba(74, 166, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 166, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.LogsAdmin__search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: min(100%, 20rem);
+}
+
+.LogsAdmin__search svg {
+  flex-shrink: 0;
+  color: var(--admin-accent, #4aa6ff);
+  opacity: 0.75;
+  font-size: 1.15rem;
+}
+
+.LogsAdmin__search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.LogsAdmin__search input::placeholder {
+  color: rgba(197, 218, 233, 0.45);
+}
+
+.LogsAdmin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.LogsAdmin__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgba(74, 166, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(13, 123, 216, 0.18);
+  color: #b8dcff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.LogsAdmin__btn:hover:not(:disabled) {
+  background: rgba(13, 123, 216, 0.32);
+  border-color: rgba(74, 166, 255, 0.5);
+}
+
+.LogsAdmin__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.LogsAdmin__btn--primary {
+  border: 1px solid rgba(74, 166, 255, 0.45);
+  background: linear-gradient(135deg, #0d7bd8, #03a9f4);
+  color: #fff;
+  box-shadow: 0 6px 18px -8px rgba(3, 169, 244, 0.65);
+}
+
+.LogsAdmin__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 22px -8px rgba(3, 169, 244, 0.75);
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #0d7bd8, #03a9f4);
+  border-color: rgba(74, 166, 255, 0.55);
+}
+
+.LogsAdmin__btn--danger {
+  background: rgba(244, 67, 54, 0.12);
+  color: #E57373;
+  border-color: rgba(244, 67, 54, 0.25);
+}
+
+.LogsAdmin__btn--danger:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.22);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+.LogsAdmin__btn--active {
+  background: rgba(76, 175, 80, 0.14);
+  border-color: rgba(129, 199, 132, 0.4);
+  color: #81C784;
+}
+
+.LogsAdmin__btn--active:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 0.22);
+  border-color: rgba(129, 199, 132, 0.55);
+}
+
+.LogsAdmin__settings {
+  margin-bottom: 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: 14px;
+  border: 1px solid rgba(74, 166, 255, 0.28);
+  background: linear-gradient(145deg, rgba(12, 36, 62, 0.85), rgba(8, 24, 44, 0.9));
+  box-shadow: 0 8px 28px -16px rgba(0, 0, 0, 0.55);
+}
+
+.LogsAdmin__settingsTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 650;
+  margin-bottom: 0.65rem;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(159, 208, 255, 0.85);
+}
+
+.LogsAdmin__settingsTitle svg {
+  color: var(--admin-accent, #4aa6ff);
+  font-size: 1.1rem;
+}
+
+.LogsAdmin__settingsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.LogsAdmin__settingsRow select {
+  min-width: 8rem;
+}
+
+.LogsAdmin__metaText {
+  font-size: 0.82rem;
+  color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+  line-height: 1.4;
+}
+
+.LogsAdmin__metaText strong {
+  color: #9fd0ff;
+  font-weight: 650;
+}
+
+.LogsAdmin__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  font-size: 0.82rem;
+  color: var(--admin-text-muted, rgba(197, 218, 233, 0.65));
+}
+
+.LogsAdmin__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 20px;
+  font-weight: 650;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.LogsAdmin__chip--debug {
+  background: rgba(158, 158, 158, 0.12);
+  color: #BDBDBD;
+  border-color: rgba(158, 158, 158, 0.2);
+}
+
+.LogsAdmin__chip--info {
+  background: rgba(74, 166, 255, 0.12);
+  color: #64B5F6;
+  border-color: rgba(74, 166, 255, 0.2);
+}
+
+.LogsAdmin__chip--warn {
+  background: rgba(255, 193, 7, 0.12);
+  color: #FFD54F;
+  border-color: rgba(255, 193, 7, 0.2);
+}
+
+.LogsAdmin__chip--error {
+  background: rgba(244, 67, 54, 0.12);
+  color: #E57373;
+  border-color: rgba(244, 67, 54, 0.2);
+}
+
+.LogsAdmin__chip--fatal {
+  background: rgba(183, 28, 28, 0.35);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.LogsAdmin__list {
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  border: 1px solid rgba(74, 166, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(4, 12, 22, 0.72);
+  color: #e5e7eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.LogsAdmin__row {
+  padding: 0.7rem 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-left: 3px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.LogsAdmin__row:hover {
+  background: rgba(74, 166, 255, 0.04);
+}
+
+.LogsAdmin__row--debug { border-left-color: #9ca3af; }
+.LogsAdmin__row--info { border-left-color: #4aa6ff; }
+.LogsAdmin__row--warn { border-left-color: #fbbf24; }
+.LogsAdmin__row--error { border-left-color: #f87171; }
+.LogsAdmin__row--fatal {
+  border-left-color: #ef4444;
+  background: rgba(127, 29, 29, 0.22);
+}
+
+.LogsAdmin__rowTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+  margin-bottom: 0.3rem;
+  opacity: 0.9;
+  font-size: 0.72rem;
+  color: rgba(197, 218, 233, 0.7);
+}
+
+.LogsAdmin__level {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.LogsAdmin__level--debug { color: #d1d5db; }
+.LogsAdmin__level--info { color: #7dd3fc; }
+.LogsAdmin__level--warn { color: #fcd34d; }
+.LogsAdmin__level--error { color: #fca5a5; }
+.LogsAdmin__level--fatal { color: #fecaca; }
+
+.LogsAdmin__type {
+  padding: 0.08rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(74, 166, 255, 0.12);
+  border: 1px solid rgba(74, 166, 255, 0.18);
+  color: #9fd0ff;
+}
+
+.LogsAdmin__id {
+  margin-left: auto;
+  opacity: 0.45;
+}
+
+.LogsAdmin__msg {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+  color: #eaf2ff;
+}
+
+.LogsAdmin__meta {
+  margin: 0.45rem 0 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: auto;
+  max-height: 12rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .LogsAdmin__search {
+    width: 100%;
+  }
+
+  .LogsAdmin__actions {
+    width: 100%;
+  }
+
+  .LogsAdmin__settingsRow select {
+    width: 100%;
+  }
+}

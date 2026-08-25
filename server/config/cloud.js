@@ -1,7 +1,22 @@
 const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { NodeHttpHandler } = require("@smithy/node-http-handler");
+const https = require("https");
 const dotenv = require('dotenv');
 
 dotenv.config();
+
+/**
+ * Node 22+/24 on Windows often fails Cloudflare R2 TLS with
+ * "unable to verify the first certificate" unless system CAs are used.
+ * Prefer --use-system-ca on process start; also allow R2_TLS_INSECURE=true for local proxies.
+ */
+function buildHttpsAgent() {
+  const insecure = String(process.env.R2_TLS_INSECURE || '').toLowerCase() === 'true';
+  return new https.Agent({
+    keepAlive: true,
+    rejectUnauthorized: !insecure
+  });
+}
 
 const r2 = new S3Client({
   region: "auto",
@@ -9,7 +24,13 @@ const r2 = new S3Client({
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY,
     secretAccessKey: process.env.R2_SECRET_KEY
-  }
+  },
+  requestHandler: new NodeHttpHandler({
+    httpsAgent: buildHttpsAgent(),
+    connectionTimeout: 10000,
+    // Large media / APK replaces can exceed 60s on slower links
+    requestTimeout: 300000
+  })
 });
 
 /**

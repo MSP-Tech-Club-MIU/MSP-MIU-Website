@@ -2,6 +2,9 @@ const db = require('../config/db');
 const { uploadToR2 } = require('../config/cloud');
 const { runEvaluationForSubmission } = require('../services/evaluationRunner');
 const { normalizeInsertId } = require('../utils/normalizeInsertId');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 /**
  * Submit team work (ZIP file and/or links)
@@ -231,7 +234,7 @@ const createSubmission = async (req, res) => {
                     const uploadResult = await uploadToR2(req.file.buffer, fileName, req.file.mimetype || 'application/zip');
                     r2Key = uploadResult.key;
                 } catch (uploadError) {
-                    console.error('Error uploading file to R2:', uploadError);
+                    logger.error('Error uploading file to R2:', uploadError);
                     return res.status(500).json({
                         success: false,
                         error: 'Failed to upload file'
@@ -272,7 +275,7 @@ const createSubmission = async (req, res) => {
                 updatedRow.r2_key
             ) {
                 runEvaluationForSubmission(existingSubmissions[0].submission_id).catch((err) => {
-                    console.error('Auto evaluation failed:', err.message);
+                    logger.error('Auto evaluation failed:', err);
                 });
             }
 
@@ -312,7 +315,7 @@ const createSubmission = async (req, res) => {
 
         const submissionId = normalizeInsertId(result);
         if (!Number.isFinite(submissionId)) {
-            console.error('Failed to resolve submission insert id:', result);
+            logger.error('Failed to resolve submission insert id:', result);
             return res.status(500).json({
                 success: false,
                 error: 'Failed to resolve created submission id'
@@ -331,7 +334,7 @@ const createSubmission = async (req, res) => {
                     }
                 );
             } catch (uploadError) {
-                console.error('Error uploading file to R2:', uploadError);
+                logger.error('Error uploading file to R2:', uploadError);
                 return res.status(500).json({
                     success: false,
                     error: 'Failed to upload file'
@@ -353,7 +356,7 @@ const createSubmission = async (req, res) => {
             createdRow.r2_key
         ) {
             runEvaluationForSubmission(submissionId).catch((err) => {
-                console.error('Auto evaluation failed:', err.message);
+                logger.error('Auto evaluation failed:', err);
             });
         }
 
@@ -364,7 +367,7 @@ const createSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating submission:', error);
+        logger.error('Error creating submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to create submission',
@@ -504,7 +507,7 @@ const getTeamSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching submission:', error);
+        logger.error('Error fetching submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch submission'
@@ -543,6 +546,17 @@ const getCompetitionSubmissions = async (req, res) => {
             });
         }
 
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await db.query(
+            `SELECT COUNT(*) AS total FROM submissions WHERE competition_id = ?`,
+            {
+                replacements: [competitionId],
+                type: db.QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
+
         const submissions = await db.query(
             `SELECT s.*, t.team_name,
                     ANY_VALUE(ct.title) AS task_title,
@@ -557,20 +571,23 @@ const getCompetitionSubmissions = async (req, res) => {
              LEFT JOIN team_members tm ON t.team_id = tm.team_id
              WHERE s.competition_id = ?
              GROUP BY s.submission_id
-             ORDER BY s.submitted_at DESC`,
+             ORDER BY s.submitted_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [competitionId],
+                replacements: [competitionId, limit, offset],
                 type: db.QueryTypes.SELECT
             }
         );
 
         res.status(200).json({
             success: true,
-            data: submissions
+            data: submissions,
+            count: submissions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
-        console.error('Error fetching submissions:', error);
+        logger.error('Error fetching submissions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch submissions'
@@ -655,6 +672,14 @@ const gradeSubmission = async (req, res) => {
             }
         );
 
+        await logAdminAction(
+            'submission_graded',
+            `Graded submission #${id} in competition #${subRows[0].competition_id} with score ${numericScore}`,
+            req,
+            'competition',
+            subRows[0].competition_id
+        );
+
         res.status(200).json({
             success: true,
             message: 'Submission graded successfully',
@@ -662,7 +687,7 @@ const gradeSubmission = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error grading submission:', error);
+        logger.error('Error grading submission:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to grade submission'

@@ -8,6 +8,7 @@ const { Submission, Evaluation, Competition } = require('../models');
 const { runStaticAnalysis } = require('./codeEvaluator');
 const { runLighthouseOnExtracted } = require('./lighthouseRunner');
 const { computeTotalAutoScore } = require('../utils/scoreCalculator');
+const logger = require('../utils/logger');
 
 /**
  * Full evaluation pipeline: download ZIP from R2, extract, static analysis, Lighthouse, persist.
@@ -20,7 +21,7 @@ async function runEvaluationForSubmission(submissionId, options = {}) {
   const log =
     options.log ||
     ((msg, data) =>
-      console.log('[EVAL]', msg, data !== undefined ? JSON.stringify(data) : ''));
+      logger.info(`[EVAL] ${msg}`, data !== undefined ? { data } : undefined));
 
   let workDir = null;
 

@@ -1,12 +1,34 @@
 const express = require("express");
 const router = express.Router();
-const { getAllMembers, getMemberById, deleteMember } = require("../controllers/members");
+const {
+  getAllMembers,
+  getMemberById,
+  createMember,
+  updateMember,
+  deleteMember,
+  exportMembersToCSV,
+  sendActivationEmails,
+  sendActivationEmail
+} = require("../controllers/members");
 const { authenticateToken, verifyRole } = require("../middlewares/auth");
 
-// Protected routes (require authentication - board/admin only)
-// Members data should be protected as it may contain sensitive information
 router.get("/", authenticateToken, verifyRole('board', 'admin'), getAllMembers);
+router.get("/export/csv", authenticateToken, verifyRole('board', 'admin'), exportMembersToCSV);
+router.post("/", authenticateToken, verifyRole('admin', 'board'), createMember);
+router.post(
+  "/send-activation-emails",
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  sendActivationEmails
+);
+router.post(
+  "/:id/send-activation-email",
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  sendActivationEmail
+);
 router.get("/:id", authenticateToken, verifyRole('board', 'admin'), getMemberById);
+router.put("/:id", authenticateToken, verifyRole('admin', 'board'), updateMember);
 router.delete("/:id", authenticateToken, verifyRole('admin', 'board'), deleteMember);
 
 module.exports = router;

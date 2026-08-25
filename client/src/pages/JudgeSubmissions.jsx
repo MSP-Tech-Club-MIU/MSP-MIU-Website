@@ -6,6 +6,7 @@ import BackButton from '../components/BackButton';
 import ApiService from '../services/api';
 import TaskQuizAssetMedia from '../components/TaskQuizAssetMedia';
 import LiveDemoEmbed from '../components/LiveDemoEmbed';
+import Pagination from '../components/Pagination';
 import { buildR2PublicObjectUrl, sanitizeDownloadBasename, normalizeLiveDemoOpenUrl } from '../utils/taskQuizAssets';
 import './JudgeSubmissions.css';
 
@@ -17,6 +18,8 @@ const emptyJudgeForm = {
   comment: ''
 };
 
+const LIMIT = 20;
+
 const JudgeSubmissions = () => {
   const { id: competitionId } = useParams();
   const navigate = useNavigate();
@@ -24,6 +27,8 @@ const JudgeSubmissions = () => {
   const [saving, setSaving] = useState(false);
   const [competition, setCompetition] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState(null);
   const [evaluation, setEvaluation] = useState(null);
   const [judgeForm, setJudgeForm] = useState(emptyJudgeForm);
@@ -56,7 +61,7 @@ const JudgeSubmissions = () => {
     [selectedSubmission?.live_url]
   );
 
-  const loadPage = async () => {
+  const loadPage = async (pageNum = page) => {
     try {
       setLoading(true);
       setError('');
@@ -74,10 +79,17 @@ const JudgeSubmissions = () => {
         throw new Error('Judging is enabled only for manual and hybrid evaluation modes.');
       }
 
-      const rows = await ApiService.getCompetitionSubmissions(competitionId);
-      const list = Array.isArray(rows) ? rows : [];
+      const result = await ApiService.getCompetitionSubmissions(competitionId, {
+        page: pageNum,
+        limit: LIMIT
+      });
+      const list = Array.isArray(result?.data) ? result.data : [];
       setSubmissions(list);
-      setSelectedSubmissionId(list[0]?.submission_id || null);
+      setPagination(result?.pagination || null);
+      setSelectedSubmissionId((prev) => {
+        if (prev && list.some((s) => Number(s.submission_id) === Number(prev))) return prev;
+        return list[0]?.submission_id || null;
+      });
       setMessage('');
     } catch (err) {
       setError(err.message || 'Failed to load judging workspace');
@@ -126,9 +138,9 @@ const JudgeSubmissions = () => {
       navigate('/login', { replace: true });
       return;
     }
-    loadPage();
+    loadPage(page);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [competitionId]);
+  }, [competitionId, page]);
 
   useEffect(() => {
     loadEvaluation(selectedSubmissionId);
@@ -190,7 +202,7 @@ const JudgeSubmissions = () => {
 
         <div className="JudgeSubmissions__layout">
           <aside className="JudgeSubmissions__list">
-            <h3>Submissions ({submissions.length})</h3>
+            <h3>Submissions ({pagination?.total ?? submissions.length})</h3>
             {submissions.length === 0 ? (
               <p className="JudgeSubmissions__muted">No submissions yet.</p>
             ) : (
@@ -212,6 +224,7 @@ const JudgeSubmissions = () => {
                 </button>
               ))
             )}
+            <Pagination pagination={pagination} onPageChange={(p) => { setPage(p); }} />
           </aside>
 
           <div className="JudgeSubmissions__panel">

@@ -1,5 +1,9 @@
 const { Event, EventFeedback } = require('../models');
 const { Op } = require('sequelize');
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 /**
  * Helper function to convert registration_enabled to boolean
@@ -51,6 +55,7 @@ const addEvent = async (req, res) => {
 
         // Convert registration_enabled to boolean (handle string "true"/"false" from form)
         const regEnabled = convertToBoolean(registration_enabled, true);
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
         // Create new event
         // Files are stored on R2 cloud, so we only accept URLs from req.body
@@ -63,8 +68,18 @@ const addEvent = async (req, res) => {
             upload_file: upload_file || null, // URL from R2 cloud storage
             main_image: main_image || null, // URL from R2 cloud storage
             attendees: attendees || null,
-            registration_enabled: regEnabled
+            registration_enabled: regEnabled,
+            season_id
         });
+
+        await logAdminAction(
+            'event_created',
+            `Created event "${newEvent.name}"`,
+            req,
+            'event',
+            newEvent.event_id,
+            newEvent.season_id
+        );
 
         res.status(201).json({
             success: true,
@@ -73,8 +88,11 @@ const addEvent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error creating event:', error);
-        console.error('Error details:', {
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error creating event:', error);
+        logger.error('Error details:', {
             name: error.name,
             message: error.message,
             stack: error.stack
@@ -91,7 +109,7 @@ const addEvent = async (req, res) => {
 
         // Handle Sequelize database errors
         if (error.name === 'SequelizeDatabaseError') {
-            console.error('Database error:', error.original);
+            logger.error('Database error:', error.original);
             return res.status(500).json({
                 success: false,
                 error: 'Database error occurred',
@@ -114,9 +132,11 @@ const addEvent = async (req, res) => {
 const getAllEvents = async (req, res) => {
     try {
         const { category, upcoming, past } = req.query;
-        
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const seasonFilter = await resolveSeasonFilter(req.query);
         // Build where clause
-        const where = {};
+        const where = { ...seasonFilter.where };
         
         if (category) {
             where.category = category;
@@ -134,19 +154,32 @@ const getAllEvents = async (req, res) => {
             };
         }
 
-        const events = await Event.findAll({
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+
+        const { rows: events, count: total } = await Event.findAndCountAll({
             where,
-            order: [['event_date', 'ASC']]
+            include,
+            order: [['event_date', 'ASC']],
+            limit,
+            offset,
+            distinct: true
         });
 
         res.status(200).json({
             success: true,
             data: events,
-            count: events.length
+            count: events.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
-        console.error('Error fetching events:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching events:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch events'
@@ -177,7 +210,7 @@ const getEventById = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error fetching event:', error);
+        logger.error('Error fetching event:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch event'
@@ -189,30 +222,23 @@ const getEventById = async (req, res) => {
  * download content
  * GET /api/events/:id/download
  */
-
 const downloadContent = async (req, res) => {
-try {
-const event = await Event.findByPk(req.params.id);
-if (!event || !event.upload_file){
-    return res.status(404).json({
-        success: false,
-        error: 'File not found'
-    });
-}
-res.download(event.upload_file);
-} catch (error) {
-    res.status(500).json({
-        success: false,
-        error: 'Failed to download file'
-    });
-
-}
-}
-
-
-
-
-
+    try {
+        const event = await Event.findByPk(req.params.id);
+        if (!event || !event.upload_file){
+            return res.status(404).json({
+                success: false,
+                error: 'File not found'
+            });
+        }
+        res.download(event.upload_file);
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Failed to download file'
+        });
+    }
+};
 
 /**
  * Update an event
@@ -260,16 +286,13 @@ const updateEvent = async (req, res) => {
             : undefined;
 
         // Handle file URLs from req.body (files are stored on R2 cloud storage)
-        // Files are uploaded to R2 via /api/upload route first, then URLs are sent here
         let newUploadFile = event.upload_file; // Default to existing
         if (upload_file !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty to clear
             newUploadFile = (upload_file === null || upload_file === '') ? null : upload_file;
         }
 
         let newMainImage = event.main_image; // Default to existing
         if (main_image !== undefined) {
-            // URL provided in req.body or explicitly set to null/empty to clear
             newMainImage = (main_image === null || main_image === '') ? null : main_image;
         }
 
@@ -293,6 +316,15 @@ const updateEvent = async (req, res) => {
         // Reload event to get updated data
         await event.reload();
 
+        await logAdminAction(
+            'event_updated',
+            `Updated event "${event.name}"`,
+            req,
+            'event',
+            event.event_id,
+            event.season_id
+        );
+
         res.status(200).json({
             success: true,
             message: 'Event updated successfully',
@@ -300,8 +332,8 @@ const updateEvent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error updating event:', error);
-        console.error('Error details:', {
+        logger.error('Error updating event:', error);
+        logger.error('Error details:', {
             name: error.name,
             message: error.message,
             stack: error.stack
@@ -318,7 +350,7 @@ const updateEvent = async (req, res) => {
 
         // Handle Sequelize database errors
         if (error.name === 'SequelizeDatabaseError') {
-            console.error('Database error:', error.original);
+            logger.error('Database error:', error.original);
             return res.status(500).json({
                 success: false,
                 error: 'Database error occurred',
@@ -351,7 +383,18 @@ const deleteEvent = async (req, res) => {
             });
         }
 
+        const eventName = event.name;
+        const seasonId = event.season_id;
         await event.destroy();
+
+        await logAdminAction(
+            'event_deleted',
+            `Deleted event "${eventName}"`,
+            req,
+            'event',
+            id,
+            seasonId
+        );
 
         res.status(200).json({
             success: true,
@@ -359,7 +402,7 @@ const deleteEvent = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error deleting event:', error);
+        logger.error('Error deleting event:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete event'
@@ -413,7 +456,7 @@ const addFeedback = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error adding feedback:', error);
+        logger.error('Error adding feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to submit feedback',
@@ -439,22 +482,26 @@ const getEventFeedback = async (req, res) => {
             });
         }
 
-        // Get all feedback for this event
-        const feedbacks = await EventFeedback.findAll({
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const { rows: feedbacks, count: total } = await EventFeedback.findAndCountAll({
             where: {
                 event_id: id
             },
-            order: [['created_at', 'DESC']]
+            order: [['created_at', 'DESC']],
+            limit,
+            offset
         });
 
         res.status(200).json({
             success: true,
             data: feedbacks,
-            count: feedbacks.length
+            count: feedbacks.length,
+            pagination: paginationMeta({ page, limit, total })
         });
 
     } catch (error) {
-        console.error('Error fetching feedback:', error);
+        logger.error('Error fetching feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch feedback'
@@ -491,13 +538,21 @@ const deleteFeedback = async (req, res) => {
 
         await feedback.destroy();
 
+        await logAdminAction(
+            'event_feedback_deleted',
+            `Deleted feedback #${feedbackId} for event #${eventId}`,
+            req,
+            'event',
+            eventId
+        );
+
         res.status(200).json({
             success: true,
             message: 'Feedback deleted successfully'
         });
 
     } catch (error) {
-        console.error('Error deleting feedback:', error);
+        logger.error('Error deleting feedback:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete feedback'

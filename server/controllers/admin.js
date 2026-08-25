@@ -1,28 +1,16 @@
-const { QueryTypes } = require('sequelize');
+const { QueryTypes, Op } = require('sequelize');
 const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, sequelize } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
-const { Op } = require('sequelize');
-
-/**
- * Helper: Log an admin notification
- */
-const logAdminAction = async (actionType, message, req, entityType = null, entityId = null) => {
-    try {
-        const boardMember = req.boardMember;
-        await AdminNotification.create({
-            action_type: actionType,
-            message,
-            performed_by: req.user.user_id,
-            performer_name: boardMember?.full_name || 'Admin',
-            performer_position: boardMember?.position || 'Admin',
-            entity_type: entityType,
-            entity_id: entityId
-        });
-    } catch (err) {
-        console.error('Failed to log admin notification:', err);
-    }
-};
+const { parsePagination, paginationMeta } = require('../utils/pagination');
+const {
+    resolveSeasonFilter,
+    seasonInclude,
+    resolveSeasonIdForWrite,
+    getDefaultSeasonId
+} = require('../utils/seasonFilter');
+const { logAdminAction } = require('../utils/adminNotification');
+const logger = require('../utils/logger');
 
 function parseCompetitionConfig(configValue) {
     if (!configValue) return null;
@@ -44,6 +32,9 @@ function writeCompetitionConfig(configObj) {
  */
 const getDashboardStats = async (req, res) => {
     try {
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const seasonWhere = seasonFilter.where;
+
         const [
             totalMembers,
             totalCompetitions,
@@ -52,12 +43,26 @@ const getDashboardStats = async (req, res) => {
             totalApplications,
             pendingApplications
         ] = await Promise.all([
-            Member.count(),
-            Competition.count(),
-            Event.count(),
-            Attendance.count({ where: { attended: false } }),
-            Application.count(),
-            Application.count({ where: { status: 'pending' } })
+            Member.count({ where: seasonWhere }),
+            Competition.count({ where: seasonWhere }),
+            Event.count({ where: seasonWhere }),
+            Attendance.count({
+                where: { attended: false },
+                include: [
+                    {
+                        model: Event,
+                        as: 'event',
+                        required: true,
+                        attributes: [],
+                        ...(seasonWhere.season_id != null
+                            ? { where: { season_id: seasonWhere.season_id } }
+                            : {})
+                    }
+                ],
+                distinct: true
+            }),
+            Application.count({ where: seasonWhere }),
+            Application.count({ where: { ...seasonWhere, status: 'pending' } })
         ]);
 
         // Get the logged-in admin's board info
@@ -90,7 +95,10 @@ const getDashboardStats = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching dashboard stats:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch dashboard statistics'
@@ -103,16 +111,32 @@ const getDashboardStats = async (req, res) => {
  */
 const getCompetitions = async (req, res) => {
     try {
-        const competitions = await Competition.findAll({
-            order: [['created_at', 'DESC']]
+        const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+        const { rows: competitions, count: total } = await Competition.findAndCountAll({
+            where: seasonFilter.where,
+            include,
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
         res.json({
             success: true,
-            data: competitions
+            data: competitions,
+            count: competitions.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching competitions:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch competitions'
@@ -133,6 +157,8 @@ const createCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            max_teams,
+            registration_deadline,
             status,
             location_type,
             location_details,
@@ -174,6 +200,8 @@ const createCompetition = async (req, res) => {
             maxSize = 1;
         }
 
+        const season_id = await resolveSeasonIdForWrite(req.body, req.query);
+
         const competition = await Competition.create({
             title,
             description,
@@ -181,6 +209,14 @@ const createCompetition = async (req, res) => {
             end_at,
             max_team_size: maxSize,
             min_team_size: minSize,
+            max_teams:
+                max_teams === '' || max_teams == null
+                    ? null
+                    : Number(max_teams),
+            registration_deadline:
+                registration_deadline === '' || registration_deadline == null
+                    ? null
+                    : registration_deadline,
             status: status || 'draft',
             location_type: location_type || 'on-campus',
             location_details: location_details || null,
@@ -190,7 +226,8 @@ const createCompetition = async (req, res) => {
             evaluation_mode: resolvedEvaluation,
             is_team_based: effectiveIsTeamBased,
             config: config ?? null,
-            created_by: req.user.user_id
+            created_by: req.user.user_id,
+            season_id
         });
 
         await ensureQuizForCompetition(competition.get({ plain: true }), req.user.user_id);
@@ -209,7 +246,10 @@ const createCompetition = async (req, res) => {
             data: competition
         });
     } catch (error) {
-        console.error('Error creating competition:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
             error: error.message || 'Failed to create competition'
@@ -239,6 +279,8 @@ const updateCompetition = async (req, res) => {
             end_at,
             max_team_size,
             min_team_size,
+            max_teams,
+            registration_deadline,
             status,
             location_type,
             location_details,
@@ -256,6 +298,16 @@ const updateCompetition = async (req, res) => {
         if (description !== undefined) updates.description = description;
         if (start_at !== undefined) updates.start_at = start_at;
         if (end_at !== undefined) updates.end_at = end_at;
+        if (max_teams !== undefined) {
+            updates.max_teams =
+                max_teams === '' || max_teams == null ? null : Number(max_teams);
+        }
+        if (registration_deadline !== undefined) {
+            updates.registration_deadline =
+                registration_deadline === '' || registration_deadline == null
+                    ? null
+                    : registration_deadline;
+        }
         if (status !== undefined) updates.status = status;
         if (location_type !== undefined) updates.location_type = location_type;
         if (location_details !== undefined) updates.location_details = location_details;
@@ -314,7 +366,7 @@ const updateCompetition = async (req, res) => {
             data: competition
         });
     } catch (error) {
-        console.error('Error updating competition:', error);
+        logger.error('Error updating competition:', error);
         if (error?.name === 'SequelizeValidationError' || error?.name === 'SequelizeDatabaseError') {
             return res.status(400).json({
                 success: false,
@@ -360,7 +412,7 @@ const deleteCompetition = async (req, res) => {
             message: 'Competition deleted successfully'
         });
     } catch (error) {
-        console.error('Error deleting competition:', error);
+        logger.error('Error deleting competition:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to delete competition'
@@ -375,15 +427,20 @@ const getCompetitionJudges = async (req, res) => {
     try {
         const { id } = req.params;
         const competition = await Competition.findByPk(id, {
-            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config', 'season_id']
         });
         if (!competition) {
             return res.status(404).json({ success: false, error: 'Competition not found' });
         }
 
+        const boardWhere = { user_id: { [Op.ne]: null } };
+        if (competition.season_id != null) {
+            boardWhere.season_id = competition.season_id;
+        }
+
         const boardRows = await Board.findAll({
-            where: { user_id: { [Op.ne]: null } },
-            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email'],
+            where: boardWhere,
+            attributes: ['board_id', 'user_id', 'full_name', 'position', 'department_id', 'email', 'season_id'],
             order: [['position', 'ASC'], ['full_name', 'ASC']]
         });
 
@@ -413,7 +470,7 @@ const getCompetitionJudges = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching competition judges:', error);
+        logger.error('Error fetching competition judges:', error);
         return res.status(500).json({ success: false, error: 'Failed to fetch competition judges' });
     }
 };
@@ -427,7 +484,7 @@ const updateCompetitionJudges = async (req, res) => {
         const { assigned_board_user_ids } = req.body || {};
 
         const competition = await Competition.findByPk(id, {
-            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config']
+            attributes: ['competition_id', 'title', 'type', 'evaluation_mode', 'config', 'season_id']
         });
         if (!competition) {
             return res.status(404).json({ success: false, error: 'Competition not found' });
@@ -458,10 +515,14 @@ const updateCompetitionJudges = async (req, res) => {
         )];
 
         if (normalizedIds.length > 0) {
+            const boardMatchWhere = {
+                user_id: { [Op.in]: normalizedIds }
+            };
+            if (competition.season_id != null) {
+                boardMatchWhere.season_id = competition.season_id;
+            }
             const boardMatches = await Board.findAll({
-                where: {
-                    user_id: { [Op.in]: normalizedIds }
-                },
+                where: boardMatchWhere,
                 attributes: ['user_id']
             });
             const validBoardUserIds = new Set(boardMatches.map((x) => Number(x.user_id)));
@@ -469,7 +530,7 @@ const updateCompetitionJudges = async (req, res) => {
             if (invalid.length > 0) {
                 return res.status(400).json({
                     success: false,
-                    error: `Some users are not board members: ${invalid.join(', ')}`
+                    error: `Some users are not board members for this competition's season: ${invalid.join(', ')}`
                 });
             }
         }
@@ -496,7 +557,7 @@ const updateCompetitionJudges = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating competition judges:', error);
+        logger.error('Error updating competition judges:', error);
         return res.status(500).json({ success: false, error: 'Failed to update competition judges' });
     }
 };
@@ -506,11 +567,14 @@ const updateCompetitionJudges = async (req, res) => {
  */
 const getAttendanceRequests = async (req, res) => {
     try {
-        const { event_id, attended, date } = req.query;
+        const { event_id, attended, date, search } = req.query;
+        const { page, limit, offset } = parsePagination(req.query);
         const where = {};
 
         if (event_id) where.event_id = event_id;
-        if (attended !== undefined) where.attended = attended === 'true';
+        if (attended !== undefined && attended !== '') {
+            where.attended = attended === 'true' || attended === true;
+        }
         if (date) {
             where.created_at = {
                 [Op.gte]: new Date(date),
@@ -518,17 +582,44 @@ const getAttendanceRequests = async (req, res) => {
             };
         }
 
-        const requests = await Attendance.findAll({
+        if (search) {
+            let sanitizedSearch = String(search).trim();
+            if (sanitizedSearch.length > 100) {
+                sanitizedSearch = sanitizedSearch.substring(0, 100);
+            }
+            sanitizedSearch = sanitizedSearch.replace(/[%_\\]/g, (match) => {
+                if (match === '\\') return '\\\\';
+                return `\\${match}`;
+            });
+            where[Op.or] = [
+                { full_name: { [Op.like]: `%${sanitizedSearch}%` } },
+                { university_id: { [Op.like]: `%${sanitizedSearch}%` } },
+                { phone_number: { [Op.like]: `%${sanitizedSearch}%` } },
+                { course_code: { [Op.like]: `%${sanitizedSearch}%` } }
+            ];
+        }
+
+        const { rows: requests, count: total } = await Attendance.findAndCountAll({
             where,
-            order: [['created_at', 'DESC']]
+            include: [{
+                model: Event,
+                as: 'event',
+                attributes: ['event_id', 'name', 'event_date']
+            }],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
         res.json({
             success: true,
-            data: requests
+            data: requests,
+            count: requests.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching attendance requests:', error);
+        logger.error('Error fetching attendance requests:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch attendance requests'
@@ -561,7 +652,7 @@ const updateAttendanceStatus = async (req, res) => {
             `${attended ? 'Confirmed' : 'Revoked'} attendance for ${request.full_name || 'a member'}`,
             req,
             'attendance',
-            request.attendance_id
+            request.request_id
         );
 
         res.json({
@@ -569,7 +660,7 @@ const updateAttendanceStatus = async (req, res) => {
             data: request
         });
     } catch (error) {
-        console.error('Error updating attendance:', error);
+        logger.error('Error updating attendance:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update attendance status'
@@ -583,7 +674,9 @@ const updateAttendanceStatus = async (req, res) => {
 const getRegistrations = async (req, res) => {
     try {
         const { status, search } = req.query;
-        const where = {};
+        const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const where = { ...seasonFilter.where };
 
         if (status) where.status = status;
         if (search) {
@@ -594,17 +687,31 @@ const getRegistrations = async (req, res) => {
             ];
         }
 
-        const applications = await Application.findAll({
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+
+        const { rows: applications, count: total } = await Application.findAndCountAll({
             where,
-            order: [['created_at', 'DESC']]
+            include,
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
 
         res.json({
             success: true,
-            data: applications
+            data: applications,
+            count: applications.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching registrations:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching registrations:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch registrations'
@@ -645,7 +752,7 @@ const updateRegistrationStatus = async (req, res) => {
             data: application
         });
     } catch (error) {
-        console.error('Error updating registration:', error);
+        logger.error('Error updating registration:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to update registration status'
@@ -658,19 +765,42 @@ const updateRegistrationStatus = async (req, res) => {
  */
 const getNotifications = async (req, res) => {
     try {
-        const { limit = 50 } = req.query;
+        const boardMember = req.boardMember;
+        const position = String(boardMember?.position || '').trim();
+        if (position !== 'President' && position !== 'Vice President') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Notifications are restricted to President and Vice President roles.'
+            });
+        }
 
-        const notifications = await AdminNotification.findAll({
+        const { page, limit, offset } = parsePagination(req.query, { defaultLimit: 50 });
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const include = [];
+        if (seasonFilter.includeSeason) {
+            include.push(seasonInclude());
+        }
+
+        const { rows: notifications, count: total } = await AdminNotification.findAndCountAll({
+            where: seasonFilter.where,
+            include,
             order: [['created_at', 'DESC']],
-            limit: parseInt(limit)
+            limit,
+            offset,
+            distinct: true
         });
 
         res.json({
             success: true,
-            data: notifications
+            data: notifications,
+            count: notifications.length,
+            pagination: paginationMeta({ page, limit, total })
         });
     } catch (error) {
-        console.error('Error fetching notifications:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching notifications:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to fetch notifications'
@@ -683,13 +813,38 @@ const getNotifications = async (req, res) => {
  */
 const getSuggestions = async (req, res) => {
     try {
-        const suggestions = await Suggestion.findAll({
-            include: [{ model: Member, as: 'member', attributes: ['member_id', 'full_name', 'email', 'university_id'] }],
-            order: [['created_at', 'DESC']]
+        const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const memberInclude = {
+            model: Member,
+            as: 'member',
+            attributes: ['member_id', 'full_name', 'email', 'university_id', 'season_id'],
+            required: false
+        };
+        // When a specific season is selected, only show suggestions tied to that season's members
+        // (guest/anonymous with no member stay visible under season_id=all only).
+        if (seasonFilter.where.season_id != null) {
+            memberInclude.required = true;
+            memberInclude.where = { season_id: seasonFilter.where.season_id };
+        }
+        const { rows: suggestions, count: total } = await Suggestion.findAndCountAll({
+            include: [memberInclude],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
-        res.json({ success: true, data: suggestions });
+        res.json({
+            success: true,
+            data: suggestions,
+            count: suggestions.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
-        console.error('Error fetching suggestions:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching suggestions:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch suggestions' });
     }
 };
@@ -699,14 +854,80 @@ const getSuggestions = async (req, res) => {
  */
 const getEventFeedbackAll = async (req, res) => {
     try {
-        const feedbacks = await EventFeedback.findAll({
-            include: [{ model: Event, as: 'event', attributes: ['event_id', 'name', 'event_date'] }],
-            order: [['created_at', 'DESC']]
+        const { page, limit, offset } = parsePagination(req.query);
+        const seasonFilter = await resolveSeasonFilter(req.query);
+        const eventInclude = {
+            model: Event,
+            as: 'event',
+            attributes: ['event_id', 'name', 'event_date', 'season_id'],
+            required: true
+        };
+        if (seasonFilter.where.season_id != null) {
+            eventInclude.where = { season_id: seasonFilter.where.season_id };
+        }
+        const { rows: feedbacks, count: total } = await EventFeedback.findAndCountAll({
+            include: [eventInclude],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
         });
-        res.json({ success: true, data: feedbacks });
+        res.json({
+            success: true,
+            data: feedbacks,
+            count: feedbacks.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
-        console.error('Error fetching feedback:', error);
+        if (error.status) {
+            return res.status(error.status).json({ success: false, error: error.message });
+        }
+        logger.error('Error fetching feedback:', error);
         res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedback' });
+    }
+};
+
+const deleteSuggestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const suggestion = await Suggestion.findByPk(id);
+        if (!suggestion) {
+            return res.status(404).json({ success: false, error: 'Suggestion not found' });
+        }
+        await suggestion.destroy();
+        await logAdminAction(
+            'suggestion_deleted',
+            `Deleted suggestion #${id}`,
+            req,
+            'suggestion',
+            id
+        );
+        res.json({ success: true, message: 'Suggestion deleted' });
+    } catch (error) {
+        logger.error('Error deleting suggestion:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete suggestion' });
+    }
+};
+
+const deleteAdminFeedback = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const feedback = await EventFeedback.findByPk(id);
+        if (!feedback) {
+            return res.status(404).json({ success: false, error: 'Feedback not found' });
+        }
+        await feedback.destroy();
+        await logAdminAction(
+            'feedback_deleted',
+            `Deleted event feedback #${id}`,
+            req,
+            'feedback',
+            id
+        );
+        res.json({ success: true, message: 'Feedback deleted' });
+    } catch (error) {
+        logger.error('Error deleting feedback:', error);
+        res.status(500).json({ success: false, error: 'Failed to delete feedback' });
     }
 };
 
@@ -720,6 +941,17 @@ const getEventFeedbackAll = async (req, res) => {
 const getCompetitionTeams = async (req, res) => {
     try {
         const { id } = req.params;
+        const { page, limit, offset } = parsePagination(req.query);
+
+        const countRows = await sequelize.query(
+            `SELECT COUNT(*) AS total FROM teams WHERE competition_id = ?`,
+            {
+                replacements: [id],
+                type: QueryTypes.SELECT
+            }
+        );
+        const total = Number(countRows[0]?.total) || 0;
+
         const rows = await sequelize.query(
             `SELECT t.team_id,
                     t.competition_id,
@@ -737,9 +969,10 @@ const getCompetitionTeams = async (req, res) => {
              FROM teams t
              LEFT JOIN users u ON t.created_by_user_id = u.user_id
              WHERE t.competition_id = ?
-             ORDER BY t.created_at DESC`,
+             ORDER BY t.created_at DESC
+             LIMIT ? OFFSET ?`,
             {
-                replacements: [id],
+                replacements: [id, limit, offset],
                 type: QueryTypes.SELECT
             }
         );
@@ -801,9 +1034,14 @@ const getCompetitionTeams = async (req, res) => {
             members: teamMembersByTeamId[row.team_id] || []
         }));
 
-        res.json({ success: true, data: teams });
+        res.json({
+            success: true,
+            data: teams,
+            count: teams.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
     } catch (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch teams' });
     }
 };
@@ -847,7 +1085,7 @@ const createAdminTeam = async (req, res) => {
 
         res.status(201).json({ success: true, data: team });
     } catch (error) {
-        console.error('Error creating team:', error);
+        logger.error('Error creating team:', error);
         res.status(500).json({ success: false, error: 'Failed to create team' });
     }
 };
@@ -880,7 +1118,7 @@ const updateAdminTeam = async (req, res) => {
 
         res.json({ success: true, data: team });
     } catch (error) {
-        console.error('Error updating team:', error);
+        logger.error('Error updating team:', error);
         res.status(500).json({ success: false, error: 'Failed to update team' });
     }
 };
@@ -910,7 +1148,7 @@ const deleteAdminTeam = async (req, res) => {
 
         res.json({ success: true, message: 'Team deleted successfully' });
     } catch (error) {
-        console.error('Error deleting team:', error);
+        logger.error('Error deleting team:', error);
         res.status(500).json({ success: false, error: 'Failed to delete team' });
     }
 };
@@ -982,7 +1220,7 @@ const getAdminTeamDetails = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error fetching admin team details:', error);
+        logger.error('Error fetching admin team details:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch team details' });
     }
 };
@@ -1029,7 +1267,7 @@ const removeAdminTeamMember = async (req, res) => {
 
         res.json({ success: true, message: 'Team member removed' });
     } catch (error) {
-        console.error('Error removing team member (admin):', error);
+        logger.error('Error removing team member (admin):', error);
         res.status(500).json({ success: false, error: 'Failed to remove team member' });
     }
 };
@@ -1106,7 +1344,7 @@ const updateAdminTeamMember = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Error updating team member (admin):', error);
+        logger.error('Error updating team member (admin):', error);
         if (error?.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).json({
                 success: false,
@@ -1157,7 +1395,7 @@ const cancelAdminTeamInvitation = async (req, res) => {
 
         res.json({ success: true, message: 'Invitation cancelled' });
     } catch (error) {
-        console.error('Error cancelling invitation (admin):', error);
+        logger.error('Error cancelling invitation (admin):', error);
         res.status(500).json({ success: false, error: 'Failed to cancel invitation' });
     }
 };
@@ -1175,6 +1413,8 @@ module.exports = {
     getNotifications,
     getSuggestions,
     getEventFeedbackAll,
+    deleteSuggestion,
+    deleteAdminFeedback,
     getCompetitionTeams,
     getCompetitionJudges,
     createAdminTeam,
@@ -1184,5 +1424,6 @@ module.exports = {
     updateAdminTeamMember,
     removeAdminTeamMember,
     cancelAdminTeamInvitation,
-    updateCompetitionJudges
+    updateCompetitionJudges,
+    logAdminAction
 };
