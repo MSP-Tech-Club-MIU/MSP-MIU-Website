@@ -13,7 +13,8 @@ import {
   MdCancel,
   MdTimer,
   MdShield,
-  MdRefresh
+  MdRefresh,
+  MdOpenInNew
 } from 'react-icons/md';
 import ApiService from '../services/api';
 import './EmailSendProgress.css';
@@ -508,6 +509,15 @@ export default function EmailSendProgress({
                 {cancelling ? 'Cancelling…' : 'Cancel Broadcast'}
               </button>
             )}
+            <a
+              href="/admin/email-tracker"
+              className="EmailSendProgress__minimizeBtn"
+              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', marginLeft: 8 }}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MdOpenInNew style={{ marginRight: 4 }} /> Full Email Tracker
+            </a>
           </div>
 
           <div className="EmailSendProgress__footerRight">

@@ -19,6 +19,7 @@ import {
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
+import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
 import { FormattedText, EmailComposerToolbar } from '../../utils/formatMarkdown';
 import mspLogo from '../../assets/Images/msp-logo.png';
@@ -30,10 +31,11 @@ const AUDIENCE_OPTIONS = [
   { value: 'attended', label: 'Attended Students Only', desc: 'Completed at least one session' }
 ];
 
-export default function CourseEmailsAdminTab({ onAlert }) {
+export default function CourseEmailsAdminTab({ onAlert, onOpenJob }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { seasonFilters } = useSeason();
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
   const queryCourseId = searchParams.get('course_id')
     ? parseInt(searchParams.get('course_id'), 10)
@@ -263,6 +265,14 @@ export default function CourseEmailsAdminTab({ onAlert }) {
         setEditingAnnouncement(null);
       } else {
         const res = await ApiService.createCourseAnnouncement(selectedCourseId, payload);
+        const job = res?.emailJob || res?.data?.emailJob || (res?.emailStats?.emailJob);
+        if (job?.id) {
+          if (onOpenJob) {
+            onOpenJob({ id: job.id, title: form.title.trim() });
+          } else {
+            setEmailSendJob({ id: job.id, title: form.title.trim() });
+          }
+        }
         const stats = res?.emailStats;
         const msg = stats
           ? `Dispatched! (${stats.sent || 0} sent, ${stats.skipped || 0} skipped, ${stats.failed || 0} failed)`
@@ -293,7 +303,15 @@ export default function CourseEmailsAdminTab({ onAlert }) {
     try {
       setResendingId(ann.announcement_id);
       const res = await ApiService.resendCourseAnnouncementEmails(selectedCourseId, ann.announcement_id);
-      const stats = res?.data?.emailStats;
+      const job = res?.emailJob || res?.data?.emailJob || (res?.emailStats?.emailJob);
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: ann.title });
+        } else {
+          setEmailSendJob({ id: job.id, title: ann.title });
+        }
+      }
+      const stats = res?.data?.emailStats || res?.emailStats;
       const msg = stats
         ? `Emails resent! (${stats.sent || 0} sent, ${stats.skipped || 0} skipped, ${stats.failed || 0} failed)`
         : 'Announcement emails resent successfully';
@@ -913,6 +931,14 @@ export default function CourseEmailsAdminTab({ onAlert }) {
           />
         )}
       </div>
+
+      {emailSendJob && (
+        <EmailSendProgress
+          jobId={emailSendJob.id}
+          title={emailSendJob.title}
+          onClear={() => setEmailSendJob(null)}
+        />
+      )}
     </div>
   );
 }

@@ -8,7 +8,8 @@ const {
   rejectAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
-  getAnnouncementEmailJobStatus
+  getAnnouncementEmailJobStatus,
+  resendAnnouncementEmails
 } = require('../controllers/announcements');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 const { presidentOrVicePresidentAuth } = require('../middlewares/adminAuth');
@@ -36,6 +37,9 @@ router.put('/:id/approve', authenticateToken, presidentOrVicePresidentAuth, appr
 // Refuse announcement email broadcast (President/VP only)
 router.put('/:id/reject', authenticateToken, presidentOrVicePresidentAuth, rejectAnnouncement);
 
+// Resend announcement emails (President/VP only)
+router.post('/:id/resend-emails', authenticateToken, presidentOrVicePresidentAuth, resendAnnouncementEmails);
+
 // Update announcement (admin/board only)
 router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateAnnouncement);
 
@@ -43,3 +47,4 @@ router.put('/:id', authenticateToken, verifyRole('admin', 'board'), updateAnnoun
 router.delete('/:id', authenticateToken, verifyRole('admin', 'board'), deleteAnnouncement);
 
 module.exports = router;
+

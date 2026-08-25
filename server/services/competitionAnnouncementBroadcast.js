@@ -129,24 +129,26 @@ async function getTeamMemberEmails(teamId) {
 
 /**
  * Broadcast competition announcement emails to targeted competitors
- * @param {Object} announcement - CompetitionAnnouncement object
+ * @param {Object} announcement - CompetitionAnnouncement object or plain object
  * @param {Object} competition - Competition object
+ * @returns {Promise<{ sent: number, failed: number, skipped: number, total: number, failures: Array, emailJob: Object }>}
  */
 async function broadcastCompetitionAnnouncementEmails(announcement, competition) {
   try {
-    const emails = await getCompetitorEmails(announcement);
+    const plain = typeof announcement?.toJSON === 'function' ? announcement.toJSON() : announcement;
+    const emails = await getCompetitorEmails(plain);
 
     if (emails.length === 0) {
-      logger.info(`Competition announcement: no recipients for announcement ${announcement.announcement_id}`);
-      return { sent: 0, failed: 0, skipped: 0 };
+      logger.info(`Competition announcement: no recipients for announcement ${plain.announcement_id}`);
+      return { sent: 0, failed: 0, skipped: 0, total: 0, failures: [], emailJob: null };
     }
 
     const { sendEmail } = await import('../utils/email.mjs');
     const { buildCompetitionAnnouncementEmail } = await import('../utils/competitionAnnouncementEmail.mjs');
-    const { sendBulkEmails } = require('../utils/bulkEmailSend');
+    const { startTrackedBulkEmailJob } = require('./announcementEmailJob');
     const { Op } = require('sequelize');
 
-    const { subject, text, html } = await buildCompetitionAnnouncementEmail(announcement, competition, {
+    const { subject, text, html } = await buildCompetitionAnnouncementEmail(plain, competition, {
       frontendUrl: process.env.FRONTEND_URL
     });
 
@@ -175,13 +177,17 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
 
     if (recipients.length === 0) {
       logger.info(
-        `Competition announcement: all recipients unsubscribed for ${announcement.announcement_id} (skipped=${skipped})`
+        `Competition announcement: all recipients unsubscribed for ${plain.announcement_id} (skipped=${skipped})`
       );
-      return { sent: 0, failed: 0, skipped };
+      return { sent: 0, failed: 0, skipped, total: emails.length, failures: [], emailJob: null };
     }
 
-    const result = await sendBulkEmails({
+    const emailJob = startTrackedBulkEmailJob({
+      type: 'competition_announcement',
+      title: `${competition?.title || 'Competition'}: ${plain.title || 'Announcement'}`,
+      announcementId: plain.announcement_id || null,
       recipients,
+      skipped,
       sendFn: sendEmail,
       buildPayload: async (recipient) => ({
         to: recipient.email,
@@ -191,13 +197,25 @@ async function broadcastCompetitionAnnouncementEmails(announcement, competition)
         html,
         fromName: 'MSP MIU Competition Announcements',
         category: 'marketing'
-      })
+      }),
+      metadata: {
+        competition_id: plain.competition_id,
+        target_type: plain.target_type || 'all'
+      }
     });
 
     logger.info(
-      `Competition announcement emails: sent=${result.sent} failed=${result.failed} skipped=${skipped} competition=${announcement.competition_id}`
+      `Competition announcement email broadcast started for ${plain.announcement_id} (Job ${emailJob.id}): competition=${plain.competition_id} recipients=${recipients.length} skipped=${skipped}`
     );
-    return { ...result, skipped };
+
+    return {
+      sent: emailJob.sent || 0,
+      failed: emailJob.failed || 0,
+      skipped,
+      total: recipients.length,
+      failures: emailJob.failures || [],
+      emailJob
+    };
   } catch (error) {
     logger.error('Error broadcasting competition announcement emails:', error);
     throw error;
@@ -209,3 +227,4 @@ module.exports = {
   getTeamMemberEmails,
   broadcastCompetitionAnnouncementEmails
 };
+

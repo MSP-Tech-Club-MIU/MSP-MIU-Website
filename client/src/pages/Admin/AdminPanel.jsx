@@ -706,6 +706,25 @@ const AdminPanel = () => {
         }
     };
 
+    const handleResendAnnouncement = async (announcement) => {
+        if (!window.confirm(`Resend emails for "${announcement.title}" to all members?`)) return;
+        try {
+            const result = await ApiService.resendAnnouncementEmails(announcement.announcement_id);
+            if (result?.emailJob?.id) {
+                setEmailSendJob({
+                    id: result.emailJob.id,
+                    title: result.data?.title || announcement.title
+                });
+            }
+            setAlert({
+                type: 'success',
+                message: 'Announcement email broadcast started!'
+            });
+        } catch (err) {
+            setAlert({ type: 'error', message: err.message || 'Failed to resend announcement emails' });
+        }
+    };
+
     const announcementApprovalBadge = (a) => {
         const status = a.approval_status || 'approved';
         if (status === 'pending') {
@@ -1228,13 +1247,13 @@ const AdminPanel = () => {
 
                     {accessLevel === 'full' && activeTab === 'android' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                            <AndroidAppAdminTab onAlert={setAlert} />
+                            <AndroidAppAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
                         </motion.div>
                     )}
 
                     {accessLevel === 'full' && activeTab === 'emails' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                            <EmailManagementAdminTab onAlert={setAlert} />
+                            <EmailManagementAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
                         </motion.div>
                     )}
 
@@ -1246,7 +1265,7 @@ const AdminPanel = () => {
 
                     {canUseProgramsTabs && (activeTab === 'course-emails' || activeTab === 'course_emails') && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-                            <CourseEmailsAdminTab onAlert={setAlert} />
+                            <CourseEmailsAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
                         </motion.div>
                     )}
 
@@ -1392,6 +1411,16 @@ const AdminPanel = () => {
                                                                 onClick={() => openReviewModal(a)}
                                                             >
                                                                 Review & Send
+                                                            </button>
+                                                        )}
+                                                        {isPresidentOrVP && a.approval_status === 'approved' && (a.send_email || !a.publish_to_website) && (
+                                                            <button
+                                                                className="AdminPanel__actionBtn"
+                                                                style={{ backgroundColor: 'rgba(3, 169, 244, 0.15)', color: '#03a9f4', border: '1px solid rgba(3, 169, 244, 0.3)' }}
+                                                                onClick={() => handleResendAnnouncement(a)}
+                                                                title="Resend email broadcast to members"
+                                                            >
+                                                                Resend Email
                                                             </button>
                                                         )}
                                                         <button className="AdminPanel__actionBtn AdminPanel__actionBtn--edit" onClick={() => openAnnouncementModal(a)}>Edit</button>

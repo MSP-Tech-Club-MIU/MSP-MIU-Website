@@ -91,11 +91,11 @@ async function sendAcceptanceEmailForMember(member, sendEmail) {
  * Bulk send member acceptance emails.
  * @param {object} [options]
  * @param {object} [options.where]
- * @param {number} [options.delayMs=500]
  */
 async function sendAcceptanceEmailsToMembers(options = {}) {
-  const { where = {}, delayMs = 500 } = options;
+  const { where = {} } = options;
   const { sendEmail } = await import('./email.mjs');
+  const { startTrackedBulkEmailJob } = require('../services/announcementEmailJob');
 
   const members = await Member.findAll({
     where,
@@ -109,64 +109,64 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
     attributes: ['member_id', 'full_name', 'email', 'department_id']
   });
 
-  const summary = {
-    total: members.length,
-    sent: 0,
-    skipped: 0,
-    failed: 0,
-    sentTo: [],
-    skippedMembers: [],
-    errors: []
-  };
-
-  for (let i = 0; i < members.length; i++) {
-    const member = members[i];
-    try {
-      const result = await sendAcceptanceEmailForMember(member, sendEmail);
-      if (result.success) {
-        summary.sent++;
-        summary.sentTo.push({
-          memberId: result.memberId,
-          name: result.name,
-          email: result.email,
-          department: result.department
-        });
-      } else if (result.skipped) {
-        summary.skipped++;
-        summary.skippedMembers.push({
-          memberId: result.memberId,
-          name: result.name,
-          email: result.email,
-          reason: result.reason
-        });
-      } else {
-        summary.failed++;
-        summary.errors.push({
-          memberId: result.memberId,
-          name: result.name,
-          email: result.email,
-          error: result.error || 'Unknown error'
-        });
-      }
-    } catch (err) {
-      summary.failed++;
-      summary.errors.push({
-        memberId: member.member_id,
-        name: member.full_name,
-        email: member.email,
-        error: err.message
-      });
+  const validRecipients = [];
+  let skipped = 0;
+  for (const m of members) {
+    const email = String(m.email || '').trim();
+    if (!email) {
+      skipped++;
+      continue;
     }
-
-    if (i < members.length - 1 && delayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    if (!m.department || !m.department.name) {
+      skipped++;
+      continue;
     }
+    validRecipients.push({
+      email,
+      member: m
+    });
   }
 
-  return summary;
+  const emailJob = startTrackedBulkEmailJob({
+    type: 'member_acceptance',
+    title: 'Member Acceptance Emails',
+    recipients: validRecipients,
+    skipped,
+    sendFn: sendEmail,
+    buildPayload: async (item) => {
+      const m = item.member;
+      const studentName = m.full_name;
+      const department = m.department;
+      const rendered = await renderTemplate('member_acceptance', {
+        studentName,
+        departmentName: department.name,
+        whatsappGroupLink: department.whatsapp_group_url || null
+      });
+
+      return {
+        to: item.email,
+        fromName: 'MSP MIU Website',
+        subject: rendered.subject,
+        text: rendered.text,
+        html: rendered.html,
+        headers: {
+          'X-Entity-Ref-ID': `acceptance-${m.member_id}-${Date.now()}`
+        }
+      };
+    }
+  });
+
+  return {
+    total: members.length,
+    sent: emailJob.sent || 0,
+    skipped,
+    failed: emailJob.failed || 0,
+    emailJob
+  };
 }
 
 module.exports = {
   sendAcceptanceEmailForMember,
   sendAcceptanceEmailsToMembers
 };
+

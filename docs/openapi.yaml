@@ -1169,6 +1169,24 @@ paths:
       security:
         -
           bearerAuth: []
+  '/announcements/{id}/resend-emails':
+    post:
+      summary: 'Create/submit /announcements/{id}/resend-emails'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Announcements
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/announcements/email-jobs/{jobId}':
     get:
       summary: 'Get /announcements/email-jobs/{jobId}'

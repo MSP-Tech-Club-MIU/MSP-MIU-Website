@@ -367,7 +367,12 @@ const sendMemberActivation = async (req, res) => {
       'member'
     );
 
-    res.json({ success: true, data: summary });
+    res.json({
+      success: true,
+      message: 'Member activation emails broadcast dispatched',
+      data: summary,
+      emailJob: summary.emailJob || null
+    });
   } catch (error) {
     logger.error('sendMemberActivation:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send activation emails' });
@@ -388,7 +393,12 @@ const sendBoardActivation = async (req, res) => {
       'board'
     );
 
-    res.json({ success: true, data: summary });
+    res.json({
+      success: true,
+      message: 'Board activation emails broadcast dispatched',
+      data: summary,
+      emailJob: summary.emailJob || null
+    });
   } catch (error) {
     logger.error('sendBoardActivation:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send board activation emails' });
@@ -409,7 +419,12 @@ const sendMemberAcceptance = async (req, res) => {
       'member'
     );
 
-    res.json({ success: true, data: summary });
+    res.json({
+      success: true,
+      message: 'Member acceptance emails broadcast dispatched',
+      data: summary,
+      emailJob: summary.emailJob || null
+    });
   } catch (error) {
     logger.error('sendMemberAcceptance:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to send acceptance emails' });

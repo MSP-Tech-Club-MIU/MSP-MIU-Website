@@ -203,9 +203,10 @@ const createCompetitionAnnouncement = async (req, res) => {
     });
 
     // Broadcast emails if approved for immediate send
+    let emailStats = null;
     if (shouldBroadcastNow) {
       try {
-        await broadcastCompetitionAnnouncementEmails(announcement, competition);
+        emailStats = await broadcastCompetitionAnnouncementEmails(announcement, competition);
       } catch (emailError) {
         logger.error('Error broadcasting announcement emails:', emailError);
       }
@@ -252,7 +253,9 @@ const createCompetitionAnnouncement = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: responseMessage,
-      data: createdAnnouncement
+      data: createdAnnouncement,
+      emailJob: emailStats?.emailJob || null,
+      emailStats
     });
   } catch (error) {
     logger.error('Error creating competition announcement:', error);
@@ -319,9 +322,10 @@ const approveCompetitionAnnouncement = async (req, res) => {
 
     await announcement.save();
 
+    let emailStats = null;
     if (announcement.send_email) {
       try {
-        await broadcastCompetitionAnnouncementEmails(announcement, competition);
+        emailStats = await broadcastCompetitionAnnouncementEmails(announcement, competition);
       } catch (emailError) {
         logger.error('Error broadcasting approved competition announcement emails:', emailError);
       }
@@ -356,7 +360,9 @@ const approveCompetitionAnnouncement = async (req, res) => {
     return res.json({
       success: true,
       message: 'Competition announcement approved and email broadcast dispatched',
-      data: updatedAnnouncement
+      data: updatedAnnouncement,
+      emailJob: emailStats?.emailJob || null,
+      emailStats
     });
   } catch (error) {
     logger.error('Error approving competition announcement:', error);
@@ -382,7 +388,7 @@ const rejectCompetitionAnnouncement = async (req, res) => {
     if (!isPresidentOrVP) {
       return res.status(403).json({
         success: false,
-        error: 'Access denied. Competition announcement refusal is restricted to President and Vice President roles.'
+        error: 'Access denied. Announcement refusal is restricted to President and Vice President roles.'
       });
     }
 
@@ -398,46 +404,31 @@ const rejectCompetitionAnnouncement = async (req, res) => {
     }
 
     announcement.approval_status = 'rejected';
+    announcement.rejection_reason = reason ? String(reason).trim() : 'Email broadcast refused by President/VP';
     announcement.approved_by = userId;
-    announcement.rejection_reason = reason ? String(reason).trim() : null;
+    announcement.email_sent = false;
 
     await announcement.save();
 
-    const updatedAnnouncement = await CompetitionAnnouncement.findByPk(announcementId, {
-      include: [
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['user_id', 'full_name', 'email'],
-          required: false
-        },
-        {
-          model: User,
-          as: 'approver',
-          attributes: ['user_id', 'full_name', 'email'],
-          required: false
-        }
-      ]
-    });
-
     await logAdminAction(
       'competition_announcement_rejected',
-      `Refused competition announcement "${updatedAnnouncement.title}"${reason ? `: ${reason}` : ''}`,
+      `Refused email broadcast for competition announcement "${announcement.title}"`,
       req,
       'competition',
-      competitionId
+      competitionId,
+      announcement.season_id
     );
 
     return res.json({
       success: true,
       message: 'Competition announcement email broadcast refused',
-      data: updatedAnnouncement
+      data: announcement
     });
   } catch (error) {
     logger.error('Error rejecting competition announcement:', error);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Failed to refuse competition announcement'
+      error: error.message || 'Failed to reject competition announcement'
     });
   }
 };
@@ -450,7 +441,7 @@ const rejectCompetitionAnnouncement = async (req, res) => {
 const updateCompetitionAnnouncement = async (req, res) => {
   try {
     const { competitionId, announcementId } = req.params;
-    const { title, message, is_active, target_type, target_team_id, target_user_id } = req.body;
+    const { title, message, is_active } = req.body;
 
     const announcement = await CompetitionAnnouncement.findOne({
       where: {
@@ -466,19 +457,13 @@ const updateCompetitionAnnouncement = async (req, res) => {
       });
     }
 
-    // Update fields if provided
-    if (title !== undefined) announcement.title = title;
-    if (message !== undefined) announcement.message = message;
-    if (is_active !== undefined) {
-      announcement.is_active = is_active === true || is_active === 'true' || is_active === 1;
-    }
-    if (target_type !== undefined) announcement.target_type = target_type;
-    if (target_team_id !== undefined) announcement.target_team_id = target_team_id;
-    if (target_user_id !== undefined) announcement.target_user_id = target_user_id;
+    if (title !== undefined) announcement.title = String(title).trim();
+    if (message !== undefined) announcement.message = String(message).trim();
+    if (is_active !== undefined) announcement.is_active = Boolean(is_active);
 
     await announcement.save();
 
-    const updatedAnnouncement = await CompetitionAnnouncement.findByPk(announcementId, {
+    const updated = await CompetitionAnnouncement.findByPk(announcementId, {
       include: [
         {
           model: User,
@@ -497,22 +482,23 @@ const updateCompetitionAnnouncement = async (req, res) => {
 
     await logAdminAction(
       'competition_announcement_updated',
-      `Updated announcement "${updatedAnnouncement.title}" in competition #${competitionId}`,
+      `Updated announcement "${updated.title}"`,
       req,
       'competition',
-      competitionId
+      competitionId,
+      updated.season_id
     );
 
     return res.json({
       success: true,
-      message: 'Competition announcement updated successfully',
-      data: updatedAnnouncement
+      message: 'Announcement updated successfully',
+      data: updated
     });
   } catch (error) {
     logger.error('Error updating competition announcement:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to update competition announcement'
+      error: error.message || 'Failed to update announcement'
     });
   }
 };
@@ -540,33 +526,35 @@ const deleteCompetitionAnnouncement = async (req, res) => {
       });
     }
 
-    // Soft delete
+    const title = announcement.title;
+    const seasonId = announcement.season_id;
     announcement.is_active = false;
     await announcement.save();
 
     await logAdminAction(
       'competition_announcement_deleted',
-      `Deleted announcement "${announcement.title}" in competition #${competitionId}`,
+      `Deleted announcement "${title}"`,
       req,
       'competition',
-      competitionId
+      competitionId,
+      seasonId
     );
 
     return res.json({
       success: true,
-      message: 'Competition announcement deleted successfully'
+      message: 'Announcement deleted successfully'
     });
   } catch (error) {
     logger.error('Error deleting competition announcement:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to delete competition announcement'
+      error: error.message || 'Failed to delete announcement'
     });
   }
 };
 
 /**
- * Resend announcement emails to all competitors
+ * Resend competition announcement emails
  * POST /api/competitions/:competitionId/announcements/:announcementId/resend-emails
  * Requires: admin or board role (President/VP required if broadcast)
  */
@@ -574,7 +562,6 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
   try {
     const { competitionId, announcementId } = req.params;
 
-    // Verify competition exists
     const competition = await Competition.findByPk(competitionId);
     if (!competition) {
       return res.status(404).json({
@@ -587,13 +574,7 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
       where: {
         announcement_id: announcementId,
         competition_id: competitionId
-      },
-      include: [{
-        model: User,
-        as: 'creator',
-        attributes: ['user_id', 'full_name', 'email'],
-        required: false
-      }]
+      }
     });
 
     if (!announcement) {
@@ -614,8 +595,9 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
     }
 
     // Send emails
+    let emailStats = null;
     try {
-      await broadcastCompetitionAnnouncementEmails(announcement, competition);
+      emailStats = await broadcastCompetitionAnnouncementEmails(announcement, competition);
     } catch (emailError) {
       logger.error('Error resending announcement emails:', emailError);
       return res.status(500).json({
@@ -635,7 +617,9 @@ const resendCompetitionAnnouncementEmails = async (req, res) => {
 
     return res.json({
       success: true,
-      message: 'Announcement emails resent successfully to all competitors'
+      message: 'Announcement emails resent successfully to all competitors',
+      emailJob: emailStats?.emailJob || null,
+      emailStats
     });
   } catch (error) {
     logger.error('Error resending competition announcement emails:', error);

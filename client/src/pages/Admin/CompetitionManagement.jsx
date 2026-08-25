@@ -7,6 +7,7 @@ import ApiService from '../../services/api';
 import SEO from '../../components/SEO';
 import PageLoader from '../../components/PageLoader';
 import Pagination from '../../components/Pagination';
+import EmailSendProgress from '../../components/EmailSendProgress';
 import AdminQuizManageModal from './AdminQuizManageModal';
 import AdminTaskQuizManageModal from './AdminTaskQuizManageModal';
 import AdminShell from './AdminShell';
@@ -152,6 +153,7 @@ const CompetitionManagement = () => {
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', message: '', send_email: true, target_type: 'all', target_team_id: '', target_user_id: '' });
   const [resendingEmails, setResendingEmails] = useState(null);
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
   // Timeslots state
   const [timeslotsList, setTimeslotsList] = useState([]);
@@ -859,10 +861,17 @@ const CompetitionManagement = () => {
         );
         setAlert({ type: 'success', message: 'Announcement updated.' });
       } else {
-        await ApiService.createCompetitionAnnouncement(
+        const res = await ApiService.createCompetitionAnnouncement(
           loadedComp.competition_id,
           payload
         );
+        const job = res?.emailJob || res?.data?.emailJob || (res?.emailStats?.emailJob);
+        if (job?.id) {
+          setEmailSendJob({
+            id: job.id,
+            title: `${loadedComp.title || 'Competition'}: ${payload.title}`
+          });
+        }
         setAlert({ type: 'success', message: 'Announcement created and sent to ' + (payload.target_type === 'all' ? 'all competitors!' : 'targeted audience!') });
       }
       setEditingAnnouncement(null);
@@ -902,10 +911,17 @@ const CompetitionManagement = () => {
   const resendAnnouncementEmails = async (announcementId) => {
     setResendingEmails(announcementId);
     try {
-      await ApiService.resendCompetitionAnnouncementEmails(
+      const res = await ApiService.resendCompetitionAnnouncementEmails(
         loadedComp.competition_id,
         announcementId
       );
+      const job = res?.emailJob || res?.data?.emailJob || (res?.emailStats?.emailJob);
+      if (job?.id) {
+        setEmailSendJob({
+          id: job.id,
+          title: `${loadedComp.title || 'Competition'}: Resend Announcement`
+        });
+      }
       setAlert({ type: 'success', message: 'Emails resent to all competitors!' });
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to resend emails' });
@@ -2126,7 +2142,16 @@ const CompetitionManagement = () => {
         </div>
       ) : null}
     </section>
+
+    {emailSendJob && (
+      <EmailSendProgress
+        jobId={emailSendJob.id}
+        title={emailSendJob.title}
+        onClear={() => setEmailSendJob(null)}
+      />
+    )}
     </AdminShell>
   );
 };
 export default CompetitionManagement;
+

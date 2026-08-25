@@ -20,6 +20,7 @@ import {
   MdTrackChanges
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
 import './EmailManagementAdminTab.css';
 
@@ -60,6 +61,12 @@ function getEmailSubPath(pathname) {
   if (parts[0] !== 'admin' || parts[1] !== 'emails') return null;
   return parts[2] || null;
 }
+
+export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { seasonFilters } = useSeason();
+  const [emailSendJob, setEmailSendJob] = useState(null);
 
 function TemplateEditor({
   template,
@@ -449,6 +456,14 @@ export default function EmailManagementAdminTab({ onAlert }) {
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailMemberActivation(seasonFilters);
+      const job = result?.emailJob || result?.data?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: 'Member Account Activation Emails' });
+        } else {
+          setEmailSendJob({ id: job.id, title: 'Member Account Activation Emails' });
+        }
+      }
       onAlert?.({ type: 'success', message: summarizeSend(result.data) });
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Send failed' });
@@ -464,6 +479,14 @@ export default function EmailManagementAdminTab({ onAlert }) {
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailBoardActivation(seasonFilters);
+      const job = result?.emailJob || result?.data?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: 'Board Account Activation Emails' });
+        } else {
+          setEmailSendJob({ id: job.id, title: 'Board Account Activation Emails' });
+        }
+      }
       onAlert?.({ type: 'success', message: summarizeSend(result.data) });
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Send failed' });
@@ -479,6 +502,14 @@ export default function EmailManagementAdminTab({ onAlert }) {
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailMemberAcceptance(seasonFilters);
+      const job = result?.emailJob || result?.data?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: 'Member Acceptance Emails' });
+        } else {
+          setEmailSendJob({ id: job.id, title: 'Member Acceptance Emails' });
+        }
+      }
       onAlert?.({ type: 'success', message: summarizeSend(result.data) });
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Send failed' });
@@ -704,6 +735,14 @@ export default function EmailManagementAdminTab({ onAlert }) {
           />
         )}
       </div>
+
+      {emailSendJob && (
+        <EmailSendProgress
+          jobId={emailSendJob.id}
+          title={emailSendJob.title}
+          onClear={() => setEmailSendJob(null)}
+        />
+      )}
     </div>
   );
 }
