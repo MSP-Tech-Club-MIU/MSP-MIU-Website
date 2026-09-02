@@ -999,7 +999,13 @@ const listEnrollments = async (req, res) => {
           { email: { [Op.like]: like } },
           { phone_number: { [Op.like]: like } },
           { university_id: { [Op.like]: like } },
-          { '$course.title$': { [Op.like]: like } }
+          {
+            course_id: {
+              [Op.in]: CourseEnrollment.sequelize.literal(
+                `(SELECT course_id FROM courses WHERE title LIKE ${CourseEnrollment.sequelize.escape(like)})`
+              )
+            }
+          }
         ];
       }
     }
