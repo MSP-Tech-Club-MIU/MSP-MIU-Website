@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MdAdd, MdAccountTree, MdLink, MdOpenInNew } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import { BOARD_POSITION_NAMES } from '../../data/departments';
 
@@ -132,9 +133,14 @@ export default function DepartmentsAdminTab({ onAlert }) {
       });
       return;
     }
-    if (!window.confirm(`Delete department "${row.name}"?\n\nThis will fail if members, board roles, or applications still reference it.`)) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Delete Department?',
+      message: `Delete department "${row.name}"?\n\nThis will fail if members, board roles, or applications still reference it.`,
+      confirmText: 'Delete Department',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteDepartment(row.department_id);
       onAlert?.({ type: 'success', message: 'Department deleted.' });

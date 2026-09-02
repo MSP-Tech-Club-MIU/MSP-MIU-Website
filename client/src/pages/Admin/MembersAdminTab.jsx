@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { MdPeople } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
@@ -80,7 +81,14 @@ export default function MembersAdminTab({ onAlert }) {
   }, [load]);
 
   const remove = async (row) => {
-    if (!window.confirm(`Remove member "${row.full_name}"? This cannot be undone.`)) return;
+    const ok = await confirmModal({
+      title: 'Remove Member?',
+      message: `Remove member "${row.full_name}"? This action cannot be undone.`,
+      confirmText: 'Remove Member',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteMember(row.member_id);
       onAlert?.({ type: 'success', message: 'Member deleted.' });
@@ -95,7 +103,14 @@ export default function MembersAdminTab({ onAlert }) {
       onAlert?.({ type: 'error', message: 'This member has no email address.' });
       return;
     }
-    if (!window.confirm(`Send account creation email to ${row.full_name} (${row.email})?`)) return;
+    const ok = await confirmModal({
+      title: 'Send Account Creation Email?',
+      message: `Send account creation email to ${row.full_name} (${row.email})?`,
+      confirmText: 'Send Email',
+      cancelText: 'Cancel',
+      type: 'info'
+    });
+    if (!ok) return;
     try {
       setSendingId(row.member_id);
       const result = await ApiService.sendMemberActivationEmail(row.member_id);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import { useSeason } from '../../context/SeasonContext';
 import { getDepartmentNameById } from '../../data/departments';
 import CommentModal from '../../components/CommentModal';
@@ -59,6 +60,70 @@ const RegistrationsTab = memo(({ onAlert }) => {
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState(null);
     const [stats, setStats] = useState(null);
+
+    const [recruitmentSettings, setRecruitmentSettings] = useState({
+        enabled: true,
+        title: 'Recruitment is Currently Closed',
+        closedMessage: 'Registrations are currently closed. Please wait until recruitment is available! Follow our Instagram page to know when recruitment opens.',
+        instagramUrl: 'https://www.instagram.com/mspmiu'
+    });
+    const [togglingRecruitment, setTogglingRecruitment] = useState(false);
+
+    const loadRecruitmentSettings = useCallback(async () => {
+        try {
+            const res = await ApiService.getSiteContentKey('recruitment');
+            const val = res?.data?.value ?? res?.data;
+            if (val && typeof val === 'object') {
+                setRecruitmentSettings((prev) => ({ ...prev, ...val }));
+            }
+        } catch (err) {
+            console.warn('Could not load recruitment settings:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRecruitmentSettings();
+    }, [loadRecruitmentSettings]);
+
+    const handleToggleRecruitment = async () => {
+        const nextEnabled = !recruitmentSettings.enabled;
+        const confirmMsg = nextEnabled
+            ? 'Open membership registrations? Users will be able to fill out and submit the Become a Member form.'
+            : 'Stop membership registrations? When stopped, visitors will see the "Recruitment Closed" screen directing them to follow the Instagram page.';
+
+        const ok = await confirmModal({
+            title: nextEnabled ? 'Open Recruitment?' : 'Stop Recruitment?',
+            message: confirmMsg,
+            confirmText: nextEnabled ? 'Open Recruitment' : 'Stop Recruitment',
+            cancelText: 'Cancel',
+            type: nextEnabled ? 'info' : 'warning'
+        });
+        if (!ok) return;
+
+        try {
+            setTogglingRecruitment(true);
+            const updated = {
+                ...recruitmentSettings,
+                enabled: nextEnabled
+            };
+            await ApiService.updateSiteContent('recruitment', updated);
+            setRecruitmentSettings(updated);
+            onAlert?.({
+                type: 'success',
+                message: nextEnabled
+                    ? 'Recruitment opened! Applications are now active.'
+                    : 'Recruitment stopped! Registrations are now closed.'
+            });
+        } catch (err) {
+            console.error('Error toggling recruitment:', err);
+            onAlert?.({
+                type: 'error',
+                message: err.message || 'Failed to update recruitment status.'
+            });
+        } finally {
+            setTogglingRecruitment(false);
+        }
+    };
 
     const [filters, setFilters] = useState(emptyFilters);
     const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
@@ -219,7 +284,14 @@ const RegistrationsTab = memo(({ onAlert }) => {
     };
 
     const handleDelete = async (app) => {
-        if (!window.confirm(`Delete application for "${app.full_name}"?`)) return;
+        const ok = await confirmModal({
+            title: 'Delete Application?',
+            message: `Delete application for "${app.full_name}"? This action cannot be undone.`,
+            confirmText: 'Delete Application',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+        if (!ok) return;
         try {
             await ApiService.deleteApplication(app.application_id);
             const remove = (prev) => prev.filter((a) => a.application_id !== app.application_id);
@@ -233,10 +305,13 @@ const RegistrationsTab = memo(({ onAlert }) => {
     };
 
     const handleSendActivationEmails = async () => {
-        const confirmed = window.confirm(
-            'Send activation emails to all accepted members who do not have an account yet?\n\n' +
-            'Members who already activated their account will be skipped. This may take a while.'
-        );
+        const confirmed = await confirmModal({
+            title: 'Send Activation Emails?',
+            message: 'Send activation emails to all accepted members who do not have an account yet?\n\nMembers who already activated their account will be skipped. This may take a while.',
+            confirmText: 'Send Activation Emails',
+            cancelText: 'Cancel',
+            type: 'warning'
+        });
         if (!confirmed) return;
 
         try {
@@ -292,6 +367,39 @@ const RegistrationsTab = memo(({ onAlert }) => {
                 saveComment={saveComment}
                 textareaRef={textareaRef}
             />
+
+            {/* Recruitment Control Banner */}
+            <div className={`RegistrationsAdmin__recruitmentBanner ${recruitmentSettings.enabled ? 'is-active' : 'is-stopped'}`}>
+                <div className="RegistrationsAdmin__recruitmentInfo">
+                    <div className="RegistrationsAdmin__recruitmentBadge">
+                        <span className={`RegistrationsAdmin__statusDot ${recruitmentSettings.enabled ? 'dot-active' : 'dot-stopped'}`} />
+                        <span className="RegistrationsAdmin__statusText">
+                            {recruitmentSettings.enabled ? 'Recruitment Open (Accepting Applications)' : 'Recruitment Stopped (Registrations Closed)'}
+                        </span>
+                    </div>
+                    <p className="RegistrationsAdmin__recruitmentDesc">
+                        {recruitmentSettings.enabled
+                            ? 'The "Become a Member" form is currently active. Students can submit membership applications.'
+                            : 'Registrations are stopped. Visitors to the Become a Member page see a notice directing them to wait and follow Instagram.'}
+                    </p>
+                </div>
+                <div className="RegistrationsAdmin__recruitmentActions">
+                    <button
+                        type="button"
+                        className={`AdminPanel__actionBtn ${recruitmentSettings.enabled ? 'AdminPanel__actionBtn--danger' : 'AdminPanel__actionBtn--approve'}`}
+                        onClick={handleToggleRecruitment}
+                        disabled={togglingRecruitment}
+                    >
+                        {togglingRecruitment ? (
+                            'Updating status…'
+                        ) : recruitmentSettings.enabled ? (
+                            '🛑 Stop Registrations'
+                        ) : (
+                            '✅ Open Registrations'
+                        )}
+                    </button>
+                </div>
+            </div>
 
             <div className="RegistrationsAdmin__toolbar">
                 <button

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../services/api';
+import { useModal } from '../context/ModalContext';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import Pagination from '../components/Pagination';
@@ -11,6 +12,7 @@ import './PageBase.css';
 const LIMIT = 20;
 
 const AttendanceReview = () => {
+  const { alert: modalAlert } = useModal();
   const navigate = useNavigate();
   const [attendanceRequests, setAttendanceRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +163,11 @@ const AttendanceReview = () => {
       );
     } catch (error) {
       console.error('Error updating attendance status:', error);
-      alert(`Failed to update attendance status: ${error.message || 'Unknown error'}`);
+      await modalAlert({
+        title: 'Update Failed',
+        message: `Failed to update attendance status: ${error.message || 'Unknown error'}`,
+        type: 'danger'
+      });
     } finally {
       setUpdatingIds(prev => {
         const newSet = new Set(prev);
@@ -193,7 +199,11 @@ const AttendanceReview = () => {
   
   const exportToCSV = async () => {
     if (attendanceRequests.length === 0) {
-      alert('No data to export');
+      await modalAlert({
+        title: 'No Data',
+        message: 'There are no attendance requests matching the current filters to export.',
+        type: 'info'
+      });
       return;
     }
 
@@ -210,7 +220,11 @@ const AttendanceReview = () => {
       await ApiService.exportAttendanceRequestsToCSV(filtersToSend);
     } catch (error) {
       console.error('Error exporting to CSV:', error);
-      alert(`Failed to export CSV: ${error.message || 'Unknown error'}`);
+      await modalAlert({
+        title: 'Export Failed',
+        message: `Failed to export CSV: ${error.message || 'Unknown error'}`,
+        type: 'danger'
+      });
     } finally {
       setIsExporting(false);
     }

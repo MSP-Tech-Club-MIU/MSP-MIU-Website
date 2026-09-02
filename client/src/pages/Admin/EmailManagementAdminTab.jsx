@@ -20,6 +20,7 @@ import {
   MdTrackChanges
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
 import './EmailManagementAdminTab.css';
@@ -406,7 +407,14 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
 
   const handleReset = async () => {
     if (!selectedKey) return;
-    if (!window.confirm('Reset this template to the code default?')) return;
+    const ok = await confirmModal({
+      title: 'Reset Template?',
+      message: 'Reset this email template to the original code default?',
+      confirmText: 'Reset Template',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setSaving(true);
       const result = await ApiService.resetEmailTemplate(selectedKey);
@@ -445,9 +453,14 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
   };
 
   const handleBulkMemberActivation = async () => {
-    if (!window.confirm('Send activation emails to members without an active account (current season filter)?')) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Send Member Activation Emails?',
+      message: 'Send activation emails to members without an active account (current season filter)?',
+      confirmText: 'Send Emails',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailMemberActivation(seasonFilters);
@@ -468,9 +481,14 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
   };
 
   const handleBulkBoardActivation = async () => {
-    if (!window.confirm('Send board activation emails to board members without an active account (current season filter)?')) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Send Board Activation Emails?',
+      message: 'Send board activation emails to board members without an active account (current season filter)?',
+      confirmText: 'Send Emails',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailBoardActivation(seasonFilters);
@@ -491,9 +509,14 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
   };
 
   const handleBulkAcceptance = async () => {
-    if (!window.confirm('Send acceptance emails to members (uses department WhatsApp links, current season filter)?')) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Send Member Acceptance Emails?',
+      message: 'Send acceptance emails to members (uses department WhatsApp links, current season filter)?',
+      confirmText: 'Send Acceptance Emails',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setBulkBusy(true);
       const result = await ApiService.sendEmailMemberAcceptance(seasonFilters);

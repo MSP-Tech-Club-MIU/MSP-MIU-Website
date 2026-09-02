@@ -18,6 +18,7 @@ import {
   FiSend
 } from 'react-icons/fi';
 import ApiService from '../services/api';
+import { useModal } from '../context/ModalContext';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import SEO from '../components/SEO';
@@ -25,6 +26,7 @@ import SEO from '../components/SEO';
 import mspLogo from '../assets/Images/msp-logo.png';
 
 const EventDetails = () => {
+  const { alert: modalAlert } = useModal();
   const { id } = useParams();
   const navigate = useNavigate();
   const [event, setEvent] = useState(null);
@@ -195,11 +197,19 @@ const EventDetails = () => {
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!feedbackText.trim()) {
-      alert('Please enter your feedback');
+      await modalAlert({
+        title: 'Feedback Required',
+        message: 'Please enter your feedback before submitting.',
+        type: 'warning'
+      });
       return;
     }
     if (feedbackText.trim().length > 2000) {
-      alert('Feedback must be less than 2000 characters');
+      await modalAlert({
+        title: 'Feedback Too Long',
+        message: 'Feedback must be less than 2000 characters.',
+        type: 'warning'
+      });
       return;
     }
 
@@ -207,10 +217,18 @@ const EventDetails = () => {
     try {
       await ApiService.addEventFeedback(event.event_id, feedbackText.trim());
       setFeedbackText('');
-      alert('Feedback submitted successfully!');
+      await modalAlert({
+        title: 'Feedback Submitted',
+        message: 'Thank you for your feedback! It helps us improve our events.',
+        type: 'success'
+      });
     } catch (err) {
       console.error('Error submitting feedback:', err);
-      alert('Failed to submit feedback: ' + (err.message || 'Unknown error'));
+      await modalAlert({
+        title: 'Submission Failed',
+        message: 'Failed to submit feedback: ' + (err.message || 'Unknown error'),
+        type: 'danger'
+      });
     } finally {
       setIsSubmittingFeedback(false);
     }

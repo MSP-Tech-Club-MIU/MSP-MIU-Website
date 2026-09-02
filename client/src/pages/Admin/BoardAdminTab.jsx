@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MdAdd, MdGroups } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
@@ -194,7 +195,14 @@ export default function BoardAdminTab({ onAlert }) {
   };
 
   const remove = async (row) => {
-    if (!window.confirm(`Delete "${row.full_name}" from the board?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Board Member?',
+      message: `Are you sure you want to delete "${row.full_name}" from the board?`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteBoardMember(row.board_id);
       onAlert?.({ type: 'success', message: 'Board member deleted.' });
@@ -209,13 +217,14 @@ export default function BoardAdminTab({ onAlert }) {
       onAlert?.({ type: 'error', message: 'This board member has no email address.' });
       return;
     }
-    if (
-      !window.confirm(
-        `Send board account activation email to ${row.full_name} (${row.email})?`
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Send Activation Email?',
+      message: `Send board account activation email to ${row.full_name} (${row.email})?`,
+      confirmText: 'Send Email',
+      cancelText: 'Cancel',
+      type: 'info'
+    });
+    if (!ok) return;
     try {
       setSendingId(row.board_id);
       const result = await ApiService.sendBoardActivationEmail(row.board_id);

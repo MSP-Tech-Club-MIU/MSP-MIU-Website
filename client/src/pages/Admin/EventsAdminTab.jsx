@@ -13,6 +13,7 @@ import {
   MdArrowBack
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
@@ -264,7 +265,14 @@ export default function EventsAdminTab({ onAlert }) {
   };
 
   const remove = async (row) => {
-    if (!window.confirm(`Delete event "${row.name}"? This cannot be undone.`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Event?',
+      message: `Delete event "${row.name}"? This action cannot be undone.`,
+      confirmText: 'Delete Event',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteEvent(row.event_id);
       onAlert?.({ type: 'success', message: 'Event deleted.' });

@@ -17,6 +17,7 @@ import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
+import { confirmModal } from '../../context/ModalContext';
 import AdminShell, { ParticleBackground } from './AdminShell';
 import RegistrationsTab from './RegistrationsTab';
 import SponsorsAdminTab from './SponsorsAdminTab';
@@ -707,7 +708,14 @@ const AdminPanel = () => {
     };
 
     const handleResendAnnouncement = async (announcement) => {
-        if (!window.confirm(`Resend emails for "${announcement.title}" to all members?`)) return;
+        const ok = await confirmModal({
+            title: 'Resend Announcement Emails?',
+            message: `Are you sure you want to resend email broadcast for "${announcement.title}" to all members?`,
+            confirmText: 'Yes, Resend',
+            cancelText: 'Cancel',
+            type: 'warning'
+        });
+        if (!ok) return;
         try {
             const result = await ApiService.resendAnnouncementEmails(announcement.announcement_id);
             if (result?.emailJob?.id) {
@@ -747,7 +755,14 @@ const AdminPanel = () => {
     };
 
     const deleteAnnouncement = async (id) => {
-        if (!window.confirm('Are you sure you want to remove this announcement?')) return;
+        const ok = await confirmModal({
+            title: 'Remove Announcement?',
+            message: 'Are you sure you want to remove this announcement? This action cannot be undone.',
+            confirmText: 'Remove',
+            cancelText: 'Cancel',
+            type: 'danger'
+        });
+        if (!ok) return;
         try {
             await ApiService.deleteAnnouncement(id);
             setAnnouncements((prev) => prev.filter((a) => a.announcement_id !== id));
@@ -1768,7 +1783,14 @@ const AdminPanel = () => {
                                                             type="button"
                                                             className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
                                                             onClick={async () => {
-                                                                if (!window.confirm('Delete this suggestion?')) return;
+                                                                const ok = await confirmModal({
+                                                                    title: 'Delete Suggestion?',
+                                                                    message: 'Are you sure you want to delete this suggestion?',
+                                                                    confirmText: 'Delete',
+                                                                    cancelText: 'Cancel',
+                                                                    type: 'danger'
+                                                                });
+                                                                if (!ok) return;
                                                                 try {
                                                                     await ApiService.deleteAdminSuggestion(s.suggestion_id);
                                                                     setAlert({ type: 'success', message: 'Suggestion deleted.' });
@@ -1820,7 +1842,14 @@ const AdminPanel = () => {
                                                             type="button"
                                                             className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
                                                             onClick={async () => {
-                                                                if (!window.confirm('Delete this feedback?')) return;
+                                                                const ok = await confirmModal({
+                                                                    title: 'Delete Feedback?',
+                                                                    message: 'Are you sure you want to delete this feedback?',
+                                                                    confirmText: 'Delete',
+                                                                    cancelText: 'Cancel',
+                                                                    type: 'danger'
+                                                                });
+                                                                if (!ok) return;
                                                                 try {
                                                                     await ApiService.deleteAdminFeedback(f.feedback_id);
                                                                     setAlert({ type: 'success', message: 'Feedback deleted.' });

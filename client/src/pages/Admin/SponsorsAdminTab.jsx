@@ -10,6 +10,7 @@ import {
   MdOpenInNew
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
@@ -336,7 +337,14 @@ export default function SponsorsAdminTab({ onAlert }) {
   };
 
   const remove = async (row) => {
-    if (!window.confirm(`Delete sponsor "${row.name}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Sponsor?',
+      message: `Are you sure you want to delete sponsor "${row.name}"?`,
+      confirmText: 'Delete Sponsor',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteSponsor(row.sponsor_id);
       onAlert?.({ type: 'success', message: 'Sponsor deleted.' });

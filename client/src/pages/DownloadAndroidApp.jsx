@@ -5,9 +5,11 @@ import BackButton from '../components/BackButton';
 import { FiDownload, FiSmartphone, FiShield, FiZap, FiCheck } from 'react-icons/fi';
 import { FaAndroid } from 'react-icons/fa';
 import ApiService from '../services/api';
+import { useModal } from '../context/ModalContext';
 import './DownloadAndroidApp.css';
 
 const DownloadAndroidApp = memo(() => {
+  const { alert: modalAlert } = useModal();
   const [appInfo, setAppInfo] = useState(null);
 
   useEffect(() => {
@@ -69,7 +71,11 @@ const DownloadAndroidApp = memo(() => {
 
     if (!r2Domain) {
       console.error('R2_PUBLIC_DOMAIN environment variable is not set');
-      alert('Download URL is not configured. Please contact the administrator.');
+      modalAlert({
+        title: 'Download Unavailable',
+        message: 'Download URL is not configured. Please contact the administrator.',
+        type: 'warning'
+      });
       return;
     }
 

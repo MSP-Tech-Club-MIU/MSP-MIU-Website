@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { MdArticle, MdRefresh, MdAdd, MdDelete, MdArrowUpward, MdArrowDownward } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 
 const SECTIONS = [
   { key: 'hero', label: 'Home hero' },
@@ -9,6 +10,7 @@ const SECTIONS = [
   { key: 'seo', label: 'SEO defaults' },
   { key: 'imagine_cup', label: 'Imagine Cup section' },
   { key: 'gallery', label: 'Gallery titles' },
+  { key: 'recruitment', label: 'Membership recruitment' },
   { key: 'lookups', label: 'Faculties / years / depts display' },
   { key: 'privacy_policy', label: 'Privacy Policy' },
   { key: 'faqs', label: 'FAQs' },
@@ -284,6 +286,73 @@ function PrivacyPolicyEditor({ value, onChange }) {
   );
 }
 
+function RecruitmentEditor({ value, onChange }) {
+  const patch = (next) => onChange({ ...value, ...next });
+
+  return (
+    <div className="SiteContentStructured">
+      <div className="AdminPanel__formGroup">
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            checked={value?.enabled !== false}
+            onChange={(e) => patch({ enabled: e.target.checked })}
+            style={{ width: 18, height: 18 }}
+          />
+          <span>Recruitment is Open (Accept applications on Become a Member page)</span>
+        </label>
+        <small style={{ display: 'block', marginTop: 4, color: 'rgba(197, 218, 233, 0.7)' }}>
+          When unchecked, visitors will see the closed notice and will be directed to follow the Instagram page.
+        </small>
+      </div>
+
+      <div className="AdminPanel__formGroup">
+        <label htmlFor="recruitment-closed-title">Closed Screen Title</label>
+        <input
+          id="recruitment-closed-title"
+          type="text"
+          value={value?.title || ''}
+          onChange={(e) => patch({ title: e.target.value })}
+          placeholder="Recruitment is Currently Closed"
+        />
+      </div>
+
+      <div className="AdminPanel__formGroup">
+        <label htmlFor="recruitment-closed-subtitle">Closed Screen Subtitle</label>
+        <input
+          id="recruitment-closed-subtitle"
+          type="text"
+          value={value?.subtitle || ''}
+          onChange={(e) => patch({ subtitle: e.target.value })}
+          placeholder="Thank you for your interest in joining MSP Tech Club at MIU."
+        />
+      </div>
+
+      <div className="AdminPanel__formGroup">
+        <label htmlFor="recruitment-closed-message">Closed Notice / Instructions</label>
+        <textarea
+          id="recruitment-closed-message"
+          rows={4}
+          value={value?.closedMessage || ''}
+          onChange={(e) => patch({ closedMessage: e.target.value })}
+          placeholder="Registrations are currently closed. Please wait until recruitment is available! Follow our Instagram page to know when recruitment opens."
+        />
+      </div>
+
+      <div className="AdminPanel__formGroup">
+        <label htmlFor="recruitment-instagram-url">Instagram Page URL</label>
+        <input
+          id="recruitment-instagram-url"
+          type="url"
+          value={value?.instagramUrl || ''}
+          onChange={(e) => patch({ instagramUrl: e.target.value })}
+          placeholder="https://www.instagram.com/mspmiu"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function SiteContentAdminTab({ onAlert }) {
   const [section, setSection] = useState('hero');
   const [value, setValue] = useState(null);
@@ -293,7 +362,7 @@ export default function SiteContentAdminTab({ onAlert }) {
   const [parseError, setParseError] = useState(null);
   const [useJson, setUseJson] = useState(false);
 
-  const isStructured = section === 'faqs' || section === 'privacy_policy';
+  const isStructured = section === 'faqs' || section === 'privacy_policy' || section === 'recruitment';
 
   const load = useCallback(async () => {
     try {
@@ -349,7 +418,14 @@ export default function SiteContentAdminTab({ onAlert }) {
   };
 
   const reset = async () => {
-    if (!window.confirm(`Reset "${section}" to defaults?`)) return;
+    const ok = await confirmModal({
+      title: 'Reset Section Defaults?',
+      message: `Reset "${section}" to default configuration? This cannot be undone.`,
+      confirmText: 'Reset Section',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setSaving(true);
       await ApiService.resetSiteContent(section);
@@ -421,9 +497,14 @@ export default function SiteContentAdminTab({ onAlert }) {
           {isStructured && !useJson ? (
             section === 'faqs' ? (
               <FaqsEditor value={value || { pageTitle: '', subtitle: '', items: [] }} onChange={onStructuredChange} />
-            ) : (
+            ) : section === 'privacy_policy' ? (
               <PrivacyPolicyEditor
                 value={value || { pageTitle: '', subtitle: '', lastUpdated: '', intro: '', sections: [] }}
+                onChange={onStructuredChange}
+              />
+            ) : (
+              <RecruitmentEditor
+                value={value || { enabled: true, title: '', subtitle: '', closedMessage: '', instagramUrl: '' }}
                 onChange={onStructuredChange}
               />
             )

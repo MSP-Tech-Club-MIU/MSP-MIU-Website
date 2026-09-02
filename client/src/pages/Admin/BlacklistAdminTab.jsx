@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MdBlock, MdAdd, MdEdit, MdDelete, MdSearch, MdWarning } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 
 const LIST_LIMIT = 20;
@@ -165,9 +166,14 @@ export default function BlacklistAdminTab({ onAlert }) {
 
   const remove = async (row) => {
     const target = row.name || row.identifier || row.phone_number || `#${row.blacklist_id}`;
-    if (!window.confirm(`Unblock and remove "${target}" from the blacklist?\n\nThis will allow them to participate in club activities again.`)) {
-      return;
-    }
+    const ok = await confirmModal({
+      title: 'Unblock and Remove?',
+      message: `Unblock and remove "${target}" from the blacklist?\n\nThis will allow them to participate in club activities again.`,
+      confirmText: 'Unblock & Remove',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteBlacklistEntry(row.blacklist_id);
       onAlert?.({ type: 'success', message: `Removed "${target}" from blacklist.` });

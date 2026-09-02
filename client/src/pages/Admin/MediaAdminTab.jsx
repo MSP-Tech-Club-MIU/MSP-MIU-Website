@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { MdPermMedia, MdUpload } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import MediaUploadModal, { MEDIA_UPLOAD_META } from './MediaUploadModal';
 
@@ -138,7 +139,15 @@ export default function MediaAdminTab({ onAlert }) {
 
   const remove = async (item) => {
     if (!item?.key) return;
-    if (!window.confirm(`Delete ${item.name || item.key}?`)) return;
+    const itemName = item.name || item.key;
+    const ok = await confirmModal({
+      title: 'Delete Media File?',
+      message: `Are you sure you want to delete ${itemName}? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCloudObject(item.key);
       onAlert?.({ type: 'success', message: 'Deleted.' });

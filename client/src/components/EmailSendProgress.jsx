@@ -17,6 +17,7 @@ import {
   MdOpenInNew
 } from 'react-icons/md';
 import ApiService from '../services/api';
+import { useModal } from '../context/ModalContext';
 import './EmailSendProgress.css';
 
 /**
@@ -32,6 +33,7 @@ export default function EmailSendProgress({
   onClear,
   onViewTracker
 }) {
+  const { confirm, alert: modalAlert } = useModal();
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
   const [isMinimized, setIsMinimized] = useState(initialMinimized);
@@ -108,13 +110,25 @@ export default function EmailSendProgress({
 
   // Cancel job handler
   const handleCancelJob = async () => {
-    if (!window.confirm('Are you sure you want to cancel the rest of this email broadcast?')) return;
+    const isConfirmed = await confirm({
+      title: 'Cancel Email Broadcast?',
+      message: 'Are you sure you want to cancel the rest of this email broadcast? Any unsent emails will be stopped.',
+      confirmText: 'Yes, Cancel Broadcast',
+      cancelText: 'Continue Sending',
+      type: 'danger'
+    });
+    if (!isConfirmed) return;
+
     try {
       setCancelling(true);
       const updated = await ApiService.cancelEmailJob(jobId);
       setJob(updated);
     } catch (err) {
-      alert(err.message || 'Failed to cancel email job');
+      await modalAlert({
+        title: 'Cancel Failed',
+        message: err.message || 'Failed to cancel email job',
+        type: 'danger'
+      });
     } finally {
       setCancelling(false);
     }

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FaAndroid } from 'react-icons/fa';
 import { FiDownload, FiSend, FiUpload } from 'react-icons/fi';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import EmailSendProgress from '../../components/EmailSendProgress';
 import './AndroidAppAdminTab.css';
 
@@ -105,7 +106,14 @@ const AndroidAppAdminTab = ({ onAlert, onOpenJob }) => {
   };
 
   const handleNotifyOnly = async () => {
-    if (!window.confirm('Send the Android app update email to all users again?')) return;
+    const ok = await confirmModal({
+      title: 'Send App Update Emails?',
+      message: 'Are you sure you want to send the Android app update email broadcast to all users again?',
+      confirmText: 'Yes, Send Emails',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     setNotifying(true);
     setError('');
     try {

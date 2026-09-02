@@ -5,12 +5,14 @@ import { FaEdit, FaSave, FaTimes, FaUpload, FaSignOutAlt, FaUser, FaEnvelope, Fa
 import './PageBase.css';
 import './Profile.css';
 import ApiService from '../services/api';
+import { useModal } from '../context/ModalContext';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import SeasonBadge from '../components/SeasonBadge';
 import { getDepartmentNameById, departments } from '../data/departments';
 
 const Profile = () => {
+  const { alert: modalAlert } = useModal();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -159,7 +161,11 @@ const Profile = () => {
       setUser(updatedUser);
       setIsEditing(false);
       
-      alert('Profile updated successfully');
+      await modalAlert({
+        title: 'Profile Updated',
+        message: 'Your profile details have been saved successfully.',
+        type: 'success'
+      });
       
       // Reset file input elements
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -178,7 +184,11 @@ const Profile = () => {
       await fetchProfile();
     } catch (error) {
       console.error('Error saving profile:', error);
-      alert(error.message || 'Failed to save profile');
+      await modalAlert({
+        title: 'Save Failed',
+        message: error.message || 'Failed to save profile',
+        type: 'danger'
+      });
     } finally {
       setUploadingBoardPhoto(false);
       setSaving(false);
@@ -189,19 +199,27 @@ const Profile = () => {
     setEditedData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        await modalAlert({
+          title: 'Invalid File Type',
+          message: 'Please select a valid image file (PNG, JPG, WEBP).',
+          type: 'warning'
+        });
         e.target.value = '';
         return;
       }
       
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        alert('File too large');
+        await modalAlert({
+          title: 'File Too Large',
+          message: 'The selected image exceeds the maximum size limit of 5MB.',
+          type: 'warning'
+        });
         e.target.value = '';
         return;
       }
@@ -217,18 +235,26 @@ const Profile = () => {
     }
   };
 
-  const handleBoardPhotoUpload = (e) => {
+  const handleBoardPhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+      await modalAlert({
+        title: 'Invalid File Type',
+        message: 'Please select a valid image file (PNG, JPG, WEBP).',
+        type: 'warning'
+      });
       e.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File too large (max 5MB)');
+      await modalAlert({
+        title: 'File Too Large',
+        message: 'The selected board photo exceeds the maximum size limit of 5MB.',
+        type: 'warning'
+      });
       e.target.value = '';
       return;
     }
@@ -241,19 +267,27 @@ const Profile = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleScheduleUpload = (e) => {
+  const handleScheduleUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file type (PDF only)
       if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file');
+        await modalAlert({
+          title: 'Invalid File Type',
+          message: 'Please select a valid PDF schedule file.',
+          type: 'warning'
+        });
         e.target.value = '';
         return;
       }
       
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert('File too large');
+        await modalAlert({
+          title: 'File Too Large',
+          message: 'The selected PDF file exceeds the maximum size limit of 10MB.',
+          type: 'warning'
+        });
         e.target.value = '';
         return;
       }

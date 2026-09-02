@@ -294,3 +294,77 @@
     color: var(--admin-text, #eaf2ff);
     font-size: 0.9rem;
 }
+
+/* Recruitment Control Banner */
+.RegistrationsAdmin__recruitmentBanner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-radius: 14px;
+    background: var(--admin-surface, rgba(15, 42, 69, 0.55));
+    border: 1px solid var(--admin-border, rgba(255, 255, 255, 0.12));
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+}
+
+.RegistrationsAdmin__recruitmentBanner.is-active {
+    border-left: 5px solid #27ae60;
+    background: linear-gradient(135deg, rgba(15, 42, 69, 0.65) 0%, rgba(39, 174, 96, 0.08) 100%);
+}
+
+.RegistrationsAdmin__recruitmentBanner.is-stopped {
+    border-left: 5px solid #e74c3c;
+    background: linear-gradient(135deg, rgba(15, 42, 69, 0.65) 0%, rgba(231, 76, 60, 0.08) 100%);
+}
+
+.RegistrationsAdmin__recruitmentInfo {
+    flex: 1;
+    min-width: 260px;
+}
+
+.RegistrationsAdmin__recruitmentBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.RegistrationsAdmin__statusDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.RegistrationsAdmin__statusDot.dot-active {
+    background: #2ecc71;
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.7);
+}
+
+.RegistrationsAdmin__statusDot.dot-stopped {
+    background: #e74c3c;
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.7);
+}
+
+.RegistrationsAdmin__statusText {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.RegistrationsAdmin__recruitmentDesc {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--admin-text-muted, rgba(197, 218, 233, 0.75));
+}
+
+.RegistrationsAdmin__recruitmentActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+

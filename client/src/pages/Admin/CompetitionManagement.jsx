@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom'
 import { FiArrowLeft, FiUsers, FiLayers, FiFileText, FiClipboard, FiClock } from 'react-icons/fi';
 import { MdQuiz, MdCampaign, MdEmojiEvents, MdEvent, MdDashboard, MdAppRegistration, MdNotifications, MdFeedback, MdPerson, MdHome, MdMenuBook } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import SEO from '../../components/SEO';
 import PageLoader from '../../components/PageLoader';
 import Pagination from '../../components/Pagination';
@@ -526,7 +527,14 @@ const CompetitionManagement = () => {
 
   const deleteTimeslot = async (timeslotId) => {
     if (!loadedComp?.competition_id) return;
-    if (!window.confirm('Delete this timeslot?')) return;
+    const ok = await confirmModal({
+      title: 'Delete Timeslot?',
+      message: 'Are you sure you want to delete this timeslot?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       setTimeslotsActionLoading(true);
       await ApiService.deleteAdminCompetitionTimeslot(loadedComp.competition_id, timeslotId);
@@ -662,7 +670,14 @@ const CompetitionManagement = () => {
 
   const deleteCompetition = async () => {
     if (!loadedComp) return;
-    if (!window.confirm(`Delete competition "${loadedComp.title}"? This cannot be undone.`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Competition?',
+      message: `Delete competition "${loadedComp.title}"? This cannot be undone.`,
+      confirmText: 'Delete Competition',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       await ApiService.deleteAdminCompetition(loadedComp.competition_id);
@@ -727,7 +742,14 @@ const CompetitionManagement = () => {
 
   const removeTeamMember = async (teamMemberId) => {
     if (!editingTeam?.team_id) return;
-    if (!window.confirm('Remove this member from the team?')) return;
+    const ok = await confirmModal({
+      title: 'Remove Team Member?',
+      message: 'Are you sure you want to remove this member from the team?',
+      confirmText: 'Remove Member',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.removeAdminTeamMember(editingTeam.team_id, teamMemberId);
       setAlert({ type: 'success', message: 'Team member removed.' });
@@ -739,7 +761,14 @@ const CompetitionManagement = () => {
 
   const cancelTeamInvitation = async (invitationId) => {
     if (!editingTeam?.team_id) return;
-    if (!window.confirm('Cancel this pending invitation?')) return;
+    const ok = await confirmModal({
+      title: 'Cancel Invitation?',
+      message: 'Are you sure you want to cancel this pending invitation?',
+      confirmText: 'Cancel Invitation',
+      cancelText: 'Keep Invitation',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       await ApiService.cancelAdminTeamInvitation(editingTeam.team_id, invitationId);
       setAlert({ type: 'success', message: 'Invitation cancelled.' });
@@ -780,7 +809,14 @@ const CompetitionManagement = () => {
   };
 
   const deleteTeam = async (teamId) => {
-    if (!window.confirm('Delete this team?')) return;
+    const ok = await confirmModal({
+      title: 'Delete Team?',
+      message: 'Are you sure you want to delete this team?',
+      confirmText: 'Delete Team',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteAdminTeam(teamId);
       setAlert({ type: 'success', message: 'Team deleted.' });
@@ -895,7 +931,14 @@ const CompetitionManagement = () => {
   };
 
   const deleteAnnouncement = async (announcementId) => {
-    if (!window.confirm('Delete this announcement?')) return;
+    const ok = await confirmModal({
+      title: 'Delete Announcement?',
+      message: 'Are you sure you want to delete this announcement?',
+      confirmText: 'Delete Announcement',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCompetitionAnnouncement(
         loadedComp.competition_id,
