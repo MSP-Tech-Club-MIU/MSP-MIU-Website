@@ -9,6 +9,7 @@ import {
   MdPlayArrow
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import './LogsAdminTab.css';
 
 const LEVEL_OPTIONS = ['debug', 'info', 'warn', 'error', 'fatal', 'silent'];
@@ -119,7 +120,14 @@ const LogsAdminTab = ({ onAlert }) => {
   };
 
   const handleClear = async () => {
-    if (!window.confirm('Clear the in-memory log buffer? This cannot be undone.')) return;
+    const ok = await confirmModal({
+      title: 'Clear Log Buffer?',
+      message: 'Clear the in-memory log buffer? This cannot be undone.',
+      confirmText: 'Clear Logs',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     setClearing(true);
     try {
       const result = await ApiService.clearAdminLogs();

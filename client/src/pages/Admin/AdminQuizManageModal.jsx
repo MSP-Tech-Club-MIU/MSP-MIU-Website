@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import { toCairoDateAndTimeStrings } from '../../utils/quizTimeEgypt';
 
 /**
@@ -178,8 +179,15 @@ const AdminQuizManageModal = ({
     );
   };
 
-  const removeQuestion = (questionId) => {
-    if (!window.confirm('Delete this question and all its options?')) return;
+  const removeQuestion = async (questionId) => {
+    const ok = await confirmModal({
+      title: 'Delete Question?',
+      message: 'Are you sure you want to delete this question and all its associated options?',
+      confirmText: 'Delete Question',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     return run(() => ApiService.deleteAdminQuizQuestion(questionId), 'Question removed.');
   };
 
@@ -216,8 +224,15 @@ const AdminQuizManageModal = ({
   const setCorrectOption = (optionId) =>
     run(() => ApiService.updateAdminQuizOption(optionId, { is_correct: true }), 'Correct answer updated.');
 
-  const removeOption = (optionId) => {
-    if (!window.confirm('Delete this option?')) return;
+  const removeOption = async (optionId) => {
+    const ok = await confirmModal({
+      title: 'Delete Option?',
+      message: 'Are you sure you want to delete this option?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     return run(() => ApiService.deleteAdminQuizOption(optionId), 'Option removed.');
   };
 

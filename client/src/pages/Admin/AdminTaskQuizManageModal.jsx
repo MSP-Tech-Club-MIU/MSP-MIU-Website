@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { MdClose } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import TaskQuizAssetMedia from '../../components/TaskQuizAssetMedia';
 import { safeTaskAssetUrl } from '../../utils/taskQuizAssets';
 import AdminQuizManageModal from './AdminQuizManageModal';
@@ -149,7 +150,14 @@ const AdminTaskQuizManageModal = ({ competition, onClose, setAlert, variant = 'm
   };
 
   const removeTask = async (taskId) => {
-    if (!window.confirm('Delete this task? Submissions linked to it may become inconsistent.')) return;
+    const ok = await confirmModal({
+      title: 'Delete Task?',
+      message: 'Are you sure you want to delete this task? Submissions linked to it may become inconsistent.',
+      confirmText: 'Delete Task',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await ApiService.deleteAdminCompetitionTask(taskId);

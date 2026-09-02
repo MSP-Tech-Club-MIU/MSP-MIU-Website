@@ -1,11 +1,25 @@
 const { Op } = require('sequelize');
-const { Application, Member } = require('../models');
+const { Application, Member, SiteContent } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
 const { checkBlacklist } = require('../utils/blacklistCheck');
 const { logAdminAction } = require('../utils/adminNotification');
+const { getDefault } = require('../utils/siteContentDefaults');
 const logger = require('../utils/logger');
+
+async function isRecruitmentOpen() {
+    try {
+        const row = await SiteContent.findByPk('recruitment');
+        if (row && row.content_value && typeof row.content_value === 'object') {
+            return row.content_value.enabled !== false;
+        }
+    } catch (err) {
+        logger.warn('Failed to read recruitment site content:', err);
+    }
+    const def = getDefault('recruitment');
+    return def ? def.enabled !== false : true;
+}
 
 function buildFieldCounts(rows, field) {
     const counts = {};
@@ -58,6 +72,15 @@ const createApplication = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 error: `Application rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+            });
+        }
+
+        // Check if recruitment is open
+        const recruitmentOpen = await isRecruitmentOpen();
+        if (!recruitmentOpen) {
+            return res.status(403).json({
+                success: false,
+                error: 'Membership recruitment is currently closed. Please wait until recruitment is open and follow our Instagram page (@mspmiu) to know when recruitment is available.'
             });
         }
 
@@ -416,6 +439,17 @@ const checkEligibility = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 error: 'At least one of university_id, email, or full_name must be provided'
+            });
+        }
+
+        // 0. Check if recruitment is open
+        const recruitmentOpen = await isRecruitmentOpen();
+        if (!recruitmentOpen) {
+            return res.json({
+                success: true,
+                eligible: false,
+                reason: 'recruitment_closed',
+                message: 'Membership recruitment is currently closed. Please wait until recruitment opens and follow our Instagram page (@mspmiu) to know when recruitment is available.'
             });
         }
 

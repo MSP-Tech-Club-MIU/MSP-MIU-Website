@@ -94,6 +94,13 @@ const DEFAULTS = {
     apkKey: 'Mobile Application/MSP-MIU.apk',
     updatedAt: null
   },
+  recruitment: {
+    enabled: true,
+    title: 'Recruitment is Currently Closed',
+    subtitle: 'Thank you for your interest in joining MSP Tech Club at MIU.',
+    closedMessage: 'Registrations are currently closed. Please wait until recruitment is available! Follow our Instagram page to know when recruitment opens.',
+    instagramUrl: 'https://www.instagram.com/mspmiu'
+  },
   lookups: {
     faculties: [
       'Computer Science',

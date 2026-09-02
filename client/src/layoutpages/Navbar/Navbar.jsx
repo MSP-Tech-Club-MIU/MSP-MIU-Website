@@ -6,7 +6,6 @@ import { useDrag } from 'react-use-gesture';
 import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
 import { MdGroups, MdEmojiEvents, MdFeedback, MdMenuBook } from 'react-icons/md';
 import './Navbar.css';
-import LoginCard from '../../components/LoginCard';
 import ApiService from '../../services/api';
 import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
 import { isCapacitor, isAndroid } from '../../utils/androidBackButton';
@@ -20,7 +19,6 @@ function pathMatchesNavTarget(pathname, to) {
 const Navbar = memo(() => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [showLoginCard, setShowLoginCard] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [isAndroidDevice, setIsAndroidDevice] = useState(false);
@@ -174,31 +172,6 @@ const Navbar = memo(() => {
     setMobileOpen(false);
   }, []);
   
-  const handleLoginClick = useCallback((e) => {
-    e.preventDefault();
-    setShowLoginCard(true);
-    closeMobile();
-  }, [closeMobile]);
-  
-  const closeLoginCard = useCallback(async () => {
-    setShowLoginCard(false);
-    // Check auth status after closing login card (user might have logged in)
-    setTimeout(async () => {
-      const isAuth = ApiService.isAuthenticated();
-      setIsAuthenticated(isAuth);
-      if (isAuth) {
-        try {
-          const userData = await ApiService.getProfile();
-          setUser(userData);
-        } catch (error) {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    }, 100);
-  }, []);
-  
   const navSections = useMemo(() => {
     const primary = [
       { to: '/', label: 'Home', icon: <FaHome /> },
@@ -279,106 +252,84 @@ const Navbar = memo(() => {
 
   const renderDesktopItem = (l) => (
     <li key={l.to}>
-      {!isAuthenticated && l.to === '/login' ? (
-        <button type="button" onClick={handleLoginClick} className="NavItem login-nav-button">
-          <span className="NavItem__icon">{l.icon}</span>
-          <span className="NavItem__label">{l.label}</span>
-        </button>
-      ) : (
-        <NavLink
-          to={l.to}
-          className={({ isActive }) =>
-            `NavItem ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavItem--profile-only' : ''}`
-          }
-        >
-          <span className={`NavItem__icon ${l.isProfile ? 'NavItem__icon--profile' : ''}`}>
-            {l.isProfile ? (
-              <>
-                {user?.profile_picture_url ? (
-                  <img
-                    src={user.profile_picture_url}
-                    alt="Profile"
-                    className="NavItem__profile-picture"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement.querySelector('.NavItem__profile-fallback');
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <span
-                  className="NavItem__profile-fallback"
-                  style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
-                >
-                  <FaUser />
-                </span>
-              </>
-            ) : (
-              l.icon
-            )}
-          </span>
-          {!l.isProfile && <span className="NavItem__label">{l.label}</span>}
-        </NavLink>
-      )}
+      <NavLink
+        to={l.to}
+        className={({ isActive }) =>
+          `NavItem ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavItem--profile-only' : ''}`
+        }
+      >
+        <span className={`NavItem__icon ${l.isProfile ? 'NavItem__icon--profile' : ''}`}>
+          {l.isProfile ? (
+            <>
+              {user?.profile_picture_url ? (
+                <img
+                  src={user.profile_picture_url}
+                  alt="Profile"
+                  className="NavItem__profile-picture"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const fallback = e.target.parentElement.querySelector('.NavItem__profile-fallback');
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span
+                className="NavItem__profile-fallback"
+                style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
+              >
+                <FaUser />
+              </span>
+            </>
+          ) : (
+            l.icon
+          )}
+        </span>
+        {!l.isProfile && <span className="NavItem__label">{l.label}</span>}
+      </NavLink>
     </li>
   );
 
   const renderDrawerItem = (l) => (
     <li key={l.to}>
-      {!isAuthenticated && l.to === '/login' ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleLoginClick(e);
-          }}
-          className="NavDrawer__link"
-        >
-          <span className="NavDrawer__icon">{l.icon}</span>
-          <span className="NavDrawer__label">{l.label}</span>
-        </button>
-      ) : (
-        <NavLink
-          to={l.to}
-          onClick={(e) => {
-            e.stopPropagation();
-            closeMobile();
-          }}
-          className={({ isActive }) =>
-            `NavDrawer__link ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavDrawer__link--profile-only' : ''}`
-          }
-          end
-        >
-          <span className={`NavDrawer__icon ${l.isProfile ? 'NavDrawer__icon--profile' : ''}`}>
-            {l.isProfile ? (
-              <>
-                {user?.profile_picture_url ? (
-                  <img
-                    src={user.profile_picture_url}
-                    alt="Profile"
-                    className="NavDrawer__profile-picture"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                      const fallback = e.target.parentElement.querySelector('.NavDrawer__profile-fallback');
-                      if (fallback) fallback.style.display = 'flex';
-                    }}
-                  />
-                ) : null}
-                <span
-                  className="NavDrawer__profile-fallback"
-                  style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
-                >
-                  <FaUser />
-                </span>
-              </>
-            ) : (
-              l.icon
-            )}
-          </span>
-          {!l.isProfile && <span className="NavDrawer__label">{l.label}</span>}
-        </NavLink>
-      )}
+      <NavLink
+        to={l.to}
+        onClick={(e) => {
+          e.stopPropagation();
+          closeMobile();
+        }}
+        className={({ isActive }) =>
+          `NavDrawer__link ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavDrawer__link--profile-only' : ''}`
+        }
+        end
+      >
+        <span className={`NavDrawer__icon ${l.isProfile ? 'NavDrawer__icon--profile' : ''}`}>
+          {l.isProfile ? (
+            <>
+              {user?.profile_picture_url ? (
+                <img
+                  src={user.profile_picture_url}
+                  alt="Profile"
+                  className="NavDrawer__profile-picture"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    const fallback = e.target.parentElement.querySelector('.NavDrawer__profile-fallback');
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span
+                className="NavDrawer__profile-fallback"
+                style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
+              >
+                <FaUser />
+              </span>
+            </>
+          ) : (
+            l.icon
+          )}
+        </span>
+        {!l.isProfile && <span className="NavDrawer__label">{l.label}</span>}
+      </NavLink>
     </li>
   );
 
@@ -645,14 +596,11 @@ const Navbar = memo(() => {
         document.body
       )}
       
-      {/* Login Card Overlay */}
-      <LoginCard isOpen={showLoginCard} onClose={closeLoginCard} />
-      
       {/* Android Back Button Handler */}
       <AndroidBackButtonHandler
-        onCloseModal={closeLoginCard}
+        onCloseModal={() => {}}
         onCloseDrawer={closeMobile}
-        isModalOpen={showLoginCard}
+        isModalOpen={false}
         isDrawerOpen={mobileOpen}
       />
     </header>

@@ -18,6 +18,7 @@ import {
   MdTrackChanges
 } from 'react-icons/md';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import EmailSendProgress from '../../components/EmailSendProgress';
 import { useSeason } from '../../context/SeasonContext';
@@ -299,7 +300,14 @@ export default function CourseEmailsAdminTab({ onAlert, onOpenJob }) {
   };
 
   const handleResend = async (ann) => {
-    if (!window.confirm(`Resend emails for "${ann.title}" to target audience?`)) return;
+    const ok = await confirmModal({
+      title: 'Resend Course Emails?',
+      message: `Resend emails for "${ann.title}" to target audience?`,
+      confirmText: 'Yes, Resend',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setResendingId(ann.announcement_id);
       const res = await ApiService.resendCourseAnnouncementEmails(selectedCourseId, ann.announcement_id);
@@ -324,7 +332,14 @@ export default function CourseEmailsAdminTab({ onAlert, onOpenJob }) {
   };
 
   const handleDelete = async (ann) => {
-    if (!window.confirm(`Are you sure you want to delete notice "${ann.title}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Notice?',
+      message: `Are you sure you want to delete notice "${ann.title}"?`,
+      confirmText: 'Delete Notice',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCourseAnnouncement(selectedCourseId, ann.announcement_id, { hard: true });
       onAlert?.({ type: 'success', message: 'Notice deleted' });

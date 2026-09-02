@@ -21,6 +21,7 @@ import {
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
+import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
 import SeasonBadge from '../../components/SeasonBadge';
 import { useSeason } from '../../context/SeasonContext';
@@ -226,7 +227,14 @@ export default function CoursesAdminTab({ onAlert }) {
   };
 
   const removeCourse = async (row) => {
-    if (!window.confirm(`Delete course "${row.title}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Course?',
+      message: `Are you sure you want to delete course "${row.title}"? This cannot be undone.`,
+      confirmText: 'Delete Course',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCourse(row.course_id);
       onAlert?.({ type: 'success', message: 'Course deleted' });
@@ -283,7 +291,14 @@ export default function CoursesAdminTab({ onAlert }) {
   };
 
   const removeLesson = async (lesson) => {
-    if (!window.confirm(`Delete lesson "${lesson.title}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Lesson?',
+      message: `Are you sure you want to delete lesson "${lesson.title}"?`,
+      confirmText: 'Delete Lesson',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCourseLesson(contentId, lesson.lesson_id);
       await loadContent();
@@ -368,7 +383,14 @@ export default function CoursesAdminTab({ onAlert }) {
   };
 
   const removeMaterial = async (lessonId, material) => {
-    if (!window.confirm(`Delete material "${material.title}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Material?',
+      message: `Are you sure you want to delete material "${material.title}"?`,
+      confirmText: 'Delete Material',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCourseMaterial(contentId, lessonId, material.material_id);
       await loadContent();
@@ -593,7 +615,14 @@ export default function CoursesAdminTab({ onAlert }) {
   };
 
   const handleResendEmails = async (announcement) => {
-    if (!window.confirm(`Resend emails for "${announcement.title}" to targeted recipients?`)) return;
+    const ok = await confirmModal({
+      title: 'Resend Course Emails?',
+      message: `Resend emails for "${announcement.title}" to targeted recipients?`,
+      confirmText: 'Yes, Resend',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
     try {
       setResendingAnnouncementId(announcement.announcement_id);
       const res = await ApiService.resendCourseAnnouncementEmails(activeAnnounceCourseId, announcement.announcement_id);
@@ -610,7 +639,14 @@ export default function CoursesAdminTab({ onAlert }) {
   };
 
   const handleDeleteAnnouncement = async (announcement) => {
-    if (!window.confirm(`Are you sure you want to delete "${announcement.title}"?`)) return;
+    const ok = await confirmModal({
+      title: 'Delete Announcement?',
+      message: `Are you sure you want to delete "${announcement.title}"?`,
+      confirmText: 'Delete Announcement',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
+    if (!ok) return;
     try {
       await ApiService.deleteCourseAnnouncement(activeAnnounceCourseId, announcement.announcement_id, { hard: true });
       onAlert?.({ type: 'success', message: 'Course announcement deleted' });
