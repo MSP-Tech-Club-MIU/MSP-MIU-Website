@@ -75,6 +75,18 @@ const STATIC_PAGES = {
       'Frequently asked questions about MSP Tech Club at MIU — membership, events, courses, competitions, and the Android app.',
     keywords: 'MSP FAQ, MIU tech club questions, MSP membership'
   },
+  '/links': {
+    title: 'Links & Socials | MSP Tech Club — MIU',
+    description:
+      'All official links, YouTube channel, social media, upcoming events, and learning tracks for MSP Tech Club at Misr International University.',
+    keywords: 'MSP links, MSP linktree, MSP MIU socials, MSP YouTube, MSP Instagram, MIU tech club'
+  },
+  '/linktree': {
+    title: 'Links & Socials | MSP Tech Club — MIU',
+    description:
+      'All official links, YouTube channel, social media, upcoming events, and learning tracks for MSP Tech Club at Misr International University.',
+    keywords: 'MSP links, MSP linktree, MSP MIU socials, MSP YouTube, MSP Instagram, MIU tech club'
+  },
   '/leaderboard': {
     title: 'Leaderboard | MSP Tech Club — MIU',
     description: 'See how members rank across MSP Tech Club activities at MIU.',
@@ -203,6 +215,7 @@ function organizationJsonLd(siteUrl, image) {
       addressLocality: 'Cairo'
     },
     sameAs: [
+      'https://www.youtube.com/@MSP-MIU',
       'https://www.instagram.com/mspmiu',
       'https://www.tiktok.com/@mspmiu',
       'https://www.linkedin.com/company/mspmiu'
@@ -465,7 +478,8 @@ async function buildSitemapXml() {
     { loc: `${siteUrl}/become-member`, changefreq: 'monthly', priority: '0.7' },
     { loc: `${siteUrl}/download-android`, changefreq: 'monthly', priority: '0.5' },
     { loc: `${siteUrl}/privacy`, changefreq: 'yearly', priority: '0.4' },
-    { loc: `${siteUrl}/faqs`, changefreq: 'monthly', priority: '0.6' }
+    { loc: `${siteUrl}/faqs`, changefreq: 'monthly', priority: '0.6' },
+    { loc: `${siteUrl}/links`, changefreq: 'weekly', priority: '0.8' }
   ];
 
   try {

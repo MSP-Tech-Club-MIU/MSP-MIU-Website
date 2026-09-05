@@ -201,6 +201,7 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
               </div>
               <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #f9f9f9; border-radius: 6px;">
                 <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:</p>
+                <p style="margin: 4px 0;"><a href="{{youtubeLink}}" style="color: #FF0000; text-decoration: none; font-size: 13px; font-weight: 600;">▶️ YouTube</a></p>
                 <p style="margin: 4px 0;"><a href="{{instagramLink}}" style="color: #E4405F; text-decoration: none; font-size: 13px; font-weight: 600;">📷 Instagram</a></p>
                 <p style="margin: 4px 0;"><a href="{{tiktokLink}}" style="color: #000000; text-decoration: none; font-size: 13px; font-weight: 600;">🎵 TikTok</a></p>
               </div>
@@ -317,6 +318,8 @@ Speakers from Orange Business:
 
 If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:
 
+YouTube: {{youtubeLink}}
+
 Instagram: {{instagramLink}}
 
 TikTok: {{tiktokLink}}
@@ -328,7 +331,7 @@ Can't wait to see you at the Opening Session!
 Cheers,
 MSP MIU Team`,
     MEMBER_ACCEPTANCE_HTML,
-    ['studentName', 'departmentName', 'departmentLink', 'instagramLink', 'tiktokLink']
+    ['studentName', 'departmentName', 'departmentLink', 'youtubeLink', 'instagramLink', 'tiktokLink']
   ),
 
   password_reset: def(

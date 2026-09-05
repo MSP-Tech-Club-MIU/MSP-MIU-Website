@@ -39,7 +39,6 @@ export default function CourseDetails() {
   const [accountName, setAccountName] = useState('');
   const [authChecked, setAuthChecked] = useState(false);
   const [starting, setStarting] = useState(false);
-  const [announcements, setAnnouncements] = useState([]);
   const [registeredName, setRegisteredName] = useState('');
   const [fetchingEnrollment, setFetchingEnrollment] = useState(false);
   const [updatingName, setUpdatingName] = useState(false);
@@ -100,12 +99,8 @@ export default function CourseDetails() {
     try {
       setLoading(true);
       setError(null);
-      const [data, annRes] = await Promise.all([
-        ApiService.getCourseById(courseId),
-        ApiService.getCourseAnnouncements(courseId).catch(() => ({ data: [] }))
-      ]);
+      const data = await ApiService.getCourseById(courseId);
       setCourse(data);
-      setAnnouncements(Array.isArray(annRes?.data) ? annRes.data : []);
     } catch (err) {
       setError(err.message || 'Failed to load course');
       setCourse(null);
@@ -450,49 +445,7 @@ export default function CourseDetails() {
           </div>
         ) : null}
 
-        {/* Public course announcements */}
-        {announcements.length > 0 ? (
-          <div className="CourseDetails__announcements" style={{ marginTop: '2.5rem' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: '#8ec2f0' }}>
-              📢 Announcements & Updates
-            </h3>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              {announcements.map((ann) => (
-                <div
-                  key={ann.announcement_id}
-                  style={{
-                    padding: '1.25rem',
-                    background: 'rgba(14, 39, 68, 0.65)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(142, 194, 240, 0.25)'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                    <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#fff' }}>{ann.title}</h4>
-                    <span style={{ fontSize: '0.8rem', color: 'rgba(234, 242, 255, 0.6)' }}>
-                      {new Date(ann.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, color: 'rgba(234, 242, 255, 0.85)', whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.92rem' }}>
-                    {ann.message}
-                  </p>
-                  {ann.cta_url ? (
-                    <div style={{ marginTop: '0.75rem' }}>
-                      <a
-                        href={ann.cta_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ display: 'inline-block', padding: '0.4rem 0.8rem', background: '#0d7bd8', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 600 }}
-                      >
-                        {ann.cta_label || 'Open Link'}
-                      </a>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
+
       </div>
     </div>
   );

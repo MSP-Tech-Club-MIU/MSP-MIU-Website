@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { FaInstagram } from 'react-icons/fa'
+import { FaInstagram, FaYoutube, FaLink } from 'react-icons/fa'
 import SEO from '../components/SEO'
 import BackButton from '../components/BackButton'
 import PageLoader from '../components/PageLoader'
@@ -493,7 +493,7 @@ const BecomeMember = memo(() => {
               </p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
               <a
                 href={recruitment?.instagramUrl || 'https://www.instagram.com/mspmiu'}
                 target="_blank"
@@ -521,7 +521,41 @@ const BecomeMember = memo(() => {
                 <span>Follow @mspmiu on Instagram</span>
               </a>
 
+              <a
+                href="https://www.youtube.com/@MSP-MIU"
+                target="_blank"
+                rel="noreferrer"
+                className="btn primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 10,
+                  width: '100%',
+                  maxWidth: 320,
+                  padding: '14px 24px',
+                  borderRadius: 14,
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                  boxShadow: '0 6px 20px rgba(255, 0, 0, 0.35)',
+                  border: 'none',
+                  color: '#ffffff'
+                }}
+              >
+                <FaYoutube style={{ fontSize: '20px' }} />
+                <span>Subscribe on YouTube</span>
+              </a>
+
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
+                <Link
+                  to="/links"
+                  className="btn ghost"
+                  style={{ fontSize: '13.5px', padding: '10px 18px', borderRadius: 10, textDecoration: 'none', color: '#eaf2ff', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <FaLink /> Quick Links
+                </Link>
                 <Link
                   to="/courses"
                   className="btn ghost"

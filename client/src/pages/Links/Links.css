@@ -1,0 +1,1075 @@
+/* ==========================================================================
+   MSP-MIU Links / Linktree Page Styles
+   Optimized for Mobile, Tablet & Desktop Viewports
+   ========================================================================== */
+
+.LinksPage {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding-top: max(24px, env(safe-area-inset-top, 24px));
+  padding-bottom: max(60px, env(safe-area-inset-bottom, 60px));
+  padding-left: max(16px, env(safe-area-inset-left, 16px));
+  padding-right: max(16px, env(safe-area-inset-right, 16px));
+  background: radial-gradient(circle at 50% 0%, #0d3159 0%, #031c35 55%, #021224 100%);
+  color: #ffffff;
+  overflow-x: hidden;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Ambient glow orbs */
+.LinksPage__glow {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: 0;
+}
+
+.LinksPage__glow--top {
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(550px, 90vw);
+  height: 360px;
+  background: radial-gradient(circle, rgba(3, 169, 244, 0.22) 0%, rgba(3, 169, 244, 0) 70%);
+}
+
+.LinksPage__glow--bottom {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, 95vw);
+  height: 380px;
+  background: radial-gradient(circle, rgba(244, 88, 31, 0.14) 0%, rgba(244, 88, 31, 0) 70%);
+}
+
+.LinksPage__container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ==========================================================================
+   Profile Header
+   ========================================================================== */
+
+.LinksProfile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 24px;
+}
+
+.LinksProfile__avatarWrap {
+  position: relative;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.LinksProfile__avatarRing {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #03a9f4, #f4581f, #83bd00);
+  animation: rotateGradient 8s linear infinite;
+  opacity: 0.9;
+}
+
+@keyframes rotateGradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.LinksProfile__avatar {
+  position: relative;
+  z-index: 1;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #031c35;
+  padding: 10px;
+  object-fit: contain;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.LinksProfile__verifiedBadge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  z-index: 2;
+  background: #031c35;
+  color: #03a9f4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.LinksProfile__logos {
+  margin-bottom: 10px;
+}
+
+.LinksProfile__orgBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 12px;
+  font-weight: 600;
+  color: #eaf2ff;
+  letter-spacing: 0.2px;
+}
+
+.LinksProfile__miuLogo {
+  width: 18px;
+  height: auto;
+  object-fit: contain;
+}
+
+.LinksProfile__name {
+  font-size: clamp(20px, 5.5vw, 26px);
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 0%, #d8ecff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.25;
+}
+
+.LinksProfile__bio {
+  font-size: clamp(13px, 3.8vw, 14.5px);
+  line-height: 1.55;
+  color: rgba(234, 242, 255, 0.85);
+  max-width: 480px;
+  margin: 0 0 18px 0;
+  padding: 0 8px;
+}
+
+.LinksProfile__bio strong {
+  color: #03a9f4;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Quick Actions Bar (Share, Copy, QR)
+   ========================================================================== */
+
+.LinksActions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  justify-content: center;
+}
+
+.LinksActions__btn {
+  flex: 1;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #eaf2ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.LinksActions__btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.LinksActions__btn:active {
+  transform: translateY(0);
+}
+
+.LinksActions__btn--copied {
+  background: rgba(131, 189, 0, 0.25) !important;
+  border-color: #83bd00 !important;
+  color: #83bd00 !important;
+}
+
+/* ==========================================================================
+   Sections Framework
+   ========================================================================== */
+
+.LinksSection {
+  width: 100%;
+  margin-bottom: 26px;
+}
+
+.LinksSection__header {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.LinksSection__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.LinksSection__badge--fire {
+  background: rgba(244, 88, 31, 0.2);
+  border: 1px solid rgba(244, 88, 31, 0.4);
+  color: #ff7043;
+}
+
+.LinksSection__badge--socials {
+  background: rgba(3, 169, 244, 0.2);
+  border: 1px solid rgba(3, 169, 244, 0.4);
+  color: #03a9f4;
+}
+
+.LinksSection__title {
+  font-size: clamp(17px, 4.5vw, 20px);
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 3px 0;
+  letter-spacing: -0.3px;
+  line-height: 1.3;
+}
+
+.LinksSection__subtitle {
+  font-size: 12.5px;
+  color: rgba(234, 242, 255, 0.7);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   TOP PRIORITY: Hero Become a Member (Registration Card)
+   ========================================================================== */
+
+.LinksHeroJoinCard {
+  display: block;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  padding: clamp(16px, 4vw, 22px) clamp(14px, 4vw, 20px);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(244, 88, 31, 0.18) 0%, rgba(13, 49, 89, 0.92) 55%, rgba(3, 28, 53, 0.98) 100%);
+  border: 1.5px solid rgba(244, 88, 31, 0.45);
+  box-shadow: 0 10px 32px rgba(244, 88, 31, 0.16), 0 4px 18px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.LinksHeroJoinCard:hover {
+  transform: translateY(-2px);
+  border-color: #f4581f;
+  box-shadow: 0 14px 40px rgba(244, 88, 31, 0.3), 0 6px 22px rgba(0, 0, 0, 0.45);
+}
+
+.LinksHeroJoinCard__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.LinksHeroJoinCard__iconBox {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #f4581f 0%, #d84315 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 6px 16px rgba(244, 88, 31, 0.38);
+}
+
+.LinksHeroJoinCard__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.LinksHeroJoinCard__badgeRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.LinksHeroJoinCard__pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #eaf2ff;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.LinksHeroJoinCard__pill--highlight {
+  background: rgba(131, 189, 0, 0.2);
+  border: 1px solid rgba(131, 189, 0, 0.4);
+  color: #83bd00;
+}
+
+.LinksHeroJoinCard__title {
+  font-size: clamp(15.5px, 4vw, 18px);
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 5px 0;
+  line-height: 1.3;
+}
+
+.LinksHeroJoinCard__desc {
+  font-size: clamp(12px, 3.5vw, 13px);
+  color: rgba(234, 242, 255, 0.82);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.LinksHeroJoinCard__ctaRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.LinksHeroJoinCard__ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 18px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #f4581f 0%, #ff6f00 100%);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(244, 88, 31, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.LinksHeroJoinCard:hover .LinksHeroJoinCard__ctaBtn {
+  transform: scale(1.03);
+}
+
+.LinksHeroJoinCard__arrowIcon {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.LinksHeroJoinCard:hover .LinksHeroJoinCard__arrowIcon {
+  transform: translateX(3px);
+}
+
+/* ==========================================================================
+   TOP PRIORITY: Social Media Cards
+   ========================================================================== */
+
+.LinksSocialCards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.SocialCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  padding: clamp(14px, 3.5vw, 16px) clamp(12px, 3.5vw, 18px);
+  border-radius: 16px;
+  background: rgba(9, 26, 44, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.SocialCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.38);
+}
+
+/* YouTube Specific Card */
+.SocialCard--youtube {
+  border-color: rgba(255, 0, 0, 0.35);
+  background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(9, 26, 44, 0.88) 60%);
+}
+.SocialCard--youtube:hover {
+  border-color: #ff0000;
+  box-shadow: 0 8px 26px rgba(255, 0, 0, 0.25);
+}
+
+/* Instagram Specific Card */
+.SocialCard--instagram {
+  border-color: rgba(225, 48, 108, 0.3);
+  background: linear-gradient(135deg, rgba(225, 48, 108, 0.08) 0%, rgba(9, 26, 44, 0.88) 60%);
+}
+.SocialCard--instagram:hover {
+  border-color: #e1306c;
+  box-shadow: 0 8px 26px rgba(225, 48, 108, 0.22);
+}
+
+/* TikTok Specific Card */
+.SocialCard--tiktok {
+  border-color: rgba(0, 242, 254, 0.3);
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.08) 0%, rgba(9, 26, 44, 0.88) 60%);
+}
+.SocialCard--tiktok:hover {
+  border-color: #00f2fe;
+  box-shadow: 0 8px 26px rgba(0, 242, 254, 0.22);
+}
+
+/* LinkedIn Specific Card */
+.SocialCard--linkedin {
+  border-color: rgba(10, 102, 194, 0.3);
+  background: linear-gradient(135deg, rgba(10, 102, 194, 0.08) 0%, rgba(9, 26, 44, 0.88) 60%);
+}
+.SocialCard--linkedin:hover {
+  border-color: #0a66c2;
+  box-shadow: 0 8px 26px rgba(10, 102, 194, 0.22);
+}
+
+.SocialCard__left {
+  display: flex;
+  align-items: center;
+}
+
+.SocialCard__iconBox {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+
+.SocialCard__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.SocialCard__headerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.SocialCard__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.SocialCard__tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.SocialCard__tag--youtube {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff5252;
+  border: 1px solid rgba(255, 0, 0, 0.35);
+}
+
+.SocialCard__tag--instagram {
+  background: rgba(225, 48, 108, 0.2);
+  color: #ff6b9d;
+  border: 1px solid rgba(225, 48, 108, 0.35);
+}
+
+.SocialCard__tag--tiktok {
+  background: rgba(0, 242, 254, 0.18);
+  color: #00f2fe;
+  border: 1px solid rgba(0, 242, 254, 0.35);
+}
+
+.SocialCard__tag--linkedin {
+  background: rgba(10, 102, 194, 0.2);
+  color: #5aa0e6;
+  border: 1px solid rgba(10, 102, 194, 0.35);
+}
+
+.SocialCard__handle {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #03a9f4;
+  margin-bottom: 3px;
+  word-break: break-all;
+}
+
+.SocialCard__desc {
+  font-size: 12px;
+  color: rgba(234, 242, 255, 0.72);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.SocialCard__action {
+  display: flex;
+  align-items: center;
+}
+
+.SocialCard__actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.SocialCard--youtube .SocialCard__actionBtn {
+  background: #ff0000;
+  border-color: #ff0000;
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.35);
+}
+
+.SocialCard--instagram .SocialCard__actionBtn {
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(220, 39, 67, 0.3);
+}
+
+.SocialCard--tiktok .SocialCard__actionBtn {
+  background: rgba(0, 242, 254, 0.15);
+  border-color: #00f2fe;
+  color: #00f2fe;
+}
+
+.SocialCard--linkedin .SocialCard__actionBtn {
+  background: #0a66c2;
+  border-color: #0a66c2;
+}
+
+.SocialCard:hover .SocialCard__actionBtn {
+  transform: scale(1.03);
+}
+
+.SocialCard__playIcon {
+  font-size: 15px;
+}
+
+.SocialCard__extIcon {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* ==========================================================================
+   Secondary Resources List & Search
+   ========================================================================== */
+
+.LinksFilter__search {
+  position: relative;
+  width: 100%;
+}
+
+.LinksFilter__searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(234, 242, 255, 0.5);
+  font-size: 13px;
+}
+
+.LinksFilter__input {
+  width: 100%;
+  padding: 11px 38px 11px 38px;
+  border-radius: 12px;
+  background: rgba(9, 26, 44, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.LinksFilter__input:focus {
+  border-color: #03a9f4;
+  background: rgba(9, 26, 44, 0.95);
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.2);
+}
+
+.LinksFilter__input::placeholder {
+  color: rgba(234, 242, 255, 0.45);
+}
+
+.LinksFilter__clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(234, 242, 255, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.LinksFilter__clear:hover {
+  color: #ffffff;
+}
+
+.LinksList {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.LinkCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: rgba(9, 26, 44, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.LinkCard:hover {
+  transform: translateY(-2px) translateX(2px);
+  background: rgba(13, 49, 89, 0.85);
+  border-color: rgba(3, 169, 244, 0.4);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3), 0 0 12px rgba(3, 169, 244, 0.12);
+}
+
+.LinkCard__iconBox {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.LinkCard__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.LinkCard__titleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+
+.LinkCard__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.LinkCard__badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.LinkCard__badge--neutral {
+  background: rgba(255, 255, 255, 0.08);
+  color: #eaf2ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.LinkCard__desc {
+  font-size: 12px;
+  color: rgba(234, 242, 255, 0.7);
+  margin: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.LinkCard__arrow {
+  color: rgba(234, 242, 255, 0.4);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.LinkCard:hover .LinkCard__arrow {
+  color: #03a9f4;
+  transform: translateX(3px);
+}
+
+/* Empty State */
+.LinksList__empty {
+  text-align: center;
+  padding: 32px 16px;
+  background: rgba(9, 26, 44, 0.6);
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: rgba(234, 242, 255, 0.7);
+  font-size: 13.5px;
+}
+
+.LinksList__resetBtn {
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  background: #03a9f4;
+  color: #031c35;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+
+.LinksFooter {
+  margin-top: 36px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.LinksFooter__brand {
+  margin: 0;
+  font-size: 12.5px;
+  color: rgba(234, 242, 255, 0.6);
+  font-weight: 500;
+}
+
+.LinksFooter__links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(234, 242, 255, 0.5);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.LinksFooter__links a {
+  color: rgba(234, 242, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.LinksFooter__links a:hover {
+  color: #03a9f4;
+}
+
+/* ==========================================================================
+   QR Code Modal
+   ========================================================================== */
+
+.LinksModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(3, 28, 53, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.LinksQrModal {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  box-sizing: border-box;
+  background: #091a2c;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  padding: 28px 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.LinksQrModal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.LinksQrModal__close:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.LinksQrModal__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.LinksQrModal__logo {
+  margin-bottom: 10px;
+}
+
+.LinksQrModal__title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.LinksQrModal__subtitle {
+  font-size: 12.5px;
+  color: rgba(234, 242, 255, 0.7);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.LinksQrModal__card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  margin-bottom: 16px;
+}
+
+.LinksQrCode__svg {
+  width: min(160px, 45vw);
+  height: min(160px, 45vw);
+  display: block;
+}
+
+.LinksQrModal__url {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #031c35;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+.LinksQrModal__footer {
+  width: 100%;
+}
+
+.LinksQrModal__btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+/* Mobile Breakpoint: <= 560px */
+@media (max-width: 560px) {
+  .LinksPage {
+    padding-top: max(16px, env(safe-area-inset-top, 16px));
+    padding-bottom: max(48px, env(safe-area-inset-bottom, 48px));
+    padding-left: max(12px, env(safe-area-inset-left, 12px));
+    padding-right: max(12px, env(safe-area-inset-right, 12px));
+  }
+
+  .LinksProfile {
+    margin-bottom: 18px;
+  }
+
+  .LinksProfile__avatarWrap {
+    width: 96px;
+    height: 96px;
+  }
+
+  .LinksProfile__avatar {
+    width: 88px;
+    height: 88px;
+  }
+
+  .LinksHeroJoinCard__content {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .LinksHeroJoinCard__ctaRow {
+    justify-content: stretch;
+  }
+
+  .LinksHeroJoinCard__ctaBtn {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .SocialCard {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .SocialCard__left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .SocialCard__action {
+    width: 100%;
+  }
+
+  .SocialCard__actionBtn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .LinkCard {
+    padding: 12px 12px;
+    min-height: 44px;
+  }
+}
+
+/* Very Small Screens: <= 360px (e.g. iPhone SE 1st gen, Galaxy Fold closed) */
+@media (max-width: 360px) {
+  .LinksActions {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .LinksActions__btn {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .SocialCard__headerRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .SocialCard__tag {
+    align-self: flex-start;
+  }
+}
+
+/* Reduced Motion for Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .LinksProfile__avatarRing {
+    animation: none;
+  }
+  .LinksPage *,
+  .LinkCard,
+  .SocialCard,
+  .LinksHeroJoinCard {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
