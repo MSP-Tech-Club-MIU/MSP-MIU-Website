@@ -7,12 +7,16 @@ import mspLogo from '../../assets/Images/msp-logo.png';
 import AMLogo from '../../assets/Images/Geometric-AM-logo-design.webp';
 
 const DEFAULT_SOCIAL = [
+  { href: 'https://www.youtube.com/@MSP-MIU', label: 'YouTube' },
   { href: 'https://www.tiktok.com/@mspmiu', label: 'TikTok' },
   { href: 'https://www.instagram.com/mspmiu', label: 'Instagram' },
   { href: 'https://www.linkedin.com/company/mspmiu', label: 'LinkedIn' },
 ];
 
 const ICONS = {
+  YouTube: (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+  ),
   TikTok: (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3.5c-.1 0-.2 0-.3.1-1.4.9-2.8 1.2-4.1 1.2v6.2c0 1.8-.7 3.4-2 4.6-1.1 1-2.6 1.6-4.2 1.6-3.3 0-6-2.7-6-6s2.7-6 6-6c.3 0 .6 0 .9.1v2.1c-.3-.1-.6-.1-.9-.1-2.2 0-4 1.8-4 4s1.8 4 4 4c1.1 0 2.1-.4 2.9-1.1 1-1 1.6-2.5 1.6-4.1V4.7c1.6 0 3.1-.4 4.6-1.3.1 0 .2-.1.2-.2.1-.1 0-.2-.1-.2z"/></svg>
   ),
@@ -90,6 +94,7 @@ export const Footer = memo(() => {
         <section className="Footer__meta" aria-labelledby="footer-meta-heading">
           <h3 id="footer-meta-heading" className="Footer__heading">Info</h3>
           <nav className="Footer__legal" aria-label="Legal and help">
+            <Link to="/links" className="Footer__legalLink">Quick Links</Link>
             <Link to="/privacy" className="Footer__legalLink">Privacy Policy</Link>
             <Link to="/faqs" className="Footer__legalLink">FAQs</Link>
           </nav>

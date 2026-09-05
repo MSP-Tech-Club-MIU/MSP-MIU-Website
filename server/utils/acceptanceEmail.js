@@ -5,6 +5,7 @@ const { departmentHasWhatsApp } = require('./emailTemplates/defaults');
 
 const DEFAULT_INSTAGRAM = 'https://www.instagram.com/mspmiu';
 const DEFAULT_TIKTOK = 'https://www.tiktok.com/@mspmiu';
+const DEFAULT_YOUTUBE = 'https://www.youtube.com/@MSP-MIU';
 
 /**
  * Send acceptance email for a single member (uses department.whatsapp_group_url).
@@ -63,6 +64,7 @@ async function sendAcceptanceEmailForMember(member, sendEmail) {
     studentName,
     departmentName: department.name,
     departmentLink,
+    youtubeLink: process.env.YOUTUBE_URL || DEFAULT_YOUTUBE,
     instagramLink: process.env.INSTAGRAM_URL || DEFAULT_INSTAGRAM,
     tiktokLink: process.env.TIKTOK_URL || DEFAULT_TIKTOK
   });
@@ -140,7 +142,11 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
       const rendered = await renderTemplate('member_acceptance', {
         studentName,
         departmentName: department.name,
-        whatsappGroupLink: department.whatsapp_group_url || null
+        departmentLink: department.whatsapp_group_url || null,
+        whatsappGroupLink: department.whatsapp_group_url || null,
+        youtubeLink: process.env.YOUTUBE_URL || DEFAULT_YOUTUBE,
+        instagramLink: process.env.INSTAGRAM_URL || DEFAULT_INSTAGRAM,
+        tiktokLink: process.env.TIKTOK_URL || DEFAULT_TIKTOK
       });
 
       return {

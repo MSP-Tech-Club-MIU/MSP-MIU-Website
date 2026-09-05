@@ -38,6 +38,7 @@ const DEFAULTS = {
     visionLabel: 'Our Vision:',
     visionText: 'Empowering students through innovation, collaboration, and continuous learning.',
     socials: [
+      { label: 'YouTube', href: 'https://www.youtube.com/@MSP-MIU' },
       { label: 'TikTok', href: 'https://www.tiktok.com/@mspmiu' },
       { label: 'Instagram', href: 'https://www.instagram.com/mspmiu' },
       { label: 'LinkedIn', href: 'https://www.linkedin.com/company/mspmiu' }

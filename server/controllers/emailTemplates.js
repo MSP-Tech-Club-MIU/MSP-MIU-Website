@@ -146,6 +146,7 @@ const SAMPLE_VARS = {
     studentName: 'Sample Member',
     departmentName: 'Software Development',
     departmentLink: 'https://chat.whatsapp.com/sample',
+    youtubeLink: 'https://www.youtube.com/@MSP-MIU',
     instagramLink: 'https://www.instagram.com/mspmiu',
     tiktokLink: 'https://www.tiktok.com/@mspmiu'
   },
