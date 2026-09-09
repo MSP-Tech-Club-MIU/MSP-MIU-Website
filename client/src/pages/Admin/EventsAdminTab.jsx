@@ -90,7 +90,7 @@ export default function EventsAdminTab({ onAlert }) {
       } else {
         setInitialLoading(true);
       }
-      const result = await ApiService.getEvents({ page, limit: PAGE_SIZE, ...seasonFilters });
+      const result = await ApiService.getEvents({ page, limit: PAGE_SIZE, no_fallback: true, ...seasonFilters });
       setItems(Array.isArray(result?.data) ? result.data : []);
       const meta = Array.isArray(result) ? null : result?.pagination || null;
       if (!meta || meta.totalPages <= 1 || (typeof meta.total === 'number' && meta.total <= PAGE_SIZE)) {

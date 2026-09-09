@@ -9,7 +9,7 @@ import { useSeason } from '../../../context/SeasonContext';
 import mspLogo from '../../../assets/Images/msp-logo.png';
 
 const EventsSection = memo(() => {
-  const { seasonFilters, isAll } = useSeason();
+  const { seasonFilters, isAll, defaultSeasonId } = useSeason();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ const EventsSection = memo(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const result = await ApiService.getEvents({ limit: 3, page: 1, ...seasonFilters });
+        const result = await ApiService.getEvents({ limit: 3, page: 1, sort: 'desc', ...seasonFilters });
         const list = Array.isArray(result) ? result : (result.data || []);
         
         // Map database fields to component fields (exactly like Events.jsx)
@@ -116,7 +116,7 @@ const EventsSection = memo(() => {
                 <div className="EventCard__body">
                   <h3 className="EventCard__title">
                     {ev.name}
-                    {isAll && (ev.season || ev.season_id) && (
+                    {(isAll || (ev.season_id && defaultSeasonId && ev.season_id !== defaultSeasonId)) && (ev.season || ev.season_id) && (
                       <> {' '}<SeasonBadge season={ev.season} /></>
                     )}
                   </h3>

@@ -1,7 +1,7 @@
-const { Event, EventFeedback } = require('../models');
+const { Event, EventFeedback, Season } = require('../models');
 const { Op } = require('sequelize');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
-const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
+const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite, serializeSeason } = require('../utils/seasonFilter');
 const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
 
@@ -131,7 +131,7 @@ const addEvent = async (req, res) => {
  */
 const getAllEvents = async (req, res) => {
     try {
-        const { category, upcoming, past } = req.query;
+        const { category, upcoming, past, no_fallback } = req.query;
         const { page, limit, offset } = parsePagination(req.query);
 
         const seasonFilter = await resolveSeasonFilter(req.query);
@@ -159,20 +159,72 @@ const getAllEvents = async (req, res) => {
             include.push(seasonInclude());
         }
 
-        const { rows: events, count: total } = await Event.findAndCountAll({
+        const sortDirection = String(req.query.sort || '').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+        const order = [['event_date', sortDirection], ['event_id', sortDirection]];
+
+        let { rows: events, count: total } = await Event.findAndCountAll({
             where,
             include,
-            order: [['event_date', 'ASC']],
+            order,
             limit,
             offset,
             distinct: true
         });
 
+        let isFallback = false;
+        let fallbackSeason = null;
+        const allowFallback = String(no_fallback || '').toLowerCase() !== 'true' && req.query.admin !== '1';
+
+        // If querying the current/default season and no events exist for it, fallback to previous season
+        const isCurrentSeason = seasonFilter.mode === 'current' || (seasonFilter.season && seasonFilter.season.is_default);
+        if (allowFallback && isCurrentSeason && total === 0) {
+            const currentSeason = seasonFilter.season;
+            if (currentSeason) {
+                // Find all previous seasons in descending chronological order
+                const previousSeasons = await Season.findAll({
+                    where: {
+                        [Op.or]: [
+                            { start_year: { [Op.lt]: currentSeason.start_year } },
+                            {
+                                start_year: currentSeason.start_year,
+                                season_id: { [Op.lt]: currentSeason.season_id }
+                            }
+                        ]
+                    },
+                    order: [['start_year', 'DESC'], ['season_id', 'DESC']]
+                });
+
+                for (const prevSeason of previousSeasons) {
+                    const fallbackWhere = { ...where, season_id: prevSeason.season_id };
+                    const fallbackInclude = [seasonInclude()];
+
+                    const fallbackResult = await Event.findAndCountAll({
+                        where: fallbackWhere,
+                        include: fallbackInclude,
+                        order,
+                        limit,
+                        offset,
+                        distinct: true
+                    });
+
+                    if (fallbackResult.count > 0) {
+                        events = fallbackResult.rows;
+                        total = fallbackResult.count;
+                        isFallback = true;
+                        fallbackSeason = prevSeason;
+                        break;
+                    }
+                }
+            }
+        }
+
         res.status(200).json({
             success: true,
             data: events,
             count: events.length,
-            pagination: paginationMeta({ page, limit, total })
+            pagination: paginationMeta({ page, limit, total }),
+            is_fallback: isFallback,
+            fallback_season: fallbackSeason ? serializeSeason(fallbackSeason) : undefined
         });
 
     } catch (error) {

@@ -605,6 +605,8 @@ class ApiService {
       if (filters.category) queryParams.append('category', filters.category);
       if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
       if (filters.past) queryParams.append('past', filters.past);
+      if (filters.sort) queryParams.append('sort', filters.sort);
+      if (filters.no_fallback) queryParams.append('no_fallback', String(filters.no_fallback));
       appendPaginationParams(queryParams, filters);
       appendSeasonParams(queryParams, filters);
 
