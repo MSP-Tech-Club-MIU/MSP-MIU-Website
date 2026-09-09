@@ -24,7 +24,7 @@ const FILTER_TO_CATEGORY = {
 };
 
 const Events = () => {
-  const { seasonFilters, isAll } = useSeason();
+  const { seasonFilters, isAll, defaultSeasonId } = useSeason();
   const [events, setEvents] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [pageLoading, setPageLoading] = useState(false);
@@ -74,7 +74,7 @@ const Events = () => {
         }
         setError(null);
 
-        const filters = { page, limit: PAGE_SIZE, ...seasonFilters };
+        const filters = { page, limit: PAGE_SIZE, sort, ...seasonFilters };
         if (filter !== 'all' && FILTER_TO_CATEGORY[filter]) {
           filters.category = FILTER_TO_CATEGORY[filter];
         }
@@ -134,7 +134,7 @@ const Events = () => {
     return () => {
       cancelled = true;
     };
-  }, [page, filter, seasonFilters]);
+  }, [page, filter, sort, seasonFilters]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -144,13 +144,8 @@ const Events = () => {
   };
 
   const filteredEvents = useMemo(() => {
-    // Category filtering is handled server-side; sort current page client-side
-    return [...events].sort((a, b) => {
-      const dateA = new Date(a.event_date);
-      const dateB = new Date(b.event_date);
-      return sort === 'desc' ? dateB - dateA : dateA - dateB;
-    });
-  }, [events, sort]);
+    return [...events];
+  }, [events]);
 
   const handleFilterChange = (nextFilter) => {
     if (nextFilter === filter) return;
@@ -158,6 +153,14 @@ const Events = () => {
     setPagination(null);
     setPage(1);
     setFilter(nextFilter);
+  };
+
+  const handleSortChange = (nextSort) => {
+    if (nextSort === sort) return;
+    hasLoadedOnceRef.current = false;
+    setPagination(null);
+    setPage(1);
+    setSort(nextSort);
   };
 
   const handlePageChange = (nextPage) => {
@@ -239,7 +242,7 @@ const Events = () => {
               id="sort-select"
               className="EventsPage__sortSelect"
               value={sort}
-              onChange={(e) => setSort(e.target.value)}
+              onChange={(e) => handleSortChange(e.target.value)}
             >
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
@@ -311,7 +314,7 @@ const Events = () => {
                     <div className="EventCard__body">
                       <h3 className="EventCard__title">
                         {event.name}
-                        {isAll && (event.season || event.season_id) && (
+                        {(isAll || (event.season_id && defaultSeasonId && event.season_id !== defaultSeasonId)) && (event.season || event.season_id) && (
                           <> {' '}<SeasonBadge season={event.season} /></>
                         )}
                       </h3>
