@@ -51,7 +51,7 @@ const CourseEnrollment = sequelize.define('CourseEnrollment', {
   attended: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
-    defaultValue: false
+    defaultValue: true
   },
   created_at: {
     type: DataTypes.DATE,

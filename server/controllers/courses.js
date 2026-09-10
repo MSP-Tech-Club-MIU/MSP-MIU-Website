@@ -719,7 +719,7 @@ const enrollInCourse = async (req, res) => {
       university_id: String(university_id).trim(),
       status: course.status === 'published' ? 'enrolled' : 'preordered',
       access_token: makeAccessToken(),
-      attended: false
+      attended: true
     });
 
     res.status(201).json({
@@ -837,7 +837,7 @@ const enrollWithAccount = async (req, res) => {
       university_id,
       status: course.status === 'published' ? 'enrolled' : 'preordered',
       access_token: makeAccessToken(),
-      attended: false
+      attended: true
     });
 
     res.status(201).json({
