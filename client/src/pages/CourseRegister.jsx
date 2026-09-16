@@ -379,9 +379,7 @@ export default function CourseRegister() {
             </div>
             <h3>{formMsg}</h3>
             <p>
-              {course.status === 'coming_soon'
-                ? 'You have been registered. You will receive an email announcement as soon as the course sessions unlock!'
-                : 'Your access is confirmed. You can now access all course lessons and materials.'}
+              Your registration is confirmed. You will receive course updates and access as sessions begin.
             </p>
             <div className="CourseRegisterPage__successActions">
               {course.status === 'published' ? (
@@ -403,11 +401,7 @@ export default function CourseRegister() {
             {/* Logged-in MSP member fast enrollment */}
             {registrationOpen && isLoggedIn && !accessToken ? (
               <div className="CourseDetails__form CourseDetails__accountBox">
-                <h3>
-                  {course.status === 'coming_soon'
-                    ? 'Get notified with your MSP account'
-                    : 'Start with your MSP account'}
-                </h3>
+                <h3>Register with your MSP account</h3>
                 <p className="CourseDetails__formLead">
                   Signed in as <strong>{accountName || 'MSP member'}</strong>.
                 </p>
@@ -427,11 +421,7 @@ export default function CourseRegister() {
                   style={{ border: 'none', width: '100%', justifyContent: 'center', marginTop: 14 }}
                 >
                   <FiUserPlus />
-                  {starting
-                    ? 'Enrolling…'
-                    : course.status === 'coming_soon'
-                      ? 'Notify Me with Account'
-                      : 'Enroll & Start Learning'}
+                  {starting ? 'Registering…' : 'Register with Account'}
                 </button>
                 {formError ? (
                   <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{formError}</p>
@@ -442,15 +432,9 @@ export default function CourseRegister() {
             {/* Guest Registration Form */}
             {registrationOpen && !isLoggedIn && !accessToken ? (
               <form className="CourseDetails__form" onSubmit={onEnroll}>
-                <h3>
-                  {course.status === 'coming_soon'
-                    ? 'Notify Me When Course Launches'
-                    : 'Register for This Course'}
-                </h3>
+                <h3>Register for This Course</h3>
                 <p className="CourseDetails__formLead">
-                  {course.status === 'coming_soon'
-                    ? 'Fill in your details to secure your spot and be notified when sessions launch.'
-                    : 'Complete the registration form to unlock full course access.'}
+                  Complete the registration form to choose your attendance track and secure your spot.
                 </p>
                 <p className="CourseDetails__loginHint">
                   Already have an MSP MIU account?{' '}
@@ -508,11 +492,7 @@ export default function CourseRegister() {
 
                 <button type="submit" disabled={submitting} style={{ width: '100%', marginTop: 14 }}>
                   <FiUserPlus style={{ marginRight: 6 }} />
-                  {submitting
-                    ? 'Registering…'
-                    : course.status === 'coming_soon'
-                      ? 'Submit Registration'
-                      : 'Complete Registration'}
+                  {submitting ? 'Registering…' : 'Register for Course'}
                 </button>
                 {formError ? (
                   <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{formError}</p>
