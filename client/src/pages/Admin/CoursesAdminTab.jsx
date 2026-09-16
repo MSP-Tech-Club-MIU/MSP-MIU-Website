@@ -751,12 +751,18 @@ export default function CoursesAdminTab({ onAlert }) {
                     />
                   </label>
                   <label className="AdminPanel__fullWidth">
-                    Description
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span>Description (Markdown &amp; Curriculum)</span>
+                      <small style={{ color: (form.description?.length || 0) > 2500 ? '#ff9800' : 'rgba(197, 218, 233, 0.7)', fontSize: '0.78rem' }}>
+                        {form.description?.length || 0} / 3000 max characters (card preview displays first ~115 chars)
+                      </small>
+                    </div>
                     <textarea
-                      rows={4}
+                      rows={5}
+                      maxLength={3000}
                       value={form.description}
                       onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                      placeholder="What students will learn…"
+                      placeholder="Course overview, curriculum topics, prerequisites…"
                       disabled={busy}
                     />
                   </label>
