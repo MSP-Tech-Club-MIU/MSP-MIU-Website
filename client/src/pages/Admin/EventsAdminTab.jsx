@@ -402,12 +402,13 @@ export default function EventsAdminTab({ onAlert }) {
                   <label className="AdminPanel__fullWidth">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span>Description</span>
-                      <small style={{ color: (form.description?.length || 0) > 250 ? '#ff9800' : 'rgba(197, 218, 233, 0.7)', fontSize: '0.78rem' }}>
-                        {form.description?.length || 0} characters (recommended ~100-200 for event card preview)
+                      <small style={{ color: (form.description?.length || 0) > 600 ? '#ff9800' : 'rgba(197, 218, 233, 0.7)', fontSize: '0.78rem' }}>
+                        {form.description?.length || 0} / 800 max characters (card preview displays first ~115 chars)
                       </small>
                     </div>
                     <textarea
                       rows={4}
+                      maxLength={800}
                       value={form.description}
                       onChange={setField('description')}
                       placeholder="What attendees can expect…"

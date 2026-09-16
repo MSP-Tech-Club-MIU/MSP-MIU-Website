@@ -352,21 +352,28 @@
   gap: 20px;
 }
 
-.CourseDetails__thumb {
+.CourseDetails__thumb,
+.CourseDetails__thumbFull {
   width: 100%;
   border-radius: 18px;
   overflow: hidden;
-  background: #031C35;
+  background: linear-gradient(135deg, rgba(3, 28, 53, 0.8), rgba(10, 28, 49, 0.9));
   border: 1px solid rgba(142, 194, 240, 0.25);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-  aspect-ratio: 16 / 9;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
 }
 
-.CourseDetails__thumb img {
+.CourseDetails__thumb img,
+.CourseDetails__thumbImg {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  max-height: 520px;
+  object-fit: contain;
+  border-radius: 12px;
 }
 
 .CourseDetails__quickSpecs {
@@ -678,6 +685,263 @@
 .CourseDetails__viewBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(3, 169, 244, 0.35);
+}
+
+/* Action CTA Card in Sidebar */
+.CourseDetails__actionCard {
+  background: rgba(14, 39, 68, 0.55);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 18px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.CourseDetails__actionTitle {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #E8F4FC;
+}
+
+.CourseDetails__actionDesc {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #A8C2D6;
+  line-height: 1.5;
+}
+
+.CourseDetails__ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+  box-sizing: border-box;
+}
+
+.CourseDetails__ctaBtn--primary {
+  background: linear-gradient(135deg, #03A9F4, #0288D1);
+  color: #fff !important;
+  box-shadow: 0 6px 20px rgba(3, 169, 244, 0.35);
+}
+
+.CourseDetails__ctaBtn--primary:hover {
+  background: linear-gradient(135deg, #29B6F6, #03A9F4);
+  box-shadow: 0 8px 26px rgba(3, 169, 244, 0.5);
+  transform: translateY(-2px);
+  color: #fff !important;
+}
+
+.CourseDetails__ctaBtn--success {
+  background: linear-gradient(135deg, #2eb26c, #1f9455);
+  color: #fff !important;
+  box-shadow: 0 6px 20px rgba(46, 178, 108, 0.35);
+}
+
+.CourseDetails__ctaBtn--success:hover {
+  background: linear-gradient(135deg, #38c87c, #2eb26c);
+  transform: translateY(-2px);
+  color: #fff !important;
+}
+
+.CourseDetails__ctaBtn--outline {
+  background: rgba(3, 169, 244, 0.1);
+  color: #03A9F4 !important;
+  border: 1.5px solid rgba(3, 169, 244, 0.35);
+}
+
+.CourseDetails__ctaBtn--outline:hover {
+  background: rgba(3, 169, 244, 0.2);
+  border-color: #03A9F4;
+  color: #fff !important;
+}
+
+.CourseDetails__ctaSub {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  color: rgba(168, 194, 214, 0.85);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.CourseDetails__enrolledNotice,
+.CourseDetails__enrolledStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(46, 178, 108, 0.12);
+  border: 1px solid rgba(46, 178, 108, 0.28);
+  color: #5ce399;
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* Bottom CTA Banner */
+.CourseDetails__bottomCta {
+  background: linear-gradient(135deg, rgba(14, 39, 68, 0.7), rgba(3, 28, 53, 0.9));
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 20px;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  margin-top: 12px;
+}
+
+.CourseDetails__bottomCtaContent h3 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  color: #E8F4FC;
+}
+
+.CourseDetails__bottomCtaContent p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #A8C2D6;
+  line-height: 1.5;
+}
+
+/* Dedicated CourseRegister Page */
+.CourseRegisterPage {
+  min-height: 85vh;
+  padding: 120px 0 80px;
+}
+
+.CourseRegisterPage__container {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.CourseRegisterPage__header {
+  margin: 20px 0 28px;
+}
+
+.CourseRegisterPage__title {
+  margin: 0 0 10px;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  font-weight: 800;
+  color: #E8F4FC;
+  line-height: 1.25;
+}
+
+.CourseRegisterPage__subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #A8C2D6;
+  line-height: 1.5;
+}
+
+.CourseRegisterPage__courseCard {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(14, 39, 68, 0.5);
+  border: 1px solid rgba(142, 194, 240, 0.18);
+  margin-bottom: 24px;
+}
+
+.CourseRegisterPage__cardMedia {
+  width: 90px;
+  height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #031C35;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.CourseRegisterPage__cardMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.CourseRegisterPage__cardInfo h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #E8F4FC;
+}
+
+.CourseRegisterPage__cardBadges {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.CourseRegisterPage__spec {
+  font-size: 0.8rem;
+  color: #8EC2F0;
+}
+
+.CourseRegisterPage__spec strong {
+  color: #E8F4FC;
+}
+
+.CourseRegisterPage__successCard {
+  background: rgba(14, 39, 68, 0.6);
+  border: 1px solid rgba(46, 178, 108, 0.35);
+  border-radius: 20px;
+  padding: 36px 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+}
+
+.CourseRegisterPage__successIcon {
+  color: #4caf50;
+  background: rgba(46, 178, 108, 0.15);
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.CourseRegisterPage__successCard h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #E8F4FC;
+}
+
+.CourseRegisterPage__successCard p {
+  margin: 0;
+  color: #A8C2D6;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.CourseRegisterPage__successActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .CourseLearn__header {

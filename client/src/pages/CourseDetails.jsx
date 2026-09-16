@@ -1,6 +1,16 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { FiPlayCircle, FiAlertCircle, FiInfo, FiUsers, FiCheckCircle } from 'react-icons/fi';
+import {
+  FiPlayCircle,
+  FiInfo,
+  FiUsers,
+  FiCheckCircle,
+  FiUserPlus,
+  FiEdit2,
+  FiAward,
+  FiClock,
+  FiCheck
+} from 'react-icons/fi';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
@@ -11,107 +21,10 @@ import mspLogo from '../assets/Images/msp-logo.png';
 import { courseAccessTokenKey } from '../utils/youtube';
 import './Courses.css';
 
-const emptyForm = () => ({
-  full_name: '',
-  email: '',
-  phone_number: '',
-  university_id: '',
-  attendance_type: 'live_attendance'
-});
-
 /**
- * Reusable Attendee Type Selector (Live Attendance & Activities vs Watch Recordings Only)
- */
-function AttendeeTypeSelector({ value, onChange, maxAttendance, name = 'attendance_type' }) {
-  const absenceText = maxAttendance !== null && maxAttendance !== undefined && Number.isFinite(Number(maxAttendance))
-    ? (Number(maxAttendance) === 0
-        ? '0 missed sessions allowed (100% attendance required for certificate)'
-        : `${maxAttendance} missed session${Number(maxAttendance) > 1 ? 's' : ''} allowed for certificate`)
-    : 'Attendance is mandatory (absence limit defined per course by instructor)';
-
-  return (
-    <div className="CourseDetails__typeSelector">
-      <span className="CourseDetails__typeSelectorTitle">
-        Participation &amp; Attendance Track *
-      </span>
-      <div className="CourseDetails__typeCards">
-        {/* Option 1: Live Attendance & Activities */}
-        <label
-          className={`CourseDetails__typeCard CourseDetails__typeCard--highlight ${value === 'live_attendance' ? 'CourseDetails__typeCard--active' : ''}`}
-        >
-          <div className="CourseDetails__typeCardTop">
-            <input
-              type="radio"
-              name={name}
-              value="live_attendance"
-              checked={value === 'live_attendance'}
-              onChange={() => onChange('live_attendance')}
-            />
-            <div className="CourseDetails__typeCardHead">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span className="CourseDetails__typeCardLabel">Live Attendance &amp; Mentorship</span>
-                <span className="CourseDetails__typeBadge CourseDetails__typeBadge--featured">⭐ Best Experience</span>
-              </div>
-              <span className="CourseDetails__typeBadge CourseDetails__typeBadge--live">In-Person / Live</span>
-            </div>
-          </div>
-
-          <div className="CourseDetails__typeCardPerks">
-            <div className="CourseDetails__typePerk">
-              <FiCheckCircle className="CourseDetails__perkIcon" />
-              <span><strong>Tutor &amp; Mentor Guidance:</strong> Dedicated tutors assist you through assignments, troubleshoot bugs, and guide your journey.</span>
-            </div>
-            <div className="CourseDetails__typePerk">
-              <FiCheckCircle className="CourseDetails__perkIcon" />
-              <span><strong>Live Troubleshooting:</strong> Ask questions in real time and get unblocked immediately during sessions.</span>
-            </div>
-            <div className="CourseDetails__typePerk">
-              <FiCheckCircle className="CourseDetails__perkIcon" />
-              <span><strong>Official Certificate:</strong> Eligible for the MSP Certificate of Completion upon finishing.</span>
-            </div>
-          </div>
-
-          <div className="CourseDetails__typeCardAlert">
-            <FiAlertCircle />
-            <span>
-              <strong>Commitment &amp; Absence Limit:</strong> Requires active participation. {absenceText}.
-            </span>
-          </div>
-        </label>
-
-        {/* Option 2: Watch Recordings Only */}
-        <label
-          className={`CourseDetails__typeCard ${value === 'recordings_only' ? 'CourseDetails__typeCard--active' : ''}`}
-        >
-          <div className="CourseDetails__typeCardTop">
-            <input
-              type="radio"
-              name={name}
-              value="recordings_only"
-              checked={value === 'recordings_only'}
-              onChange={() => onChange('recordings_only')}
-            />
-            <div className="CourseDetails__typeCardHead">
-              <span className="CourseDetails__typeCardLabel">Watch Recordings Only</span>
-              <span className="CourseDetails__typeBadge CourseDetails__typeBadge--recorded">Self-Paced / Remote</span>
-            </div>
-          </div>
-          <p className="CourseDetails__typeCardDesc">
-            Watch recorded session videos on your own schedule. Self-paced independent study without live meeting obligations.
-          </p>
-          <div className="CourseDetails__typeCardInfo">
-            <FiInfo />
-            <span>Flexible self-study. Note: Does not include live tutor mentorship, interactive group tasks, or certificate eligibility.</span>
-          </div>
-        </label>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Course landing: description + registration. Lessons open via View course after register.
- * Logged-in MSP users skip the form and enroll with their account when starting the course.
+ * Course Details Page
+ * Displays full uncropped thumbnail, course overview, tutor mentorship & attendance policy,
+ * and prominent action CTA linking to the dedicated registration page (/courses/:id/register).
  */
 export default function CourseDetails() {
   const { id } = useParams();
@@ -123,22 +36,10 @@ export default function CourseDetails() {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [submitting, setSubmitting] = useState(false);
-  const [formMsg, setFormMsg] = useState(null);
-  const [formError, setFormError] = useState(null);
   const [accessToken, setAccessToken] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [accountName, setAccountName] = useState('');
-  const [accountAttendanceType, setAccountAttendanceType] = useState('live_attendance');
-  const [authChecked, setAuthChecked] = useState(false);
-  const [starting, setStarting] = useState(false);
   const [registeredName, setRegisteredName] = useState('');
-  const [registeredAttendanceType, setRegisteredAttendanceType] = useState('live_attendance');
+  const [registeredAttendanceType, setRegisteredAttendanceType] = useState('');
   const [fetchingEnrollment, setFetchingEnrollment] = useState(false);
-  const [updatingName, setUpdatingName] = useState(false);
-  const [nameEditMsg, setNameEditMsg] = useState(null);
-  const [nameEditError, setNameEditError] = useState(null);
 
   useEffect(() => {
     const fromQuery = searchParams.get('token');
@@ -151,44 +52,6 @@ export default function CourseDetails() {
     }
     setAccessToken(token);
   }, [courseId, searchParams]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        if (!ApiService.isAuthenticated()) {
-          if (!cancelled) {
-            setIsLoggedIn(false);
-            setAccountName('');
-          }
-          return;
-        }
-        const user = await ApiService.getProfile();
-        if (!cancelled) {
-          setIsLoggedIn(true);
-          setAccountName(user?.full_name || user?.university_id || user?.email || '');
-        }
-      } catch {
-        if (!cancelled) {
-          setIsLoggedIn(false);
-          setAccountName('');
-        }
-      } finally {
-        if (!cancelled) setAuthChecked(true);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    if (location.state?.needRegister) {
-      setFormError(
-        isLoggedIn
-          ? 'Click View course to continue with your MSP account.'
-          : 'Please register for this course (or log in with your MSP account) before viewing lessons.'
-      );
-    }
-  }, [location.state, isLoggedIn]);
 
   const loadCourse = useCallback(async () => {
     try {
@@ -208,70 +71,7 @@ export default function CourseDetails() {
     if (Number.isFinite(courseId)) loadCourse();
   }, [courseId, loadCourse]);
 
-  const persistToken = (token) => {
-    if (!token) return;
-    localStorage.setItem(courseAccessTokenKey(courseId), token);
-    setAccessToken(token);
-  };
-
-  const onEnroll = async (e) => {
-    e.preventDefault();
-    setFormMsg(null);
-    setFormError(null);
-
-    const emailTrimmed = String(form.email || '').trim();
-    const miuEmailRegex = /^[^\s@]+@miuegypt\.edu\.eg$/i;
-    if (!miuEmailRegex.test(emailTrimmed)) {
-      setFormError('Only @miuegypt.edu.eg email addresses are allowed');
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const result = await ApiService.enrollInCourse(courseId, {
-        ...form,
-        email: emailTrimmed
-      });
-      persistToken(result.data?.access_token);
-      setFormMsg(result.message || 'Registered successfully');
-      setForm(emptyForm());
-    } catch (err) {
-      if (err.status === 409 && err.data?.access_token) {
-        persistToken(err.data.access_token);
-        setFormMsg('You were already registered — you can open the course now.');
-      } else {
-        setFormError(err.message || 'Registration failed');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  /** Logged-in: enroll with account info, then open learn (or confirm notify). */
-  const startWithAccount = async () => {
-    setStarting(true);
-    setFormError(null);
-    setFormMsg(null);
-    try {
-      let token = accessToken;
-      if (!token) {
-        const result = await ApiService.enrollInCourseWithAccount(courseId, {
-          attendance_type: accountAttendanceType
-        });
-        token = result.data?.access_token;
-        persistToken(token);
-        setFormMsg(result.message || 'Enrolled with your MSP account');
-      }
-      if (course?.status === 'published' && token) {
-        navigate(`/courses/${courseId}/learn?token=${encodeURIComponent(token)}`);
-      }
-    } catch (err) {
-      setFormError(err.message || 'Could not start with your MSP account');
-    } finally {
-      setStarting(false);
-    }
-  };
-
+  // Fetch enrollment details if user has an access token
   useEffect(() => {
     let cancelled = false;
     if (Number.isFinite(courseId) && accessToken) {
@@ -297,47 +97,22 @@ export default function CourseDetails() {
     return () => { cancelled = true; };
   }, [courseId, accessToken]);
 
-  const handleUpdateRegistration = async (e) => {
-    e.preventDefault();
-    setNameEditMsg(null);
-    setNameEditError(null);
-
-    if (!registeredName.trim()) {
-      setNameEditError('Name cannot be empty');
-      return;
-    }
-
-    setUpdatingName(true);
-    try {
-      const result = await ApiService.updateCourseEnrollmentName(courseId, {
-        token: accessToken,
-        full_name: registeredName,
-        attendance_type: registeredAttendanceType
-      });
-      setNameEditMsg(result.message || 'Registration details updated successfully');
-    } catch (err) {
-      setNameEditError(err.message || 'Failed to update registration details');
-    } finally {
-      setUpdatingName(false);
-    }
-  };
-
-  if (loading || !authChecked) return <PageLoader />;
+  if (loading) return <PageLoader />;
   if (error || !course) {
     return (
       <div className="CourseDetails">
         <div className="CourseDetails__container">
-          <BackButton to="/courses" />
+          <BackButton to="/courses" label="Back to Courses" />
           <div className="CoursesPage__empty">{error || 'Course not found'}</div>
         </div>
       </div>
     );
   }
 
-  const registrationOpen = course.status === 'coming_soon' || course.status === 'published';
-  const canViewCourse = course.status === 'published' && !!accessToken;
+  const isEnrolled = !!accessToken;
+  const canViewCourse = course.status === 'published' && isEnrolled;
   const learnPath = `/courses/${courseId}/learn${accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''}`;
-  const loginState = { from: { pathname: `/courses/${courseId}` } };
+  const registerPath = `/courses/${courseId}/register${accessToken ? `?token=${encodeURIComponent(accessToken)}` : ''}`;
 
   return (
     <div className="CourseDetails">
@@ -350,7 +125,7 @@ export default function CourseDetails() {
         type="article"
       />
       <div className="CourseDetails__container">
-        <BackButton to="/courses" />
+        <BackButton to="/courses" label="Back to Courses" />
 
         {/* Top Header */}
         <header className="CourseDetails__header">
@@ -367,9 +142,9 @@ export default function CourseDetails() {
           <h1 className="CourseDetails__title">{course.title}</h1>
         </header>
 
-        {/* 2-Column Responsive Layout */}
+        {/* 2-Column Responsive Split Layout */}
         <div className="CourseDetails__splitLayout">
-          {/* Main Content Column (Left, ~62%) */}
+          {/* Main Content Column (Left, ~60%) */}
           <main className="CourseDetails__mainCol">
             {/* Overview & Description Card */}
             <div className="CourseDetails__overviewCard">
@@ -383,7 +158,7 @@ export default function CourseDetails() {
               )}
             </div>
 
-            {/* Attendance & Commitment Policy Card */}
+            {/* Attendance & Participation Tracks Policy Card */}
             <div className="CourseDetails__policyCard">
               <h3 className="CourseDetails__policyHeading">
                 <FiUsers style={{ marginRight: 8, verticalAlign: 'middle', color: '#03A9F4' }} />
@@ -424,24 +199,42 @@ export default function CourseDetails() {
               </div>
             </div>
 
-            {course.status === 'coming_soon' ? (
-              <div className="CourseDetails__lockedNotice">
-                <FiInfo style={{ marginRight: 6, flexShrink: 0 }} />
-                <span>
-                  Lessons and materials will unlock once this course is published. Register below to be notified first and secure your spot!
-                </span>
+            {/* Bottom Register CTA Banner */}
+            <div className="CourseDetails__bottomCta">
+              <div className="CourseDetails__bottomCtaContent">
+                <h3>Ready to start learning {course.title}?</h3>
+                <p>
+                  Join fellow students in the live mentorship track or follow along with on-demand recordings.
+                </p>
               </div>
-            ) : null}
+              <div className="CourseDetails__bottomCtaAction">
+                {canViewCourse ? (
+                  <Link to={learnPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary">
+                    <FiPlayCircle /> Start Learning Now
+                  </Link>
+                ) : (
+                  <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary">
+                    <FiUserPlus />
+                    {isEnrolled
+                      ? 'Edit Registration'
+                      : course.status === 'coming_soon'
+                        ? 'Get Notified When Live'
+                        : 'Register for Course'}
+                  </Link>
+                )}
+              </div>
+            </div>
           </main>
 
-          {/* Sticky Sidebar Column (Right, ~38%) */}
+          {/* Sidebar Column (Right, ~40%) */}
           <aside className="CourseDetails__sidebarCol">
             <div className="CourseDetails__stickySidebar">
-              {/* Media Card */}
-              <div className="CourseDetails__thumb">
+              {/* Full Uncropped Thumbnail Showcase */}
+              <div className="CourseDetails__thumbFull">
                 <img
                   src={course.thumbnail_url || mspLogo}
                   alt={course.title}
+                  className="CourseDetails__thumbImg"
                   onError={(e) => { e.currentTarget.src = mspLogo; }}
                 />
               </div>
@@ -468,186 +261,62 @@ export default function CourseDetails() {
                 </div>
               </div>
 
-              {/* Registered View Button (when course published) */}
-              {canViewCourse ? (
-                <div className="CourseDetails__viewWrap">
-                  <Link to={learnPath} className="CourseDetails__viewBtn" style={{ width: '100%', justifyContent: 'center' }}>
-                    <FiPlayCircle />
-                    View course
-                  </Link>
-                  <p className="CourseDetails__formMsg">
-                    You&apos;re registered on this device. Open the course anytime.
-                  </p>
-                </div>
-              ) : null}
+              {/* Registration Call To Action Card */}
+              <div className="CourseDetails__actionCard">
+                <h3 className="CourseDetails__actionTitle">Enrollment &amp; Registration</h3>
+                <p className="CourseDetails__actionDesc">
+                  {course.status === 'coming_soon'
+                    ? 'Pre-registration is open. Register now to be notified as soon as sessions begin and claim your spot!'
+                    : 'Enroll now to access lessons, assignments, and choose your preferred attendance track.'}
+                </p>
 
-              {/* Logged-in MSP member box */}
-              {registrationOpen && isLoggedIn && !accessToken ? (
-                <div className="CourseDetails__form CourseDetails__accountBox">
-                  <h3>
-                    {course.status === 'coming_soon'
-                      ? 'Get notified with your MSP account'
-                      : 'Start with your MSP account'}
-                  </h3>
-                  <p className="CourseDetails__formLead">
-                    Signed in as <strong>{accountName || 'MSP member'}</strong>.
-                  </p>
-
-                  <AttendeeTypeSelector
-                    value={accountAttendanceType}
-                    onChange={setAccountAttendanceType}
-                    maxAttendance={course.max_attendance}
-                    name="account_attendance_type"
-                  />
-
-                  <button
-                    type="button"
-                    className="CourseDetails__viewBtn"
-                    onClick={startWithAccount}
-                    disabled={starting}
-                    style={{ border: 'none', width: '100%', justifyContent: 'center', marginTop: 12 }}
-                  >
-                    <FiPlayCircle />
-                    {starting
-                      ? 'Starting…'
-                      : course.status === 'coming_soon'
-                        ? 'Notify me'
-                        : 'View course'}
-                  </button>
-                  {formMsg ? <p className="CourseDetails__formMsg">{formMsg}</p> : null}
-                  {formError ? (
-                    <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{formError}</p>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Guest registration form */}
-              {registrationOpen && !isLoggedIn && !accessToken ? (
-                <form className="CourseDetails__form" onSubmit={onEnroll}>
-                  <h3>
-                    {course.status === 'coming_soon'
-                      ? 'Notify me when available'
-                      : 'Register for this course'}
-                  </h3>
-                  <p className="CourseDetails__formLead">
-                    {course.status === 'coming_soon'
-                      ? 'We will email you as soon as lessons are published.'
-                      : 'Complete the form below to watch lessons.'}
-                  </p>
-                  <p className="CourseDetails__loginHint">
-                    You can skip this form if you{' '}
-                    <Link to="/login" state={loginState}>
-                      log in with your MSP account
+                {/* State 1: Enrolled and Course Published */}
+                {canViewCourse ? (
+                  <div className="CourseDetails__enrolledBox">
+                    <div className="CourseDetails__enrolledStatus">
+                      <FiCheckCircle size={20} color="#4caf50" />
+                      <span>You are registered on this device</span>
+                    </div>
+                    <Link to={learnPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary" style={{ width: '100%', justifyContent: 'center' }}>
+                      <FiPlayCircle /> Start Course
                     </Link>
-                    {' '}(if you have one).
-                  </p>
-                  <div className="CourseDetails__formGrid">
-                    <label>
-                      Full name
-                      <input
-                        required
-                        value={form.full_name}
-                        onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      Email (@miuegypt.edu.eg)
-                      <input
-                        required
-                        type="email"
-                        placeholder="name2398765@miuegypt.edu.eg"
-                        value={form.email}
-                        onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      Phone number
-                      <input
-                        required
-                        value={form.phone_number}
-                        onChange={(e) => setForm((f) => ({ ...f, phone_number: e.target.value }))}
-                      />
-                    </label>
-                    <label>
-                      University ID
-                      <input
-                        required
-                        value={form.university_id}
-                        onChange={(e) => setForm((f) => ({ ...f, university_id: e.target.value }))}
-                      />
-                    </label>
                   </div>
+                ) : null}
 
-                  <AttendeeTypeSelector
-                    value={form.attendance_type}
-                    onChange={(val) => setForm((f) => ({ ...f, attendance_type: val }))}
-                    maxAttendance={course.max_attendance}
-                    name="guest_attendance_type"
-                  />
-
-                  <button type="submit" disabled={submitting} style={{ width: '100%', marginTop: 12 }}>
-                    {submitting
-                      ? 'Submitting…'
-                      : course.status === 'coming_soon'
-                        ? 'Notify me'
-                        : 'Register'}
-                  </button>
-                  {formMsg ? <p className="CourseDetails__formMsg">{formMsg}</p> : null}
-                  {formError ? (
-                    <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{formError}</p>
-                  ) : null}
-                </form>
-              ) : null}
-
-              {/* Already registered (coming_soon): update details */}
-              {registrationOpen && accessToken && course.status === 'coming_soon' ? (
-                <div className="CourseDetails__form CourseDetails__editBox">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4caf50', fontWeight: 600, fontSize: '0.95rem' }}>
-                    <FiCheckCircle />
-                    <span>You&apos;re registered on the notify list!</span>
+                {/* State 2: Enrolled and Course Coming Soon */}
+                {isEnrolled && course.status === 'coming_soon' ? (
+                  <div className="CourseDetails__enrolledBox">
+                    <div className="CourseDetails__enrolledStatus">
+                      <FiCheckCircle size={20} color="#4caf50" />
+                      <span>
+                        Registered on waitlist
+                        {registeredAttendanceType
+                          ? ` (${registeredAttendanceType === 'recordings_only' ? 'Recordings' : 'Live Track'})`
+                          : ''}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.82rem', color: '#A8C2D6', margin: '6px 0 14px' }}>
+                      We will notify you by email when lessons are released.
+                    </p>
+                    <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--outline" style={{ width: '100%', justifyContent: 'center' }}>
+                      <FiEdit2 /> Edit Registration Details
+                    </Link>
                   </div>
-                  <p className="CourseDetails__formLead" style={{ marginTop: 8 }}>
-                    We will email you when this course is published. You can adjust your registration track and name below before the course starts.
-                  </p>
+                ) : null}
 
-                  {fetchingEnrollment ? (
-                    <p className="CourseDetails__formMsg">Loading registration details...</p>
-                  ) : (
-                    <form onSubmit={handleUpdateRegistration}>
-                      <div className="CourseDetails__formGrid" style={{ marginBottom: 12 }}>
-                        <label>
-                          Full Name (printed on certificate)
-                          <input
-                            required
-                            type="text"
-                            value={registeredName}
-                            onChange={(e) => setRegisteredName(e.target.value)}
-                          />
-                        </label>
-                      </div>
-
-                      <AttendeeTypeSelector
-                        value={registeredAttendanceType}
-                        onChange={setRegisteredAttendanceType}
-                        maxAttendance={course.max_attendance}
-                        name="registered_attendance_type"
-                      />
-
-                      <button
-                        type="submit"
-                        disabled={updatingName || !registeredName.trim()}
-                        style={{ width: '100%', marginTop: 12 }}
-                      >
-                        {updatingName ? 'Saving...' : 'Update Details'}
-                      </button>
-                      {nameEditMsg ? <p className="CourseDetails__formMsg" style={{ color: '#4caf50' }}>{nameEditMsg}</p> : null}
-                      {nameEditError ? (
-                        <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{nameEditError}</p>
-                      ) : null}
-                    </form>
-                  )}
-                </div>
-              ) : null}
+                {/* State 3: Not Enrolled Yet */}
+                {!isEnrolled ? (
+                  <div className="CourseDetails__notEnrolledBox">
+                    <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary" style={{ width: '100%', justifyContent: 'center' }}>
+                      <FiUserPlus />
+                      <span>{course.status === 'coming_soon' ? 'Join Notification List' : 'Register for Course'}</span>
+                    </Link>
+                    <p className="CourseDetails__ctaSub">
+                      Includes choice of <strong>Live Attendance with Tutor Mentorship</strong> or <strong>Recordings Only</strong>.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </aside>
         </div>
@@ -655,4 +324,3 @@ export default function CourseDetails() {
     </div>
   );
 }
-
