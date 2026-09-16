@@ -336,13 +336,13 @@ const Events = () => {
                           </span>
                         )}
                       </div>
-                      {event.description && (
-                        <p className="EventCard__description">
-                          {event.description.length > 100
-                            ? `${event.description.substring(0, 100)}...`
-                            : event.description}
-                        </p>
-                      )}
+                      <p className="EventCard__description">
+                        {event.description
+                          ? (event.description.length > 115
+                              ? `${event.description.substring(0, 115)}…`
+                              : event.description)
+                          : ''}
+                      </p>
                     </div>
                   </motion.article>
                   ))}

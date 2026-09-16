@@ -663,13 +663,15 @@ const enrollInCourse = async (req, res) => {
       });
     }
 
-    const { full_name, email, phone_number, university_id } = req.body;
+    const { full_name, email, phone_number, university_id, attendance_type } = req.body;
     if (!full_name || !email || !phone_number || !university_id) {
       return res.status(400).json({
         success: false,
         error: 'full_name, email, phone_number, and university_id are required'
       });
     }
+
+    const validAttendanceType = attendance_type === 'recordings_only' ? 'recordings_only' : 'live_attendance';
 
     const blacklistStatus = await checkBlacklist({
       name: full_name,
@@ -707,7 +709,7 @@ const enrollInCourse = async (req, res) => {
       return res.status(409).json({
         success: false,
         error: 'You are already registered for this course',
-        data: { access_token: existing.access_token }
+        data: { access_token: existing.access_token, attendance_type: existing.attendance_type }
       });
     }
 
@@ -719,7 +721,8 @@ const enrollInCourse = async (req, res) => {
       university_id: String(university_id).trim(),
       status: course.status === 'published' ? 'enrolled' : 'preordered',
       access_token: makeAccessToken(),
-      attended: true
+      attended: true,
+      attendance_type: validAttendanceType
     });
 
     res.status(201).json({
@@ -730,7 +733,8 @@ const enrollInCourse = async (req, res) => {
       data: {
         enrollment_id: enrollment.enrollment_id,
         access_token: enrollment.access_token,
-        status: enrollment.status
+        status: enrollment.status,
+        attendance_type: enrollment.attendance_type
       }
     });
   } catch (error) {
@@ -812,10 +816,13 @@ const enrollWithAccount = async (req, res) => {
           enrollment_id: existing.enrollment_id,
           access_token: existing.access_token,
           status: existing.status,
+          attendance_type: existing.attendance_type,
           from_account: true
         }
       });
     }
+
+    const validAttendanceType = req.body?.attendance_type === 'recordings_only' ? 'recordings_only' : 'live_attendance';
 
     let phone_number = 'MSP-account';
     try {
@@ -837,7 +844,8 @@ const enrollWithAccount = async (req, res) => {
       university_id,
       status: course.status === 'published' ? 'enrolled' : 'preordered',
       access_token: makeAccessToken(),
-      attended: true
+      attended: true,
+      attendance_type: validAttendanceType
     });
 
     res.status(201).json({
@@ -849,6 +857,7 @@ const enrollWithAccount = async (req, res) => {
         enrollment_id: enrollment.enrollment_id,
         access_token: enrollment.access_token,
         status: enrollment.status,
+        attendance_type: enrollment.attendance_type,
         from_account: true
       }
     });
@@ -961,6 +970,7 @@ const getMyProgress = async (req, res) => {
         full_name: enrollment.full_name,
         status: enrollment.status,
         attended: enrollment.attended,
+        attendance_type: enrollment.attendance_type || 'live_attendance',
         completed_lesson_ids: completed.map((p) => p.lesson_id),
         completed_count: completed.length,
         lesson_count: lessonCount,
@@ -1013,6 +1023,11 @@ const listEnrollments = async (req, res) => {
     // Attended filter
     if (req.query.attended === 'true' || req.query.attended === 'false') {
       where.attended = req.query.attended === 'true';
+    }
+
+    // Attendance type filter
+    if (req.query.attendance_type && ['live_attendance', 'recordings_only'].includes(req.query.attendance_type)) {
+      where.attendance_type = req.query.attendance_type;
     }
 
     // Certificate eligibility filter
@@ -1136,6 +1151,9 @@ const updateEnrollment = async (req, res) => {
     if (req.body.status && ['preordered', 'notified', 'enrolled'].includes(req.body.status)) {
       enrollment.status = req.body.status;
     }
+    if (req.body.attendance_type && ['live_attendance', 'recordings_only'].includes(req.body.attendance_type)) {
+      enrollment.attendance_type = req.body.attendance_type;
+    }
     await enrollment.save();
 
     await logAdminAction(
@@ -1156,10 +1174,10 @@ const updateEnrollment = async (req, res) => {
 const updateEnrollmentName = async (req, res) => {
   try {
     const courseId = parseInt(req.params.id, 10);
-    const { token, full_name } = req.body;
+    const { token, full_name, attendance_type } = req.body;
 
-    if (!token || !full_name || !String(full_name).trim()) {
-      return res.status(400).json({ success: false, error: 'token and full_name are required' });
+    if (!token || (!full_name && !attendance_type)) {
+      return res.status(400).json({ success: false, error: 'token and full_name or attendance_type are required' });
     }
 
     const enrollment = await CourseEnrollment.findOne({
@@ -1177,35 +1195,43 @@ const updateEnrollmentName = async (req, res) => {
     if (course.status !== 'coming_soon') {
       return res.status(400).json({
         success: false,
-        error: 'You can only edit the certificate name before the course opens.'
+        error: 'You can only edit registration details before the course opens.'
       });
     }
 
-    const trimmedName = String(full_name).trim();
+    if (full_name && String(full_name).trim()) {
+      const trimmedName = String(full_name).trim();
 
-    const blacklistStatus = await checkBlacklist({
-      name: trimmedName,
-      university_id: enrollment.university_id,
-      phone_number: enrollment.phone_number,
-      email: enrollment.email
-    });
-
-    if (blacklistStatus.isBlacklisted) {
-      return res.status(403).json({
-        success: false,
-        error: `Name update rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+      const blacklistStatus = await checkBlacklist({
+        name: trimmedName,
+        university_id: enrollment.university_id,
+        phone_number: enrollment.phone_number,
+        email: enrollment.email
       });
+
+      if (blacklistStatus.isBlacklisted) {
+        return res.status(403).json({
+          success: false,
+          error: `Name update rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
+        });
+      }
+
+      enrollment.full_name = trimmedName;
     }
 
-    enrollment.full_name = trimmedName;
+    if (attendance_type && ['live_attendance', 'recordings_only'].includes(attendance_type)) {
+      enrollment.attendance_type = attendance_type;
+    }
+
     await enrollment.save();
 
     res.json({
       success: true,
-      message: 'Certificate name updated successfully',
+      message: 'Registration details updated successfully',
       data: {
         enrollment_id: enrollment.enrollment_id,
-        full_name: enrollment.full_name
+        full_name: enrollment.full_name,
+        attendance_type: enrollment.attendance_type
       }
     });
   } catch (error) {
@@ -1537,7 +1563,7 @@ const exportEnrollmentsCSV = async (req, res) => {
 
     const headers = [
       '#', 'Course', 'Full Name', 'Email', 'Phone', 'University ID',
-      'Status', 'Overall Attended', 'Sessions Attended', 'Sessions Missed',
+      'Status', 'Attendance Type', 'Overall Attended', 'Sessions Attended', 'Sessions Missed',
       'Max Allowed Missed', 'Certificate Eligible',
       'Lessons Completed', 'Lesson Count', 'Completion %'
     ];
@@ -1571,6 +1597,7 @@ const exportEnrollmentsCSV = async (req, res) => {
         row.phone_number,
         row.university_id,
         row.status,
+        row.attendance_type === 'recordings_only' ? 'Recordings only' : 'Live attendance & activities',
         row.attended ? 'Yes' : 'No',
         cert.attended_count,
         cert.missed_count,

@@ -854,6 +854,28 @@ async function ensureBlacklistTable() {
   }
 }
 
+async function ensureCourseEnrollmentColumns() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'course_enrollments'
+         AND COLUMN_NAME = 'attendance_type'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await sequelize.query(
+        "ALTER TABLE `course_enrollments` ADD COLUMN `attendance_type` ENUM('live_attendance', 'recordings_only') NOT NULL DEFAULT 'live_attendance'"
+      );
+      logger.info('Added course_enrollments.attendance_type column');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure course_enrollments.attendance_type:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -870,6 +892,7 @@ const syncModels = async () => {
     await ensureUserEmailColumns();
     await ensureCourseAnnouncementTable();
     await ensureCourseColumnsAndAttendanceTable();
+    await ensureCourseEnrollmentColumns();
     await ensureBlacklistTable();
   } catch (error) {
     logger.error('Error synchronizing models:', error);

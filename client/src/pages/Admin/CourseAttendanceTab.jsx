@@ -9,6 +9,7 @@ const LIMIT = 20;
 
 const emptyFilters = () => ({
   course_id: '',
+  attendance_type: '',
   attended: '',
   eligible: '',
   search: ''
@@ -72,6 +73,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
 
       const params = { page, limit: LIMIT };
       if (filters.course_id) params.course_id = filters.course_id;
+      if (filters.attendance_type) params.attendance_type = filters.attendance_type;
       if (filters.attended !== '') params.attended = filters.attended;
       if (filters.eligible !== '') params.eligible = filters.eligible;
       if (debouncedSearch) params.search = debouncedSearch;
@@ -89,7 +91,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
       setLoading(false);
       setIsFiltering(false);
     }
-  }, [page, filters.course_id, filters.attended, filters.eligible, debouncedSearch, onAlert]);
+  }, [page, filters.course_id, filters.attendance_type, filters.attended, filters.eligible, debouncedSearch, onAlert]);
 
   useEffect(() => {
     fetchEnrollments();
@@ -108,6 +110,9 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
 
   const displayedRows = useMemo(() => {
     let list = rows;
+    if (filters.attendance_type) {
+      list = list.filter((r) => (r.attendance_type || 'live_attendance') === filters.attendance_type);
+    }
     if (filters.attended === 'true') list = list.filter((r) => r.attended);
     else if (filters.attended === 'false') list = list.filter((r) => !r.attended);
 
@@ -132,7 +137,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
       });
     }
     return list;
-  }, [rows, filters.attended, filters.eligible, debouncedSearch]);
+  }, [rows, filters.attendance_type, filters.attended, filters.eligible, debouncedSearch]);
 
   const handleAttendedChange = async (row, newAttended) => {
     if (Boolean(row.attended) === newAttended) return;
@@ -228,7 +233,8 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
     try {
       setIsExporting(true);
       const blob = await ApiService.exportCourseEnrollmentsCsv(
-        filters.course_id || undefined
+        filters.course_id || undefined,
+        filters.attendance_type || undefined
       );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -246,11 +252,21 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
   };
 
   const hasActiveFilters = Boolean(
-    filters.course_id || filters.attended !== '' || filters.eligible !== '' || filters.search
+    filters.course_id ||
+    filters.attendance_type ||
+    filters.attended !== '' ||
+    filters.eligible !== '' ||
+    filters.search
   );
   const attendedOnPage = displayedRows.filter((r) => r.attended).length;
   const eligibleOnPage = displayedRows.filter((r) => r.certificate_eligible).length;
   const ineligibleOnPage = displayedRows.filter((r) => !r.certificate_eligible).length;
+  const liveCountOnPage = displayedRows.filter(
+    (r) => (r.attendance_type || 'live_attendance') === 'live_attendance'
+  ).length;
+  const recordingsCountOnPage = displayedRows.filter(
+    (r) => r.attendance_type === 'recordings_only'
+  ).length;
   const avgCompletion =
     displayedRows.length === 0
       ? 0
@@ -293,6 +309,18 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
           <div className="AttendanceAdmin__stat">
             <span className="AttendanceAdmin__statValue">{totalCount}</span>
             <span className="AttendanceAdmin__statLabel">Total Attendees</span>
+          </div>
+          <div className="AttendanceAdmin__stat">
+            <span className="AttendanceAdmin__statValue" style={{ color: '#03A9F4' }}>
+              {liveCountOnPage}
+            </span>
+            <span className="AttendanceAdmin__statLabel">Live Attendees (page)</span>
+          </div>
+          <div className="AttendanceAdmin__stat">
+            <span className="AttendanceAdmin__statValue" style={{ color: '#5ce399' }}>
+              {recordingsCountOnPage}
+            </span>
+            <span className="AttendanceAdmin__statLabel">Recordings Only (page)</span>
           </div>
           <div className="AttendanceAdmin__stat">
             <span className="AttendanceAdmin__statValue AttendanceAdmin__statValue--ok">
@@ -338,6 +366,18 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
                 {course.title || `Course ${course.course_id}`}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="AttendanceAdmin__field">
+          <span>Attendee Type</span>
+          <select
+            className="AdminPanel__filterSelect"
+            value={filters.attendance_type}
+            onChange={(e) => handleFilterChange('attendance_type', e.target.value)}
+          >
+            <option value="">All Types</option>
+            <option value="live_attendance">Live Attendance</option>
+            <option value="recordings_only">Recordings Only</option>
           </select>
         </label>
         <label className="AttendanceAdmin__field">
@@ -396,6 +436,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
                 <th />
                 <th>Name</th>
                 <th>Course</th>
+                <th>Track / Type</th>
                 <th>Sessions Attended</th>
                 <th>Certificate Eligibility</th>
                 <th>Progress</th>
@@ -444,6 +485,43 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
                         <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
                           Max allowed missed: <strong>{row.max_attendance != null ? row.max_attendance : '0 (100%)'}</strong>
                         </div>
+                      </td>
+                      <td>
+                        {row.attendance_type === 'recordings_only' ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              background: 'rgba(92, 227, 153, 0.15)',
+                              color: '#5ce399',
+                              border: '1px solid rgba(92, 227, 153, 0.3)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Recordings Only
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              background: 'rgba(3, 169, 244, 0.15)',
+                              color: '#03A9F4',
+                              border: '1px solid rgba(3, 169, 244, 0.3)',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            Live Attendance
+                          </span>
+                        )}
                       </td>
                       <td>
                         <strong>{attendedSessionsCount} / {total}</strong> sessions
@@ -501,7 +579,7 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
                     </tr>
                     {isExpanded ? (
                       <tr className="CourseAttendanceAdmin__detailRow">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="CourseAttendanceAdmin__detail" style={{ padding: '12px 16px' }}>
                             <div style={{ marginBottom: 14 }}>
                               <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem' }}>

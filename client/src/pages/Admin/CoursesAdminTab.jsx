@@ -404,6 +404,7 @@ export default function CoursesAdminTab({ onAlert }) {
   const [enrollPage, setEnrollPage] = useState(1);
   const [enrollPagination, setEnrollPagination] = useState(null);
   const [enrollLoading, setEnrollLoading] = useState(false);
+  const [enrollAttendanceType, setEnrollAttendanceType] = useState('');
 
   const loadEnrollments = useCallback(async () => {
     setEnrollLoading(true);
@@ -411,7 +412,8 @@ export default function CoursesAdminTab({ onAlert }) {
       const result = await ApiService.getCourseEnrollments({
         page: enrollPage,
         limit: ENROLL_PAGE_SIZE,
-        course_id: enrollCourseId || undefined
+        course_id: enrollCourseId || undefined,
+        attendance_type: enrollAttendanceType || undefined
       });
       setEnrollments(Array.isArray(result.data) ? result.data : []);
       setEnrollPagination(result.pagination || null);
@@ -420,7 +422,7 @@ export default function CoursesAdminTab({ onAlert }) {
     } finally {
       setEnrollLoading(false);
     }
-  }, [enrollPage, enrollCourseId, onAlert]);
+  }, [enrollPage, enrollCourseId, enrollAttendanceType, onAlert]);
 
   useEffect(() => {
     if (view === 'enrollments') loadEnrollments();
@@ -428,7 +430,10 @@ export default function CoursesAdminTab({ onAlert }) {
 
   const exportCsv = async () => {
     try {
-      const blob = await ApiService.exportCourseEnrollmentsCsv(enrollCourseId || undefined);
+      const blob = await ApiService.exportCourseEnrollmentsCsv(
+        enrollCourseId || undefined,
+        enrollAttendanceType || undefined
+      );
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1297,6 +1302,25 @@ export default function CoursesAdminTab({ onAlert }) {
           </div>
         </div>
 
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: '#C5DAE9' }}>
+            <span>Attendee Type:</span>
+            <select
+              className="AdminPanel__filterSelect"
+              value={enrollAttendanceType}
+              onChange={(e) => {
+                setEnrollAttendanceType(e.target.value);
+                setEnrollPage(1);
+              }}
+              style={{ minWidth: 160 }}
+            >
+              <option value="">All Types</option>
+              <option value="live_attendance">Live Attendance</option>
+              <option value="recordings_only">Recordings Only</option>
+            </select>
+          </label>
+        </div>
+
         {enrollLoading ? (
           <div className="AdminPanel__empty"><p>Loading…</p></div>
         ) : enrollments.length === 0 ? (
@@ -1309,6 +1333,7 @@ export default function CoursesAdminTab({ onAlert }) {
                   <th>Name</th>
                   <th>Course</th>
                   <th>Contact</th>
+                  <th>Track / Type</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -1324,6 +1349,39 @@ export default function CoursesAdminTab({ onAlert }) {
                     <td>
                       <div>{row.email}</div>
                       <div style={{ opacity: 0.7 }}>{row.phone_number}</div>
+                    </td>
+                    <td>
+                      {row.attendance_type === 'recordings_only' ? (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          background: 'rgba(92, 227, 153, 0.15)',
+                          color: '#5ce399',
+                          border: '1px solid rgba(92, 227, 153, 0.3)',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Recordings Only
+                        </span>
+                      ) : (
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '3px 8px',
+                          borderRadius: 6,
+                          fontSize: '0.76rem',
+                          fontWeight: 600,
+                          background: 'rgba(3, 169, 244, 0.15)',
+                          color: '#03A9F4',
+                          border: '1px solid rgba(3, 169, 244, 0.3)',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          Live Attendance
+                        </span>
+                      )}
                     </td>
                     <td>{row.status}</td>
                     <td>
