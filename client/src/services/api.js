@@ -2134,10 +2134,11 @@ class ApiService {
     return result;
   }
 
-  static async enrollInCourseWithAccount(courseId) {
+  static async enrollInCourseWithAccount(courseId, data = {}) {
     const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enroll/me`, {
       method: 'POST',
-      headers: this.getHeaders(true)
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data)
     });
     const result = await response.json();
     if (!response.ok) {
@@ -2170,14 +2171,14 @@ class ApiService {
     return result.data || result;
   }
 
-  static async updateCourseEnrollmentName(courseId, { token, full_name }) {
+  static async updateCourseEnrollmentName(courseId, { token, full_name, attendance_type }) {
     const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enrollment/name`, {
       method: 'PUT',
       headers: this.getHeaders(),
-      body: JSON.stringify({ token, full_name })
+      body: JSON.stringify({ token, full_name, attendance_type })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Failed to update certificate name');
+    if (!response.ok) throw new Error(result.error || 'Failed to update registration details');
     return result;
   }
 
@@ -2264,10 +2265,14 @@ class ApiService {
     return result.data || result;
   }
 
-  static async exportCourseEnrollmentsCsv(courseId) {
-    const url = courseId
+  static async exportCourseEnrollmentsCsv(courseId, attendanceType) {
+    const params = new URLSearchParams();
+    if (attendanceType) params.append('attendance_type', attendanceType);
+    const qs = params.toString();
+    const base = courseId
       ? `${API_BASE_URL}/courses/${courseId}/enrollments/export`
       : `${API_BASE_URL}/courses/admin/enrollments/export`;
+    const url = `${base}${qs ? `?${qs}` : ''}`;
     const response = await fetch(url, { headers: this.getHeaders(true) });
     if (!response.ok) {
       const result = await response.json().catch(() => ({}));

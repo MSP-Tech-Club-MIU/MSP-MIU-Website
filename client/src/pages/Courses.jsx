@@ -149,12 +149,11 @@ export default function Courses() {
                       <>{' '}<SeasonBadge season={course.season} /></>
                     ) : null}
                   </h2>
-                  {course.description ? (
-                    <p>
-                      {String(course.description).slice(0, 120)}
-                      {String(course.description).length > 120 ? '…' : ''}
-                    </p>
-                  ) : null}
+                  <p>
+                    {course.description
+                      ? `${String(course.description).slice(0, 115)}${String(course.description).length > 115 ? '…' : ''}`
+                      : ''}
+                  </p>
                 </div>
               </motion.article>
             ))}

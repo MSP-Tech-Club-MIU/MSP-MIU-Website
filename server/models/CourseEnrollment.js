@@ -53,6 +53,11 @@ const CourseEnrollment = sequelize.define('CourseEnrollment', {
     allowNull: false,
     defaultValue: true
   },
+  attendance_type: {
+    type: DataTypes.ENUM('live_attendance', 'recordings_only'),
+    allowNull: false,
+    defaultValue: 'live_attendance'
+  },
   created_at: {
     type: DataTypes.DATE,
     allowNull: false,
