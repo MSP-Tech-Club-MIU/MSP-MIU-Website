@@ -9,7 +9,9 @@ import {
   FiEdit2,
   FiAward,
   FiClock,
-  FiCheck
+  FiCheck,
+  FiMaximize2,
+  FiX
 } from 'react-icons/fi';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
@@ -40,6 +42,7 @@ export default function CourseDetails() {
   const [registeredName, setRegisteredName] = useState('');
   const [registeredAttendanceType, setRegisteredAttendanceType] = useState('');
   const [fetchingEnrollment, setFetchingEnrollment] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   useEffect(() => {
     const fromQuery = searchParams.get('token');
@@ -215,11 +218,7 @@ export default function CourseDetails() {
                 ) : (
                   <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary">
                     <FiUserPlus />
-                    {isEnrolled
-                      ? 'Edit Registration'
-                      : course.status === 'coming_soon'
-                        ? 'Get Notified When Live'
-                        : 'Register for Course'}
+                    {isEnrolled ? 'Edit Registration' : 'Register for Course'}
                   </Link>
                 )}
               </div>
@@ -229,14 +228,24 @@ export default function CourseDetails() {
           {/* Sidebar Column (Right, ~40%) */}
           <aside className="CourseDetails__sidebarCol">
             <div className="CourseDetails__stickySidebar">
-              {/* Full Uncropped Thumbnail Showcase */}
-              <div className="CourseDetails__thumbFull">
+              {/* Full Uncropped Thumbnail Showcase with Lightbox Zoom */}
+              <div
+                className="CourseDetails__thumbFull"
+                onClick={() => setImageModalOpen(true)}
+                title="Click to view full image in high resolution"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') setImageModalOpen(true); }}
+              >
                 <img
                   src={course.thumbnail_url || mspLogo}
                   alt={course.title}
                   className="CourseDetails__thumbImg"
                   onError={(e) => { e.currentTarget.src = mspLogo; }}
                 />
+                <span className="CourseDetails__zoomBadge">
+                  <FiMaximize2 /> Expand Poster
+                </span>
               </div>
 
               {/* Quick Info Specs */}
@@ -263,11 +272,9 @@ export default function CourseDetails() {
 
               {/* Registration Call To Action Card */}
               <div className="CourseDetails__actionCard">
-                <h3 className="CourseDetails__actionTitle">Enrollment &amp; Registration</h3>
+                <h3 className="CourseDetails__actionTitle">Course Registration</h3>
                 <p className="CourseDetails__actionDesc">
-                  {course.status === 'coming_soon'
-                    ? 'Pre-registration is open. Register now to be notified as soon as sessions begin and claim your spot!'
-                    : 'Enroll now to access lessons, assignments, and choose your preferred attendance track.'}
+                  Registration is open. Register now to secure your spot and choose your preferred attendance track.
                 </p>
 
                 {/* State 1: Enrolled and Course Published */}
@@ -289,14 +296,14 @@ export default function CourseDetails() {
                     <div className="CourseDetails__enrolledStatus">
                       <FiCheckCircle size={20} color="#4caf50" />
                       <span>
-                        Registered on waitlist
+                        Registered for course
                         {registeredAttendanceType
                           ? ` (${registeredAttendanceType === 'recordings_only' ? 'Recordings' : 'Live Track'})`
                           : ''}
                       </span>
                     </div>
                     <p style={{ fontSize: '0.82rem', color: '#A8C2D6', margin: '6px 0 14px' }}>
-                      We will notify you by email when lessons are released.
+                      You are registered for this course. You can update your registration details anytime.
                     </p>
                     <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--outline" style={{ width: '100%', justifyContent: 'center' }}>
                       <FiEdit2 /> Edit Registration Details
@@ -309,7 +316,7 @@ export default function CourseDetails() {
                   <div className="CourseDetails__notEnrolledBox">
                     <Link to={registerPath} className="CourseDetails__ctaBtn CourseDetails__ctaBtn--primary" style={{ width: '100%', justifyContent: 'center' }}>
                       <FiUserPlus />
-                      <span>{course.status === 'coming_soon' ? 'Join Notification List' : 'Register for Course'}</span>
+                      <span>Register for Course</span>
                     </Link>
                     <p className="CourseDetails__ctaSub">
                       Includes choice of <strong>Live Attendance with Tutor Mentorship</strong> or <strong>Recordings Only</strong>.
@@ -321,6 +328,30 @@ export default function CourseDetails() {
           </aside>
         </div>
       </div>
+
+      {/* Lightbox Modal for Full Poster Preview */}
+      {imageModalOpen && (
+        <div className="CourseDetails__lightboxOverlay" onClick={() => setImageModalOpen(false)}>
+          <div className="CourseDetails__lightboxContent" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className="CourseDetails__lightboxClose"
+              onClick={() => setImageModalOpen(false)}
+              aria-label="Close image preview"
+            >
+              <FiX size={22} />
+            </button>
+            <img
+              src={course.thumbnail_url || mspLogo}
+              alt={course.title}
+              className="CourseDetails__lightboxImg"
+            />
+            <div className="CourseDetails__lightboxCaption">
+              <span>{course.title}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
