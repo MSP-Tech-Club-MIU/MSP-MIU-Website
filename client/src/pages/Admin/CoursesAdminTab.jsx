@@ -89,29 +89,61 @@ export default function CoursesAdminTab({ onAlert }) {
   const imageInputRef = useRef(null);
   const hasLoadedOnceRef = useRef(false);
   const [openMenuCourseId, setOpenMenuCourseId] = useState(null);
+  const [menuCoords, setMenuCoords] = useState(null);
   const menuRef = useRef(null);
 
   useEffect(() => {
     if (!openMenuCourseId) return;
-    const handleOutsideClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setOpenMenuCourseId(null);
-      }
+    const handleClose = () => {
+      setOpenMenuCourseId(null);
+      setMenuCoords(null);
     };
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setOpenMenuCourseId(null);
+      if (e.key === 'Escape') handleClose();
     };
-    document.addEventListener('mousedown', handleOutsideClick);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('scroll', handleClose, true);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [openMenuCourseId]);
 
+  const handleToggleMenu = (e, row) => {
+    e.stopPropagation();
+    if (openMenuCourseId === row.course_id) {
+      setOpenMenuCourseId(null);
+      setMenuCoords(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 230;
+    const estimatedHeight = 320;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+    let left = rect.right - menuWidth;
+    if (left < 12) left = 12;
+    if (left + menuWidth > window.innerWidth - 12) {
+      left = window.innerWidth - menuWidth - 12;
+    }
+
+    setMenuCoords({
+      top: rect.bottom + 6,
+      bottom: window.innerHeight - rect.top + 6,
+      left,
+      openUp
+    });
+    setOpenMenuCourseId(row.course_id);
+  };
+
   const loadList = useCallback(async () => {
     const isPageChange = hasLoadedOnceRef.current;
     setOpenMenuCourseId(null);
+    setMenuCoords(null);
     try {
       if (isPageChange) setPageLoading(true);
       else setInitialLoading(true);
@@ -836,6 +868,128 @@ export default function CoursesAdminTab({ onAlert }) {
               {notifying ? 'Sending Notifications...' : 'Send Notifications'}
             </button>
           </div>
+        </div>
+      </div>,
+      document.body
+    );
+  };
+
+  const renderRowActionsMenu = () => {
+    if (!openMenuCourseId || !menuCoords) return null;
+    const row = items.find((c) => c.course_id === openMenuCourseId);
+    if (!row) return null;
+
+    return createPortal(
+      <div className="CourseActions__portalWrapper">
+        <div
+          className="CourseActions__backdrop"
+          onClick={() => {
+            setOpenMenuCourseId(null);
+            setMenuCoords(null);
+          }}
+        />
+        <div
+          ref={menuRef}
+          className={`CourseActions__menu CourseActions__menu--portal ${
+            menuCoords.openUp ? 'CourseActions__menu--up' : ''
+          }`}
+          style={{
+            position: 'fixed',
+            top: menuCoords.openUp ? 'auto' : `${menuCoords.top}px`,
+            bottom: menuCoords.openUp ? `${menuCoords.bottom}px` : 'auto',
+            left: `${menuCoords.left}px`,
+            zIndex: 10001
+          }}
+          role="menu"
+        >
+          <div className="CourseActions__menuHeader">Students &amp; Progress</div>
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            onClick={() => {
+              setOpenMenuCourseId(null);
+              setMenuCoords(null);
+              setView('enrollments', { course_id: row.course_id });
+            }}
+          >
+            <MdPeople className="CourseActions__itemIcon" />
+            <span>Enrollments</span>
+          </button>
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            onClick={() => {
+              setOpenMenuCourseId(null);
+              setMenuCoords(null);
+              setView('attendance', { course_id: row.course_id });
+            }}
+          >
+            <MdFactCheck className="CourseActions__itemIcon" />
+            <span>Attendance &amp; Progress</span>
+          </button>
+
+          <div className="CourseActions__menuDivider" />
+          <div className="CourseActions__menuHeader">Communications</div>
+
+          {row.status === 'published' && (
+            <button
+              type="button"
+              className="CourseActions__menuItem CourseActions__menuItem--highlight"
+              role="menuitem"
+              onClick={() => {
+                setOpenMenuCourseId(null);
+                setMenuCoords(null);
+                openNotifyAvailabilityModal(row.course_id);
+              }}
+            >
+              <MdSend className="CourseActions__itemIcon" />
+              <span>Notify Students</span>
+            </button>
+          )}
+
+          <Link
+            to={`/admin/course-emails?course_id=${row.course_id}`}
+            className="CourseActions__menuItem"
+            role="menuitem"
+            onClick={() => {
+              setOpenMenuCourseId(null);
+              setMenuCoords(null);
+            }}
+          >
+            <MdEmail className="CourseActions__itemIcon" />
+            <span>Send Course Email</span>
+          </Link>
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            onClick={() => {
+              setOpenMenuCourseId(null);
+              setMenuCoords(null);
+              setActiveAnnounceCourseId(row.course_id);
+              setView('announcements', { course_id: row.course_id });
+            }}
+          >
+            <MdCampaign className="CourseActions__itemIcon" />
+            <span>Announcements</span>
+          </button>
+
+          <div className="CourseActions__menuDivider" />
+          <button
+            type="button"
+            className="CourseActions__menuItem CourseActions__menuItem--danger"
+            role="menuitem"
+            onClick={() => {
+              setOpenMenuCourseId(null);
+              setMenuCoords(null);
+              removeCourse(row);
+            }}
+          >
+            <MdDelete className="CourseActions__itemIcon" />
+            <span>Delete Course</span>
+          </button>
         </div>
       </div>,
       document.body
@@ -2287,115 +2441,19 @@ export default function CoursesAdminTab({ onAlert }) {
                         <MdOpenInNew />
                       </Link>
 
-                      <div
-                        className="CourseActions__menuWrapper"
-                        ref={openMenuCourseId === row.course_id ? menuRef : null}
-                      >
+                      <div className="CourseActions__menuWrapper">
                         <button
                           type="button"
                           className={`AdminPanel__modalBtn AdminPanel__modalBtn--secondary CourseActions__iconBtn ${
                             openMenuCourseId === row.course_id ? 'CourseActions__iconBtn--active' : ''
                           }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuCourseId((prev) => (prev === row.course_id ? null : row.course_id));
-                          }}
+                          onClick={(e) => handleToggleMenu(e, row)}
                           title="More options"
                           aria-label="More options"
                           aria-expanded={openMenuCourseId === row.course_id}
                         >
                           <MdMoreVert />
                         </button>
-
-                        {openMenuCourseId === row.course_id && (
-                          <div
-                            className={`CourseActions__menu ${
-                              items.length > 1 && index >= items.length - 2 ? 'CourseActions__menu--up' : ''
-                            }`}
-                            role="menu"
-                          >
-                            <div className="CourseActions__menuHeader">Students &amp; Progress</div>
-                            <button
-                              type="button"
-                              className="CourseActions__menuItem"
-                              role="menuitem"
-                              onClick={() => {
-                                setOpenMenuCourseId(null);
-                                setView('enrollments', { course_id: row.course_id });
-                              }}
-                            >
-                              <MdPeople className="CourseActions__itemIcon" />
-                              <span>Enrollments</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="CourseActions__menuItem"
-                              role="menuitem"
-                              onClick={() => {
-                                setOpenMenuCourseId(null);
-                                setView('attendance', { course_id: row.course_id });
-                              }}
-                            >
-                              <MdFactCheck className="CourseActions__itemIcon" />
-                              <span>Attendance &amp; Progress</span>
-                            </button>
-
-                            <div className="CourseActions__menuDivider" />
-                            <div className="CourseActions__menuHeader">Communications</div>
-
-                            {row.status === 'published' && (
-                              <button
-                                type="button"
-                                className="CourseActions__menuItem CourseActions__menuItem--highlight"
-                                role="menuitem"
-                                onClick={() => {
-                                  setOpenMenuCourseId(null);
-                                  openNotifyAvailabilityModal(row.course_id);
-                                }}
-                              >
-                                <MdSend className="CourseActions__itemIcon" />
-                                <span>Notify Students</span>
-                              </button>
-                            )}
-
-                            <Link
-                              to={`/admin/course-emails?course_id=${row.course_id}`}
-                              className="CourseActions__menuItem"
-                              role="menuitem"
-                              onClick={() => setOpenMenuCourseId(null)}
-                            >
-                              <MdEmail className="CourseActions__itemIcon" />
-                              <span>Send Course Email</span>
-                            </Link>
-                            <button
-                              type="button"
-                              className="CourseActions__menuItem"
-                              role="menuitem"
-                              onClick={() => {
-                                setOpenMenuCourseId(null);
-                                setActiveAnnounceCourseId(row.course_id);
-                                setView('announcements', { course_id: row.course_id });
-                              }}
-                            >
-                              <MdCampaign className="CourseActions__itemIcon" />
-                              <span>Announcements</span>
-                            </button>
-
-                            <div className="CourseActions__menuDivider" />
-                            <button
-                              type="button"
-                              className="CourseActions__menuItem CourseActions__menuItem--danger"
-                              role="menuitem"
-                              onClick={() => {
-                                setOpenMenuCourseId(null);
-                                removeCourse(row);
-                              }}
-                            >
-                              <MdDelete className="CourseActions__itemIcon" />
-                              <span>Delete Course</span>
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </td>
@@ -2410,6 +2468,7 @@ export default function CoursesAdminTab({ onAlert }) {
         <Pagination pagination={pagination} onPageChange={setPage} disabled={pageLoading} />
       ) : null}
       {renderNotifyAvailabilityModal()}
+      {renderRowActionsMenu()}
     </div>
   );
 }
