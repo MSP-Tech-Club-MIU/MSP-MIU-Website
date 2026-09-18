@@ -2850,6 +2850,14 @@ body.admin-panel-active .SiteLayout__main {
   display: inline-flex;
 }
 
+.CourseActions__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.12);
+  cursor: default;
+}
+
 .CourseActions__menu {
   position: absolute;
   right: 0;
@@ -2867,16 +2875,33 @@ body.admin-panel-active .SiteLayout__main {
   text-align: left;
 }
 
+.CourseActions__menu--portal {
+  position: fixed !important;
+  z-index: 10001 !important;
+}
+
 .CourseActions__menu--up {
   top: auto;
   bottom: calc(100% + 6px);
   transform-origin: bottom right;
+  animation-name: CourseActionsMenuInUp;
 }
 
 @keyframes CourseActionsMenuIn {
   from {
     opacity: 0;
     transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes CourseActionsMenuInUp {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(4px);
   }
   to {
     opacity: 1;
