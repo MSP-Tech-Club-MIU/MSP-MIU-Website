@@ -11,7 +11,7 @@ const {
 } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
-const { notifyCourseEnrollments } = require('../utils/courseAvailableEmail');
+const { notifyCourseEnrollments, checkFirstSessionHasVideo } = require('../utils/courseAvailableEmail');
 const { checkBlacklist } = require('../utils/blacklistCheck');
 const { logAdminAction } = require('../utils/adminNotification');
 const logger = require('../utils/logger');
@@ -306,24 +306,36 @@ const updateCourseStatus = async (req, res) => {
 
     let notifyResult = null;
     if (status === 'published' && !course.notify_sent_at) {
-      const enrollments = await CourseEnrollment.findAll({
-        where: {
-          course_id: course.course_id,
-          status: { [Op.in]: ['preordered', 'enrolled'] }
-        }
+      const videoCheck = await checkFirstSessionHasVideo(course.course_id);
+      const whereEnrollments = {
+        course_id: course.course_id,
+        status: { [Op.in]: ['preordered', 'enrolled'] }
+      };
+      // If session 1 has no video content, only notify live attendance students
+      if (!videoCheck.hasVideo) {
+        whereEnrollments.attendance_type = 'live_attendance';
+      }
+
+      const enrollments = await CourseEnrollment.findAll({ where: whereEnrollments });
+      notifyResult = await notifyCourseEnrollments(course, enrollments, {
+        hasVideo: videoCheck.hasVideo,
+        firstLesson: videoCheck.firstLesson
       });
-      notifyResult = await notifyCourseEnrollments(course, enrollments);
-      course.notify_sent_at = new Date();
-      if (enrollments.length > 0) {
-        await CourseEnrollment.update(
-          { status: 'notified' },
-          {
-            where: {
-              course_id: course.course_id,
-              status: 'preordered'
+
+      if (notifyResult.sent > 0) {
+        course.notify_sent_at = new Date();
+        const notifiedIds = enrollments.map((e) => e.enrollment_id);
+        if (notifiedIds.length > 0) {
+          await CourseEnrollment.update(
+            { status: 'notified' },
+            {
+              where: {
+                enrollment_id: { [Op.in]: notifiedIds },
+                status: 'preordered'
+              }
             }
-          }
-        );
+          );
+        }
       }
     }
 
@@ -1633,6 +1645,197 @@ const exportEnrollmentsCSV = async (req, res) => {
   }
 };
 
+/**
+ * GET /courses/:id/notify-availability-status
+ * Returns availability notification status & preview metrics for a course.
+ */
+const getCourseAvailabilityStatus = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    const videoCheck = await checkFirstSessionHasVideo(courseId);
+
+    const [liveTotal, livePending, recordingsTotal, recordingsPending] = await Promise.all([
+      CourseEnrollment.count({
+        where: { course_id: courseId, attendance_type: 'live_attendance' }
+      }),
+      CourseEnrollment.count({
+        where: {
+          course_id: courseId,
+          attendance_type: 'live_attendance',
+          status: { [Op.in]: ['preordered', 'enrolled'] }
+        }
+      }),
+      CourseEnrollment.count({
+        where: { course_id: courseId, attendance_type: 'recordings_only' }
+      }),
+      CourseEnrollment.count({
+        where: {
+          course_id: courseId,
+          attendance_type: 'recordings_only',
+          status: { [Op.in]: ['preordered', 'enrolled'] }
+        }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        course_id: course.course_id,
+        title: course.title,
+        status: course.status,
+        notify_sent_at: course.notify_sent_at,
+        has_first_lesson: videoCheck.hasFirstSession,
+        first_lesson_title: videoCheck.firstLesson?.title || null,
+        has_video: videoCheck.hasVideo,
+        video_material: videoCheck.videoMaterial ? {
+          material_id: videoCheck.videoMaterial.material_id,
+          title: videoCheck.videoMaterial.title,
+          material_type: videoCheck.videoMaterial.material_type
+        } : null,
+        live_total: liveTotal,
+        live_pending: livePending,
+        recordings_total: recordingsTotal,
+        recordings_pending: recordingsPending
+      }
+    });
+  } catch (error) {
+    logger.error('getCourseAvailabilityStatus:', error);
+    res.status(500).json({ success: false, error: 'Failed to get course availability status' });
+  }
+};
+
+/**
+ * POST /courses/:id/notify-availability
+ * Explicitly notifies enrolled students of course availability.
+ * If session 1 has no video content, recordings-only members are held back
+ * and only live-attendance members are informed.
+ */
+const notifyCourseAvailability = async (req, res) => {
+  try {
+    const courseId = parseInt(req.params.id, 10);
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, error: 'Course not found' });
+    }
+
+    if (course.status !== 'published') {
+      return res.status(400).json({
+        success: false,
+        error: 'Course must be published to notify enrolled students of availability.'
+      });
+    }
+
+    const { force } = req.body || {};
+    const videoCheck = await checkFirstSessionHasVideo(course.course_id);
+
+    const where = { course_id: course.course_id };
+    if (!force) {
+      where.status = { [Op.in]: ['preordered', 'enrolled'] };
+    }
+    // If session 1 has no video content uploaded yet, only notify live attendance students
+    if (!videoCheck.hasVideo) {
+      where.attendance_type = 'live_attendance';
+    }
+
+    const enrollments = await CourseEnrollment.findAll({ where });
+
+    // Count how many recordings students are held back (if any)
+    let heldBackCount = 0;
+    if (!videoCheck.hasVideo) {
+      heldBackCount = await CourseEnrollment.count({
+        where: {
+          course_id: course.course_id,
+          attendance_type: 'recordings_only',
+          ...(!force ? { status: { [Op.in]: ['preordered', 'enrolled'] } } : {})
+        }
+      });
+    }
+
+    if (!enrollments.length && heldBackCount > 0) {
+      return res.json({
+        success: true,
+        message: `No pending live attendance students. ${heldBackCount} recordings-only student(s) are held back because session 1 has no video content yet. Upload a video to session 1 to notify them.`,
+        data: {
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          live_notified: 0,
+          recordings_notified: 0,
+          held_back_recordings: heldBackCount,
+          has_video: false,
+          first_lesson_title: videoCheck.firstLesson?.title || null
+        }
+      });
+    }
+
+    if (!enrollments.length) {
+      return res.json({
+        success: true,
+        message: 'All eligible students have already been notified.',
+        data: {
+          sent: 0,
+          failed: 0,
+          skipped: 0,
+          live_notified: 0,
+          recordings_notified: 0,
+          held_back_recordings: 0,
+          has_video: videoCheck.hasVideo,
+          first_lesson_title: videoCheck.firstLesson?.title || null
+        }
+      });
+    }
+
+    const notifyResult = await notifyCourseEnrollments(course, enrollments, {
+      hasVideo: videoCheck.hasVideo,
+      firstLesson: videoCheck.firstLesson
+    });
+
+    if (notifyResult.sent > 0) {
+      course.notify_sent_at = new Date();
+      await course.save();
+
+      const sentIds = enrollments.map((e) => e.enrollment_id);
+      await CourseEnrollment.update(
+        { status: 'notified' },
+        {
+          where: {
+            enrollment_id: { [Op.in]: sentIds },
+            status: 'preordered'
+          }
+        }
+      );
+    }
+
+    await logAdminAction(
+      'course_availability_notified',
+      `Notified ${notifyResult.sent} student(s) for course "${course.title}" (${notifyResult.live_notified} live, ${notifyResult.recordings_notified} recordings, ${heldBackCount} recordings held back)`,
+      req,
+      'course',
+      course.course_id,
+      course.season_id
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...notifyResult,
+        held_back_recordings: heldBackCount
+      },
+      message: videoCheck.hasVideo
+        ? `Notified ${notifyResult.sent} student(s) (${notifyResult.live_notified} live attendance, ${notifyResult.recordings_notified} recordings).`
+        : `Notified ${notifyResult.sent} live attendance student(s). ${heldBackCount} recordings-only student(s) were held back because session 1 has no video content yet.`
+    });
+  } catch (error) {
+    logger.error('notifyCourseAvailability:', error);
+    res.status(500).json({ success: false, error: 'Failed to notify course enrollments' });
+  }
+};
+
 module.exports = {
   listCourses,
   listCoursesAdmin,
@@ -1661,5 +1864,7 @@ module.exports = {
   updateLessonAttendance,
   bulkUpdateLessonAttendance,
   updateEnrollmentLessonAttendance,
-  exportEnrollmentsCSV
+  exportEnrollmentsCSV,
+  getCourseAvailabilityStatus,
+  notifyCourseAvailability
 };

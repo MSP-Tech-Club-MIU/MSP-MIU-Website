@@ -29,7 +29,9 @@ const {
   updateLessonAttendance,
   bulkUpdateLessonAttendance,
   updateEnrollmentLessonAttendance,
-  exportEnrollmentsCSV
+  exportEnrollmentsCSV,
+  getCourseAvailabilityStatus,
+  notifyCourseAvailability
 } = require('../controllers/courses');
 
 const admin = [authenticateToken, verifyRole('admin', 'board')];
@@ -50,6 +52,8 @@ router.put('/admin/enrollments/:enrollmentId', ...admin, updateEnrollment);
 router.delete('/admin/enrollments/:enrollmentId', ...admin, deleteEnrollment);
 
 router.get('/:id/admin', ...admin, getCourseAdmin);
+router.get('/:id/notify-availability-status', ...admin, getCourseAvailabilityStatus);
+router.post('/:id/notify-availability', ...admin, notifyCourseAvailability);
 router.get('/:id/enrollments', ...admin, listEnrollments);
 router.get('/:id/enrollments/export', ...admin, exportEnrollmentsCSV);
 router.put('/:id/enrollments/:enrollmentId', ...admin, updateEnrollment);

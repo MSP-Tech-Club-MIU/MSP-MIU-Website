@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, memo } from 'react';
 import { FiDownload, FiCheck, FiX, FiAward } from 'react-icons/fi';
-import { MdExpandLess, MdExpandMore } from 'react-icons/md';
+import { MdExpandLess, MdExpandMore, MdSensors, MdVideocam } from 'react-icons/md';
 import ApiService from '../../services/api';
 import Pagination from '../../components/Pagination';
 import { useSeason } from '../../context/SeasonContext';
@@ -157,6 +157,36 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
     } catch (err) {
       console.error('Error updating attendance:', err);
       onAlert?.({ type: 'error', message: err.message || 'Failed to update attendance.' });
+    } finally {
+      setUpdatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(row.enrollment_id);
+        return next;
+      });
+    }
+  };
+
+  const handleAttendanceTypeToggle = async (row) => {
+    const nextType = row.attendance_type === 'recordings_only' ? 'live_attendance' : 'recordings_only';
+    try {
+      setUpdatingIds((prev) => new Set(prev).add(row.enrollment_id));
+      await ApiService.updateCourseEnrollment(
+        row.enrollment_id,
+        { attendance_type: nextType },
+        row.course_id
+      );
+      setRows((prev) =>
+        prev.map((r) =>
+          r.enrollment_id === row.enrollment_id ? { ...r, attendance_type: nextType } : r
+        )
+      );
+      onAlert?.({
+        type: 'success',
+        message: `Switched ${row.full_name} to ${nextType === 'recordings_only' ? 'Recordings Only' : 'Live Attendance'}.`
+      });
+    } catch (err) {
+      console.error('Error updating attendance type:', err);
+      onAlert?.({ type: 'error', message: err.message || 'Failed to update attendance type.' });
     } finally {
       setUpdatingIds((prev) => {
         const next = new Set(prev);
@@ -487,41 +517,65 @@ const CourseAttendanceTab = memo(({ onAlert, initialCourseId = null }) => {
                         </div>
                       </td>
                       <td>
-                        {row.attendance_type === 'recordings_only' ? (
-                          <span
+                        <div
+                          className="CourseTrackSwitch"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            background: 'rgba(5, 20, 36, 0.7)',
+                            borderRadius: '20px',
+                            padding: '2px',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)',
+                            userSelect: 'none'
+                          }}
+                          title="Click to switch attendance track"
+                        >
+                          <button
+                            type="button"
+                            disabled={isUpdating}
+                            onClick={() => row.attendance_type !== 'live_attendance' && handleAttendanceTypeToggle(row)}
                             style={{
+                              border: 'none',
+                              cursor: isUpdating ? 'wait' : (row.attendance_type === 'live_attendance' ? 'default' : 'pointer'),
+                              padding: '3px 8px',
+                              borderRadius: '16px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
                               display: 'inline-flex',
                               alignItems: 'center',
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              fontSize: '0.76rem',
-                              fontWeight: 600,
-                              background: 'rgba(92, 227, 153, 0.15)',
-                              color: '#5ce399',
-                              border: '1px solid rgba(92, 227, 153, 0.3)',
-                              whiteSpace: 'nowrap'
+                              gap: '4px',
+                              transition: 'all 0.2s ease',
+                              background: row.attendance_type === 'live_attendance' ? 'linear-gradient(135deg, #0d7bd8, #03A9F4)' : 'transparent',
+                              color: row.attendance_type === 'live_attendance' ? '#ffffff' : 'rgba(197, 218, 233, 0.65)',
+                              boxShadow: row.attendance_type === 'live_attendance' ? '0 2px 6px rgba(3, 169, 244, 0.35)' : 'none'
                             }}
                           >
-                            Recordings Only
-                          </span>
-                        ) : (
-                          <span
+                            <MdSensors style={{ fontSize: '0.82rem' }} /> Live
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isUpdating}
+                            onClick={() => row.attendance_type !== 'recordings_only' && handleAttendanceTypeToggle(row)}
                             style={{
+                              border: 'none',
+                              cursor: isUpdating ? 'wait' : (row.attendance_type === 'recordings_only' ? 'default' : 'pointer'),
+                              padding: '3px 8px',
+                              borderRadius: '16px',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
                               display: 'inline-flex',
                               alignItems: 'center',
-                              padding: '3px 8px',
-                              borderRadius: 6,
-                              fontSize: '0.76rem',
-                              fontWeight: 600,
-                              background: 'rgba(3, 169, 244, 0.15)',
-                              color: '#03A9F4',
-                              border: '1px solid rgba(3, 169, 244, 0.3)',
-                              whiteSpace: 'nowrap'
+                              gap: '4px',
+                              transition: 'all 0.2s ease',
+                              background: row.attendance_type === 'recordings_only' ? 'linear-gradient(135deg, #27ae60, #2ecc71)' : 'transparent',
+                              color: row.attendance_type === 'recordings_only' ? '#ffffff' : 'rgba(197, 218, 233, 0.65)',
+                              boxShadow: row.attendance_type === 'recordings_only' ? '0 2px 6px rgba(46, 204, 113, 0.35)' : 'none'
                             }}
                           >
-                            Live Attendance
-                          </span>
-                        )}
+                            <MdVideocam style={{ fontSize: '0.82rem' }} /> Recordings
+                          </button>
+                        </div>
                       </td>
                       <td>
                         <strong>{attendedSessionsCount} / {total}</strong> sessions

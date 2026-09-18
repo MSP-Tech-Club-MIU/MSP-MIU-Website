@@ -17,7 +17,11 @@ import {
   MdCampaign,
   MdEmail,
   MdSend,
-  MdRefresh
+  MdRefresh,
+  MdSensors,
+  MdVideocam,
+  MdCheckCircle,
+  MdWarning
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -443,6 +447,275 @@ export default function CoursesAdminTab({ onAlert }) {
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Export failed' });
     }
+  };
+
+  const [updatingEnrollmentId, setUpdatingEnrollmentId] = useState(null);
+
+  const handleToggleAttendanceType = async (row) => {
+    const nextType = row.attendance_type === 'recordings_only' ? 'live_attendance' : 'recordings_only';
+    try {
+      setUpdatingEnrollmentId(row.enrollment_id);
+      await ApiService.updateCourseEnrollment(
+        row.enrollment_id,
+        { attendance_type: nextType },
+        row.course_id
+      );
+      setEnrollments((prev) =>
+        prev.map((item) =>
+          item.enrollment_id === row.enrollment_id
+            ? { ...item, attendance_type: nextType }
+            : item
+        )
+      );
+      onAlert?.({
+        type: 'success',
+        message: `Switched ${row.full_name} to ${nextType === 'recordings_only' ? 'Recordings Only' : 'Live Attendance'}.`
+      });
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to update attendance track' });
+    } finally {
+      setUpdatingEnrollmentId(null);
+    }
+  };
+
+  // ---- Course Availability Notification Modal State ----
+  const [notifyModalCourseId, setNotifyModalCourseId] = useState(null);
+  const [notifyStatusLoading, setNotifyStatusLoading] = useState(false);
+  const [notifyStatusData, setNotifyStatusData] = useState(null);
+  const [notifyForce, setNotifyForce] = useState(false);
+  const [notifying, setNotifying] = useState(false);
+
+  const openNotifyAvailabilityModal = async (courseId) => {
+    setNotifyModalCourseId(courseId);
+    setNotifyStatusLoading(true);
+    setNotifyStatusData(null);
+    setNotifyForce(false);
+    try {
+      const data = await ApiService.getCourseAvailabilityStatus(courseId);
+      setNotifyStatusData(data);
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to load course availability status' });
+      setNotifyModalCourseId(null);
+    } finally {
+      setNotifyStatusLoading(false);
+    }
+  };
+
+  const closeNotifyAvailabilityModal = () => {
+    if (notifying) return;
+    setNotifyModalCourseId(null);
+    setNotifyStatusData(null);
+    setNotifyForce(false);
+  };
+
+  const handleSendAvailabilityNotifications = async () => {
+    if (!notifyModalCourseId) return;
+    try {
+      setNotifying(true);
+      const res = await ApiService.notifyCourseAvailability(notifyModalCourseId, { force: notifyForce });
+      onAlert?.({
+        type: 'success',
+        message: res.message || 'Availability notifications sent successfully.'
+      });
+      closeNotifyAvailabilityModal();
+      if (view === 'content' && contentId) {
+        loadCourseDetail(contentId);
+      }
+      if (view === 'enrollments') {
+        loadEnrollments();
+      }
+      if (view === 'list') {
+        loadCourses();
+      }
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to send notifications' });
+    } finally {
+      setNotifying(false);
+    }
+  };
+
+  const renderNotifyAvailabilityModal = () => {
+    if (!notifyModalCourseId) return null;
+    return createPortal(
+      <div
+        className="AdminPanel__modalOverlay"
+        onClick={() => !notifying && closeNotifyAvailabilityModal()}
+      >
+        <div
+          className="AdminPanel__modal"
+          style={{ maxWidth: 540 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="AdminPanel__modalHeader">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MdSend style={{ color: '#03A9F4', fontSize: '1.4rem' }} />
+              <h3 className="AdminPanel__modalTitle" style={{ margin: 0 }}>
+                Notify Enrolled Students
+              </h3>
+            </div>
+            {!notifying && (
+              <button
+                type="button"
+                className="AdminPanel__closeBtn"
+                onClick={closeNotifyAvailabilityModal}
+              >
+                <MdClose />
+              </button>
+            )}
+          </div>
+
+          <div className="AdminPanel__modalBody">
+            {notifyStatusLoading ? (
+              <div style={{ textAlign: 'center', padding: '30px 0' }}>
+                <p style={{ color: '#A8C2D6' }}>Checking course &amp; video status...</p>
+              </div>
+            ) : notifyStatusData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div>
+                  <h4 style={{ margin: '0 0 4px', color: '#fff', fontSize: '1.05rem' }}>
+                    {notifyStatusData.title}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#8aa2b8' }}>
+                    Inform students that the course is available and confirm their enrollment status.
+                  </p>
+                </div>
+
+                {/* Session 1 Video Status Box */}
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 8,
+                    background: notifyStatusData.has_video
+                      ? 'rgba(46, 204, 113, 0.12)'
+                      : 'rgba(243, 156, 18, 0.12)',
+                    border: `1px solid ${notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.35)' : 'rgba(243, 156, 18, 0.35)'}`,
+                    display: 'flex',
+                    gap: 12,
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  {notifyStatusData.has_video ? (
+                    <MdCheckCircle style={{ color: '#2ecc71', fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }} />
+                  ) : (
+                    <MdWarning style={{ color: '#f39c12', fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }} />
+                  )}
+                  <div>
+                    <div style={{ fontWeight: 600, color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12', fontSize: '0.9rem' }}>
+                      {notifyStatusData.has_video
+                        ? 'Session 1 Video Content Ready'
+                        : 'No Video Uploaded to Session 1 Yet'}
+                    </div>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#c5dae9', lineHeight: 1.45 }}>
+                      {notifyStatusData.has_video
+                        ? `Session 1 (${notifyStatusData.first_lesson_title || 'Session 1'}) has video content. Both Live Attendance and Recordings students will be notified.`
+                        : `Before Session 1 video content is uploaded, ONLY Live Attendance students are informed of course availability. Recordings-only students will be held back until Session 1 video is uploaded.`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recipient breakdown cards */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 12
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '12px',
+                      borderRadius: 8,
+                      background: 'rgba(3, 169, 244, 0.08)',
+                      border: '1px solid rgba(3, 169, 244, 0.25)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#03A9F4', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <MdSensors /> Live Attendance
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: '4px 0' }}>
+                      {notifyForce ? notifyStatusData.live_total : notifyStatusData.live_pending}
+                      <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#8aa2b8', marginLeft: 6 }}>
+                        / {notifyStatusData.live_total} total
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#8aa2b8' }}>
+                      Will receive live attendance access details.
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '12px',
+                      borderRadius: 8,
+                      background: notifyStatusData.has_video
+                        ? 'rgba(46, 204, 113, 0.08)'
+                        : 'rgba(255, 255, 255, 0.04)',
+                      border: `1px solid ${notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}`,
+                      opacity: notifyStatusData.has_video ? 1 : 0.75
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: notifyStatusData.has_video ? '#2ecc71' : '#a0aec0', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <MdVideocam /> Recordings Access
+                    </div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: '4px 0' }}>
+                      {notifyForce ? notifyStatusData.recordings_total : notifyStatusData.recordings_pending}
+                      <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#8aa2b8', marginLeft: 6 }}>
+                        / {notifyStatusData.recordings_total} total
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: notifyStatusData.has_video ? '#2ecc71' : '#e67e22' }}>
+                      {notifyStatusData.has_video
+                        ? 'Will receive encouraging self-paced learning email.'
+                        : 'Held back until Session 1 video is added.'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Force resend toggle */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem', color: '#c5dae9', marginTop: 4 }}>
+                  <input
+                    type="checkbox"
+                    checked={notifyForce}
+                    onChange={(e) => setNotifyForce(e.target.checked)}
+                    style={{ width: 16, height: 16, accentColor: '#03A9F4' }}
+                  />
+                  <span>Resend to all enrolled students (including previously notified)</span>
+                </label>
+
+                {notifyStatusData.notify_sent_at && (
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#8aa2b8' }}>
+                    Last notified: {new Date(notifyStatusData.notify_sent_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ color: '#e74c3c' }}>Unable to load course status.</p>
+            )}
+          </div>
+
+          <div className="AdminPanel__modalActions" style={{ justifyContent: 'flex-end', gap: 10 }}>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+              onClick={closeNotifyAvailabilityModal}
+              disabled={notifying}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+              style={{ background: 'linear-gradient(135deg, #0d7bd8, #03A9F4)', color: '#fff' }}
+              onClick={handleSendAvailabilityNotifications}
+              disabled={notifying || notifyStatusLoading || !notifyStatusData}
+            >
+              {notifying ? 'Sending Notifications...' : 'Send Notifications'}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   // ---- Announcements state ----
@@ -1305,6 +1578,17 @@ export default function CoursesAdminTab({ onAlert }) {
               <FiDownload style={{ marginRight: 4 }} />
               Export CSV
             </button>
+            {enrollCourseId && (
+              <button
+                type="button"
+                className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
+                style={{ background: 'linear-gradient(135deg, #0d7bd8, #03A9F4)', color: '#fff' }}
+                onClick={() => openNotifyAvailabilityModal(enrollCourseId)}
+                title="Inform enrolled students of course availability and their status"
+              >
+                <MdSend style={{ marginRight: 4 }} /> Inform Availability
+              </button>
+            )}
           </div>
         </div>
 
@@ -1357,37 +1641,65 @@ export default function CoursesAdminTab({ onAlert }) {
                       <div style={{ opacity: 0.7 }}>{row.phone_number}</div>
                     </td>
                     <td>
-                      {row.attendance_type === 'recordings_only' ? (
-                        <span style={{
+                      <div
+                        className="CourseTrackSwitch"
+                        style={{
                           display: 'inline-flex',
                           alignItems: 'center',
-                          padding: '3px 8px',
-                          borderRadius: 6,
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          background: 'rgba(92, 227, 153, 0.15)',
-                          color: '#5ce399',
-                          border: '1px solid rgba(92, 227, 153, 0.3)',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          Recordings Only
-                        </span>
-                      ) : (
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '3px 8px',
-                          borderRadius: 6,
-                          fontSize: '0.76rem',
-                          fontWeight: 600,
-                          background: 'rgba(3, 169, 244, 0.15)',
-                          color: '#03A9F4',
-                          border: '1px solid rgba(3, 169, 244, 0.3)',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          Live Attendance
-                        </span>
-                      )}
+                          background: 'rgba(5, 20, 36, 0.7)',
+                          borderRadius: '20px',
+                          padding: '2px',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)',
+                          userSelect: 'none'
+                        }}
+                        title="Click to switch attendance track"
+                      >
+                        <button
+                          type="button"
+                          disabled={updatingEnrollmentId === row.enrollment_id}
+                          onClick={() => row.attendance_type !== 'live_attendance' && handleToggleAttendanceType(row)}
+                          style={{
+                            border: 'none',
+                            cursor: updatingEnrollmentId === row.enrollment_id ? 'wait' : (row.attendance_type === 'live_attendance' ? 'default' : 'pointer'),
+                            padding: '3px 8px',
+                            borderRadius: '16px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s ease',
+                            background: row.attendance_type === 'live_attendance' ? 'linear-gradient(135deg, #0d7bd8, #03A9F4)' : 'transparent',
+                            color: row.attendance_type === 'live_attendance' ? '#ffffff' : 'rgba(197, 218, 233, 0.65)',
+                            boxShadow: row.attendance_type === 'live_attendance' ? '0 2px 6px rgba(3, 169, 244, 0.35)' : 'none'
+                          }}
+                        >
+                          <MdSensors style={{ fontSize: '0.82rem' }} /> Live
+                        </button>
+                        <button
+                          type="button"
+                          disabled={updatingEnrollmentId === row.enrollment_id}
+                          onClick={() => row.attendance_type !== 'recordings_only' && handleToggleAttendanceType(row)}
+                          style={{
+                            border: 'none',
+                            cursor: updatingEnrollmentId === row.enrollment_id ? 'wait' : (row.attendance_type === 'recordings_only' ? 'default' : 'pointer'),
+                            padding: '3px 8px',
+                            borderRadius: '16px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.2s ease',
+                            background: row.attendance_type === 'recordings_only' ? 'linear-gradient(135deg, #27ae60, #2ecc71)' : 'transparent',
+                            color: row.attendance_type === 'recordings_only' ? '#ffffff' : 'rgba(197, 218, 233, 0.65)',
+                            boxShadow: row.attendance_type === 'recordings_only' ? '0 2px 6px rgba(46, 204, 113, 0.35)' : 'none'
+                          }}
+                        >
+                          <MdVideocam style={{ fontSize: '0.82rem' }} /> Recordings
+                        </button>
+                      </div>
                     </td>
                     <td>{row.status}</td>
                     <td>
@@ -1412,6 +1724,7 @@ export default function CoursesAdminTab({ onAlert }) {
             onPageChange={setEnrollPage}
           />
         ) : null}
+        {renderNotifyAvailabilityModal()}
       </div>
     );
   }
@@ -1461,13 +1774,24 @@ export default function CoursesAdminTab({ onAlert }) {
                 <MdPublish /> Publish & notify
               </button>
             ) : (
-              <button
-                type="button"
-                className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                onClick={() => publishStatus('coming_soon')}
-              >
-                Set coming soon
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="AdminPanel__addBtn"
+                  style={{ background: 'linear-gradient(135deg, #0d7bd8, #03A9F4)' }}
+                  onClick={() => openNotifyAvailabilityModal(contentId)}
+                  title="Inform enrolled students of course availability and their status"
+                >
+                  <MdSend style={{ marginRight: 4 }} /> Notify Students
+                </button>
+                <button
+                  type="button"
+                  className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                  onClick={() => publishStatus('coming_soon')}
+                >
+                  Set coming soon
+                </button>
+              </>
             )}
             <Link
               to={`/courses/${contentId}`}
@@ -1681,6 +2005,7 @@ export default function CoursesAdminTab({ onAlert }) {
             />
           </>
         )}
+        {renderNotifyAvailabilityModal()}
       </div>
     );
   }
@@ -1806,6 +2131,17 @@ export default function CoursesAdminTab({ onAlert }) {
                       >
                         Lessons
                       </button>
+                      {row.status === 'published' && (
+                        <button
+                          type="button"
+                          className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                          onClick={() => openNotifyAvailabilityModal(row.course_id)}
+                          title="Notify enrolled students of course availability"
+                          style={{ color: '#03A9F4', borderColor: 'rgba(3, 169, 244, 0.4)' }}
+                        >
+                          <MdSend style={{ marginRight: 4 }} /> Notify
+                        </button>
+                      )}
                       <Link
                         to={`/admin/course-emails?course_id=${row.course_id}`}
                         className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -1863,6 +2199,7 @@ export default function CoursesAdminTab({ onAlert }) {
       {pagination && pagination.totalPages > 1 ? (
         <Pagination pagination={pagination} onPageChange={setPage} disabled={pageLoading} />
       ) : null}
+      {renderNotifyAvailabilityModal()}
     </div>
   );
 }
