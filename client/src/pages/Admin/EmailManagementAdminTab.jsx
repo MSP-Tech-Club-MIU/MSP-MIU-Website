@@ -51,7 +51,9 @@ const TEMPLATE_ICONS = {
   timeslot_assigned: MdEmojiEvents,
   course_certificate: MdEmail,
   course_announcement: MdCampaign,
-  course_available: MdMenuBook
+  course_available: MdMenuBook,
+  course_available_live: MdMenuBook,
+  course_available_recordings: MdMenuBook
 };
 
 const WHATSAPP_TEMPLATE_KEYS = new Set(['member_acceptance']);

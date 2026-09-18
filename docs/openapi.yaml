@@ -2741,6 +2741,42 @@ paths:
           required: true
           schema:
             type: string
+  '/courses/{id}/notify-availability':
+    post:
+      summary: 'Create/submit /courses/{id}/notify-availability'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/courses/{id}/notify-availability-status':
+    get:
+      summary: 'Get /courses/{id}/notify-availability-status'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - courses
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/courses/{id}/progress':
     post:
       summary: 'Create/submit /courses/{id}/progress'

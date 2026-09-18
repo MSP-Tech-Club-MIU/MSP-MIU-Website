@@ -2027,6 +2027,26 @@ class ApiService {
     return result;
   }
 
+  static async getCourseAvailabilityStatus(courseId) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/notify-availability-status`, {
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch course availability status');
+    return result.data || result;
+  }
+
+  static async notifyCourseAvailability(courseId, { force = false } = {}) {
+    const response = await fetch(`${API_BASE_URL}/courses/${courseId}/notify-availability`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ force })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to notify course availability');
+    return result;
+  }
+
   static async deleteCourse(id) {
     const response = await fetch(`${API_BASE_URL}/courses/${id}`, {
       method: 'DELETE',

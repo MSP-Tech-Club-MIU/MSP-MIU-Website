@@ -948,6 +948,7 @@ MSP MIU Team`,
 
 Good news — {{courseTitle}} is now available!
 
+Your status: {{attendanceType}}
 Open the course: {{courseUrl}}
 
 You're among the first to know because you registered your interest.
@@ -967,6 +968,7 @@ MSP MIU Team`,
         <tr><td style="padding:40px;">
           <p style="color:#333;font-size:16px;line-height:1.6;">Hi {{studentName}},</p>
           <p style="color:#333;font-size:16px;line-height:1.6;"><strong>{{courseTitle}}</strong> is now available. You're among the first to know because you registered your interest.</p>
+          <p style="color:#555;font-size:14px;line-height:1.6;">Your registered track: <strong>{{attendanceType}}</strong></p>
           <p style="text-align:center;margin:28px 0;"><a href="{{courseUrl}}" style="display:inline-block;padding:12px 24px;background:#0d7bd8;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Open course</a></p>
         </td></tr>
         <tr><td style="padding:20px 40px;background:#f9f9f9;border-radius:0 0 8px 8px;">
@@ -977,7 +979,141 @@ MSP MIU Team`,
   </table>
 </body>
 </html>`,
-    ['studentName', 'courseTitle', 'courseUrl']
+    ['studentName', 'courseTitle', 'courseUrl', 'attendanceType']
+  ),
+
+  course_available_live: def(
+    'course_available_live',
+    'Course available (Live Attendance)',
+    'system',
+    '{{courseTitle}} is now available - Live Attendance Access',
+    `Hi {{studentName}},
+
+We're excited to announce that {{courseTitle}} is officially available and live sessions are kicking off!
+
+Enrollment Status: Live Attendance & Mentorship
+You are confirmed for interactive live attendance. You'll participate in real time, engage with instructors and peers, and receive direct mentoring during sessions.
+
+Open Course Portal: {{courseUrl}}
+
+What's next:
+- Check the session schedule and upcoming live meeting dates.
+- Access the course portal to review preparatory materials and resources.
+- Active attendance is tracked toward your official certificate of completion.
+
+Best regards,
+MSP MIU Team`,
+    `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{courseTitle}} is now available</title></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;background:#f4f4f4;">
+    <tr><td align="center" style="padding:20px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.08);">
+        <tr><td style="padding:28px 40px;background:linear-gradient(135deg,#031C35,#1D4F82);">
+          <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">MSP Tech Club</h1>
+          <p style="margin:6px 0 0;color:#eaf2ff;font-size:14px;">MIU Student Branch</p>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="color:#333;font-size:16px;line-height:1.6;margin:0 0 16px;">Hi {{studentName}},</p>
+          <p style="color:#333;font-size:16px;line-height:1.6;margin:0 0 20px;">We're excited to announce that <strong>{{courseTitle}}</strong> is officially available and live sessions are kicking off!</p>
+
+          <div style="margin:20px 0;padding:18px 20px;background:#eef7ff;border-left:4px solid #03A9F4;border-radius:6px;">
+            <div style="font-size:12px;font-weight:700;color:#0d7bd8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Your Enrollment Status</div>
+            <div style="font-size:16px;font-weight:700;color:#031C35;">🎙️ Live Attendance &amp; Mentorship</div>
+            <p style="margin:8px 0 0;color:#445566;font-size:14px;line-height:1.5;">You are confirmed for interactive live attendance. You'll participate in real time, engage with instructors and peers, and receive direct mentoring during sessions.</p>
+          </div>
+
+          <div style="margin:20px 0;padding:16px 20px;background:#f8f9fa;border-radius:6px;border:1px solid #e9ecef;">
+            <h3 style="margin:0 0 10px;font-size:15px;color:#222;">What's next?</h3>
+            <ul style="margin:0;padding-left:20px;color:#555;font-size:14px;line-height:1.6;">
+              <li>Check the session schedule and upcoming live meeting dates.</li>
+              <li>Access the course portal to review preparatory materials and resources.</li>
+              <li>Active attendance is tracked toward your official certificate of completion.</li>
+            </ul>
+          </div>
+
+          <p style="text-align:center;margin:30px 0 20px;"><a href="{{courseUrl}}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#0d7bd8,#03A9F4);color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;box-shadow:0 3px 6px rgba(13,123,216,0.3);">Open Course Portal</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;background:#f9f9f9;border-top:1px solid #eeeeee;">
+          <p style="margin:0;color:#666;font-size:13px;line-height:1.5;">If you have any questions or schedule conflicts, reach out to the course team.<br>Best regards,<br><strong>MSP MIU Team</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    ['studentName', 'courseTitle', 'courseUrl', 'attendanceType']
+  ),
+
+  course_available_recordings: def(
+    'course_available_recordings',
+    'Course available (Recordings Access)',
+    'system',
+    '{{courseTitle}} is now live — Session 1 Recording & Materials Ready!',
+    `Hi {{studentName}},
+
+Great news — {{courseTitle}} is officially underway, and your learning journey starts right now!
+
+Your Enrollment Track: 📹 Session 1 Recording & Flexible Learning Ready!
+The Session 1 video recording and all accompanying materials are now live on the course portal for you to watch and practice at your convenience.
+
+Open Course Portal: {{courseUrl}}
+
+Empower your learning on your own terms:
+- Learn at your ideal pace: Pause complex explanations, replay coding demonstrations, and learn when your focus is highest.
+- Complete access to resources: You have the exact same access to all lesson slides, GitHub code repositories, practical exercises, and downloads.
+- Equal recognition: Complete the lessons and hands-on tasks to earn your verified MSP certificate of completion.
+- Community backing: You are an integral part of our developer community. You can connect with mentors and ask questions anytime in our community channels.
+
+Every skilled engineer grows by practicing with focus. We are thrilled to have you with us!
+
+Best regards,
+MSP MIU Team`,
+    `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>{{courseTitle}} is now available</title></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;background:#f4f4f4;">
+    <tr><td align="center" style="padding:20px 0;">
+      <table role="presentation" style="width:600px;max-width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.08);">
+        <tr><td style="padding:28px 40px;background:linear-gradient(135deg,#031C35,#1D4F82);">
+          <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">MSP Tech Club</h1>
+          <p style="margin:6px 0 0;color:#eaf2ff;font-size:14px;">MIU Student Branch</p>
+        </td></tr>
+        <tr><td style="padding:36px 40px;">
+          <p style="color:#333;font-size:16px;line-height:1.6;margin:0 0 16px;">Hi {{studentName}},</p>
+          <p style="color:#333;font-size:16px;line-height:1.6;margin:0 0 20px;">Great news — <strong>{{courseTitle}}</strong> is officially underway, and your learning journey starts right now!</p>
+
+          <div style="margin:20px 0;padding:18px 20px;background:#e8f8f0;border-left:4px solid #2ecc71;border-radius:6px;">
+            <div style="font-size:12px;font-weight:700;color:#27ae60;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Your Enrollment Track</div>
+            <div style="font-size:16px;font-weight:700;color:#1e4620;">📹 Session 1 Recording &amp; Flexible Learning Ready!</div>
+            <p style="margin:8px 0 0;color:#2c5e3b;font-size:14px;line-height:1.5;">The <strong>Session 1 video recording and all accompanying materials are now live</strong> on the course portal for you to watch and practice at your convenience.</p>
+          </div>
+
+          <div style="margin:22px 0;padding:20px;background:#fafbfc;border-radius:8px;border:1px solid #e1e8ed;">
+            <h3 style="margin:0 0 12px;font-size:15px;color:#1a202c;font-weight:700;">Empower your learning on your own terms:</h3>
+            <ul style="margin:0;padding-left:20px;color:#4a5568;font-size:14px;line-height:1.7;">
+              <li><strong>Learn at your ideal pace:</strong> Pause complex explanations, replay coding demonstrations, and learn when your focus is highest.</li>
+              <li><strong>Complete access to resources:</strong> You have the exact same access to all lesson slides, GitHub code repositories, practical exercises, and downloads.</li>
+              <li><strong>Equal recognition:</strong> Complete the lessons and hands-on tasks to earn your verified MSP certificate of completion.</li>
+              <li><strong>Community backing:</strong> You are an integral part of our developer community. You can connect with mentors and ask questions anytime in our community channels.</li>
+            </ul>
+          </div>
+
+          <p style="color:#555;font-size:14px;line-height:1.6;margin:18px 0 26px;">Every skilled engineer grows by practicing with focus. We are thrilled to have you with us and can't wait to see what you build!</p>
+
+          <p style="text-align:center;margin:30px 0 20px;"><a href="{{courseUrl}}" style="display:inline-block;padding:14px 32px;background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;text-decoration:none;border-radius:6px;font-weight:700;font-size:15px;box-shadow:0 3px 6px rgba(46,204,113,0.3);">Watch Session 1 &amp; Open Course</a></p>
+        </td></tr>
+        <tr><td style="padding:20px 40px;background:#f9f9f9;border-top:1px solid #eeeeee;">
+          <p style="margin:0;color:#666;font-size:13px;line-height:1.5;">Happy learning and keep building!<br>Best regards,<br><strong>MSP MIU Team</strong></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    ['studentName', 'courseTitle', 'courseUrl', 'attendanceType']
   ),
 
   course_announcement: def(

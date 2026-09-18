@@ -254,7 +254,20 @@ const SAMPLE_VARS = {
   course_available: {
     studentName: 'Sample Student',
     courseTitle: 'Sample Course',
-    courseUrl: 'https://msp-miu.tech/courses/1/learn?token=sample'
+    courseUrl: 'https://msp-miu.tech/courses/1/learn?token=sample',
+    attendanceType: 'Live Attendance'
+  },
+  course_available_live: {
+    studentName: 'Sample Student',
+    courseTitle: 'Sample Course',
+    courseUrl: 'https://msp-miu.tech/courses/1/learn?token=sample',
+    attendanceType: 'Live Attendance'
+  },
+  course_available_recordings: {
+    studentName: 'Sample Student',
+    courseTitle: 'Sample Course',
+    courseUrl: 'https://msp-miu.tech/courses/1/learn?token=sample',
+    attendanceType: 'Recordings Only'
   }
 };
 
