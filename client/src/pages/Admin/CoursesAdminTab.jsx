@@ -21,7 +21,9 @@ import {
   MdSensors,
   MdVideocam,
   MdCheckCircle,
-  MdWarning
+  MdWarning,
+  MdMoreVert,
+  MdPeople
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -86,9 +88,30 @@ export default function CoursesAdminTab({ onAlert }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef(null);
   const hasLoadedOnceRef = useRef(false);
+  const [openMenuCourseId, setOpenMenuCourseId] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!openMenuCourseId) return;
+    const handleOutsideClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuCourseId(null);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setOpenMenuCourseId(null);
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuCourseId]);
 
   const loadList = useCallback(async () => {
     const isPageChange = hasLoadedOnceRef.current;
+    setOpenMenuCourseId(null);
     try {
       if (isPageChange) setPageLoading(true);
       else setInitialLoading(true);
@@ -110,10 +133,12 @@ export default function CoursesAdminTab({ onAlert }) {
 
   useEffect(() => {
     if (view === 'list') loadList();
+    setOpenMenuCourseId(null);
   }, [view, loadList]);
 
   useEffect(() => {
     setPage(1);
+    setOpenMenuCourseId(null);
   }, [seasonFilters]);
 
   const openCreate = () => {
@@ -540,24 +565,49 @@ export default function CoursesAdminTab({ onAlert }) {
       <div
         className="AdminPanel__modalOverlay"
         onClick={() => !notifying && closeNotifyAvailabilityModal()}
+        role="presentation"
       >
         <div
-          className="AdminPanel__modal"
-          style={{ maxWidth: 540 }}
+          className="AdminPanel__modalContent"
+          style={{ maxWidth: 580 }}
           onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
         >
           <div className="AdminPanel__modalHeader">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MdSend style={{ color: '#03A9F4', fontSize: '1.4rem' }} />
-              <h3 className="AdminPanel__modalTitle" style={{ margin: 0 }}>
-                Notify Enrolled Students
-              </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, rgba(13, 123, 216, 0.2), rgba(3, 169, 244, 0.2))',
+                  border: '1px solid rgba(3, 169, 244, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#03A9F4',
+                  fontSize: '1.25rem',
+                  flexShrink: 0
+                }}
+              >
+                <MdSend />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.18rem', color: '#eaf2ff', fontWeight: 700 }}>
+                  Notify Enrolled Students
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.84rem', color: '#8aa2b8' }}>
+                  {notifyStatusData?.title ? `${notifyStatusData.title} • Course Availability` : 'Inform students that the course is available'}
+                </p>
+              </div>
             </div>
             {!notifying && (
               <button
                 type="button"
-                className="AdminPanel__closeBtn"
+                className="AdminPanel__modalClose"
                 onClick={closeNotifyAvailabilityModal}
+                aria-label="Close"
               >
                 <MdClose />
               </button>
@@ -566,49 +616,67 @@ export default function CoursesAdminTab({ onAlert }) {
 
           <div className="AdminPanel__modalBody">
             {notifyStatusLoading ? (
-              <div style={{ textAlign: 'center', padding: '30px 0' }}>
-                <p style={{ color: '#A8C2D6' }}>Checking course &amp; video status...</p>
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <div style={{ fontSize: '1.5rem', marginBottom: 12, color: '#03A9F4' }}>⏳</div>
+                <p style={{ color: '#A8C2D6', margin: 0 }}>Checking course &amp; video content status...</p>
               </div>
             ) : notifyStatusData ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div>
-                  <h4 style={{ margin: '0 0 4px', color: '#fff', fontSize: '1.05rem' }}>
-                    {notifyStatusData.title}
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '0.84rem', color: '#8aa2b8' }}>
-                    Inform students that the course is available and confirm their enrollment status.
-                  </p>
-                </div>
-
-                {/* Session 1 Video Status Box */}
+                {/* Session 1 Video Status Banner */}
                 <div
                   style={{
-                    padding: '12px 16px',
-                    borderRadius: 8,
+                    padding: '14px 18px',
+                    borderRadius: 12,
                     background: notifyStatusData.has_video
-                      ? 'rgba(46, 204, 113, 0.12)'
-                      : 'rgba(243, 156, 18, 0.12)',
+                      ? 'linear-gradient(135deg, rgba(46, 204, 113, 0.12), rgba(39, 174, 96, 0.06))'
+                      : 'linear-gradient(135deg, rgba(243, 156, 18, 0.12), rgba(211, 84, 0, 0.06))',
                     border: `1px solid ${notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.35)' : 'rgba(243, 156, 18, 0.35)'}`,
                     display: 'flex',
-                    gap: 12,
+                    gap: 14,
                     alignItems: 'flex-start'
                   }}
                 >
-                  {notifyStatusData.has_video ? (
-                    <MdCheckCircle style={{ color: '#2ecc71', fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }} />
-                  ) : (
-                    <MdWarning style={{ color: '#f39c12', fontSize: '1.5rem', flexShrink: 0, marginTop: 2 }} />
-                  )}
-                  <div>
-                    <div style={{ fontWeight: 600, color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12', fontSize: '0.9rem' }}>
-                      {notifyStatusData.has_video
-                        ? 'Session 1 Video Content Ready'
-                        : 'No Video Uploaded to Session 1 Yet'}
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: '50%',
+                      background: notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.2)' : 'rgba(243, 156, 18, 0.2)',
+                      color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.2rem',
+                      flexShrink: 0,
+                      marginTop: 2
+                    }}
+                  >
+                    {notifyStatusData.has_video ? <MdCheckCircle /> : <MdWarning />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12', fontSize: '0.92rem' }}>
+                        {notifyStatusData.has_video
+                          ? 'Session 1 Video Content Ready'
+                          : 'No Video Uploaded to Session 1 Yet'}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          padding: '2px 8px',
+                          borderRadius: 10,
+                          fontWeight: 600,
+                          background: notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.2)' : 'rgba(243, 156, 18, 0.2)',
+                          color: notifyStatusData.has_video ? '#5ce399' : '#f39c12'
+                        }}
+                      >
+                        {notifyStatusData.has_video ? 'All Tracks Unlocked' : 'Live Only'}
+                      </span>
                     </div>
-                    <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: '#c5dae9', lineHeight: 1.45 }}>
+                    <p style={{ margin: '6px 0 0', fontSize: '0.83rem', color: '#c5dae9', lineHeight: 1.5 }}>
                       {notifyStatusData.has_video
-                        ? `Session 1 (${notifyStatusData.first_lesson_title || 'Session 1'}) has video content. Both Live Attendance and Recordings students will be notified.`
-                        : `Before Session 1 video content is uploaded, ONLY Live Attendance students are informed of course availability. Recordings-only students will be held back until Session 1 video is uploaded.`}
+                        ? `Session 1 (${notifyStatusData.first_lesson_title || 'Session 1'}) has video content. Both Live Attendance and Recordings students will receive their dedicated notifications.`
+                        : `Before Session 1 video content is uploaded, ONLY Live Attendance students are informed of course availability. Recordings-only students will be held back until Session 1 has a video uploaded.`}
                     </p>
                   </div>
                 </div>
@@ -618,74 +686,119 @@ export default function CoursesAdminTab({ onAlert }) {
                   style={{
                     display: 'grid',
                     gridTemplateColumns: '1fr 1fr',
-                    gap: 12
+                    gap: 14
                   }}
                 >
                   <div
                     style={{
-                      padding: '12px',
-                      borderRadius: 8,
-                      background: 'rgba(3, 169, 244, 0.08)',
-                      border: '1px solid rgba(3, 169, 244, 0.25)'
+                      padding: '16px',
+                      borderRadius: 14,
+                      background: 'linear-gradient(145deg, rgba(13, 123, 216, 0.08), rgba(3, 169, 244, 0.04))',
+                      border: '1px solid rgba(3, 169, 244, 0.25)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#03A9F4', fontSize: '0.85rem', fontWeight: 600 }}>
-                      <MdSensors /> Live Attendance
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#03A9F4', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <MdSensors style={{ fontSize: '1rem' }} /> Live Attendance
+                      </span>
+                      <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: 4, background: 'rgba(3, 169, 244, 0.15)', color: '#03A9F4', fontWeight: 600 }}>
+                        Eligible
+                      </span>
                     </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: '4px 0' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.2, marginTop: 4 }}>
                       {notifyForce ? notifyStatusData.live_total : notifyStatusData.live_pending}
-                      <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#8aa2b8', marginLeft: 6 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#8aa2b8', marginLeft: 6 }}>
                         / {notifyStatusData.live_total} total
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: '#8aa2b8' }}>
-                      Will receive live attendance access details.
+                    <div style={{ fontSize: '0.78rem', color: '#8aa2b8', lineHeight: 1.4 }}>
+                      Confirmed for live interactive sessions and mentorship.
                     </div>
                   </div>
 
                   <div
                     style={{
-                      padding: '12px',
-                      borderRadius: 8,
+                      padding: '16px',
+                      borderRadius: 14,
                       background: notifyStatusData.has_video
-                        ? 'rgba(46, 204, 113, 0.08)'
-                        : 'rgba(255, 255, 255, 0.04)',
-                      border: `1px solid ${notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.1)'}`,
-                      opacity: notifyStatusData.has_video ? 1 : 0.75
+                        ? 'linear-gradient(145deg, rgba(46, 204, 113, 0.08), rgba(39, 174, 96, 0.04))'
+                        : 'rgba(255, 255, 255, 0.02)',
+                      border: `1px solid ${notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.25)' : 'rgba(255, 255, 255, 0.08)'}`,
+                      opacity: notifyStatusData.has_video ? 1 : 0.7,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: notifyStatusData.has_video ? '#2ecc71' : '#a0aec0', fontSize: '0.85rem', fontWeight: 600 }}>
-                      <MdVideocam /> Recordings Access
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: notifyStatusData.has_video ? '#2ecc71' : '#a0aec0', fontSize: '0.82rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <MdVideocam style={{ fontSize: '1rem' }} /> Recordings Access
+                      </span>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        background: notifyStatusData.has_video ? 'rgba(46, 204, 113, 0.15)' : 'rgba(243, 156, 18, 0.15)',
+                        color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12',
+                        fontWeight: 600
+                      }}>
+                        {notifyStatusData.has_video ? 'Ready' : 'Held Back'}
+                      </span>
                     </div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: '4px 0' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', lineHeight: 1.2, marginTop: 4 }}>
                       {notifyForce ? notifyStatusData.recordings_total : notifyStatusData.recordings_pending}
-                      <span style={{ fontSize: '0.8rem', fontWeight: 400, color: '#8aa2b8', marginLeft: 6 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 500, color: '#8aa2b8', marginLeft: 6 }}>
                         / {notifyStatusData.recordings_total} total
                       </span>
                     </div>
-                    <div style={{ fontSize: '0.78rem', color: notifyStatusData.has_video ? '#2ecc71' : '#e67e22' }}>
+                    <div style={{ fontSize: '0.78rem', color: notifyStatusData.has_video ? '#2ecc71' : '#f39c12', lineHeight: 1.4 }}>
                       {notifyStatusData.has_video
-                        ? 'Will receive encouraging self-paced learning email.'
-                        : 'Held back until Session 1 video is added.'}
+                        ? 'Empowering self-paced email with Session 1 link.'
+                        : 'Waiting for Session 1 video upload.'}
                     </div>
                   </div>
                 </div>
 
                 {/* Force resend toggle */}
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem', color: '#c5dae9', marginTop: 4 }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s ease',
+                    userSelect: 'none',
+                    marginTop: 4
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={notifyForce}
                     onChange={(e) => setNotifyForce(e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: '#03A9F4' }}
+                    style={{ width: 18, height: 18, accentColor: '#03A9F4', cursor: 'pointer', flexShrink: 0 }}
                   />
-                  <span>Resend to all enrolled students (including previously notified)</span>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 600, color: '#eaf2ff' }}>
+                      Resend to all enrolled students
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'rgba(197, 218, 233, 0.65)', marginTop: 2 }}>
+                      By default, only students who have not been notified yet receive the email. Check this to resend to everyone.
+                    </span>
+                  </div>
                 </label>
 
                 {notifyStatusData.notify_sent_at && (
-                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#8aa2b8' }}>
-                    Last notified: {new Date(notifyStatusData.notify_sent_at).toLocaleString()}
-                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'rgba(197, 218, 233, 0.6)' }}>
+                    <MdRefresh style={{ fontSize: '0.9rem' }} />
+                    <span>Last notification sent on {new Date(notifyStatusData.notify_sent_at).toLocaleString()}</span>
+                  </div>
                 )}
               </div>
             ) : (
@@ -693,7 +806,7 @@ export default function CoursesAdminTab({ onAlert }) {
             )}
           </div>
 
-          <div className="AdminPanel__modalActions" style={{ justifyContent: 'flex-end', gap: 10 }}>
+          <div className="AdminPanel__modalActions">
             <button
               type="button"
               className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -705,10 +818,21 @@ export default function CoursesAdminTab({ onAlert }) {
             <button
               type="button"
               className="AdminPanel__modalBtn AdminPanel__modalBtn--primary"
-              style={{ background: 'linear-gradient(135deg, #0d7bd8, #03A9F4)', color: '#fff' }}
+              style={{
+                background: 'linear-gradient(135deg, #0d7bd8 0%, #03A9F4 100%)',
+                color: '#ffffff',
+                fontWeight: 600,
+                boxShadow: '0 4px 14px rgba(13, 123, 216, 0.35)',
+                border: 'none',
+                padding: '10px 22px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8
+              }}
               onClick={handleSendAvailabilityNotifications}
               disabled={notifying || notifyStatusLoading || !notifyStatusData}
             >
+              <MdSend />
               {notifying ? 'Sending Notifications...' : 'Send Notifications'}
             </button>
           </div>
@@ -2084,7 +2208,7 @@ export default function CoursesAdminTab({ onAlert }) {
               </tr>
             </thead>
             <tbody>
-              {items.map((row) => (
+              {items.map((row, index) => (
                 <tr key={row.course_id}>
                   <td>
                     <div className="SponsorsAdmin__rowIdentity">
@@ -2114,79 +2238,165 @@ export default function CoursesAdminTab({ onAlert }) {
                       </div>
                     </div>
                   </td>
-                  <td>{row.status}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span
+                      className={`AdminPanel__badge ${
+                        row.status === 'published'
+                          ? 'AdminPanel__badge--approved'
+                          : row.status === 'coming_soon'
+                          ? 'AdminPanel__badge--upcoming'
+                          : row.status === 'archived'
+                          ? 'AdminPanel__badge--rejected'
+                          : 'AdminPanel__badge--pending'
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="CourseActions__row">
                       <button
                         type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => openEdit(row)}
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary CourseActions__btn"
+                        onClick={() => {
+                          setOpenMenuCourseId(null);
+                          openEdit(row);
+                        }}
+                        title="Edit course details"
                       >
                         <MdEdit /> Edit
                       </button>
                       <button
                         type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => setView('content', { id: row.course_id })}
-                      >
-                        Lessons
-                      </button>
-                      {row.status === 'published' && (
-                        <button
-                          type="button"
-                          className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                          onClick={() => openNotifyAvailabilityModal(row.course_id)}
-                          title="Notify enrolled students of course availability"
-                          style={{ color: '#03A9F4', borderColor: 'rgba(3, 169, 244, 0.4)' }}
-                        >
-                          <MdSend style={{ marginRight: 4 }} /> Notify
-                        </button>
-                      )}
-                      <Link
-                        to={`/admin/course-emails?course_id=${row.course_id}`}
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                      >
-                        <MdSend style={{ marginRight: 4 }} /> Send Email
-                      </Link>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary CourseActions__btn"
                         onClick={() => {
-                          setActiveAnnounceCourseId(row.course_id);
-                          setView('announcements', { course_id: row.course_id });
+                          setOpenMenuCourseId(null);
+                          setView('content', { id: row.course_id });
                         }}
+                        title="Manage lessons and curriculum"
                       >
-                        <MdCampaign /> Announcements
-                      </button>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => setView('enrollments', { course_id: row.course_id })}
-                      >
-                        Enrollments
-                      </button>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => setView('attendance', { course_id: row.course_id })}
-                      >
-                        Attendance
+                        <MdMenuBook /> Lessons
                       </button>
                       <Link
                         to={`/courses/${row.course_id}`}
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
+                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary CourseActions__iconBtn"
                         target="_blank"
                         rel="noreferrer"
+                        title="View public course page"
                       >
                         <MdOpenInNew />
                       </Link>
-                      <button
-                        type="button"
-                        className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
-                        onClick={() => removeCourse(row)}
+
+                      <div
+                        className="CourseActions__menuWrapper"
+                        ref={openMenuCourseId === row.course_id ? menuRef : null}
                       >
-                        <MdDelete />
-                      </button>
+                        <button
+                          type="button"
+                          className={`AdminPanel__modalBtn AdminPanel__modalBtn--secondary CourseActions__iconBtn ${
+                            openMenuCourseId === row.course_id ? 'CourseActions__iconBtn--active' : ''
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuCourseId((prev) => (prev === row.course_id ? null : row.course_id));
+                          }}
+                          title="More options"
+                          aria-label="More options"
+                          aria-expanded={openMenuCourseId === row.course_id}
+                        >
+                          <MdMoreVert />
+                        </button>
+
+                        {openMenuCourseId === row.course_id && (
+                          <div
+                            className={`CourseActions__menu ${
+                              items.length > 1 && index >= items.length - 2 ? 'CourseActions__menu--up' : ''
+                            }`}
+                            role="menu"
+                          >
+                            <div className="CourseActions__menuHeader">Students &amp; Progress</div>
+                            <button
+                              type="button"
+                              className="CourseActions__menuItem"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenMenuCourseId(null);
+                                setView('enrollments', { course_id: row.course_id });
+                              }}
+                            >
+                              <MdPeople className="CourseActions__itemIcon" />
+                              <span>Enrollments</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="CourseActions__menuItem"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenMenuCourseId(null);
+                                setView('attendance', { course_id: row.course_id });
+                              }}
+                            >
+                              <MdFactCheck className="CourseActions__itemIcon" />
+                              <span>Attendance &amp; Progress</span>
+                            </button>
+
+                            <div className="CourseActions__menuDivider" />
+                            <div className="CourseActions__menuHeader">Communications</div>
+
+                            {row.status === 'published' && (
+                              <button
+                                type="button"
+                                className="CourseActions__menuItem CourseActions__menuItem--highlight"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenMenuCourseId(null);
+                                  openNotifyAvailabilityModal(row.course_id);
+                                }}
+                              >
+                                <MdSend className="CourseActions__itemIcon" />
+                                <span>Notify Students</span>
+                              </button>
+                            )}
+
+                            <Link
+                              to={`/admin/course-emails?course_id=${row.course_id}`}
+                              className="CourseActions__menuItem"
+                              role="menuitem"
+                              onClick={() => setOpenMenuCourseId(null)}
+                            >
+                              <MdEmail className="CourseActions__itemIcon" />
+                              <span>Send Course Email</span>
+                            </Link>
+                            <button
+                              type="button"
+                              className="CourseActions__menuItem"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenMenuCourseId(null);
+                                setActiveAnnounceCourseId(row.course_id);
+                                setView('announcements', { course_id: row.course_id });
+                              }}
+                            >
+                              <MdCampaign className="CourseActions__itemIcon" />
+                              <span>Announcements</span>
+                            </button>
+
+                            <div className="CourseActions__menuDivider" />
+                            <button
+                              type="button"
+                              className="CourseActions__menuItem CourseActions__menuItem--danger"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenMenuCourseId(null);
+                                removeCourse(row);
+                              }}
+                            >
+                              <MdDelete className="CourseActions__itemIcon" />
+                              <span>Delete Course</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </td>
                 </tr>
