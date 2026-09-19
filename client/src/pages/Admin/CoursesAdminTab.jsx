@@ -1391,7 +1391,7 @@ export default function CoursesAdminTab({ onAlert }) {
     });
 
     return (
-      <div className="AdminPanel__section SponsorsAdmin">
+      <div className="AdminPanel__section SponsorsAdmin CoursesAdmin">
         <div className="AdminPanel__sectionHeader">
           <div>
             <h2 className="AdminPanel__sectionTitle">
@@ -1401,7 +1401,7 @@ export default function CoursesAdminTab({ onAlert }) {
               Broadcast emails or message individual students for {selectedCourse?.title || 'selected course'}.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="CoursesAdmin__headerActions" style={{ alignItems: 'center' }}>
             {items.length > 1 && (
               <select
                 className="AdminPanel__input"
@@ -1761,7 +1761,7 @@ export default function CoursesAdminTab({ onAlert }) {
 
   if (view === 'attendance') {
     return (
-      <div className="AdminPanel__section SponsorsAdmin">
+      <div className="AdminPanel__section SponsorsAdmin CoursesAdmin">
         <div className="AdminPanel__sectionHeader">
           <div>
             <h2 className="AdminPanel__sectionTitle">
@@ -1771,7 +1771,7 @@ export default function CoursesAdminTab({ onAlert }) {
               Session attendance and lesson completion for course attendees.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="CoursesAdmin__headerActions">
             <button
               type="button"
               className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -1804,7 +1804,7 @@ export default function CoursesAdminTab({ onAlert }) {
 
   if (view === 'enrollments') {
     return (
-      <div className="AdminPanel__section SponsorsAdmin">
+      <div className="AdminPanel__section SponsorsAdmin CoursesAdmin">
         <div className="AdminPanel__sectionHeader">
           <div>
             <h2 className="AdminPanel__sectionTitle">
@@ -1814,7 +1814,7 @@ export default function CoursesAdminTab({ onAlert }) {
               Registration roster and enrollment status.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="CoursesAdmin__headerActions">
             <button
               type="button"
               className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -1894,8 +1894,8 @@ export default function CoursesAdminTab({ onAlert }) {
         ) : enrollments.length === 0 ? (
           <div className="AdminPanel__empty"><p>No enrollments yet.</p></div>
         ) : (
-          <div className="AdminPanel__tableWrap">
-            <table className="AdminPanel__table SponsorsAdmin__table">
+          <div className="AdminPanel__tableWrap CoursesAdmin__tableWrap">
+            <table className="AdminPanel__table SponsorsAdmin__table CoursesAdmin__table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -2009,7 +2009,7 @@ export default function CoursesAdminTab({ onAlert }) {
 
   if (view === 'content') {
     return (
-      <div className="AdminPanel__section SponsorsAdmin">
+      <div className="AdminPanel__section SponsorsAdmin CoursesAdmin">
         <div className="AdminPanel__sectionHeader">
           <div>
             <h2 className="AdminPanel__sectionTitle">
@@ -2019,7 +2019,7 @@ export default function CoursesAdminTab({ onAlert }) {
               Manage lessons, YouTube embeds, and files under Courses/{contentId}/…
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="CoursesAdmin__headerActions">
             <button
               type="button"
               className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -2144,8 +2144,8 @@ export default function CoursesAdminTab({ onAlert }) {
                   </div>
 
                   {(lesson.materials || []).length > 0 ? (
-                    <div className="AdminPanel__tableWrap" style={{ marginBottom: 14 }}>
-                      <table className="AdminPanel__table SponsorsAdmin__table">
+                    <div className="AdminPanel__tableWrap CoursesAdmin__tableWrap" style={{ marginBottom: 14 }}>
+                      <table className="AdminPanel__table SponsorsAdmin__table CoursesAdmin__table">
                         <thead>
                           <tr>
                             <th>Type</th>
@@ -2290,7 +2290,7 @@ export default function CoursesAdminTab({ onAlert }) {
 
   // Default list view
   return (
-    <div className="AdminPanel__section SponsorsAdmin">
+    <div className="AdminPanel__section SponsorsAdmin CoursesAdmin">
       {modal}
       <div className="AdminPanel__sectionHeader">
         <div>
@@ -2301,7 +2301,7 @@ export default function CoursesAdminTab({ onAlert }) {
             Create courses, manage lessons and materials, publish with email notify, and review enrollments and attendance.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="CoursesAdmin__headerActions">
           <Link
             to="/admin/course-emails"
             className="AdminPanel__modalBtn AdminPanel__modalBtn--secondary"
@@ -2352,19 +2352,19 @@ export default function CoursesAdminTab({ onAlert }) {
       ) : pageLoading ? (
         <div className="AdminPanel__empty"><p>Loading page {page}…</p></div>
       ) : (
-        <div className="AdminPanel__tableWrap">
-          <table className="AdminPanel__table SponsorsAdmin__table">
+        <div className="AdminPanel__tableWrap CoursesAdmin__tableWrap">
+          <table className="AdminPanel__table SponsorsAdmin__table CoursesAdmin__table">
             <thead>
               <tr>
-                <th>Course</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th className="CoursesAdmin__colCourse">Course</th>
+                <th className="CoursesAdmin__colStatus">Status</th>
+                <th className="CoursesAdmin__colActions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((row, index) => (
                 <tr key={row.course_id}>
-                  <td>
+                  <td className="CoursesAdmin__colCourse">
                     <div className="SponsorsAdmin__rowIdentity">
                       <div className="SponsorsAdmin__rowLogo">
                         {row.thumbnail_url ? (
@@ -2392,7 +2392,7 @@ export default function CoursesAdminTab({ onAlert }) {
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td className="CoursesAdmin__colStatus">
                     <span
                       className={`AdminPanel__badge ${
                         row.status === 'published'
@@ -2407,7 +2407,7 @@ export default function CoursesAdminTab({ onAlert }) {
                       {row.status}
                     </span>
                   </td>
-                  <td>
+                  <td className="CoursesAdmin__colActions">
                     <div className="CourseActions__row">
                       <button
                         type="button"
