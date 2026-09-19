@@ -363,6 +363,7 @@ body.admin-panel-active .SiteLayout__main {
     flex: 1;
     display: flex;
     flex-direction: column;
+    min-width: 0;
     overflow: hidden;
     z-index: 1;
     position: relative;
@@ -582,6 +583,26 @@ body.admin-panel-active .SiteLayout__main {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 166, 255, 0.28) transparent;
+}
+
+.AdminPanel__tableWrap::-webkit-scrollbar {
+    height: 6px;
+}
+
+.AdminPanel__tableWrap::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+}
+
+.AdminPanel__tableWrap::-webkit-scrollbar-thumb {
+    background: rgba(74, 166, 255, 0.25);
+    border-radius: 3px;
+}
+
+.AdminPanel__tableWrap::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.45);
 }
 
 .AdminPanel__table th:first-child,
@@ -1837,6 +1858,18 @@ body.admin-panel-active .SiteLayout__main {
         overflow-x: auto;
     }
 
+    .AdminPanel__tableWrap .AdminPanel__table {
+        display: table;
+        overflow-x: visible;
+    }
+
+    .AdminPanel__table th:first-child,
+    .AdminPanel__table td:first-child {
+        position: static;
+        left: auto;
+        z-index: auto;
+    }
+
     .AdminPanel__formRow {
         grid-template-columns: 1fr;
     }
@@ -2987,3 +3020,97 @@ body.admin-panel-active .SiteLayout__main {
 .CourseActions__menuItem--danger:hover .CourseActions__itemIcon {
   color: #ff8787;
 }
+
+/* ── Courses Admin Responsive & Horizontal Scroll ── */
+.CoursesAdmin__headerActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.CoursesAdmin__tableWrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  position: relative;
+  width: 100%;
+}
+
+.CoursesAdmin__table {
+  min-width: 640px;
+  width: 100%;
+}
+
+/* Ensure sticky first-child is NEVER active on CoursesAdmin tables so columns don't slide underneath */
+.CoursesAdmin__table th:first-child,
+.CoursesAdmin__table td:first-child,
+.CoursesAdmin .AdminPanel__table th:first-child,
+.CoursesAdmin .AdminPanel__table td:first-child {
+  position: static !important;
+  left: auto !important;
+  z-index: auto !important;
+}
+
+.CoursesAdmin__table td:first-child,
+.CoursesAdmin .AdminPanel__table td:first-child {
+  background: rgba(15, 42, 69, 0.3) !important;
+}
+
+.CoursesAdmin__table tbody tr:hover td:first-child,
+.CoursesAdmin .AdminPanel__table tbody tr:hover td:first-child {
+  background: rgba(74, 166, 255, 0.06) !important;
+}
+
+.CoursesAdmin__colCourse {
+  min-width: 280px;
+}
+
+.CoursesAdmin__colStatus {
+  min-width: 110px;
+  white-space: nowrap;
+}
+
+.CoursesAdmin__colActions {
+  min-width: 230px;
+  white-space: nowrap;
+}
+
+.CoursesAdmin__table .SponsorsAdmin__rowTagline {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .CoursesAdmin__headerActions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(74, 166, 255, 0.25) transparent;
+  }
+
+  .CoursesAdmin__headerActions::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .CoursesAdmin__headerActions::-webkit-scrollbar-thumb {
+    background: rgba(74, 166, 255, 0.25);
+    border-radius: 2px;
+  }
+
+  .CoursesAdmin__headerActions > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .CoursesAdmin__table .SponsorsAdmin__rowTagline {
+    max-width: 220px;
+  }
+}
