@@ -46,6 +46,37 @@ const DEFAULT_YEARS = [
   { value: 5, label: 'Senior 2' }
 ]
 
+/**
+ * Clean and format Egyptian phone input into a standard 10-digit number (without leading 0)
+ * matching the visual +20 prefix.
+ *
+ * Supports:
+ * - 010xxxxxxxx (11 digits with leading 0) -> 10xxxxxxxx
+ * - +2010xxxxxxxx / 2010xxxxxxxx / 002010xxxxxxxx -> 10xxxxxxxx
+ * - Arabic-Indic (٠-٩) and Eastern Persian (۰-۹) numerals
+ * - Copy-pasted numbers with spaces, dashes, parentheses
+ */
+function normalizePhoneInput(raw) {
+  if (!raw) return '';
+  let s = String(raw)
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776));
+
+  let digits = s.replace(/\D/g, '');
+
+  if (digits.startsWith('0020')) {
+    digits = digits.slice(4);
+  } else if (digits.startsWith('20') && digits.length > 10) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.startsWith('0') && digits.length > 1) {
+    digits = digits.replace(/^0+/, '');
+  }
+
+  return digits.slice(0, 10);
+}
+
 const Stepper = memo(({ step }) => {
   const items = useMemo(() => [0,1,2,3,4], []);
   const percent = useMemo(() => Math.min(100, Math.max(0, (step/(items.length-1))*100)), [step, items.length]);
@@ -180,6 +211,7 @@ const BecomeMember = memo(() => {
 
   const updateField = useCallback((key, value) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    setErrors(prev => (prev[key] ? { ...prev, [key]: undefined } : prev))
     // Clear eligibility status whenever step-0 fields are edited so user re-checks
     if (key === 'name' || key === 'email' || key === 'studentId') {
       setEligibilityStatus(null)
@@ -196,11 +228,31 @@ const BecomeMember = memo(() => {
     updateField('studentId', raw)
   }, [updateField])
 
-  // Egyptian Phone number auto-formatting (strip non-digits & leading 0, max 10 digits)
+  // Egyptian Phone number auto-formatting (normalize local/international, max 10 digits without leading 0)
   const handlePhoneChange = useCallback((e) => {
-    const cleaned = e.target.value.replace(/[^\d]/g, '').replace(/^0+/, '').slice(0, 10)
+    const cleaned = normalizePhoneInput(e.target.value)
     updateField('phone', cleaned)
   }, [updateField])
+
+  // Intercept and normalize pasted phone numbers
+  const handlePhonePaste = useCallback((e) => {
+    const text = e.clipboardData?.getData('text')
+    if (text) {
+      e.preventDefault()
+      const cleaned = normalizePhoneInput(text)
+      updateField('phone', cleaned)
+    }
+  }, [updateField])
+
+  // Identify Egyptian mobile carrier for visual feedback
+  const operatorInfo = useMemo(() => {
+    const cleaned = normalizePhoneInput(form.phone)
+    if (cleaned.startsWith('10')) return { name: 'Vodafone', class: 'vodafone' }
+    if (cleaned.startsWith('11')) return { name: 'Etisalat', class: 'etisalat' }
+    if (cleaned.startsWith('12')) return { name: 'Orange', class: 'orange' }
+    if (cleaned.startsWith('15')) return { name: 'WE', class: 'we' }
+    return null
+  }, [form.phone])
 
   // Clear draft & reset form
   const handleClearDraft = useCallback(async () => {
@@ -289,9 +341,11 @@ const BecomeMember = memo(() => {
 
     if (step === 2) {
       if (!form.interview) e.interview = 'Select interview preference.'
-      // Accept Egyptian mobile numbers starting with 10, 11, 12, or 15 -> 10 digits without leading 0
-      if (!/^(10|11|12|15)\d{8}$/.test(form.phone)) {
-        e.phone = 'Enter a valid 10-digit Egyptian mobile number (e.g. 1012345678, starting with 10, 11, 12, or 15).'
+      const cleanedPhone = normalizePhoneInput(form.phone)
+      if (!/^(10|11|12|15)\d{8}$/.test(cleanedPhone)) {
+        e.phone = 'Enter a valid Egyptian mobile number (e.g. 01012345678 or 1012345678, starting with 010, 011, 012, or 015).'
+      } else if (cleanedPhone !== form.phone) {
+        updateField('phone', cleanedPhone)
       }
     }
 
@@ -356,6 +410,8 @@ const BecomeMember = memo(() => {
     setSubmitting(true)
     
     try {
+      const cleanedPhone = normalizePhoneInput(form.phone) || String(form.phone).replace(/\D/g, '').replace(/^0+/, '');
+
       // Prepare form data for API
       const formData = {
         university_id: form.studentId,
@@ -363,7 +419,7 @@ const BecomeMember = memo(() => {
         email: form.email,
         faculty: form.faculty,
         year: parseInt(form.year),
-        phone_number: `+20${form.phone}`,
+        phone_number: `+20${cleanedPhone}`,
         first_choice: departments.find((d) => d.name === form.dept1)?.id ?? getDepartmentIdByName(form.dept1),
         second_choice: departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2),
         skills: form.skills,
@@ -392,10 +448,12 @@ const BecomeMember = memo(() => {
       if (error.message) {
         if (error.message.includes('duplicate') || error.message.includes('already exists')) {
           errorMessage = 'An application with this email or student ID already exists.';
-        } else if (error.message.includes('validation') || error.message.includes('invalid')) {
-          errorMessage = 'Please check your information and try again.';
+        } else if (error.message.toLowerCase().includes('phone')) {
+          errorMessage = error.message;
         } else if (error.message.includes('Network') || error.message.includes('fetch')) {
           errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('validation')) {
+          errorMessage = 'Please check your information and try again.';
         } else {
           errorMessage = error.message;
         }
@@ -730,14 +788,22 @@ const BecomeMember = memo(() => {
                   <div className="prefix-wrap">
                     <span className="prefix" aria-hidden="true">+20</span>
                     <input
+                      type="tel"
                       className="pill phone-input"
                       inputMode="numeric"
+                      autoComplete="tel"
                       value={form.phone}
                       onChange={handlePhoneChange}
+                      onPaste={handlePhonePaste}
                       placeholder="1012345678"
-                      maxLength={10}
+                      aria-label="Egyptian Mobile Phone Number"
                     />
                   </div>
+                  {operatorInfo && (
+                    <span className={`phone-operator-badge phone-operator-badge--${operatorInfo.class}`}>
+                      📶 {operatorInfo.name}
+                    </span>
+                  )}
                   {errors.phone && <small className="error">{errors.phone}</small>}
                 </label>
               </div>
@@ -862,7 +928,7 @@ const BecomeMember = memo(() => {
                   <div className="review-item-content">
                     <ul className="summary" style={{ margin: 0 }}>
                       <li><b>Interview:</b> <span>{form.interview || '-'}</span></li>
-                      <li><b>Phone:</b> <span>{form.phone ? `+20${form.phone}` : '-'}</span></li>
+                      <li><b>Phone:</b> <span>{form.phone ? `+20${normalizePhoneInput(form.phone)}` : '-'}</span></li>
                     </ul>
                   </div>
                   <button type="button" className="review-edit-btn" onClick={() => setStep(2)}>Edit Contact</button>
