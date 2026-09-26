@@ -34,6 +34,34 @@ function buildFieldCounts(rows, field) {
         .sort((a, b) => b.count - a.count);
 }
 
+function normalizeEgyptianPhoneNumber(phone) {
+    if (!phone || typeof phone !== 'string') return null;
+    const ascii = phone
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776));
+    const digits = ascii.replace(/\D/g, '');
+
+    // Must end with 10 digits starting with 10, 11, 12, or 15
+    if (!/1[0125][0-9]{8}$/.test(digits)) {
+        return null;
+    }
+
+    if (digits.length === 10) {
+        return `+20${digits}`;
+    }
+    if (digits.length === 11 && digits.startsWith('0')) {
+        return `+20${digits.slice(1)}`;
+    }
+    if (digits.length === 12 && digits.startsWith('20')) {
+        return `+20${digits.slice(2)}`;
+    }
+    if (digits.length === 14 && digits.startsWith('0020')) {
+        return `+20${digits.slice(4)}`;
+    }
+
+    return null;
+}
+
 // Submit new application
 const createApplication = async (req, res) => {
     try {
@@ -60,11 +88,20 @@ const createApplication = async (req, res) => {
             });
         }
 
+        // Validate phone number format (Egyptian mobile numbers)
+        const normalizedPhone = normalizeEgyptianPhoneNumber(phone_number);
+        if (!normalizedPhone) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid phone number format. Must be a valid Egyptian mobile number (e.g., 01012345678 or +201012345678)'
+            });
+        }
+
         // Check if applicant is blacklisted
         const blacklistStatus = await checkBlacklist({
             name: full_name,
             university_id,
-            phone_number,
+            phone_number: normalizedPhone,
             email
         });
 
@@ -102,15 +139,6 @@ const createApplication = async (req, res) => {
             });
         }
 
-        // Validate phone number format (Egyptian numbers)
-        const phoneRegex = /^01[0125][0-9]{8}$/;
-        if (!phoneRegex.test(phone_number)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid phone number format. Must be a valid Egyptian number (e.g., 01012345678)'
-            });
-        }
-
         const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
         // Check if applicant already applied with same university_id in the same season
@@ -132,7 +160,7 @@ const createApplication = async (req, res) => {
             email,
             faculty,
             year,
-            phone_number,
+            phone_number: normalizedPhone,
             first_choice,
             second_choice: second_choice || null,
             skills,
