@@ -876,6 +876,29 @@ async function ensureCourseEnrollmentColumns() {
   }
 }
 
+async function ensureApplicationFacultyColumn() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT DATA_TYPE
+       FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'applications'
+         AND COLUMN_NAME = 'faculty'`
+    );
+    const dataType = String(rows[0]?.DATA_TYPE || '').toLowerCase();
+    if (dataType && dataType !== 'varchar') {
+      await sequelize.query(
+        'ALTER TABLE `applications` MODIFY COLUMN `faculty` VARCHAR(100) NOT NULL'
+      );
+      logger.info('Converted applications.faculty column to VARCHAR(100)');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure applications.faculty VARCHAR(100):', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -894,6 +917,7 @@ const syncModels = async () => {
     await ensureCourseColumnsAndAttendanceTable();
     await ensureCourseEnrollmentColumns();
     await ensureBlacklistTable();
+    await ensureApplicationFacultyColumn();
   } catch (error) {
     logger.error('Error synchronizing models:', error);
     logger.info('Note: If you have existing data, you may need to manually adjust the schema');
