@@ -178,7 +178,7 @@ async function sendBoardActivationEmailsToMembers(options = {}) {
       const departmentName = b.department?.name || null;
       const tokenResult = generateToken({
         email: item.email,
-        type: 'activation',
+        type: 'board_activation',
         board_id: b.board_id
       });
 

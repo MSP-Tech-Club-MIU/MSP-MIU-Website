@@ -6,20 +6,42 @@ import {
   MdTune,
   MdSearch,
   MdPause,
-  MdPlayArrow
+  MdPlayArrow,
+  MdFilterAltOff
 } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { confirmModal } from '../../context/ModalContext';
 import './LogsAdminTab.css';
 
 const LEVEL_OPTIONS = ['debug', 'info', 'warn', 'error', 'fatal', 'silent'];
-const FILTER_LEVELS = ['', 'debug', 'info', 'warn', 'error', 'fatal'];
+const LEVEL_WEIGHTS = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
+  fatal: 50
+};
+
+const FILTER_LEVEL_OPTIONS = [
+  { value: '', label: 'All levels' },
+  { value: 'warn+', label: 'Warnings & Errors (≥ warn)' },
+  { value: 'error+', label: 'Errors & Fatal (≥ error)' },
+  { value: 'only:debug', label: 'Only debug' },
+  { value: 'only:info', label: 'Only info' },
+  { value: 'only:warn', label: 'Only warn' },
+  { value: 'only:error', label: 'Only error' },
+  { value: 'only:fatal', label: 'Only fatal' }
+];
+
 const TYPE_OPTIONS = [
   { value: '', label: 'All types' },
-  { value: 'http', label: 'HTTP' },
-  { value: 'audit', label: 'Audit' },
-  { value: 'security', label: 'Security' },
-  { value: 'error', label: 'Error context' }
+  { value: 'http_error', label: 'Failed / Rejected (4xx, 5xx & Ineligible)' },
+  { value: 'error', label: 'Errors & Exceptions' },
+  { value: 'application', label: 'Applications (/api/applications)' },
+  { value: 'auth', label: 'Auth & Account Activation' },
+  { value: 'security', label: 'Security Events' },
+  { value: 'audit', label: 'Audit Events' },
+  { value: 'http', label: 'All HTTP Requests' }
 ];
 
 const formatTime = (iso) => {
@@ -36,14 +58,104 @@ const entryMeta = (entry) => {
   return rest;
 };
 
+const matchesLevelClient = (entry, rawLevel) => {
+  if (!rawLevel || rawLevel === 'all') return true;
+  const lvl = String(entry?.level || 'info').toLowerCase();
+  const weight = LEVEL_WEIGHTS[lvl] || 0;
+
+  if (rawLevel.startsWith('only:') || rawLevel.startsWith('exact:')) {
+    const target = rawLevel.split(':')[1];
+    return lvl === target;
+  }
+  if (rawLevel.startsWith('min:')) {
+    const target = rawLevel.split(':')[1];
+    const minW = LEVEL_WEIGHTS[target];
+    return minW != null ? weight >= minW : true;
+  }
+  if (rawLevel.endsWith('+')) {
+    const target = rawLevel.slice(0, -1);
+    const minW = LEVEL_WEIGHTS[target];
+    return minW != null ? weight >= minW : true;
+  }
+  if (LEVEL_WEIGHTS[rawLevel] != null) {
+    return lvl === rawLevel;
+  }
+  return true;
+};
+
+const matchesTypeClient = (entry, typeFilter) => {
+  if (!typeFilter) return true;
+  const tf = String(typeFilter).toLowerCase();
+  const t = String(entry?.type || '').toLowerCase();
+  const lvl = String(entry?.level || '').toLowerCase();
+  const path = String(entry?.path || '').toLowerCase();
+  const ctx = String(entry?.context || '').toLowerCase();
+  const evt = String(entry?.event || '').toLowerCase();
+  const msg = String(entry?.msg || '').toLowerCase();
+  const status = Number(entry?.status);
+
+  switch (tf) {
+    case 'error':
+      return (
+        t === 'error' ||
+        lvl === 'error' ||
+        lvl === 'fatal' ||
+        Boolean(entry?.err) ||
+        (Number.isFinite(status) && status >= 500)
+      );
+    case 'http_error':
+      return (
+        (Number.isFinite(status) && status >= 400) ||
+        entry?.eligible === false ||
+        lvl === 'warn' ||
+        lvl === 'error' ||
+        lvl === 'fatal'
+      );
+    case 'application':
+      return (
+        t === 'application' ||
+        path.includes('/api/applications') ||
+        ctx.startsWith('application') ||
+        msg.includes('application')
+      );
+    case 'auth':
+      return (
+        t === 'auth' ||
+        t === 'security' ||
+        path.includes('/api/auth') ||
+        path.includes('/api/users') ||
+        ctx.startsWith('auth.') ||
+        ctx.startsWith('user.') ||
+        evt.includes('login') ||
+        evt.includes('register') ||
+        evt.includes('activat') ||
+        evt.includes('password') ||
+        evt.includes('token')
+      );
+    default:
+      return t === tf;
+  }
+};
+
+const matchesQueryClient = (entry, q) => {
+  if (!q) return true;
+  const needle = String(q).toLowerCase().trim();
+  if (!needle) return true;
+  try {
+    return JSON.stringify(entry).toLowerCase().includes(needle);
+  } catch {
+    return String(entry?.msg || '').toLowerCase().includes(needle);
+  }
+};
+
 const LogsAdminTab = ({ onAlert }) => {
   const [entries, setEntries] = useState([]);
+  const [serverTotalCounts, setServerTotalCounts] = useState(null);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [levelFilter, setLevelFilter] = useState('info');
+  const [levelFilter, setLevelFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [query, setQuery] = useState('');
   const [queryDraft, setQueryDraft] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [levelDraft, setLevelDraft] = useState('info');
@@ -54,14 +166,13 @@ const LogsAdminTab = ({ onAlert }) => {
 
   const load = useCallback(async () => {
     try {
+      // Fetch full buffer so client-side filters and level count chips work instantaneously
       const result = await ApiService.getAdminLogs({
-        level: levelFilter || undefined,
-        type: typeFilter || undefined,
-        q: query || undefined,
-        limit: 300
+        limit: 500
       });
       const data = result.data || {};
       setEntries(Array.isArray(data.entries) ? data.entries : []);
+      if (data.totalCounts) setServerTotalCounts(data.totalCounts);
       setMeta(data.meta || null);
       if (data.meta?.level) setLevelDraft(data.meta.level);
       setError('');
@@ -70,7 +181,7 @@ const LogsAdminTab = ({ onAlert }) => {
     } finally {
       setLoading(false);
     }
-  }, [levelFilter, typeFilter, query]);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -85,10 +196,19 @@ const LogsAdminTab = ({ onAlert }) => {
     return () => clearInterval(id);
   }, [autoRefresh, load]);
 
+  const filteredEntries = useMemo(() => {
+    return entries.filter(
+      (entry) =>
+        matchesLevelClient(entry, levelFilter) &&
+        matchesTypeClient(entry, typeFilter) &&
+        matchesQueryClient(entry, queryDraft)
+    );
+  }, [entries, levelFilter, typeFilter, queryDraft]);
+
   useEffect(() => {
     if (!stickToBottom.current || !listRef.current) return;
     listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [entries]);
+  }, [filteredEntries]);
 
   const onListScroll = () => {
     const el = listRef.current;
@@ -99,7 +219,19 @@ const LogsAdminTab = ({ onAlert }) => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setQuery(queryDraft.trim());
+  };
+
+  const hasActiveFilters = Boolean(levelFilter || typeFilter || queryDraft.trim());
+
+  const handleResetFilters = () => {
+    setLevelFilter('');
+    setTypeFilter('');
+    setQueryDraft('');
+  };
+
+  const handleChipClick = (lvl) => {
+    const target = `only:${lvl}`;
+    setLevelFilter((prev) => (prev === target ? '' : target));
   };
 
   const handleSetLevel = async () => {
@@ -146,8 +278,8 @@ const LogsAdminTab = ({ onAlert }) => {
     for (const e of entries) {
       if (c[e.level] != null) c[e.level] += 1;
     }
-    return c;
-  }, [entries]);
+    return serverTotalCounts || c;
+  }, [entries, serverTotalCounts]);
 
   return (
     <div className="AdminPanel__section LogsAdmin">
@@ -157,7 +289,7 @@ const LogsAdminTab = ({ onAlert }) => {
         </h2>
         <p className="AdminPanel__muted LogsAdmin__hint">
           Live view of recent server logs kept in memory on this instance
-          ({meta?.bufferCount ?? '—'} / {meta?.bufferMax ?? '—'} entries). Cleared on
+          ({meta?.bufferCount ?? entries.length} / {meta?.bufferMax ?? '—'} entries). Cleared on
           deploy or restart. Visible only to President, Vice President, and Head of
           Software Development.
         </p>
@@ -166,14 +298,14 @@ const LogsAdminTab = ({ onAlert }) => {
       <div className="LogsAdmin__toolbar">
         <div className="LogsAdmin__filters">
           <label className="LogsAdmin__field">
-            <span>Min level</span>
+            <span>Level</span>
             <select
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value)}
             >
-              {FILTER_LEVELS.map((l) => (
-                <option key={l || 'all'} value={l}>
-                  {l ? l : 'all'}
+              {FILTER_LEVEL_OPTIONS.map((opt) => (
+                <option key={opt.value || 'all'} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
@@ -197,13 +329,20 @@ const LogsAdminTab = ({ onAlert }) => {
             <MdSearch aria-hidden />
             <input
               type="search"
-              placeholder="Search message / fields…"
+              placeholder="Filter by message, email, ID, path, error…"
               value={queryDraft}
               onChange={(e) => setQueryDraft(e.target.value)}
             />
-            <button type="submit" className="LogsAdmin__btn">
-              Search
-            </button>
+            {hasActiveFilters ? (
+              <button
+                type="button"
+                className="LogsAdmin__btn"
+                onClick={handleResetFilters}
+                title="Clear all active filters"
+              >
+                <MdFilterAltOff /> Reset
+              </button>
+            ) : null}
           </form>
         </div>
 
@@ -274,12 +413,25 @@ const LogsAdminTab = ({ onAlert }) => {
       </div>
 
       <div className="LogsAdmin__stats">
-        <span>Showing {entries.length}</span>
-        <span className="LogsAdmin__chip LogsAdmin__chip--debug">debug {counts.debug}</span>
-        <span className="LogsAdmin__chip LogsAdmin__chip--info">info {counts.info}</span>
-        <span className="LogsAdmin__chip LogsAdmin__chip--warn">warn {counts.warn}</span>
-        <span className="LogsAdmin__chip LogsAdmin__chip--error">error {counts.error}</span>
-        <span className="LogsAdmin__chip LogsAdmin__chip--fatal">fatal {counts.fatal}</span>
+        <span>
+          Showing <strong>{filteredEntries.length}</strong> of {entries.length}
+        </span>
+        {(['debug', 'info', 'warn', 'error', 'fatal']).map((lvl) => {
+          const isSelected = levelFilter === `only:${lvl}` || levelFilter === lvl;
+          return (
+            <button
+              key={lvl}
+              type="button"
+              onClick={() => handleChipClick(lvl)}
+              className={`LogsAdmin__chip LogsAdmin__chip--${lvl} ${
+                isSelected ? 'LogsAdmin__chip--selected' : ''
+              }`}
+              title={`Click to filter by ${lvl.toUpperCase()} only`}
+            >
+              {lvl} {counts[lvl] ?? 0}
+            </button>
+          );
+        })}
       </div>
 
       {loading && entries.length === 0 ? (
@@ -290,9 +442,19 @@ const LogsAdminTab = ({ onAlert }) => {
         <div className="AdminPanel__empty">
           <p>{error}</p>
         </div>
-      ) : entries.length === 0 ? (
+      ) : filteredEntries.length === 0 ? (
         <div className="AdminPanel__empty">
           <p>No log entries match these filters yet.</p>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className="LogsAdmin__btn"
+              style={{ marginTop: '0.6rem' }}
+              onClick={handleResetFilters}
+            >
+              <MdFilterAltOff /> Clear Filters
+            </button>
+          ) : null}
         </div>
       ) : (
         <div
@@ -300,7 +462,7 @@ const LogsAdminTab = ({ onAlert }) => {
           ref={listRef}
           onScroll={onListScroll}
         >
-          {entries.map((entry) => {
+          {filteredEntries.map((entry) => {
             const metaFields = entryMeta(entry);
             const hasMeta = Object.keys(metaFields).length > 0;
             return (
@@ -315,6 +477,19 @@ const LogsAdminTab = ({ onAlert }) => {
                   <time dateTime={entry.time}>{formatTime(entry.time)}</time>
                   {entry.type ? (
                     <span className="LogsAdmin__type">{entry.type}</span>
+                  ) : null}
+                  {entry.status ? (
+                    <span
+                      className={`LogsAdmin__type ${
+                        entry.status >= 500
+                          ? 'LogsAdmin__level--error'
+                          : entry.status >= 400
+                            ? 'LogsAdmin__level--warn'
+                            : ''
+                      }`}
+                    >
+                      HTTP {entry.status}
+                    </span>
                   ) : null}
                   <span className="LogsAdmin__id">#{entry.id}</span>
                 </div>
@@ -332,3 +507,4 @@ const LogsAdminTab = ({ onAlert }) => {
 };
 
 export default LogsAdminTab;
+

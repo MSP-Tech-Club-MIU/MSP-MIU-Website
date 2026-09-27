@@ -157,6 +157,49 @@ app.get("*", (req, res) => {
   return sendSeoSpa(req, res);
 });
 
+// Global Express error handler (catches malformed JSON, multer errors, uncaught middleware errors)
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || (err.type === "entity.parse.failed" ? 400 : 500);
+  const message =
+    err.type === "entity.parse.failed"
+      ? "Invalid JSON payload"
+      : err.message || "Internal server error";
+
+  logger.logError(
+    "express.unhandled",
+    err,
+    {
+      method: req.method,
+      path: req.originalUrl || req.url,
+      status
+    },
+    req
+  );
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  return res.status(status).json({
+    success: false,
+    error: message
+  });
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled Promise Rejection", reason instanceof Error ? reason : new Error(String(reason)), {
+    type: "error",
+    context: "process.unhandledRejection"
+  });
+});
+
+process.on("uncaughtException", (err) => {
+  logger.fatal("Uncaught Exception", err, {
+    type: "error",
+    context: "process.uncaughtException"
+  });
+});
+
 const { runAutoSubmitExpiredAttempts } = require("./server/services/quizAttemptLifecycle");
 const { syncModels } = require("./server/models");
 
@@ -184,3 +227,4 @@ const { syncModels } = require("./server/models");
 })();
 
 module.exports = app;
+

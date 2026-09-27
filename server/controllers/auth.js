@@ -215,6 +215,10 @@ const register = async (req, res) => {
 
         // Validation
         if (!email || !password) {
+            logSecurityEvent('REGISTRATION_FAILED', {
+                reason: 'Missing email or password',
+                email: email || 'not_provided'
+            }, req);
             return res.status(400).json({
                 success: false,
                 error: 'Email and password are required'
@@ -224,6 +228,10 @@ const register = async (req, res) => {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
+            logSecurityEvent('REGISTRATION_FAILED', {
+                reason: 'Invalid email format',
+                email
+            }, req);
             return res.status(400).json({
                 success: false,
                 error: 'Invalid email format'
@@ -232,6 +240,10 @@ const register = async (req, res) => {
 
         // Validate password length
         if (password.length < 6) {
+            logSecurityEvent('REGISTRATION_FAILED', {
+                reason: 'Password too short',
+                email
+            }, req);
             return res.status(400).json({
                 success: false,
                 error: 'Password must be at least 6 characters long'
@@ -247,6 +259,11 @@ const register = async (req, res) => {
         });
 
         if (blacklistStatus.isBlacklisted) {
+            logSecurityEvent('REGISTRATION_BLOCKED', {
+                reason: 'User blacklisted',
+                email,
+                blacklist_reason: blacklistStatus.reason
+            }, req);
             return res.status(403).json({
                 success: false,
                 error: `Registration blocked: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
@@ -257,6 +274,11 @@ const register = async (req, res) => {
         const existingUser = await User.findOne({ where: { email } });
 
         if (existingUser) {
+            logSecurityEvent('REGISTRATION_FAILED', {
+                reason: 'Email already exists',
+                email,
+                existing_user_id: existingUser.user_id
+            }, req);
             return res.status(409).json({
                 success: false,
                 error: 'User with this email already exists'
