@@ -95,17 +95,49 @@ const createApplication = async (req, res) => {
         const trimmedMotivation = String(motivation || '').trim();
         const trimmedInterview = String(interview || '').trim();
 
+        const applicantMeta = {
+            type: 'application',
+            context: 'applications.create',
+            university_id: trimmedUniId || undefined,
+            email: trimmedEmail || undefined,
+            full_name: trimmedName || undefined,
+            faculty: trimmedFaculty || undefined,
+            first_choice,
+            second_choice
+        };
+
         // Validation
-        if (!trimmedUniId || !trimmedName || !trimmedEmail || !trimmedFaculty || !year || !phone_number || 
-            !first_choice || !trimmedSkills || !trimmedMotivation || !trimmedInterview) {
+        const missingFields = [];
+        if (!trimmedUniId) missingFields.push('university_id');
+        if (!trimmedName) missingFields.push('full_name');
+        if (!trimmedEmail) missingFields.push('email');
+        if (!trimmedFaculty) missingFields.push('faculty');
+        if (!year) missingFields.push('year');
+        if (!phone_number) missingFields.push('phone_number');
+        if (!first_choice) missingFields.push('first_choice');
+        if (!trimmedSkills) missingFields.push('skills');
+        if (!trimmedMotivation) missingFields.push('motivation');
+        if (!trimmedInterview) missingFields.push('interview');
+
+        if (missingFields.length > 0) {
+            logger.warn('Application submission rejected: missing required fields', {
+                ...applicantMeta,
+                reason: 'missing_fields',
+                missingFields
+            });
             return res.status(400).json({ 
                 success: false,
-                error: 'All required fields must be provided' 
+                error: `All required fields must be provided (missing: ${missingFields.join(', ')})` 
             });
         }
 
         const parsedYear = Number(year);
         if (!Number.isInteger(parsedYear) || parsedYear < 1 || parsedYear > 6) {
+            logger.warn('Application submission rejected: invalid academic year', {
+                ...applicantMeta,
+                reason: 'invalid_year',
+                year
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Invalid academic year'
@@ -113,6 +145,11 @@ const createApplication = async (req, res) => {
         }
 
         if (!['on-campus', 'online'].includes(trimmedInterview)) {
+            logger.warn('Application submission rejected: invalid interview preference', {
+                ...applicantMeta,
+                reason: 'invalid_interview',
+                interview: trimmedInterview
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Invalid interview preference. Must be "on-campus" or "online"'
@@ -122,6 +159,11 @@ const createApplication = async (req, res) => {
         // Validate phone number format (Egyptian mobile numbers)
         const normalizedPhone = normalizeEgyptianPhoneNumber(phone_number);
         if (!normalizedPhone) {
+            logger.warn('Application submission rejected: invalid phone number format', {
+                ...applicantMeta,
+                reason: 'invalid_phone',
+                raw_phone: phone_number
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Invalid phone number format. Must be a valid Egyptian mobile number (e.g., 01012345678 or +201012345678)'
@@ -137,6 +179,12 @@ const createApplication = async (req, res) => {
         });
 
         if (blacklistStatus.isBlacklisted) {
+            logger.warn('Application submission blocked: applicant matched blacklist', {
+                ...applicantMeta,
+                reason: 'blacklisted',
+                blacklistReason: blacklistStatus.reason,
+                matchedEntry: blacklistStatus.entry?.blacklist_id
+            });
             return res.status(403).json({
                 success: false,
                 error: `Application rejected: You are restricted from participating in club activities. Reason: ${blacklistStatus.reason}`
@@ -146,6 +194,10 @@ const createApplication = async (req, res) => {
         // Check if recruitment is open
         const recruitmentOpen = await isRecruitmentOpen();
         if (!recruitmentOpen) {
+            logger.warn('Application submission rejected: recruitment is closed', {
+                ...applicantMeta,
+                reason: 'recruitment_closed'
+            });
             return res.status(403).json({
                 success: false,
                 error: 'Membership recruitment is currently closed. Please wait until recruitment is open and follow our Instagram page (@mspmiu) to know when recruitment is available.'
@@ -155,6 +207,10 @@ const createApplication = async (req, res) => {
         // Validate university_id format (e.g., 2024/12345 or numbers)
         const idRegex = /^[0-9/]+$/;
         if (!idRegex.test(trimmedUniId) || !/\d/.test(trimmedUniId)) {
+            logger.warn('Application submission rejected: invalid university ID format', {
+                ...applicantMeta,
+                reason: 'invalid_university_id'
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Invalid university ID format'
@@ -164,6 +220,10 @@ const createApplication = async (req, res) => {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(trimmedEmail)) {
+            logger.warn('Application submission rejected: invalid email format', {
+                ...applicantMeta,
+                reason: 'invalid_email'
+            });
             return res.status(400).json({
                 success: false,
                 error: 'Invalid email format'
@@ -172,15 +232,33 @@ const createApplication = async (req, res) => {
 
         const season_id = await resolveSeasonIdForWrite(req.body, req.query);
 
-        // Check if applicant already applied with same university_id in the same season
+        // Check if applicant already applied with same university_id or email in the same season
         const existingApplication = await Application.findOne({
-            where: { university_id: trimmedUniId, season_id }
+            where: {
+                season_id,
+                [Op.or]: [
+                    { university_id: trimmedUniId },
+                    { email: trimmedEmail }
+                ]
+            }
         });
 
         if (existingApplication) {
+            const dupField =
+                existingApplication.university_id === trimmedUniId ? 'university_id' : 'email';
+            logger.warn('Application submission rejected: duplicate application for season', {
+                ...applicantMeta,
+                reason: 'duplicate_application',
+                duplicateField: dupField,
+                season_id,
+                existing_application_id: existingApplication.application_id
+            });
             return res.status(400).json({
                 success: false,
-                error: 'An application with this university ID already exists for this season'
+                error:
+                    dupField === 'university_id'
+                        ? 'An application with this university ID already exists for this season'
+                        : 'An application with this email address already exists for this season'
             });
         }
 
@@ -207,6 +285,16 @@ const createApplication = async (req, res) => {
             season_id
         });
 
+        logger.info('Application submitted successfully', {
+            type: 'application',
+            context: 'applications.create',
+            application_id: application.application_id,
+            university_id: trimmedUniId,
+            email: trimmedEmail,
+            full_name: trimmedName,
+            season_id
+        });
+
         res.status(201).json({
             success: true,
             message: 'Application submitted successfully',
@@ -214,10 +302,45 @@ const createApplication = async (req, res) => {
         });
 
     } catch (error) {
+        logger.logError(
+            'applications.create',
+            error,
+            {
+                type: 'application',
+                university_id: req.body?.university_id,
+                email: req.body?.email,
+                full_name: req.body?.full_name,
+                faculty: req.body?.faculty,
+                first_choice: req.body?.first_choice,
+                second_choice: req.body?.second_choice
+            },
+            req
+        );
+
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        logger.error('Error creating application:', error);
+
+        const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage || '';
+        if (error.name === 'SequelizeUniqueConstraintError' || /Duplicate entry/i.test(sqlMessage)) {
+            return res.status(409).json({
+                success: false,
+                error: 'An application with this university ID or email already exists.'
+            });
+        }
+        if (error.name === 'SequelizeForeignKeyConstraintError') {
+            return res.status(400).json({
+                success: false,
+                error: 'Selected department choice is invalid. Please re-select your preferred department and try again.'
+            });
+        }
+        if (error.name === 'SequelizeValidationError') {
+            return res.status(400).json({
+                success: false,
+                error: error.errors?.[0]?.message || 'Invalid application data provided.'
+            });
+        }
+
         res.status(500).json({
             success: false,
             error: 'Internal server error'
@@ -506,7 +629,19 @@ const checkEligibility = async (req, res) => {
         const full_name = rawName ? String(rawName).trim() : '';
         const email = rawEmail ? String(rawEmail).trim().toLowerCase() : '';
 
+        const eligibilityMeta = {
+            type: 'application',
+            context: 'applications.checkEligibility',
+            university_id: university_id || undefined,
+            email: email || undefined,
+            full_name: full_name || undefined
+        };
+
         if (!university_id && !email && !full_name) {
+            logger.warn('Eligibility check failed: no identifier provided', {
+                ...eligibilityMeta,
+                reason: 'missing_identifier'
+            });
             return res.status(400).json({
                 success: false,
                 error: 'At least one of university_id, email, or full_name must be provided'
@@ -516,6 +651,11 @@ const checkEligibility = async (req, res) => {
         // 0. Check if recruitment is open
         const recruitmentOpen = await isRecruitmentOpen();
         if (!recruitmentOpen) {
+            logger.warn('Eligibility check: recruitment closed', {
+                ...eligibilityMeta,
+                eligible: false,
+                reason: 'recruitment_closed'
+            });
             return res.json({
                 success: true,
                 eligible: false,
@@ -530,6 +670,11 @@ const checkEligibility = async (req, res) => {
             season_id = await resolveSeasonIdForWrite({}, {});
         } catch (seasonErr) {
             // No default season → applications are closed
+            logger.warn('Eligibility check: no active/default season configured', {
+                ...eligibilityMeta,
+                eligible: false,
+                reason: 'no_season'
+            });
             return res.json({
                 success: true,
                 eligible: false,
@@ -546,6 +691,13 @@ const checkEligibility = async (req, res) => {
         });
 
         if (blacklistStatus.isBlacklisted) {
+            logger.warn('Eligibility check blocked: applicant matched blacklist', {
+                ...eligibilityMeta,
+                eligible: false,
+                reason: 'blacklisted',
+                blacklistReason: blacklistStatus.reason,
+                matchedEntry: blacklistStatus.entry?.blacklist_id
+            });
             return res.json({
                 success: true,
                 eligible: false,
@@ -554,11 +706,18 @@ const checkEligibility = async (req, res) => {
             });
         }
 
-        // 3. Check for existing application this season (any status)
-        if (university_id) {
+        // 3. Check for existing application this season (by university_id or email)
+        if (university_id || email) {
+            const orConditions = [];
+            if (university_id) orConditions.push({ university_id });
+            if (email) orConditions.push({ email });
+
             const existingApp = await Application.findOne({
-                where: { university_id, season_id },
-                attributes: ['application_id', 'status', 'full_name']
+                where: {
+                    season_id,
+                    [Op.or]: orConditions
+                },
+                attributes: ['application_id', 'status', 'full_name', 'university_id', 'email']
             });
 
             if (existingApp) {
@@ -582,6 +741,14 @@ const checkEligibility = async (req, res) => {
                     message: 'You already have an application on file for this season.'
                 };
 
+                logger.warn('Eligibility check: existing application found for season', {
+                    ...eligibilityMeta,
+                    eligible: false,
+                    reason: statusInfo.reason,
+                    existing_application_id: existingApp.application_id,
+                    existing_status: existingApp.status
+                });
+
                 return res.json({
                     success: true,
                     eligible: false,
@@ -598,6 +765,12 @@ const checkEligibility = async (req, res) => {
             });
 
             if (currentSeasonMember) {
+                logger.warn('Eligibility check: already a member in current season', {
+                    ...eligibilityMeta,
+                    eligible: false,
+                    reason: 'already_member',
+                    member_id: currentSeasonMember.member_id
+                });
                 return res.json({
                     success: true,
                     eligible: false,
@@ -629,10 +802,20 @@ const checkEligibility = async (req, res) => {
         });
 
     } catch (error) {
+        logger.logError(
+            'applications.checkEligibility',
+            error,
+            {
+                type: 'application',
+                university_id: req.body?.university_id,
+                email: req.body?.email,
+                full_name: req.body?.full_name
+            },
+            req
+        );
         if (error.status) {
             return res.status(error.status).json({ success: false, error: error.message });
         }
-        logger.error('Error checking application eligibility:', error);
         res.status(500).json({
             success: false,
             error: 'Internal server error'

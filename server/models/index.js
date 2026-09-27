@@ -899,6 +899,41 @@ async function ensureApplicationFacultyColumn() {
   }
 }
 
+async function ensureApplicationMultiSeasonIndexes() {
+  try {
+    const [idxRows] = await sequelize.query(
+      `SELECT INDEX_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS cols
+       FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'applications'
+         AND NON_UNIQUE = 0
+         AND INDEX_NAME <> 'PRIMARY'
+       GROUP BY INDEX_NAME`
+    );
+    for (const row of idxRows || []) {
+      const cols = String(row.cols || '').toLowerCase();
+      if (cols === 'university_id' || cols === 'email') {
+        await sequelize.query(`ALTER TABLE \`applications\` DROP INDEX \`${row.INDEX_NAME}\``);
+        logger.info(`Dropped legacy unique index ${row.INDEX_NAME} (${cols}) on applications`);
+      }
+    }
+
+    const hasComposite = (idxRows || []).some(
+      (r) => String(r.cols || '').toLowerCase() === 'university_id,season_id'
+    );
+    if (!hasComposite) {
+      await sequelize.query(
+        'ALTER TABLE `applications` ADD UNIQUE INDEX `uniq_applications_university_season` (`university_id`, `season_id`)'
+      );
+      logger.info('Added composite unique index uniq_applications_university_season on applications');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure applications multi-season indexes:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -918,6 +953,7 @@ const syncModels = async () => {
     await ensureCourseEnrollmentColumns();
     await ensureBlacklistTable();
     await ensureApplicationFacultyColumn();
+    await ensureApplicationMultiSeasonIndexes();
   } catch (error) {
     logger.error('Error synchronizing models:', error);
     logger.info('Note: If you have existing data, you may need to manually adjust the schema');

@@ -144,7 +144,7 @@ const BecomeMember = memo(() => {
   const departments = useMemo(() => {
     if (Array.isArray(lookups.departments) && lookups.departments.length) {
       return lookups.departments.map((d) => ({
-        id: d.id ?? d.department_id,
+        id: d.id ?? d.department_id ?? getDepartmentIdByName(d.name),
         name: d.name
       }))
     }
@@ -356,8 +356,9 @@ const BecomeMember = memo(() => {
     if (step === 0 || checkAll) {
       // Name: require at least 2 words (no maximum)
       if (!/^\s*\S+(?:\s+\S+){1,}\s*$/.test(form.name)) e.name = 'Enter at least 2 words.'
-      // email pattern: letters then digits (e.g. name2398765) followed by @miuegypt.edu.eg
-      if (!/^[A-Za-z]+\d+@miuegypt\.edu\.eg$/i.test(form.email.trim())) e.email = 'Format: name2398765@miuegypt.edu.eg'
+      // email pattern: valid MIU email ending with @miuegypt.edu.eg
+      const normalizedEmail = toAsciiDigits(form.email).trim()
+      if (!/^[A-Za-z0-9._+-]+@miuegypt\.edu\.eg$/i.test(normalizedEmail)) e.email = 'Format: name2398765@miuegypt.edu.eg'
       // student ID pattern: 4 digits / 5 digits (e.g. 2023/37654)
       if (!/^\d{4}\/\d{5}$/.test(toAsciiDigits(form.studentId).trim())) e.studentId = 'Format: xxxx/xxxxx (e.g. 2023/37654)'
     }

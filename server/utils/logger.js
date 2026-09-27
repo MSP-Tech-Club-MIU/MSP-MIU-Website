@@ -69,6 +69,26 @@ const sanitizeError = (error) => {
   };
 
   if (error.code != null) sanitized.code = error.code;
+  if (error.status != null) sanitized.status = error.status;
+
+  // Preserve Sequelize / MySQL diagnostic details safely
+  const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
+  const sqlCode = error.parent?.code || error.original?.code;
+  if (sqlMessage) sanitized.sqlMessage = sqlMessage;
+  if (sqlCode && !sanitized.code) sanitized.code = sqlCode;
+  if (error.fields && typeof error.fields === 'object') {
+    sanitized.fields = redact(error.fields);
+  }
+  if (error.table) sanitized.table = error.table;
+  if (error.index) sanitized.index = error.index;
+  if (Array.isArray(error.errors) && error.errors.length > 0) {
+    sanitized.validationErrors = error.errors.slice(0, 10).map((e) => ({
+      field: e.path || e.field || undefined,
+      message: e.message,
+      type: e.type || e.validatorKey || undefined,
+      value: isSensitiveKey(e.path || '') ? '[REDACTED]' : e.value
+    }));
+  }
 
   if (error.data && typeof error.data === 'object') {
     sanitized.data = redact(error.data);
@@ -128,28 +148,112 @@ const pushToBuffer = (entry) => {
   }
 };
 
+const matchesTypeFilter = (entry, typeFilter) => {
+  if (!typeFilter) return true;
+  const t = String(entry.type || '').toLowerCase();
+  const lvl = String(entry.level || '').toLowerCase();
+  const path = String(entry.path || '').toLowerCase();
+  const ctx = String(entry.context || '').toLowerCase();
+  const evt = String(entry.event || '').toLowerCase();
+  const msg = String(entry.msg || '').toLowerCase();
+  const status = Number(entry.status);
+
+  switch (typeFilter) {
+    case 'error':
+      return (
+        t === 'error' ||
+        lvl === 'error' ||
+        lvl === 'fatal' ||
+        Boolean(entry.err) ||
+        (Number.isFinite(status) && status >= 500)
+      );
+    case 'http_error':
+      return (
+        (Number.isFinite(status) && status >= 400) ||
+        entry.eligible === false ||
+        lvl === 'warn' ||
+        lvl === 'error' ||
+        lvl === 'fatal'
+      );
+    case 'application':
+      return (
+        t === 'application' ||
+        path.includes('/api/applications') ||
+        ctx.startsWith('application') ||
+        msg.includes('application')
+      );
+    case 'auth':
+      return (
+        t === 'auth' ||
+        t === 'security' ||
+        path.includes('/api/auth') ||
+        path.includes('/api/users') ||
+        ctx.startsWith('auth.') ||
+        ctx.startsWith('user.') ||
+        evt.includes('login') ||
+        evt.includes('register') ||
+        evt.includes('activat') ||
+        evt.includes('password') ||
+        evt.includes('token')
+      );
+    default:
+      return t === typeFilter;
+  }
+};
+
 /**
  * Recent buffered log entries (newest last). Filters are optional.
+ * Supports level as:
+ *   - 'debug' | 'info' | 'warn' | 'error' | 'fatal' (exact match when exact=true, or min level)
+ *   - 'only:info' / 'exact:info' (exact level match)
+ *   - 'min:warn' (minimum level match)
  * @param {{ level?: string, type?: string, q?: string, limit?: number, sinceId?: number }} [opts]
  */
 const getRecentLogs = (opts = {}) => {
   const limit = Math.min(Math.max(Number(opts.limit) || 200, 1), BUFFER_MAX);
-  const minLevelNum =
-    opts.level && LEVELS[opts.level] != null ? LEVELS[opts.level] : null;
-  const typeFilter = opts.type ? String(opts.type).toLowerCase() : null;
-  const q = opts.q ? String(opts.q).toLowerCase() : null;
+  const rawLevel = opts.level ? String(opts.level).toLowerCase().trim() : '';
+  const typeFilter = opts.type ? String(opts.type).toLowerCase().trim() : null;
+  const q = opts.q ? String(opts.q).toLowerCase().trim() : null;
   const sinceId = opts.sinceId != null ? Number(opts.sinceId) : null;
+
+  const totalCounts = { debug: 0, info: 0, warn: 0, error: 0, fatal: 0 };
+  for (const e of logBuffer) {
+    if (totalCounts[e.level] != null) totalCounts[e.level] += 1;
+  }
 
   let rows = logBuffer;
   if (sinceId != null && !Number.isNaN(sinceId)) {
     rows = rows.filter((e) => e.id > sinceId);
   }
-  if (minLevelNum != null) {
-    rows = rows.filter((e) => (LEVELS[e.level] || 0) >= minLevelNum);
+
+  if (rawLevel && rawLevel !== 'all') {
+    if (rawLevel.startsWith('only:') || rawLevel.startsWith('exact:')) {
+      const target = rawLevel.split(':')[1];
+      if (LEVELS[target] != null) {
+        rows = rows.filter((e) => e.level === target);
+      }
+    } else if (rawLevel.startsWith('min:')) {
+      const target = rawLevel.split(':')[1];
+      const minNum = LEVELS[target];
+      if (minNum != null) {
+        rows = rows.filter((e) => (LEVELS[e.level] || 0) >= minNum);
+      }
+    } else if (rawLevel.endsWith('+')) {
+      const target = rawLevel.slice(0, -1);
+      const minNum = LEVELS[target];
+      if (minNum != null) {
+        rows = rows.filter((e) => (LEVELS[e.level] || 0) >= minNum);
+      }
+    } else if (LEVELS[rawLevel] != null) {
+      // Exact level match by default when a specific level is chosen
+      rows = rows.filter((e) => e.level === rawLevel);
+    }
   }
+
   if (typeFilter) {
-    rows = rows.filter((e) => String(e.type || '').toLowerCase() === typeFilter);
+    rows = rows.filter((e) => matchesTypeFilter(e, typeFilter));
   }
+
   if (q) {
     rows = rows.filter((e) => {
       try {
@@ -164,6 +268,7 @@ const getRecentLogs = (opts = {}) => {
   return {
     entries: sliced,
     totalBuffered: logBuffer.length,
+    totalCounts,
     bufferMax: BUFFER_MAX,
     returned: sliced.length
   };
@@ -267,6 +372,10 @@ const write = (level, bindings, message, arg2, arg3) => {
     fields.err = sanitizeError(err);
   }
 
+  if ((level === 'error' || level === 'fatal') && !fields.type) {
+    fields.type = 'error';
+  }
+
   const record = {
     id: ++logSeq,
     level,
@@ -322,7 +431,10 @@ const logAuditEvent = (event, details = {}, req = null) => {
       ? req.headers['user-agent']
       : 'unknown';
 
-  info(event, {
+  const isFailure = /(FAIL|BLOCK|DENIED|REJECT|ERROR|INVALID|EXPIRED)/i.test(String(event || ''));
+  const logFn = isFailure ? warn : info;
+
+  logFn(event, {
     type: 'audit',
     event,
     clientIp,
@@ -356,7 +468,19 @@ const logError = (context, errObj, additionalInfo = {}, req = null) => {
  * @param {Object} req
  */
 const logSecurityEvent = (event, details = {}, req = null) => {
-  logAuditEvent(`SECURITY_${event}`, { type: 'security', ...details }, req);
+  const clientIp = req ? getClientIp(req) : 'unknown';
+  const userAgent =
+    req && req.headers && req.headers['user-agent']
+      ? req.headers['user-agent']
+      : 'unknown';
+
+  warn(`SECURITY_${event}`, {
+    type: 'security',
+    event: `SECURITY_${event}`,
+    clientIp,
+    userAgent,
+    ...details
+  });
 };
 
 module.exports = {

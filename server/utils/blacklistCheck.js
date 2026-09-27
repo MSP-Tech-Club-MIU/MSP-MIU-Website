@@ -120,12 +120,24 @@ async function checkBlacklist(params = {}) {
         matched = true;
       }
 
-      // 3. Name match (exact trimmed lowercase or strong substring match)
+      // 3. Name match (exact full name match, or >= 3 consecutive matching name tokens)
       if (!matched && entryName && normCandidateName) {
         if (entryName === normCandidateName) {
           matched = true;
-        } else if (entryName.length >= 5 && (normCandidateName.includes(entryName) || entryName.includes(normCandidateName))) {
-          matched = true;
+        } else {
+          const entryWords = entryName.split(' ').filter(Boolean);
+          const candidateWords = normCandidateName.split(' ').filter(Boolean);
+          if (entryWords.length >= 3 && candidateWords.length >= 3) {
+            const shorter = entryWords.length <= candidateWords.length ? entryWords.join(' ') : candidateWords.join(' ');
+            const longer = entryWords.length <= candidateWords.length ? candidateWords.join(' ') : entryWords.join(' ');
+            if (
+              longer === shorter ||
+              longer.startsWith(`${shorter} `) ||
+              longer.endsWith(` ${shorter}`)
+            ) {
+              matched = true;
+            }
+          }
         }
       }
 
