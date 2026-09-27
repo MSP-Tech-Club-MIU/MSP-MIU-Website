@@ -329,9 +329,9 @@ const BecomeMember = memo(() => {
       // Name: require at least 2 words (no maximum)
       if (!/^\s*\S+(?:\s+\S+){1,}\s*$/.test(form.name)) e.name = 'Enter at least 2 words.'
       // email pattern: letters then digits (e.g. name2398765) followed by @miuegypt.edu.eg
-      if (!/^[A-Za-z]+\d+@miuegypt\.edu\.eg$/.test(form.email)) e.email = 'Format: name2398765@miuegypt.edu.eg'
+      if (!/^[A-Za-z]+\d+@miuegypt\.edu\.eg$/.test(form.email.trim())) e.email = 'Format: name2398765@miuegypt.edu.eg'
       // student ID pattern: 4 digits / 5 digits (e.g. 2023/37654)
-      if (!/^\d{4}\/\d{5}$/.test(form.studentId)) e.studentId = 'Format: xxxx/xxxxx (e.g. 2023/37654)'
+      if (!/^\d{4}\/\d{5}$/.test(form.studentId.trim())) e.studentId = 'Format: xxxx/xxxxx (e.g. 2023/37654)'
     }
 
     if (step === 1) {
@@ -376,9 +376,9 @@ const BecomeMember = memo(() => {
         setCheckingEligibility(true)
         try {
           const result = await ApiService.checkApplicationEligibility({
-            university_id: form.studentId,
-            full_name: form.name,
-            email: form.email,
+            university_id: form.studentId.trim(),
+            full_name: form.name.trim(),
+            email: form.email.trim(),
           })
           setEligibilityStatus(result)
           // Only advance if eligible (warnings still allow advancing)
@@ -414,16 +414,16 @@ const BecomeMember = memo(() => {
 
       // Prepare form data for API
       const formData = {
-        university_id: form.studentId,
-        full_name: form.name,
-        email: form.email,
+        university_id: form.studentId.trim(),
+        full_name: form.name.trim(),
+        email: form.email.trim(),
         faculty: form.faculty,
         year: parseInt(form.year),
         phone_number: `+20${cleanedPhone}`,
         first_choice: departments.find((d) => d.name === form.dept1)?.id ?? getDepartmentIdByName(form.dept1),
         second_choice: departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2),
-        skills: form.skills,
-        motivation: form.motivation,
+        skills: form.skills.trim(),
+        motivation: form.motivation.trim(),
         interview: form.interview
       };
 

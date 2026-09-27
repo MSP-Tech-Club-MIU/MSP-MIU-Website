@@ -121,9 +121,13 @@ const createApplication = async (req, res) => {
             });
         }
 
+        const trimmedEmail = String(email).trim();
+        const trimmedUniId = String(university_id).trim();
+        const trimmedName = String(full_name).trim();
+
         // Validate university_id format (e.g., 2024/12345 or numbers)
         const idRegex = /^[0-9/]+$/;
-        if (!idRegex.test(university_id)) {
+        if (!idRegex.test(trimmedUniId)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid university ID format'
@@ -131,8 +135,8 @@ const createApplication = async (req, res) => {
         }
 
         // Validate email format
-        const emailRegex = /^[^s@]+@[^s@]+.[^s@]+$/;
-        if (!emailRegex.test(email)) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid email format'
@@ -143,7 +147,7 @@ const createApplication = async (req, res) => {
 
         // Check if applicant already applied with same university_id in the same season
         const existingApplication = await Application.findOne({
-            where: { university_id, season_id }
+            where: { university_id: trimmedUniId, season_id }
         });
 
         if (existingApplication) {
@@ -155,9 +159,9 @@ const createApplication = async (req, res) => {
 
         // Create application
         const application = await Application.create({
-            university_id,
-            full_name,
-            email,
+            university_id: trimmedUniId,
+            full_name: trimmedName,
+            email: trimmedEmail,
             faculty,
             year,
             phone_number: normalizedPhone,
