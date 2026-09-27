@@ -46,6 +46,27 @@ const DEFAULT_YEARS = [
   { value: 5, label: 'Senior 2' }
 ]
 
+const TECH_FACULTIES = new Set([
+  'Computer Science',
+  'Computer Engineering',
+  'Engineering Sciences & Arts - ECE',
+  'Electronics & Communication Engineering',
+])
+
+function isTechFaculty(faculty) {
+  if (!faculty) return false
+  if (TECH_FACULTIES.has(faculty)) return true
+  const f = String(faculty).toLowerCase()
+  return f.includes('computer') || f.includes('ece') || f.includes('electronics')
+}
+
+function toAsciiDigits(raw) {
+  if (!raw) return ''
+  return String(raw)
+    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776))
+}
+
 /**
  * Clean and format Egyptian phone input into a standard 10-digit number (without leading 0)
  * matching the visual +20 prefix.
@@ -58,9 +79,7 @@ const DEFAULT_YEARS = [
  */
 function normalizePhoneInput(raw) {
   if (!raw) return '';
-  let s = String(raw)
-    .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
-    .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776));
+  let s = toAsciiDigits(raw);
 
   let digits = s.replace(/\D/g, '');
 
@@ -220,7 +239,7 @@ const BecomeMember = memo(() => {
 
   // University ID auto-formatting with slash (xxxx/xxxxx)
   const handleStudentIdChange = useCallback((e) => {
-    let raw = e.target.value.replace(/[^\d/]/g, '')
+    let raw = toAsciiDigits(e.target.value).replace(/[^\d/]/g, '')
     if (!raw.includes('/') && raw.length > 4) {
       raw = raw.slice(0, 4) + '/' + raw.slice(4, 9)
     }
@@ -313,8 +332,8 @@ const BecomeMember = memo(() => {
 
   // When faculty changes, if current departments are not allowed for the selected faculty, clear them
   useEffect(() => {
-    // Only show Software and Technical for Computer Science and ECE
-    const allowTech = form.faculty === 'Computer Science' || form.faculty === 'Engineering Sciences & Arts - ECE'
+    // Only show Software and Technical for Computer Science, Computer Engineering, and ECE
+    const allowTech = isTechFaculty(form.faculty)
     if (!allowTech) {
       const blocked = ['Software Development', 'Technical Training']
       if (blocked.includes(form.dept1) || blocked.includes(form.dept2)) {
@@ -323,23 +342,32 @@ const BecomeMember = memo(() => {
     }
   }, [form.faculty, form.dept1, form.dept2])
 
+  // Prevent duplicate department selection
+  useEffect(() => {
+    if (form.dept1 && form.dept2 && form.dept1 === form.dept2) {
+      setForm(prev => ({ ...prev, dept2: '' }))
+    }
+  }, [form.dept1, form.dept2])
+
   function validateCurrentStep() {
     const e = {}
-    if (step === 0) {
+    const checkAll = step === 5
+
+    if (step === 0 || checkAll) {
       // Name: require at least 2 words (no maximum)
       if (!/^\s*\S+(?:\s+\S+){1,}\s*$/.test(form.name)) e.name = 'Enter at least 2 words.'
       // email pattern: letters then digits (e.g. name2398765) followed by @miuegypt.edu.eg
-      if (!/^[A-Za-z]+\d+@miuegypt\.edu\.eg$/.test(form.email.trim())) e.email = 'Format: name2398765@miuegypt.edu.eg'
+      if (!/^[A-Za-z]+\d+@miuegypt\.edu\.eg$/i.test(form.email.trim())) e.email = 'Format: name2398765@miuegypt.edu.eg'
       // student ID pattern: 4 digits / 5 digits (e.g. 2023/37654)
-      if (!/^\d{4}\/\d{5}$/.test(form.studentId.trim())) e.studentId = 'Format: xxxx/xxxxx (e.g. 2023/37654)'
+      if (!/^\d{4}\/\d{5}$/.test(toAsciiDigits(form.studentId).trim())) e.studentId = 'Format: xxxx/xxxxx (e.g. 2023/37654)'
     }
 
-    if (step === 1) {
+    if (step === 1 || checkAll) {
       if (!form.faculty) e.faculty = 'Select faculty.'
       if (!form.year) e.year = 'Select year.'
     }
 
-    if (step === 2) {
+    if (step === 2 || checkAll) {
       if (!form.interview) e.interview = 'Select interview preference.'
       const cleanedPhone = normalizePhoneInput(form.phone)
       if (!/^(10|11|12|15)\d{8}$/.test(cleanedPhone)) {
@@ -349,17 +377,24 @@ const BecomeMember = memo(() => {
       }
     }
 
-    if (step === 3) {
+    if (step === 3 || checkAll) {
       // Only first department is required; second is optional
       if (!form.dept1) e.dept1 = 'Choose department.'
     }
 
-    if (step === 4) {
+    if (step === 4 || checkAll) {
       if (!form.skills.trim()) e.skills = 'Tell us your skills.'
       if (!form.motivation.trim()) e.motivation = 'Share your motivation.'
     }
 
     setErrors(e)
+    if (checkAll && Object.keys(e).length > 0) {
+      if (e.name || e.email || e.studentId) setStep(0)
+      else if (e.faculty || e.year) setStep(1)
+      else if (e.interview || e.phone) setStep(2)
+      else if (e.dept1) setStep(3)
+      else if (e.skills || e.motivation) setStep(4)
+    }
     return Object.keys(e).length === 0
   }
 
@@ -376,9 +411,9 @@ const BecomeMember = memo(() => {
         setCheckingEligibility(true)
         try {
           const result = await ApiService.checkApplicationEligibility({
-            university_id: form.studentId.trim(),
+            university_id: toAsciiDigits(form.studentId).trim(),
             full_name: form.name.trim(),
-            email: form.email.trim(),
+            email: form.email.trim().toLowerCase(),
           })
           setEligibilityStatus(result)
           // Only advance if eligible (warnings still allow advancing)
@@ -414,14 +449,16 @@ const BecomeMember = memo(() => {
 
       // Prepare form data for API
       const formData = {
-        university_id: form.studentId.trim(),
+        university_id: toAsciiDigits(form.studentId).trim(),
         full_name: form.name.trim(),
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         faculty: form.faculty,
         year: parseInt(form.year),
         phone_number: `+20${cleanedPhone}`,
         first_choice: departments.find((d) => d.name === form.dept1)?.id ?? getDepartmentIdByName(form.dept1),
-        second_choice: departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2),
+        second_choice: form.dept2 && form.dept2 !== form.dept1
+          ? (departments.find((d) => d.name === form.dept2)?.id ?? getDepartmentIdByName(form.dept2))
+          : null,
         skills: form.skills.trim(),
         motivation: form.motivation.trim(),
         interview: form.interview
@@ -823,7 +860,7 @@ const BecomeMember = memo(() => {
                       .filter(d => {
                         if (isBoardPosition(d)) return false
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {
-                          return form.faculty === 'Computer Science' || form.faculty === 'Engineering Sciences & Arts - ECE'
+                          return isTechFaculty(form.faculty)
                         }
                         return true
                       })
@@ -840,8 +877,9 @@ const BecomeMember = memo(() => {
                     {departments
                       .filter(d => {
                         if (isBoardPosition(d)) return false
+                        if (form.dept1 && d.name === form.dept1) return false
                         if (d.name === 'Software Development' || d.name === 'Technical Training') {
-                          return form.faculty === 'Computer Science' || form.faculty === 'Engineering Sciences & Arts - ECE'
+                          return isTechFaculty(form.faculty)
                         }
                         return true
                       })

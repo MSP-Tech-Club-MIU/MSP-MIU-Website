@@ -30,17 +30,11 @@ const Application = sequelize.define('Application', {
     }
   },
   faculty: {
-    type: DataTypes.ENUM(
-      'Computer Science',
-      'Engineering Sciences & Arts - ECE',
-      'Mass Communication',
-      'Dentistry',
-      'Engineering Sciences & Arts - Architecture',
-      'Pharmacy',
-      'Business',
-      'Alsun'
-    ),
-    allowNull: false
+    type: DataTypes.STRING(100),
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   year: {
     type: DataTypes.INTEGER,

@@ -62,6 +62,14 @@ function normalizeEgyptianPhoneNumber(phone) {
     return null;
 }
 
+function normalizeUniversityId(raw) {
+    if (!raw || typeof raw !== 'string') return '';
+    return raw
+        .trim()
+        .replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632))
+        .replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776));
+}
+
 // Submit new application
 const createApplication = async (req, res) => {
     try {
@@ -79,12 +87,35 @@ const createApplication = async (req, res) => {
             interview
         } = req.body;
 
+        const trimmedUniId = normalizeUniversityId(String(university_id || ''));
+        const trimmedName = String(full_name || '').trim();
+        const trimmedEmail = String(email || '').trim().toLowerCase();
+        const trimmedFaculty = String(faculty || '').trim();
+        const trimmedSkills = String(skills || '').trim();
+        const trimmedMotivation = String(motivation || '').trim();
+        const trimmedInterview = String(interview || '').trim();
+
         // Validation
-        if (!university_id || !full_name || !email || !faculty || !year || !phone_number || 
-            !first_choice || !skills || !motivation || !interview) {
+        if (!trimmedUniId || !trimmedName || !trimmedEmail || !trimmedFaculty || !year || !phone_number || 
+            !first_choice || !trimmedSkills || !trimmedMotivation || !trimmedInterview) {
             return res.status(400).json({ 
                 success: false,
                 error: 'All required fields must be provided' 
+            });
+        }
+
+        const parsedYear = Number(year);
+        if (!Number.isInteger(parsedYear) || parsedYear < 1 || parsedYear > 6) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid academic year'
+            });
+        }
+
+        if (!['on-campus', 'online'].includes(trimmedInterview)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid interview preference. Must be "on-campus" or "online"'
             });
         }
 
@@ -99,10 +130,10 @@ const createApplication = async (req, res) => {
 
         // Check if applicant is blacklisted
         const blacklistStatus = await checkBlacklist({
-            name: full_name,
-            university_id,
+            name: trimmedName,
+            university_id: trimmedUniId,
             phone_number: normalizedPhone,
-            email
+            email: trimmedEmail
         });
 
         if (blacklistStatus.isBlacklisted) {
@@ -121,13 +152,9 @@ const createApplication = async (req, res) => {
             });
         }
 
-        const trimmedEmail = String(email).trim();
-        const trimmedUniId = String(university_id).trim();
-        const trimmedName = String(full_name).trim();
-
         // Validate university_id format (e.g., 2024/12345 or numbers)
         const idRegex = /^[0-9/]+$/;
-        if (!idRegex.test(trimmedUniId)) {
+        if (!idRegex.test(trimmedUniId) || !/\d/.test(trimmedUniId)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid university ID format'
@@ -157,19 +184,25 @@ const createApplication = async (req, res) => {
             });
         }
 
+        const primaryChoiceId = Number(first_choice);
+        const secondaryChoiceId =
+            second_choice != null && second_choice !== '' && Number(second_choice) !== primaryChoiceId
+                ? Number(second_choice)
+                : null;
+
         // Create application
         const application = await Application.create({
             university_id: trimmedUniId,
             full_name: trimmedName,
             email: trimmedEmail,
-            faculty,
-            year,
+            faculty: trimmedFaculty,
+            year: parsedYear,
             phone_number: normalizedPhone,
-            first_choice,
-            second_choice: second_choice || null,
-            skills,
-            motivation,
-            interview,
+            first_choice: primaryChoiceId,
+            second_choice: secondaryChoiceId,
+            skills: trimmedSkills,
+            motivation: trimmedMotivation,
+            interview: trimmedInterview,
             status: 'pending',
             season_id
         });
@@ -465,7 +498,13 @@ const deleteApplication = async (req, res) => {
 // Check eligibility before a user completes the full form (called after step 0)
 const checkEligibility = async (req, res) => {
     try {
-        const { university_id, full_name, email } = req.body;
+        const rawUniId = req.body?.university_id;
+        const rawName = req.body?.full_name;
+        const rawEmail = req.body?.email;
+
+        const university_id = rawUniId ? normalizeUniversityId(String(rawUniId)) : '';
+        const full_name = rawName ? String(rawName).trim() : '';
+        const email = rawEmail ? String(rawEmail).trim().toLowerCase() : '';
 
         if (!university_id && !email && !full_name) {
             return res.status(400).json({
