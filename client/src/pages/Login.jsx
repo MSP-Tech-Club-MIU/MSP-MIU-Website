@@ -232,8 +232,12 @@ export const Login = () => {
 
     try {
       const adminAccess = await ApiService.checkAdminAccess();
-      if (adminAccess.success) {
-        window.location.href = '/admin';
+      if (adminAccess.hasAnyAdminAccess) {
+        window.location.href = adminAccess.homePath || '/admin';
+        return;
+      }
+      if (adminAccess.accessLevel === null && adminAccess.hasFullAdmin === false) {
+        window.location.href = '/profile';
         return;
       }
     } catch {
@@ -245,7 +249,7 @@ export const Login = () => {
     const hasRegistrationsAccess =
       loggedInUser?.role === 'board' || (!Number.isNaN(deptId) && deptId === 5);
 
-    window.location.href = hasRegistrationsAccess ? '/admin' : '/profile';
+    window.location.href = hasRegistrationsAccess ? '/admin/registrations' : '/profile';
   }, [postLoginRedirect, loggedInUser]);
 
   const handleLogout = useCallback(() => {

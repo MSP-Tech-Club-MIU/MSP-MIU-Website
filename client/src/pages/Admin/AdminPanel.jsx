@@ -121,10 +121,18 @@ const AdminPanel = () => {
     const [hasAccess, setHasAccess] = useState(false);
     /** 'full' | 'programs' | 'registrations' */
     const [accessLevel, setAccessLevel] = useState('full');
+    const [adminInfo, setAdminInfo] = useState(null);
     const [alert, setAlert] = useState(null);
     const [emailSendJob, setEmailSendJob] = useState(null); // { id, title }
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const unauthorizedProbePathRef = useRef(null);
     const canUseProgramsTabs = accessLevel === 'full' || accessLevel === 'programs';
+
+    const recordUnauthorizedAdminRoute = useCallback((pathname) => {
+        if (unauthorizedProbePathRef.current === pathname) return;
+        unauthorizedProbePathRef.current = pathname;
+        ApiService.getAdminDashboard().catch(() => {});
+    }, []);
 
     useEffect(() => {
         document.body.classList.add('admin-panel-active');
@@ -132,6 +140,8 @@ const AdminPanel = () => {
     }, []);
 
     useEffect(() => {
+        if (loading || !hasAccess) return;
+
         if (location.pathname === '/admin' || location.pathname === '/admin/') {
             const home =
                 accessLevel === 'registrations'
@@ -145,23 +155,32 @@ const AdminPanel = () => {
 
         // Attendance lives under Events now
         if (location.pathname === '/admin/attendance') {
+            if (accessLevel === 'registrations') {
+                recordUnauthorizedAdminRoute(location.pathname);
+                navigate('/admin/registrations', { replace: true });
+                setActiveTab('registrations');
+                return;
+            }
             navigate('/admin/events?view=attendance', { replace: true });
             return;
         }
 
         const tabFromPath = getAdminTabFromPath(location.pathname);
         if (accessLevel === 'registrations' && tabFromPath !== 'registrations') {
+            recordUnauthorizedAdminRoute(location.pathname);
             navigate('/admin/registrations', { replace: true });
             setActiveTab('registrations');
             return;
         }
         if (accessLevel === 'programs' && !PROGRAMS_TAB_KEYS.includes(tabFromPath)) {
+            recordUnauthorizedAdminRoute(location.pathname);
             navigate('/admin/events', { replace: true });
             setActiveTab('events');
             return;
         }
+        unauthorizedProbePathRef.current = null;
         setActiveTab((prev) => (prev === tabFromPath ? prev : tabFromPath));
-    }, [location.pathname, navigate, getAdminTabFromPath, accessLevel]);
+    }, [location.pathname, navigate, getAdminTabFromPath, accessLevel, loading, hasAccess, recordUnauthorizedAdminRoute]);
 
     // Dashboard state
     const [stats, setStats] = useState(null);
@@ -259,7 +278,8 @@ const AdminPanel = () => {
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
     ], []);
 
-    const adminPosition = stats?.adminInfo?.position || adminProfile?.position;
+    const resolvedAdminInfo = stats?.adminInfo || adminInfo;
+    const adminPosition = resolvedAdminInfo?.position || adminProfile?.position;
     const isPresidentOrVP = adminPosition === 'President' || adminPosition === 'Vice President';
 
     const navItems = useMemo(() => {
@@ -305,53 +325,69 @@ const AdminPanel = () => {
             }
 
             const result = await ApiService.checkAdminAccess();
-            if (result.success) {
+            if (result.adminInfo) {
+                setAdminInfo(result.adminInfo);
+            }
+
+            if (result.success || result.accessLevel === 'full') {
                 setAccessLevel('full');
                 setHasAccess(true);
                 setLoading(false);
-                fetchDashboard();
-                fetchCompetitions();
                 return;
             }
 
-            // SoftDev / Tech Training / AI / Cyber Security board → Programs tabs
-            let boardDeptId = null;
-            try {
-                const boardResult = await ApiService.getMyBoardMembership();
-                boardDeptId = boardResult?.data?.department_id;
-            } catch (err) {
-                console.error('Failed to load board membership:', err);
+            let resolvedLevel = result.accessLevel;
+            if (!resolvedLevel) {
+                // Fallback if /admin/access was unreachable
+                let boardDeptId = result.boardMember?.department_id ?? null;
+                if (boardDeptId == null) {
+                    try {
+                        const boardResult = await ApiService.getMyBoardMembership();
+                        boardDeptId = boardResult?.data?.department_id;
+                    } catch (err) {
+                        console.error('Failed to load board membership:', err);
+                    }
+                }
+
+                if (
+                    profile?.role === 'board' &&
+                    isProgramsEligibleDepartment(boardDeptId)
+                ) {
+                    resolvedLevel = 'programs';
+                } else {
+                    const deptRaw = profile?.department_id;
+                    const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+                    const hasRegAccess = profile?.role === 'board' || (!isNaN(deptId) && deptId === 5);
+                    if (hasRegAccess) {
+                        resolvedLevel = 'registrations';
+                    }
+                }
             }
 
-            if (
-                profile?.role === 'board' &&
-                isProgramsEligibleDepartment(boardDeptId)
-            ) {
+            if (resolvedLevel === 'programs') {
                 setAccessLevel('programs');
                 setHasAccess(true);
-                setLoading(false);
-                fetchCompetitions();
-                if (!PROGRAMS_TAB_KEYS.some((k) => location.pathname.includes(`/admin/${k}`))) {
+                if (location.pathname === '/admin' || location.pathname === '/admin/') {
+                    setActiveTab('events');
                     navigate('/admin/events', { replace: true });
                 }
+                setLoading(false);
                 return;
             }
 
-            // Board or department 5 → registrations-only access
-            const deptRaw = profile?.department_id;
-            const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
-            const hasRegAccess = profile?.role === 'board' || (!isNaN(deptId) && deptId === 5);
-
-            if (hasRegAccess) {
+            if (resolvedLevel === 'registrations') {
                 setAccessLevel('registrations');
                 setHasAccess(true);
-                setLoading(false);
-                if (!location.pathname.includes('/admin/registrations')) {
+                if (location.pathname === '/admin' || location.pathname === '/admin/') {
+                    setActiveTab('registrations');
                     navigate('/admin/registrations', { replace: true });
                 }
+                setLoading(false);
                 return;
             }
 
+            // User has no admin access at all and is trying to access an /admin route
+            recordUnauthorizedAdminRoute(location.pathname);
             setHasAccess(false);
             setLoading(false);
         };
@@ -362,10 +398,11 @@ const AdminPanel = () => {
 
     // Redirect away from notifications tab if user is not President or Vice President
     useEffect(() => {
-        if (hasAccess && accessLevel === 'full' && stats?.adminInfo && !isPresidentOrVP && activeTab === 'notifications') {
+        if (hasAccess && accessLevel === 'full' && resolvedAdminInfo && !isPresidentOrVP && activeTab === 'notifications') {
+            ApiService.getAdminNotifications({ limit: 1 }).catch(() => {});
             navigate('/admin/dashboard', { replace: true });
         }
-    }, [hasAccess, accessLevel, stats, isPresidentOrVP, activeTab, navigate]);
+    }, [hasAccess, accessLevel, resolvedAdminInfo, isPresidentOrVP, activeTab, navigate]);
 
     // Auto dismiss alerts
     useEffect(() => {
@@ -379,6 +416,9 @@ const AdminPanel = () => {
         try {
             const data = await ApiService.getAdminDashboard({ ...seasonFilters });
             setStats(data);
+            if (data?.adminInfo) {
+                setAdminInfo(data.adminInfo);
+            }
         } catch (err) {
             console.error('Failed to load dashboard:', err);
         }
@@ -828,11 +868,11 @@ const AdminPanel = () => {
 
     const handleRegAlert = useCallback((a) => setAlert(a), []);
 
-    const adminName = stats?.adminInfo?.full_name || adminProfile?.full_name || 'Admin';
-    const adminTitle = stats?.adminInfo?.title || 'Admin Panel';
+    const adminName = resolvedAdminInfo?.full_name || adminProfile?.full_name || 'Admin';
+    const adminTitle = resolvedAdminInfo?.title || 'Admin Panel';
 
     let roleInitials = 'AD';
-    const position = stats?.adminInfo?.position;
+    const position = resolvedAdminInfo?.position;
     if (position === 'President') {
         roleInitials = 'P';
     } else if (position === 'Vice President') {

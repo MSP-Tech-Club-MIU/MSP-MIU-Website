@@ -75,8 +75,8 @@ Defined in [`AppRouter.jsx`](../client/src/AppRouter.jsx) (lazy-loaded; most wra
 ## Admin access (UI)
 
 1. Must be logged in.
-2. Full admin if `GET /api/admin/dashboard` succeeds (`adminAuth`).
-3. Else if `role === 'board'` or `department_id === 5` → **registrations only**.
+2. Access level (`full`, `programs`, `registrations`, or `null`) is resolved via `GET /api/admin/access` (`ApiService.checkAdminAccess()`).
+3. `GET /api/admin/dashboard` (`adminAuth`) is only called when viewing the Dashboard tab or when a user attempts to access an unauthorized admin route.
 4. Otherwise redirected away.
 
 Tabs: dashboard, events (+ attendance query), competitions, registrations, notifications, announcements, suggestions, sponsors, board, media, content, members, seasons, emails, android.

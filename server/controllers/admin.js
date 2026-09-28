@@ -10,7 +10,101 @@ const {
     getDefaultSeasonId
 } = require('../utils/seasonFilter');
 const { logAdminAction } = require('../utils/adminNotification');
+const { loadCurrentSeasonBoardMember } = require('../middlewares/adminAuth');
+const { isAdminEligibleBoardMember } = require('../utils/adminEligibleBoard');
+const { isProgramsEligibleBoardMember } = require('../utils/programsEligibleBoard');
 const logger = require('../utils/logger');
+
+/**
+ * Check current authenticated user's admin access capabilities (returns HTTP 200).
+ * Avoids probing /api/admin/dashboard (which logs 403 for non-full-admin users).
+ */
+const getAdminAccess = async (req, res) => {
+    try {
+        if (!req.user || !req.user.user_id) {
+            return res.status(401).json({
+                success: false,
+                error: 'Authentication Required'
+            });
+        }
+
+        const userId = req.user.user_id;
+        const [{ boardMember }, user] = await Promise.all([
+            loadCurrentSeasonBoardMember(userId),
+            User.findByPk(userId, {
+                attributes: ['user_id', 'role', 'department_id', 'full_name', 'email']
+            }).catch(() => null)
+        ]);
+
+        const isFullAdmin = Boolean(boardMember && isAdminEligibleBoardMember(boardMember));
+        const role = user?.role || req.user.role;
+        const deptRaw = user?.department_id ?? req.user.department;
+        const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+
+        const isProgramsAdmin = Boolean(
+            !isFullAdmin &&
+            boardMember &&
+            (role === 'board' || role === 'admin') &&
+            isProgramsEligibleBoardMember(boardMember)
+        );
+
+        const isRegistrationsAdmin = Boolean(
+            !isFullAdmin &&
+            !isProgramsAdmin &&
+            (role === 'board' || role === 'admin' || (!Number.isNaN(deptId) && deptId === 5))
+        );
+
+        let accessLevel = null;
+        if (isFullAdmin) {
+            accessLevel = 'full';
+        } else if (isProgramsAdmin) {
+            accessLevel = 'programs';
+        } else if (isRegistrationsAdmin) {
+            accessLevel = 'registrations';
+        }
+
+        const homePath =
+            accessLevel === 'full'
+                ? '/admin/dashboard'
+                : accessLevel === 'programs'
+                  ? '/admin/events'
+                  : accessLevel === 'registrations'
+                    ? '/admin/registrations'
+                    : null;
+
+        let adminInfo = null;
+        if (boardMember) {
+            let adminTitle = boardMember.position;
+            if (boardMember.position === 'Head' && Number(boardMember.department_id) === 1) {
+                adminTitle = 'Head of Software Development';
+            }
+            adminInfo = {
+                full_name: boardMember.full_name,
+                position: boardMember.position,
+                title: adminTitle,
+                department_id: boardMember.department_id
+            };
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                hasFullAdmin: isFullAdmin,
+                hasAnyAdminAccess: Boolean(accessLevel),
+                accessLevel,
+                homePath,
+                boardMember: boardMember || null,
+                adminInfo
+            }
+        });
+    } catch (error) {
+        logger.error('Error checking admin access:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to check admin access'
+        });
+    }
+};
 
 function parseCompetitionConfig(configValue) {
     if (!configValue) return null;
@@ -1401,6 +1495,7 @@ const cancelAdminTeamInvitation = async (req, res) => {
 };
 
 module.exports = {
+    getAdminAccess,
     getDashboardStats,
     getCompetitions,
     createCompetition,

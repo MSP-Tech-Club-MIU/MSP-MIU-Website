@@ -52,7 +52,7 @@ Requires a row in `board` for the current user in the **default season** (`is_de
 
 If no default season exists yet, any linked board row is accepted (bootstrap).
 
-Frontend: `ApiService.checkAdminAccess()` probes `GET /api/admin/dashboard`. Full admin vs registrations-only is decided in `AdminPanel.jsx`.
+Frontend: `ApiService.checkAdminAccess()` queries `GET /api/admin/access` (HTTP 200) to resolve `full`, `programs`, or `registrations` access without triggering a 403 on `/api/admin/dashboard`.
 
 ## Judging access (`authorizeJudgingAccess`)
 

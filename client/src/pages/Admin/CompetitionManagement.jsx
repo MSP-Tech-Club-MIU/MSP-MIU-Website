@@ -265,9 +265,13 @@ const CompetitionManagement = () => {
           return;
         }
         const result = await ApiService.checkAdminAccess();
-        let allowed = result.success;
+        let allowed = result.success || result.accessLevel === 'full';
         let level = 'full';
-        if (!allowed) {
+        if (!allowed && result.accessLevel === 'programs') {
+          allowed = true;
+          level = 'programs';
+        }
+        if (!allowed && !result.accessLevel) {
           try {
             const [profile, boardResult] = await Promise.all([
               ApiService.getProfile().catch(() => null),
@@ -282,6 +286,7 @@ const CompetitionManagement = () => {
           }
         }
         if (!allowed) {
+          ApiService.getAdminDashboard().catch(() => {});
           if (!cancelled) {
             setHasAccess(false);
             setLoading(false);

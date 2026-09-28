@@ -130,6 +130,17 @@ components:
           type: string
 security: []
 paths:
+  /admin/access:
+    get:
+      summary: 'Get /admin/access'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
   /admin/attendance:
     get:
       tags:

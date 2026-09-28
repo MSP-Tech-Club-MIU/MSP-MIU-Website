@@ -3157,24 +3157,52 @@ class ApiService {
   // Admin Panel Part
 
   /**
-   * Check if the current user has admin panel access
-   * @returns {Promise<Object>} - { success, boardMember }
+   * Check if the current user has admin panel access without triggering 403 on /admin/dashboard
+   * @returns {Promise<Object>} - { success, hasFullAdmin, hasAnyAdminAccess, accessLevel, homePath, boardMember, adminInfo }
    */
   static async checkAdminAccess() {
     try {
-      const response = await fetch(`${API_BASE_URL}/admin/dashboard`, {
+      const response = await fetch(`${API_BASE_URL}/admin/access`, {
         method: 'GET',
         headers: this.getHeaders(true),
       });
 
       if (!response.ok) {
-        return { success: false };
+        return {
+          success: false,
+          hasFullAdmin: false,
+          hasAnyAdminAccess: false,
+          accessLevel: null,
+          homePath: null,
+          boardMember: null,
+          adminInfo: null,
+        };
       }
 
-      return { success: true };
+      const result = await response.json();
+      const data = result?.data || {};
+      const hasFullAdmin = Boolean(data.hasFullAdmin);
+
+      return {
+        success: hasFullAdmin,
+        hasFullAdmin,
+        hasAnyAdminAccess: Boolean(data.hasAnyAdminAccess),
+        accessLevel: data.accessLevel || null,
+        homePath: data.homePath || null,
+        boardMember: data.boardMember || null,
+        adminInfo: data.adminInfo || null,
+      };
     } catch (error) {
       console.error('Error checking admin access:', error);
-      return { success: false };
+      return {
+        success: false,
+        hasFullAdmin: false,
+        hasAnyAdminAccess: false,
+        accessLevel: null,
+        homePath: null,
+        boardMember: null,
+        adminInfo: null,
+      };
     }
   }
 
