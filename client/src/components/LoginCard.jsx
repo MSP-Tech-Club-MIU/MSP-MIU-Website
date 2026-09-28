@@ -202,8 +202,12 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
     // Prefer admin panel when the user can access any of its pages
     try {
       const adminAccess = await ApiService.checkAdminAccess();
-      if (adminAccess.success) {
-        window.location.href = '/admin';
+      if (adminAccess.hasAnyAdminAccess) {
+        window.location.href = adminAccess.homePath || '/admin';
+        return;
+      }
+      if (adminAccess.accessLevel === null && adminAccess.hasFullAdmin === false) {
+        window.location.href = '/profile';
         return;
       }
     } catch {
@@ -215,7 +219,7 @@ const LoginCard = memo(({ isOpen, onClose, postLoginRedirect }) => {
     const hasRegistrationsAccess =
       loggedInUser?.role === 'board' || (!Number.isNaN(deptId) && deptId === 5);
 
-    window.location.href = hasRegistrationsAccess ? '/admin' : '/profile';
+    window.location.href = hasRegistrationsAccess ? '/admin/registrations' : '/profile';
   }, [postLoginRedirect, loggedInUser]);
 
   useEffect(() => {

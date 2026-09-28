@@ -24,6 +24,7 @@ const Profile = () => {
   const [scheduleFile, setScheduleFile] = useState(null);
   const [scheduleFileName, setScheduleFileName] = useState(null);
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
+  const [adminHomePath, setAdminHomePath] = useState('/admin');
   const [boardMembership, setBoardMembership] = useState(null);
   const [boardPhotoPreview, setBoardPhotoPreview] = useState(null);
   const [boardPhotoFile, setBoardPhotoFile] = useState(null);
@@ -45,8 +46,9 @@ const Profile = () => {
   const resolveAdminAccess = async (userData) => {
     try {
       const adminAccess = await ApiService.checkAdminAccess();
-      if (adminAccess.success) {
+      if (adminAccess.hasAnyAdminAccess) {
         setHasAdminAccess(true);
+        setAdminHomePath(adminAccess.homePath || '/admin');
         return;
       }
     } catch {
@@ -61,6 +63,9 @@ const Profile = () => {
       (!Number.isNaN(deptId) && deptId === 5);
 
     setHasAdminAccess(Boolean(hasRegistrationsAccess));
+    if (hasRegistrationsAccess) {
+      setAdminHomePath('/admin/registrations');
+    }
   };
 
   const fetchBoardMembership = async () => {
@@ -383,7 +388,7 @@ const Profile = () => {
                 {hasAdminAccess && (
                   <motion.button
                     className="action-btn admin-btn"
-                    onClick={() => { window.location.href = '/admin'; }}
+                    onClick={() => { window.location.href = adminHomePath; }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >

@@ -3,6 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middlewares/auth');
 const { adminAuth, adminOrProgramsAuth, presidentOrVicePresidentAuth } = require('../middlewares/adminAuth');
 const {
+    getAdminAccess,
     getDashboardStats,
     getCompetitions,
     createCompetition,
@@ -76,6 +77,9 @@ router.use(authenticateToken);
 const fullAdmin = adminAuth;
 const programsAdmin = adminOrProgramsAuth;
 const presidentOrVP = presidentOrVicePresidentAuth;
+
+// Non-403 capability check for current authenticated user
+router.get('/access', getAdminAccess);
 
 // Dashboard + org tools — full admin only
 router.get('/dashboard', fullAdmin, getDashboardStats);
