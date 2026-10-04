@@ -22,6 +22,8 @@ import {
   FaLayerGroup,
   FaMagnet,
   FaBug,
+  FaShareAlt,
+  FaCheck,
 } from 'react-icons/fa';
 import BackButton from '../../components/BackButton';
 import SEO from '../../components/SEO';
@@ -414,6 +416,8 @@ export const CyberRunner = () => {
     crashReason: '',
   });
   const [confirmReset, setConfirmReset] = useState(false);
+  const [isDucking, setIsDucking] = useState(false);
+  const [copiedScore, setCopiedScore] = useState(false);
 
   const canvasRef = useRef(null);
   const stageWrapRef = useRef(null);
@@ -421,6 +425,19 @@ export const CyberRunner = () => {
   const bannerTimeoutRef = useRef(null);
   const statsRef = useRef(stats);
   statsRef.current = stats;
+
+  const touchStartYRef = useRef(0);
+  const touchStartXRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
+  const touchIsDuckingRef = useRef(false);
+
+  const triggerHaptic = useCallback((pattern = 14) => {
+    if (typeof window !== 'undefined' && window.navigator && typeof window.navigator.vibrate === 'function') {
+      try {
+        window.navigator.vibrate(pattern);
+      } catch (e) {}
+    }
+  }, []);
 
   const activeTheme = useMemo(() => getLevelTheme(hud.level), [hud.level]);
 
@@ -581,6 +598,7 @@ export const CyberRunner = () => {
     if (eng.status === 'IDLE' || eng.status === 'GAME_OVER') {
       resetEngineForNewRun();
       sfx.jump(statsRef.current.muted);
+      triggerHaptic(18);
       return;
     }
     if (eng.status !== 'PLAYING') return;
@@ -591,6 +609,7 @@ export const CyberRunner = () => {
     if (p.ducking) {
       p.ducking = false;
       eng.keys.down = false;
+      setIsDucking(false);
       p.w = STAND_W;
       p.h = STAND_H;
       if (p.y + p.h > GROUND_Y) {
@@ -602,19 +621,23 @@ export const CyberRunner = () => {
       p.vy = JUMP_VY;
       p.jumpsUsed = 1;
       sfx.jump(statsRef.current.muted);
+      triggerHaptic(14);
       spawnParticles(p.x + p.w * 0.4, GROUND_Y - 4, theme.primary, 9, 3.6);
     } else if (p.jumpsUsed === 1) {
       p.vy = DOUBLE_JUMP_VY;
       p.jumpsUsed = 2;
       sfx.doubleJump(statsRef.current.muted);
+      triggerHaptic([12, 18, 14]);
       spawnParticles(p.x + p.w * 0.5, p.y + p.h, theme.secondary, 15, 4.6);
       addPopup(p.x + 24, p.y - 9, 'BOOST!', theme.secondary);
     }
-  }, [resetEngineForNewRun, spawnParticles, addPopup]);
+  }, [resetEngineForNewRun, spawnParticles, addPopup, triggerHaptic]);
 
   const setDuckState = useCallback((isDown) => {
     const eng = engineRef.current;
     eng.keys.down = isDown;
+    setIsDucking(isDown);
+    if (isDown) triggerHaptic(10);
     if (eng.status !== 'PLAYING') return;
     const p = eng.player;
     const onGround = p.y + p.h >= GROUND_Y - 1;
@@ -634,7 +657,86 @@ export const CyberRunner = () => {
         p.y = GROUND_Y - STAND_H;
       }
     }
-  }, []);
+  }, [triggerHaptic]);
+
+  // Touch & Swipe gesture handling directly on the game canvas
+  const handleCanvasTouchStart = useCallback((e) => {
+    if (gameState !== 'PLAYING') return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartYRef.current = touch.clientY;
+    touchStartXRef.current = touch.clientX;
+    touchStartTimeRef.current = performance.now();
+    touchIsDuckingRef.current = false;
+  }, [gameState]);
+
+  const handleCanvasTouchMove = useCallback((e) => {
+    if (gameState !== 'PLAYING') return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const deltaY = touch.clientY - touchStartYRef.current;
+    const deltaX = touch.clientX - touchStartXRef.current;
+
+    // Swipe down detected: duck and hold
+    if (deltaY > 24 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      if (!touchIsDuckingRef.current) {
+        touchIsDuckingRef.current = true;
+        setDuckState(true);
+      }
+    }
+  }, [gameState, setDuckState]);
+
+  const handleCanvasTouchEnd = useCallback((e) => {
+    if (gameState !== 'PLAYING') {
+      if (gameState === 'IDLE' || gameState === 'GAME_OVER') {
+        triggerJump();
+      }
+      return;
+    }
+    if (touchIsDuckingRef.current) {
+      touchIsDuckingRef.current = false;
+      setDuckState(false);
+      return;
+    }
+
+    const touch = e.changedTouches?.[0];
+    if (touch) {
+      const deltaY = touch.clientY - touchStartYRef.current;
+      const deltaTime = performance.now() - touchStartTimeRef.current;
+      // Quick tap or upward swipe triggers jump
+      if (deltaY < -18 || (deltaTime < 400 && Math.abs(deltaY) < 30)) {
+        triggerJump();
+      }
+    } else {
+      triggerJump();
+    }
+  }, [gameState, setDuckState, triggerJump]);
+
+  const handleShareScore = useCallback(async () => {
+    const shareText = `I scored ${hud.score.toLocaleString()} pts (Level ${hud.level}: ${activeTheme.name}) in MSP Cyber Runner! Can you beat it?`;
+    const shareUrl = `${window.location.origin}/game`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'MSP Cyber Runner',
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (e) {
+        // User cancelled or unsupported
+      }
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(`${shareText}\nPlay at: ${shareUrl}`);
+        setCopiedScore(true);
+        setTimeout(() => setCopiedScore(false), 2200);
+      }
+    } catch (e) {}
+  }, [hud.score, hud.level, activeTheme.name]);
 
   const togglePause = useCallback(() => {
     const eng = engineRef.current;
@@ -865,6 +967,7 @@ export const CyberRunner = () => {
       eng.status = 'GAME_OVER';
       eng.crashReason = reasonText;
       sfx.gameOver(statsRef.current.muted);
+      triggerHaptic([35, 45, 50]);
       spawnParticles(
         eng.player.x + eng.player.w / 2,
         eng.player.y + eng.player.h / 2,
@@ -1821,7 +1924,9 @@ export const CyberRunner = () => {
           <div className="CyberRunner__topActions">
             <button
               type="button"
-              className={`CyberRunner__iconBtn ${theaterMode ? 'CyberRunner__iconBtn--active' : ''}`}
+              className={`CyberRunner__iconBtn CyberRunner__theaterBtn ${
+                theaterMode ? 'CyberRunner__iconBtn--active' : ''
+              }`}
               onClick={handleToggleTheater}
               aria-pressed={theaterMode}
               title={theaterMode ? 'Switch to Standard Screen Size' : 'Expand Game Screen to Wide Theater Mode'}
@@ -1958,6 +2063,9 @@ export const CyberRunner = () => {
                 triggerJump();
               }
             }}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleCanvasTouchMove}
+            onTouchEnd={handleCanvasTouchEnd}
             aria-label="MSP Cyber Runner game canvas"
           />
 
@@ -1993,8 +2101,8 @@ export const CyberRunner = () => {
                   </div>
                   <h2>Ready to Deploy?</h2>
                   <p>
-                    Press <kbd>Space</kbd> / <kbd>↑</kbd> to Jump (tap twice for{' '}
-                    <strong>Double Jump</strong>) and hold <kbd>↓</kbd> to{' '}
+                    Tap screen or press <kbd>Space</kbd> to Jump (tap twice for{' '}
+                    <strong>Double Jump</strong>) and hold <kbd>↓</kbd> or swipe down to{' '}
                     <strong>Duck under Cyber Birds</strong>. Every <strong>500 pts</strong> warps
                     you into a brand-new tech world!
                   </p>
@@ -2067,13 +2175,24 @@ export const CyberRunner = () => {
                     )}
                   </div>
 
-                  <button
-                    type="button"
-                    className="CyberRunner__primaryBtn CyberRunner__primaryBtn--gameover"
-                    onClick={resetEngineForNewRun}
-                  >
-                    <FaRedo /> Play Again (Space)
-                  </button>
+                  <div className="CyberRunner__gameOverActions">
+                    <button
+                      type="button"
+                      className="CyberRunner__primaryBtn CyberRunner__primaryBtn--gameover"
+                      onClick={resetEngineForNewRun}
+                    >
+                      <FaRedo /> Play Again (Space)
+                    </button>
+                    <button
+                      type="button"
+                      className="CyberRunner__shareBtn"
+                      onClick={handleShareScore}
+                      title="Share your score"
+                    >
+                      {copiedScore ? <FaCheck /> : <FaShareAlt />}
+                      <span>{copiedScore ? 'Score Copied!' : 'Share Score'}</span>
+                    </button>
+                  </div>
 
                   <div className="CyberRunner__recruitCta">
                     <div className="CyberRunner__recruitDivider" aria-hidden="true" />
@@ -2094,18 +2213,9 @@ export const CyberRunner = () => {
           <div className="CyberRunner__touchControls">
             <button
               type="button"
-              className="CyberRunner__touchBtn CyberRunner__touchBtn--jump"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                triggerJump();
-              }}
-            >
-              <FaArrowUp />
-              <span>JUMP / DOUBLE JUMP</span>
-            </button>
-            <button
-              type="button"
-              className="CyberRunner__touchBtn CyberRunner__touchBtn--duck"
+              className={`CyberRunner__touchBtn CyberRunner__touchBtn--duck ${
+                isDucking ? 'is-ducking' : ''
+              }`}
               onPointerDown={(e) => {
                 e.preventDefault();
                 setDuckState(true);
@@ -2116,9 +2226,22 @@ export const CyberRunner = () => {
               }}
               onPointerLeave={() => setDuckState(false)}
               onPointerCancel={() => setDuckState(false)}
+              aria-label="Hold to duck under flying birds and laser gates"
             >
               <FaArrowDown />
-              <span>HOLD TO DUCK (BIRDS &amp; GATES)</span>
+              <span>HOLD TO DUCK</span>
+            </button>
+            <button
+              type="button"
+              className="CyberRunner__touchBtn CyberRunner__touchBtn--jump"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                triggerJump();
+              }}
+              aria-label="Jump or tap twice to double jump"
+            >
+              <FaArrowUp />
+              <span>JUMP / BOOST</span>
             </button>
           </div>
 
