@@ -39,6 +39,7 @@ const DownloadAndroidApp = lazy(() => import('./pages/DownloadAndroidApp'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy/PrivacyPolicy'));
 const FAQs = lazy(() => import('./pages/FAQs/FAQs'));
 const Links = lazy(() => import('./pages/Links/Links'));
+const CyberRunner = lazy(() => import('./pages/Game/CyberRunner'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
 const CompetitionManagement = lazy(() => import('./pages/Admin/CompetitionManagement'));
@@ -204,6 +205,8 @@ const AppRouter = () => {
           <Route path="/faq" element={<Navigate to="/faqs" replace />} />
           <Route path="/links" element={<SiteLayout><Links /></SiteLayout>} />
           <Route path="/linktree" element={<Navigate to="/links" replace />} />
+          <Route path="/game" element={<SiteLayout><CyberRunner /></SiteLayout>} />
+          <Route path="/arcade" element={<Navigate to="/game" replace />} />
           <Route path="/admin/competition-management" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
           <Route path="/admin/competition-management/:competitionId" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
           <Route path="/admin/*" element={<SiteLayout><AdminPanel /></SiteLayout>} />

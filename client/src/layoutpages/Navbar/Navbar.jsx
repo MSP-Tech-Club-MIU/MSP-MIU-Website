@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake } from 'react-icons/fa';
+import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake, FaGamepad } from 'react-icons/fa';
 import { MdGroups, MdEmojiEvents, MdFeedback, MdMenuBook } from 'react-icons/md';
 import './Navbar.css';
 import ApiService from '../../services/api';
@@ -184,6 +184,7 @@ const Navbar = memo(() => {
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
       { to: '/suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+      { to: '/game', label: 'Cyber Runner', icon: <FaGamepad /> },
     ];
     if (!isCapacitor()) {
       extended.push({ to: '/download-android', label: 'Download App', icon: <FaAndroid /> });

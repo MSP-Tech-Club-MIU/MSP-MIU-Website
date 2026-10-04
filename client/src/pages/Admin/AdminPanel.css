@@ -140,8 +140,6 @@ body.admin-panel-active .SiteLayout__main {
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(74, 166, 255, 0.25) transparent;
 }
 
 .AdminPanel__navGroup {
@@ -583,8 +581,6 @@ body.admin-panel-active .SiteLayout__main {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-radius: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(74, 166, 255, 0.28) transparent;
 }
 
 .AdminPanel__tableWrap::-webkit-scrollbar {
@@ -1043,9 +1039,17 @@ body.admin-panel-active .SiteLayout__main {
     width: 5px;
 }
 
+.AdminPanel__modalContent::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 .AdminPanel__modalContent::-webkit-scrollbar-thumb {
-    background: rgba(74, 166, 255, 0.2);
+    background: rgba(74, 166, 255, 0.22);
     border-radius: 3px;
+}
+
+.AdminPanel__modalContent::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.4);
 }
 
 .AdminPanel__modalTitle {
@@ -1163,9 +1167,17 @@ body.admin-panel-active .SiteLayout__main {
     width: 5px;
 }
 
+.AdminPanel__modalContent::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 .AdminPanel__modalContent::-webkit-scrollbar-thumb {
-    background: rgba(74, 166, 255, 0.2);
+    background: rgba(74, 166, 255, 0.22);
     border-radius: 3px;
+}
+
+.AdminPanel__modalContent::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.4);
 }
 
 /* ══ MODAL HEADER ══ */
@@ -3092,17 +3104,23 @@ body.admin-panel-active .SiteLayout__main {
     -webkit-overflow-scrolling: touch;
     width: 100%;
     padding-bottom: 6px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(74, 166, 255, 0.25) transparent;
   }
 
   .CoursesAdmin__headerActions::-webkit-scrollbar {
     height: 4px;
   }
 
+  .CoursesAdmin__headerActions::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   .CoursesAdmin__headerActions::-webkit-scrollbar-thumb {
     background: rgba(74, 166, 255, 0.25);
     border-radius: 2px;
+  }
+
+  .CoursesAdmin__headerActions::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.45);
   }
 
   .CoursesAdmin__headerActions > * {
