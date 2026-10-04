@@ -430,6 +430,7 @@ export const CyberRunner = () => {
   const touchStartXRef = useRef(0);
   const touchStartTimeRef = useRef(0);
   const touchIsDuckingRef = useRef(false);
+  const lastTouchTimeRef = useRef(0);
 
   const triggerHaptic = useCallback((pattern = 14) => {
     if (typeof window !== 'undefined' && window.navigator && typeof window.navigator.vibrate === 'function') {
@@ -468,6 +469,7 @@ export const CyberRunner = () => {
     baseSpeed: START_SPEED,
     speed: START_SPEED,
     groundOffset: 0,
+    canvasW: CANVAS_W,
     invincibleTimer: 0,
     warpFlash: 0,
     magnetTimer: 0,
@@ -661,7 +663,9 @@ export const CyberRunner = () => {
 
   // Touch & Swipe gesture handling directly on the game canvas
   const handleCanvasTouchStart = useCallback((e) => {
+    lastTouchTimeRef.current = performance.now();
     if (gameState !== 'PLAYING') return;
+    if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
     if (!touch) return;
     touchStartYRef.current = touch.clientY;
@@ -672,6 +676,7 @@ export const CyberRunner = () => {
 
   const handleCanvasTouchMove = useCallback((e) => {
     if (gameState !== 'PLAYING') return;
+    if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
     if (!touch) return;
     const deltaY = touch.clientY - touchStartYRef.current;
@@ -687,6 +692,8 @@ export const CyberRunner = () => {
   }, [gameState, setDuckState]);
 
   const handleCanvasTouchEnd = useCallback((e) => {
+    lastTouchTimeRef.current = performance.now();
+    if (e.cancelable) e.preventDefault();
     if (gameState !== 'PLAYING') {
       if (gameState === 'IDLE' || gameState === 'GAME_OVER') {
         triggerJump();
@@ -771,6 +778,7 @@ export const CyberRunner = () => {
     const level = eng.level;
     const theme = getLevelTheme(level);
     const roll = Math.random();
+    const cW = eng.canvasW || CANVAS_W;
     let primaryObs = null;
 
     const skyProb = Math.min(0.46, 0.28 + (level - 1) * 0.04);
@@ -805,7 +813,7 @@ export const CyberRunner = () => {
           lane === 'MID_DUCK'
             ? `${theme.birdLabel} [DUCK]`
             : theme.birdLabel,
-        x: CANVAS_W + 55,
+        x: cW + 55,
         y: birdY,
         baseY: birdY,
         w: 62,
@@ -826,7 +834,7 @@ export const CyberRunner = () => {
           type: 'SKY_BIRD',
           lane: secondHigh ? 'HIGH_SKY' : 'MID_DUCK',
           label: theme.birdLabel,
-          x: CANVAS_W + 275,
+          x: cW + 275,
           y: secondHigh ? 148 : GROUND_Y - 84,
           baseY: secondHigh ? 148 : GROUND_Y - 84,
           w: 58,
@@ -845,7 +853,7 @@ export const CyberRunner = () => {
         type: 'LASER_GATE',
         isOverhead: isOverheadGate,
         label: isOverheadGate ? 'LASER [DUCK]' : 'FIREWALL_GATE',
-        x: CANVAS_W + 55,
+        x: cW + 55,
         y: isOverheadGate ? GROUND_Y - 220 : GROUND_Y - 88,
         w: 38,
         h: isOverheadGate ? 174 : 88, // Overhead bottom at GROUND_Y - 46 (ducking H=34 slides under!)
@@ -859,7 +867,7 @@ export const CyberRunner = () => {
       primaryObs = {
         type: 'BUG',
         label: canHop ? 'HOP_BUG' : 'SYNTAX_BUG',
-        x: CANVAS_W + 55,
+        x: cW + 55,
         y: GROUND_Y - 44,
         w: 46,
         h: 44,
@@ -877,7 +885,7 @@ export const CyberRunner = () => {
       primaryObs = {
         type: 'SERVER_404',
         label: tall ? '500_ERR' : '404_BLK',
-        x: CANVAS_W + 55,
+        x: cW + 55,
         y: GROUND_Y - h,
         w,
         h,
@@ -889,7 +897,7 @@ export const CyberRunner = () => {
       primaryObs = {
         type: 'CONFLICT',
         label: '<<<<<',
-        x: CANVAS_W + 55,
+        x: cW + 55,
         y: GROUND_Y - 40,
         w: 76,
         h: 40,
@@ -1082,14 +1090,38 @@ export const CyberRunner = () => {
     if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = CANVAS_W * dpr;
-    canvas.height = CANVAS_H * dpr;
+    const updateCanvasSize = () => {
+      const wrap = stageWrapRef.current;
+      if (!wrap || !canvas) return;
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
+      if (!w || !h) return;
+      const aspect = w / h;
+      const logicalW = Math.max(680, Math.round(CANVAS_H * aspect));
+      engineRef.current.canvasW = logicalW;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      if (canvas.width !== logicalW * dpr || canvas.height !== CANVAS_H * dpr) {
+        canvas.width = logicalW * dpr;
+        canvas.height = CANVAS_H * dpr;
+      }
+    };
+    updateCanvasSize();
+
+    let resizeObs = null;
+    if (typeof ResizeObserver !== 'undefined' && stageWrapRef.current) {
+      resizeObs = new ResizeObserver(() => {
+        updateCanvasSize();
+      });
+      resizeObs.observe(stageWrapRef.current);
+    } else {
+      window.addEventListener('resize', updateCanvasSize);
+    }
 
     const updateEngine = (dt) => {
       const eng = engineRef.current;
       if (eng.status !== 'PLAYING') return;
 
+      const cW = eng.canvasW || CANVAS_W;
       const dtFactor = Math.min(dt / 16.667, 2.5);
       const p = eng.player;
 
@@ -1111,7 +1143,7 @@ export const CyberRunner = () => {
         sfx.levelUp(statsRef.current.muted);
         triggerLevelBanner(nextTheme);
         addPopup(
-          CANVAS_W * 0.5,
+          cW * 0.5,
           120,
           `LEVEL ${computedLevel}: ${nextTheme.name.toUpperCase()}!`,
           nextTheme.primary
@@ -1133,20 +1165,20 @@ export const CyberRunner = () => {
           node.y += node.vy * 2.3 * dtFactor;
           if (node.y > GROUND_Y - 10) {
             node.y = 15;
-            node.x = Math.random() * CANVAS_W;
+            node.x = Math.random() * cW;
           }
         } else if (theme.bgStyle === 'inferno') {
           node.y -= node.vy * 1.5 * dtFactor;
           node.x -= eng.speed * 0.22 * dtFactor;
           if (node.y < 20 || node.x < -20) {
             node.y = GROUND_Y - 10;
-            node.x = Math.random() * (CANVAS_W + 100);
+            node.x = Math.random() * (cW + 100);
           }
         } else {
           const mult = theme.bgStyle === 'quantum' ? 1.65 : node.speedFactor;
           node.x -= eng.speed * mult * dtFactor;
           if (node.x < -40) {
-            node.x = CANVAS_W + 30;
+            node.x = cW + 30;
             node.y = 36 + Math.random() * (GROUND_Y - 75);
           }
         }
@@ -1174,7 +1206,7 @@ export const CyberRunner = () => {
       }
 
       const lastObs = eng.obstacles[eng.obstacles.length - 1];
-      if (!lastObs || CANVAS_W - (lastObs.x + lastObs.w) >= eng.nextObstacleGap) {
+      if (!lastObs || cW - (lastObs.x + lastObs.w) >= eng.nextObstacleGap) {
         spawnObstacleAndCollectibles(eng);
       }
 
@@ -1193,7 +1225,7 @@ export const CyberRunner = () => {
           obs.wingPhase += 0.27 * dtFactor;
           if (obs.oscillate) {
             obs.y = obs.baseY + Math.sin(obs.wingPhase * 0.6) * (obs.waveAmp || 20);
-          } else if (obs.swoop && obs.x < CANVAS_W * 0.74) {
+          } else if (obs.swoop && obs.x < cW * 0.74) {
             obs.y += (obs.swoopTargetY - obs.y) * 0.05 * dtFactor;
           }
         } else if (obs.type === 'BUG' && obs.canHop) {
@@ -1362,9 +1394,11 @@ export const CyberRunner = () => {
 
     const drawScene = () => {
       const eng = engineRef.current;
+      const cW = eng.canvasW || CANVAS_W;
       const theme = getLevelTheme(eng.level);
+      const currentDpr = Math.min(window.devicePixelRatio || 1, 2);
       ctx.save();
-      ctx.scale(dpr, dpr);
+      ctx.scale(currentDpr, currentDpr);
 
       // 1. Dynamic Level Sky Gradient
       const bgGrad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
@@ -1372,7 +1406,7 @@ export const CyberRunner = () => {
       bgGrad.addColorStop(0.72, theme.skyMid);
       bgGrad.addColorStop(1, theme.skyBot);
       ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.fillRect(0, 0, cW, CANVAS_H);
 
       // 2. Level-Specific Background World FX
       if (theme.bgStyle === 'matrix') {
@@ -1429,7 +1463,7 @@ export const CyberRunner = () => {
       // Perspective Cyber Grid Overlay
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
       ctx.lineWidth = 1;
-      for (let gx = -eng.groundOffset; gx < CANVAS_W; gx += 60) {
+      for (let gx = -eng.groundOffset; gx < cW; gx += 60) {
         ctx.beginPath();
         ctx.moveTo(gx, 0);
         ctx.lineTo(gx, GROUND_Y);
@@ -1438,7 +1472,7 @@ export const CyberRunner = () => {
       for (let gy = 60; gy < GROUND_Y; gy += 60) {
         ctx.beginPath();
         ctx.moveTo(0, gy);
-        ctx.lineTo(CANVAS_W, gy);
+        ctx.lineTo(cW, gy);
         ctx.stroke();
       }
 
@@ -1447,18 +1481,18 @@ export const CyberRunner = () => {
       groundGrad.addColorStop(0, theme.groundTop);
       groundGrad.addColorStop(1, theme.groundBot);
       ctx.fillStyle = groundGrad;
-      ctx.fillRect(0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y);
+      ctx.fillRect(0, GROUND_Y, cW, CANVAS_H - GROUND_Y);
 
       ctx.strokeStyle = theme.primary;
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(0, GROUND_Y);
-      ctx.lineTo(CANVAS_W, GROUND_Y);
+      ctx.lineTo(cW, GROUND_Y);
       ctx.stroke();
 
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
       ctx.lineWidth = 1.6;
-      for (let tx = -eng.groundOffset; tx < CANVAS_W + 60; tx += 60) {
+      for (let tx = -eng.groundOffset; tx < cW + 60; tx += 60) {
         ctx.beginPath();
         ctx.moveTo(tx, GROUND_Y + 18);
         ctx.lineTo(tx + 28, GROUND_Y + 18);
@@ -1845,7 +1879,7 @@ export const CyberRunner = () => {
         ctx.save();
         ctx.globalAlpha = eng.warpFlash * 0.35;
         ctx.fillStyle = theme.primary;
-        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillRect(0, 0, cW, CANVAS_H);
         ctx.restore();
       }
 
@@ -1866,7 +1900,7 @@ export const CyberRunner = () => {
       const paddedBest = String(
         Math.max(statsRef.current.highScore, eng.score)
       ).padStart(5, '0');
-      ctx.fillText(`HI ${paddedBest}   ${paddedScore}`, CANVAS_W - 24, 34);
+      ctx.fillText(`HI ${paddedBest}   ${paddedScore}`, cW - 24, 34);
 
       ctx.restore();
     };
@@ -1886,6 +1920,11 @@ export const CyberRunner = () => {
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (resizeObs) {
+        resizeObs.disconnect();
+      } else {
+        window.removeEventListener('resize', updateCanvasSize);
+      }
     };
   }, [
     spawnObstacleAndCollectibles,
@@ -2059,6 +2098,7 @@ export const CyberRunner = () => {
             ref={canvasRef}
             className="CyberRunner__canvas"
             onClick={() => {
+              if (performance.now() - lastTouchTimeRef.current < 650) return;
               if (gameState === 'PLAYING') {
                 triggerJump();
               }

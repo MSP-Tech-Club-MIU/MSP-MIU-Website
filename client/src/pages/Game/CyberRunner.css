@@ -11,18 +11,18 @@
 }
 
 .CyberRunner__container {
-  max-width: 980px;
+  max-width: 1280px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.05rem;
+  gap: 1.15rem;
   transition: max-width 0.35s cubic-bezier(0.22, 1, 0.36, 1), gap 0.3s ease;
 }
 
 .CyberRunnerPage--theater .CyberRunner__container {
-  max-width: 96vw;
-  gap: 0.75rem;
+  max-width: 98vw;
+  gap: 0.85rem;
 }
 
 .CyberRunner__topRow {
@@ -334,23 +334,23 @@
 .CyberRunner__stageWrap {
   position: relative;
   width: 100%;
-  min-height: 360px;
-  max-height: 440px;
+  min-height: 480px;
+  height: clamp(480px, 58vh, 620px);
+  aspect-ratio: 1120 / 500;
   border-radius: 20px;
   overflow: hidden;
   border: 2px solid var(--theme-primary);
   box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55), 0 0 34px var(--theme-glow);
   background: #041122;
-  aspect-ratio: 1120 / 500;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  transition: min-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.45s ease, box-shadow 0.45s ease;
+  transition: min-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), height 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.45s ease, box-shadow 0.45s ease;
 }
 
 .CyberRunnerPage--theater .CyberRunner__stageWrap {
-  min-height: 540px;
-  max-height: 76vh;
+  min-height: 620px;
+  height: clamp(620px, 80vh, 860px);
   border-width: 2.5px;
   box-shadow: 0 28px 68px rgba(0, 0, 0, 0.72), 0 0 46px var(--theme-glow);
 }
@@ -1180,13 +1180,13 @@
     padding: 0.1rem 0.3rem;
   }
 
-  /* Preserved 2.24:1 Native Game Ratio & Touch optimization */
+  /* Substantially enlarged mobile stage with zero distortion */
   .CyberRunner__stageWrap {
     width: 100%;
-    min-height: unset;
-    max-height: 52vh;
-    aspect-ratio: 1120 / 500;
-    border-radius: 14px;
+    min-height: 290px;
+    height: clamp(290px, 44vh, 380px);
+    aspect-ratio: unset;
+    border-radius: 16px;
     touch-action: none;
     -webkit-touch-callout: none;
   }
@@ -1316,5 +1316,136 @@
 
   .CyberRunner__panel {
     padding: 0.95rem;
+  }
+}
+
+/* Extra Small Phones (width <= 480px) */
+@media (max-width: 480px) {
+  .CyberRunnerPage {
+    padding: 0.5rem 0.5rem 2.2rem;
+  }
+
+  .CyberRunner__topActions {
+    gap: 0.35rem;
+  }
+
+  .CyberRunner__iconBtn {
+    padding: 0.36rem 0.6rem;
+    font-size: 0.74rem;
+  }
+
+  .CyberRunner__stageWrap {
+    min-height: 270px;
+    height: clamp(270px, 42vh, 340px);
+    border-radius: 13px;
+  }
+
+  .CyberRunner__hudGrid {
+    gap: 0.28rem;
+  }
+
+  .CyberRunner__hudCard {
+    padding: 0.32rem 0.42rem;
+  }
+
+  .CyberRunner__hudValue {
+    font-size: 0.96rem;
+  }
+
+  .CyberRunner__touchBtn {
+    min-height: 54px;
+    padding: 0.75rem 0.6rem;
+    font-size: 0.84rem;
+  }
+
+  .CyberRunner__touchBtn span {
+    font-size: 0.82rem;
+  }
+}
+
+/* Mobile Landscape Gaming Mode (height <= 520px) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .CyberRunnerPage {
+    padding: 0.25rem 0.6rem 1.2rem;
+    min-height: 100vh;
+  }
+
+  .CyberRunner__container {
+    gap: 0.35rem;
+  }
+
+  .CyberRunner__header,
+  .CyberRunner__subtitle {
+    display: none;
+  }
+
+  .CyberRunner__levelBar {
+    display: none;
+  }
+
+  .CyberRunner__stageWrap {
+    width: 100%;
+    height: calc(100vh - 105px);
+    min-height: 200px;
+    max-height: 78vh;
+    border-radius: 12px;
+  }
+
+  .CyberRunner__touchControls {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+  }
+
+  .CyberRunner__touchBtn {
+    min-height: 44px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .CyberRunner__overlayCard {
+    padding: 0.65rem 0.9rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .CyberRunner__overlayCard h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .CyberRunner__crashLog {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.35rem;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .CyberRunner__crashScoreBlock {
+    margin-bottom: 0.35rem;
+  }
+
+  .CyberRunner__recruitCta {
+    margin-top: 0.35rem;
+  }
+}
+
+/* Tablet Screens (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .CyberRunner__container {
+    max-width: 95vw;
+  }
+
+  .CyberRunner__stageWrap {
+    min-height: 440px;
+    height: clamp(440px, 52vh, 580px);
+  }
+
+  .CyberRunner__worldsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .CyberRunner__hudGrid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.65rem;
   }
 }
