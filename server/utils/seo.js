@@ -96,6 +96,11 @@ const STATIC_PAGES = {
     title: 'Exercises | MSP Tech Club — MIU',
     description: 'Practice exercises from MSP Tech Club at Misr International University.',
     keywords: 'MSP exercises'
+  },
+  '/game': {
+    title: 'Cyber Runner Minigame | MSP Tech Club — MIU',
+    description: 'Play MSP Cyber Runner! Dodge bugs, 404s, and firewalls while collecting code tokens in the official MSP Tech Club minigame.',
+    keywords: 'MSP minigame, Cyber Runner, MIU tech club game, student arcade'
   }
 };
 
@@ -479,7 +484,8 @@ async function buildSitemapXml() {
     { loc: `${siteUrl}/download-android`, changefreq: 'monthly', priority: '0.5' },
     { loc: `${siteUrl}/privacy`, changefreq: 'yearly', priority: '0.4' },
     { loc: `${siteUrl}/faqs`, changefreq: 'monthly', priority: '0.6' },
-    { loc: `${siteUrl}/links`, changefreq: 'weekly', priority: '0.8' }
+    { loc: `${siteUrl}/links`, changefreq: 'weekly', priority: '0.8' },
+    { loc: `${siteUrl}/game`, changefreq: 'monthly', priority: '0.7' }
   ];
 
   try {

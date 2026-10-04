@@ -1,0 +1,1063 @@
+.CyberRunnerPage {
+  --theme-primary: #03A9F4;
+  --theme-secondary: #1ec6ff;
+  --theme-surface: rgba(9, 26, 44, 0.78);
+  --theme-glow: rgba(3, 169, 244, 0.32);
+
+  min-height: 88vh;
+  padding: 1.25rem 1rem 3.5rem;
+  color: #eaf2ff;
+  transition: --theme-primary 0.5s ease, --theme-secondary 0.5s ease;
+}
+
+.CyberRunner__container {
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+  transition: max-width 0.35s cubic-bezier(0.22, 1, 0.36, 1), gap 0.3s ease;
+}
+
+.CyberRunnerPage--theater .CyberRunner__container {
+  max-width: 96vw;
+  gap: 0.75rem;
+}
+
+.CyberRunner__topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.CyberRunner__topActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.CyberRunner__iconBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.52rem 0.95rem;
+  border-radius: 10px;
+  border: 1px solid var(--theme-primary);
+  background: var(--theme-surface);
+  color: #eaf2ff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.CyberRunner__iconBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 14px var(--theme-glow);
+  color: #ffffff;
+}
+
+.CyberRunner__iconBtn--active {
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+  color: #03101f;
+  border-color: #ffffff;
+  box-shadow: 0 0 18px var(--theme-glow);
+}
+
+.CyberRunner__iconBtn--active:hover {
+  background: linear-gradient(135deg, var(--theme-secondary), var(--theme-primary));
+  color: #03101f;
+}
+
+.CyberRunner__header {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto 0.1rem;
+  transition: all 0.3s ease;
+}
+
+.CyberRunnerPage--theater .CyberRunner__header {
+  margin: 0 auto;
+}
+
+.CyberRunnerPage--theater .CyberRunner__badgePill {
+  margin-bottom: 0.2rem;
+  padding: 0.22rem 0.75rem;
+  font-size: 0.68rem;
+}
+
+.CyberRunnerPage--theater .CyberRunner__title {
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  margin-bottom: 0;
+}
+
+.CyberRunnerPage--theater .CyberRunner__subtitle {
+  display: none;
+}
+
+.CyberRunner__badgePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.34rem 0.95rem;
+  border-radius: 999px;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-primary);
+  box-shadow: 0 0 16px var(--theme-glow);
+  color: var(--theme-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.55rem;
+  transition: all 0.4s ease;
+}
+
+.CyberRunner__title {
+  margin: 0 0 0.45rem;
+  font-size: clamp(1.85rem, 3.6vw, 2.65rem);
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff 0%, var(--theme-secondary) 55%, var(--theme-primary) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: background 0.4s ease;
+}
+
+.CyberRunner__subtitle {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.55;
+  color: #b0c7e4;
+}
+
+.CyberRunner__subtitle strong {
+  color: var(--theme-secondary);
+}
+
+/* Level Progress Bar */
+.CyberRunner__levelBar {
+  background: var(--theme-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 4px solid var(--theme-primary);
+  border-radius: 14px;
+  padding: 0.75rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.4s ease;
+}
+
+.CyberRunner__levelBarInfo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.CyberRunner__levelTag {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__levelTag strong {
+  color: #ffffff;
+  font-size: 0.94rem;
+}
+
+.CyberRunner__levelHazardHint {
+  color: #9ab5d6;
+  font-size: 0.82rem;
+}
+
+.CyberRunner__levelNext {
+  color: #9ab5d6;
+  font-size: 0.8rem;
+  font-family: monospace;
+}
+
+.CyberRunner__levelNext strong {
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__progressTrack {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.CyberRunner__progressFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-secondary));
+  box-shadow: 0 0 12px var(--theme-glow);
+  transition: width 0.2s ease, background 0.4s ease;
+}
+
+/* HUD Strip */
+.CyberRunner__hudGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+.CyberRunner__hudCard {
+  background: var(--theme-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  padding: 0.8rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.3rem;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+
+.CyberRunner__hudCard:hover {
+  border-color: var(--theme-primary);
+}
+
+.CyberRunner__hudLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ab5d6;
+  font-weight: 600;
+}
+
+.CyberRunner__hudIconGold {
+  color: #FFC107;
+}
+
+.CyberRunner__hudIconCyan {
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__hudIconGreen {
+  color: #83BD00;
+}
+
+.CyberRunner__hudValue {
+  font-size: 1.45rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.CyberRunner__hudValue--primary {
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__hudValue--gold {
+  color: #FFC107;
+}
+
+.CyberRunner__speedTag {
+  font-size: 0.74rem;
+  padding: 0.1rem 0.42rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #d0e4ff;
+}
+
+.CyberRunner__comboTag {
+  font-size: 0.78rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(255, 193, 7, 0.18);
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  color: #FFC107;
+}
+
+/* Active Power-Up Pills */
+.CyberRunner__powerPills {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.CyberRunner__powerPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.24rem 0.52rem;
+  border-radius: 7px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #6e85a3;
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__powerPill.is-active-shield {
+  background: rgba(30, 198, 255, 0.2);
+  border-color: #1ec6ff;
+  color: #1ec6ff;
+  box-shadow: 0 0 10px rgba(30, 198, 255, 0.35);
+}
+
+.CyberRunner__powerPill.is-active-magnet {
+  background: rgba(217, 70, 239, 0.22);
+  border-color: #d946ef;
+  color: #f5d0fe;
+  box-shadow: 0 0 10px rgba(217, 70, 239, 0.35);
+}
+
+.CyberRunner__powerPill.is-active-slowmo {
+  background: rgba(0, 230, 118, 0.2);
+  border-color: #00e676;
+  color: #69f0ae;
+  box-shadow: 0 0 10px rgba(0, 230, 118, 0.35);
+}
+
+/* Enlarged Canvas Viewport & Overlays */
+.CyberRunner__stageWrap {
+  position: relative;
+  width: 100%;
+  min-height: 360px;
+  max-height: 440px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid var(--theme-primary);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.55), 0 0 34px var(--theme-glow);
+  background: #041122;
+  aspect-ratio: 1120 / 500;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: min-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.45s ease, box-shadow 0.45s ease;
+}
+
+.CyberRunnerPage--theater .CyberRunner__stageWrap {
+  min-height: 540px;
+  max-height: 76vh;
+  border-width: 2.5px;
+  box-shadow: 0 28px 68px rgba(0, 0, 0, 0.72), 0 0 46px var(--theme-glow);
+}
+
+.CyberRunner__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+/* Non-Blocking Level-Up Warp Banner */
+.CyberRunner__levelUpBanner {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) !important;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(6, 18, 34, 0.9);
+  border: 1.5px solid var(--theme-primary);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 22px var(--theme-glow);
+  border-radius: 14px;
+  padding: 0.6rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  text-align: center;
+}
+
+.CyberRunner__levelUpKicker {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__levelUpBanner strong {
+  font-size: 1.15rem;
+  color: #ffffff;
+}
+
+.CyberRunner__levelUpBanner span:last-child {
+  font-size: 0.78rem;
+  color: #b0c7e4;
+}
+
+.CyberRunner__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 15, 29, 0.76);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 5;
+}
+
+.CyberRunner__overlayCard {
+  max-width: 460px;
+  width: 100%;
+  background: rgba(10, 28, 50, 0.94);
+  border: 1.5px solid var(--theme-primary);
+  border-radius: 18px;
+  padding: 1.5rem 1.75rem;
+  text-align: center;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55), 0 0 24px var(--theme-glow);
+}
+
+.CyberRunner__overlayCard--gameover {
+  border-color: rgba(255, 91, 31, 0.65);
+  padding: 1.15rem 1.5rem;
+}
+
+.CyberRunner__overlayIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 0.7rem;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--theme-primary);
+  color: var(--theme-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.CyberRunner__overlayCard h2 {
+  margin: 0 0 0.45rem;
+  font-size: 1.45rem;
+  color: #ffffff;
+}
+
+.CyberRunner__crashTitle {
+  margin: 0 0 0.3rem !important;
+  font-size: 1.3rem !important;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #ff6e40 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.CyberRunner__overlayCard p {
+  margin: 0 0 1.15rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #b0c7e4;
+}
+
+.CyberRunner__crashLog {
+  font-family: monospace;
+  font-size: 0.76rem !important;
+  color: #ff9e80 !important;
+  background: rgba(255, 91, 31, 0.12);
+  border: 1px solid rgba(255, 91, 31, 0.32);
+  border-radius: 8px;
+  padding: 0.32rem 0.65rem;
+  margin: 0 0 0.7rem !important;
+}
+
+.CyberRunner__crashScoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.32rem;
+  margin-bottom: 0.8rem;
+}
+
+.CyberRunner__crashScoreMain {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #eaf2ff;
+}
+
+.CyberRunner__crashScoreMain span {
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__crashSubMeta {
+  font-family: monospace;
+  font-size: 0.76rem;
+  color: #8aa3c6;
+  letter-spacing: 0.04em;
+}
+
+.CyberRunner__newRecordBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.78rem;
+  border-radius: 999px;
+  background: rgba(255, 193, 7, 0.2);
+  border: 1px solid #FFC107;
+  color: #FFC107;
+  font-size: 0.73rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.CyberRunner__primaryBtn--gameover {
+  padding: 0.6rem 1.35rem;
+  font-size: 0.9rem;
+}
+
+.CyberRunner__recruitCta {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.16rem;
+}
+
+.CyberRunner__recruitDivider {
+  width: 68%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.24),
+    transparent
+  );
+  margin-bottom: 0.5rem;
+}
+
+.CyberRunner__recruitPrompt {
+  margin: 0 !important;
+  font-size: 0.8rem !important;
+  color: #9ab5d6 !important;
+  line-height: 1.35 !important;
+}
+
+.CyberRunner__recruitClub {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+
+.CyberRunner__recruitLink {
+  margin-top: 0.1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--theme-secondary);
+  text-decoration: none;
+  padding: 0.18rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__recruitLink:hover {
+  color: #ffffff;
+  border-color: var(--theme-primary);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 12px var(--theme-glow);
+}
+
+.CyberRunner__overlayBtns {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.CyberRunner__primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
+  color: #04101e;
+  font-size: 0.96rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 20px var(--theme-glow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.CyberRunner__primaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px var(--theme-glow);
+}
+
+.CyberRunner__secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+  color: #eaf2ff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.CyberRunner__secondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Controls Bar */
+.CyberRunner__controlsBar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.CyberRunner__touchControls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  touch-action: manipulation;
+}
+
+.CyberRunner__touchBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 0.95rem 1rem;
+  border-radius: 13px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: transform 0.1s ease, border-color 0.3s ease;
+}
+
+.CyberRunner__touchBtn:active {
+  transform: scale(0.97);
+}
+
+.CyberRunner__touchBtn--jump {
+  background: var(--theme-surface);
+  border: 1.5px solid var(--theme-primary);
+  color: #ffffff;
+  box-shadow: 0 4px 16px var(--theme-glow);
+}
+
+.CyberRunner__touchBtn--duck {
+  background: linear-gradient(135deg, rgba(255, 191, 0, 0.2), rgba(244, 88, 31, 0.18));
+  border: 1.5px solid rgba(255, 191, 0, 0.55);
+  color: #ffe082;
+}
+
+.CyberRunner__keyboardLegend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.35rem;
+  font-size: 0.83rem;
+  color: #9ab5d6;
+}
+
+.CyberRunner__keyboardLegend kbd,
+.CyberRunner__overlayCard kbd {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+
+/* Discovered Worlds Strip */
+.CyberRunner__worldsCard {
+  background: var(--theme-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  transition: background 0.4s ease;
+}
+
+.CyberRunner__worldsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.65rem;
+}
+
+.CyberRunner__worldChip {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  transition: all 0.25s ease;
+}
+
+.CyberRunner__worldChip.is-locked {
+  opacity: 0.48;
+}
+
+.CyberRunner__worldChip.is-unlocked {
+  border-color: var(--chip-color);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.CyberRunner__worldChip.is-current {
+  border-width: 2px;
+  border-color: var(--chip-color);
+  box-shadow: 0 0 16px var(--theme-glow);
+  transform: translateY(-2px);
+}
+
+.CyberRunner__worldChipTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  font-family: monospace;
+}
+
+.CyberRunner__worldLvl {
+  font-weight: 800;
+  color: var(--chip-color);
+}
+
+.CyberRunner__worldPts {
+  color: #8aa3c6;
+}
+
+.CyberRunner__worldChip strong {
+  font-size: 0.83rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.CyberRunner__worldChip small {
+  font-size: 0.7rem;
+  color: #9ab5d6;
+  font-family: monospace;
+}
+
+/* Bottom Stats & Badges Grid */
+.CyberRunner__bottomGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.15rem;
+}
+
+.CyberRunner__panel {
+  background: var(--theme-surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: background 0.4s ease;
+}
+
+.CyberRunner__panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.CyberRunner__panelHeader h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+}
+
+.CyberRunner__panelIconGold {
+  color: #FFC107;
+}
+
+.CyberRunner__panelIconCyan {
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__gamesCount {
+  font-size: 0.78rem;
+  padding: 0.22rem 0.68rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--theme-secondary);
+  font-weight: 600;
+}
+
+.CyberRunner__emptyText {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #8aa3c6;
+  line-height: 1.5;
+}
+
+.CyberRunner__runsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.CyberRunner__runItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.CyberRunner__runRank {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ab5d6;
+}
+
+.CyberRunner__runRank--1 {
+  background: rgba(255, 193, 7, 0.22);
+  color: #FFC107;
+  border: 1px solid rgba(255, 193, 7, 0.45);
+}
+
+.CyberRunner__runRank--2 {
+  background: rgba(192, 192, 192, 0.2);
+  color: #e0e0e0;
+}
+
+.CyberRunner__runRank--3 {
+  background: rgba(205, 127, 50, 0.22);
+  color: #ffb74d;
+}
+
+.CyberRunner__runInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.CyberRunner__runInfo strong {
+  font-size: 0.95rem;
+  color: #ffffff;
+  font-family: monospace;
+}
+
+.CyberRunner__runInfo span {
+  font-size: 0.76rem;
+  color: #9ab5d6;
+}
+
+.CyberRunner__runDate {
+  font-size: 0.76rem;
+  color: #6e85a3;
+}
+
+.CyberRunner__lifetimeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.CyberRunner__lifetimeRow span {
+  display: block;
+  font-size: 0.72rem;
+  color: #8aa3c6;
+}
+
+.CyberRunner__lifetimeRow strong {
+  font-size: 0.98rem;
+  color: #eaf2ff;
+  font-family: monospace;
+}
+
+.CyberRunner__resetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 91, 31, 0.35);
+  background: rgba(255, 91, 31, 0.1);
+  color: #ff9e80;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.CyberRunner__resetBtn:hover {
+  background: rgba(255, 91, 31, 0.22);
+}
+
+.CyberRunner__confirmReset {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.CyberRunner__confirmYes {
+  padding: 0.38rem 0.65rem;
+  border-radius: 7px;
+  border: none;
+  background: #ff5b1f;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.CyberRunner__confirmNo {
+  padding: 0.38rem 0.65rem;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #bfe0ff;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* Badges List */
+.CyberRunner__badgesList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.CyberRunner__badgeItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.52rem 0.75rem;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: opacity 0.2s ease;
+}
+
+.CyberRunner__badgeItem.is-locked {
+  opacity: 0.5;
+}
+
+.CyberRunner__badgeItem.is-unlocked {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--theme-primary);
+}
+
+.CyberRunner__badgeDot {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.CyberRunner__badgeText {
+  flex: 1;
+}
+
+.CyberRunner__badgeTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.CyberRunner__badgeTitleRow strong {
+  font-size: 0.88rem;
+  color: #ffffff;
+}
+
+.CyberRunner__badgeTarget {
+  font-size: 0.74rem;
+  font-family: monospace;
+  color: var(--theme-secondary);
+}
+
+.CyberRunner__badgeText p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: #9ab5d6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .CyberRunner__worldsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .CyberRunner__hudGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .CyberRunner__worldsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .CyberRunner__bottomGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .CyberRunner__stageWrap {
+    min-height: 260px;
+    aspect-ratio: 16 / 9;
+  }
+
+  .CyberRunner__keyboardLegend {
+    display: none;
+  }
+}
