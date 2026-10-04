@@ -16,6 +16,7 @@
     "send-certificate-emails": "node scripts/sendCertificateEmails.mjs",
     "send-single-certificate-email": "node scripts/sendSingleCertificateEmail.mjs",
     "test-announcement-email": "node scripts/sendLatestAnnouncementTestEmail.mjs",
+    "send-brainsmingle-emails": "node scripts/sendBrainsMingleEmails.mjs",
     "test-announcement-email-progress": "node scripts/testAnnouncementEmailJobProgress.js",
     "test-create-team-flow": "node scripts/testCompetitionCreateTeamFlow.mjs",
     "patch:season-schema": "node scripts/patchSeasonSchema.js",
