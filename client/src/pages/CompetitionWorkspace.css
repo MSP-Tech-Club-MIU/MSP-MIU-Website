@@ -291,12 +291,20 @@
 }
 
 .CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar-thumb {
-    background: rgba(3, 169, 244, .35);
-    border-radius: 999px;
+    background: rgba(74, 166, 255, 0.22);
+    border-radius: 3px;
+}
+
+.CompetitionWorkspace__taskQuizBriefingScroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 166, 255, 0.4);
 }
 
 .CompetitionWorkspace__taskQuizBriefingBlock {

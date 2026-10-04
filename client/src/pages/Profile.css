@@ -555,23 +555,27 @@ select.detail-input option {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.schedule-display::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.schedule-display::-webkit-scrollbar,
+.schedule-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.schedule-display::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+.schedule-display::-webkit-scrollbar-track,
+.schedule-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
 }
 
-.schedule-display::-webkit-scrollbar-thumb {
-  background: rgba(3, 169, 244, 0.5);
-  border-radius: 4px;
+.schedule-display::-webkit-scrollbar-thumb,
+.schedule-content::-webkit-scrollbar-thumb {
+  background: rgba(74, 166, 255, 0.25);
+  border-radius: 3px;
 }
 
-.schedule-display::-webkit-scrollbar-thumb:hover {
-  background: rgba(3, 169, 244, 0.7);
+.schedule-display::-webkit-scrollbar-thumb:hover,
+.schedule-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(74, 166, 255, 0.45);
 }
 
 /* Loading State */
