@@ -1,5 +1,5 @@
 const { QueryTypes, Op } = require('sequelize');
-const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Team, sequelize } = require('../models');
+const { Competition, Event, Attendance, Application, Member, Board, User, Department, Suggestion, EventFeedback, Feedback, Course, CourseLesson, Team, sequelize } = require('../models');
 const { ensureQuizForCompetition } = require('../utils/ensureQuizForCompetition');
 const AdminNotification = require('../models/AdminNotification');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
@@ -1003,17 +1003,176 @@ const deleteSuggestion = async (req, res) => {
     }
 };
 
+/**
+ * Unified feedback viewer for admin: courses, lessons, events, competitions, and general.
+ * GET /api/admin/feedbacks
+ */
+const getAdminFeedbacks = async (req, res) => {
+    try {
+        const { page, limit, offset } = parsePagination(req.query);
+        const { target_type, target_id, rating, search, startDate, endDate } = req.query;
+
+        const where = {};
+        if (target_type && target_type !== 'all') {
+            where.target_type = String(target_type).toLowerCase();
+        }
+        if (target_id) {
+            const parsedId = parseInt(target_id, 10);
+            if (!isNaN(parsedId)) where.target_id = parsedId;
+        }
+        if (rating) {
+            const parsedRating = parseInt(rating, 10);
+            if (!isNaN(parsedRating) && parsedRating >= 1 && parsedRating <= 5) {
+                where.rating = parsedRating;
+            }
+        }
+        if (startDate || endDate) {
+            where.created_at = {};
+            if (startDate) where.created_at[Op.gte] = new Date(startDate);
+            if (endDate) where.created_at[Op.lte] = new Date(endDate);
+        }
+        if (search && String(search).trim()) {
+            const term = `%${String(search).trim()}%`;
+            where[Op.or] = [
+                { feedback: { [Op.like]: term } },
+                { positives: { [Op.like]: term } },
+                { negatives: { [Op.like]: term } },
+                { name: { [Op.like]: term } },
+                { email: { [Op.like]: term } }
+            ];
+        }
+
+        const { rows: feedbacks, count: total } = await Feedback.findAndCountAll({
+            where,
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['user_id', 'full_name', 'email', 'username'],
+                    required: false
+                },
+                {
+                    model: Course,
+                    as: 'course',
+                    attributes: ['course_id', 'title'],
+                    required: false
+                },
+                {
+                    model: Event,
+                    as: 'event',
+                    attributes: ['event_id', 'name'],
+                    required: false
+                },
+                {
+                    model: CourseLesson,
+                    as: 'lesson',
+                    attributes: ['lesson_id', 'title', 'course_id'],
+                    required: false,
+                    include: [
+                        {
+                            model: Course,
+                            as: 'course',
+                            attributes: ['course_id', 'title'],
+                            required: false
+                        }
+                    ]
+                },
+                {
+                    model: Competition,
+                    as: 'competition',
+                    attributes: ['competition_id', 'title'],
+                    required: false
+                }
+            ],
+            order: [['created_at', 'DESC']],
+            limit,
+            offset,
+            distinct: true
+        });
+
+        res.json({
+            success: true,
+            data: feedbacks,
+            count: feedbacks.length,
+            pagination: paginationMeta({ page, limit, total })
+        });
+    } catch (error) {
+        logger.error('Error fetching admin feedbacks:', error);
+        res.status(500).json({ success: false, error: error.message || 'Failed to fetch feedbacks' });
+    }
+};
+
+/**
+ * Performance and analytics for activities and feedback.
+ * GET /api/admin/feedbacks/stats
+ */
+const getAdminFeedbackStats = async (req, res) => {
+    try {
+        const feedbacks = await Feedback.findAll({
+            attributes: ['feedback_id', 'target_type', 'target_id', 'rating', 'positives', 'negatives', 'created_at']
+        });
+
+        const totalCount = feedbacks.length;
+        const rated = feedbacks.filter((f) => f.rating != null && f.rating >= 1 && f.rating <= 5);
+        const overallAverageRating = rated.length > 0 
+            ? Number((rated.reduce((a, b) => a + b.rating, 0) / rated.length).toFixed(1))
+            : null;
+
+        const byType = {};
+        for (const type of ['general', 'course', 'event', 'lesson', 'competition']) {
+            const items = feedbacks.filter((f) => f.target_type === type);
+            const ratedItems = items.filter((f) => f.rating != null && f.rating >= 1 && f.rating <= 5);
+            byType[type] = {
+                count: items.length,
+                avgRating: ratedItems.length > 0 
+                    ? Number((ratedItems.reduce((a, b) => a + b.rating, 0) / ratedItems.length).toFixed(1))
+                    : null
+            };
+        }
+
+        const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+        for (const f of rated) {
+            ratingDistribution[f.rating] = (ratingDistribution[f.rating] || 0) + 1;
+        }
+
+        const countsWithPositives = feedbacks.filter((f) => f.positives && f.positives.trim()).length;
+        const countsWithNegatives = feedbacks.filter((f) => f.negatives && f.negatives.trim()).length;
+
+        res.json({
+            success: true,
+            data: {
+                totalCount,
+                ratedCount: rated.length,
+                overallAverageRating,
+                byType,
+                ratingDistribution,
+                countsWithPositives,
+                countsWithNegatives
+            }
+        });
+    } catch (error) {
+        logger.error('Error fetching admin feedback stats:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch feedback stats' });
+    }
+};
+
 const deleteAdminFeedback = async (req, res) => {
     try {
         const { id } = req.params;
-        const feedback = await EventFeedback.findByPk(id);
+        const feedback = await Feedback.findByPk(id);
         if (!feedback) {
+            const legacy = await EventFeedback.findByPk(id);
+            if (legacy) {
+                await legacy.destroy();
+                await logAdminAction('feedback_deleted', `Deleted legacy event feedback #${id}`, req, 'feedback', id);
+                return res.json({ success: true, message: 'Feedback deleted' });
+            }
             return res.status(404).json({ success: false, error: 'Feedback not found' });
         }
         await feedback.destroy();
         await logAdminAction(
             'feedback_deleted',
-            `Deleted event feedback #${id}`,
+            `Deleted activity feedback #${id} (${feedback.target_type})`,
             req,
             'feedback',
             id
@@ -1508,6 +1667,8 @@ module.exports = {
     getNotifications,
     getSuggestions,
     getEventFeedbackAll,
+    getAdminFeedbacks,
+    getAdminFeedbackStats,
     deleteSuggestion,
     deleteAdminFeedback,
     getCompetitionTeams,

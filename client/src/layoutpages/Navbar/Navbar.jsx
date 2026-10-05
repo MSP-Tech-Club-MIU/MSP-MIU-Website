@@ -183,7 +183,7 @@ const Navbar = memo(() => {
       { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
-      { to: '/suggestions', label: 'Suggestions', icon: <MdFeedback /> },
+      { to: '/suggestions', label: 'Suggestions / Feedback', icon: <MdFeedback /> },
       { to: '/game', label: 'Cyber Runner', icon: <FaGamepad /> },
     ];
     if (!isCapacitor()) {

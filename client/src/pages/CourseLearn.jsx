@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom';
-import { FiDownload, FiCheckCircle, FiVideo } from 'react-icons/fi';
+import { FiDownload, FiCheckCircle, FiVideo, FiStar, FiMessageSquare } from 'react-icons/fi';
+import FeedbackModal from '../components/FeedbackModal';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
@@ -27,6 +28,7 @@ export default function CourseLearn() {
   const [completedIds, setCompletedIds] = useState([]);
   const [marking, setMarking] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [lessonFeedbackOpen, setLessonFeedbackOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -257,21 +259,31 @@ export default function CourseLearn() {
                   </div>
                 ) : null}
 
-                {completedIds.includes(activeLesson.lesson_id) ? (
-                  <p className="CourseDetails__formMsg">
-                    <FiCheckCircle style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                    Lesson completed
-                  </p>
-                ) : (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+                  {completedIds.includes(activeLesson.lesson_id) ? (
+                    <p className="CourseDetails__formMsg" style={{ margin: 0 }}>
+                      <FiCheckCircle style={{ verticalAlign: 'middle', marginRight: 6 }} />
+                      Lesson completed
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      className="CourseDetails__completeBtn"
+                      onClick={markComplete}
+                      disabled={marking}
+                    >
+                      {marking ? 'Saving…' : 'Mark lesson complete'}
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="CourseDetails__completeBtn"
-                    onClick={markComplete}
-                    disabled={marking}
+                    className="CourseDetails__ctaBtn CourseDetails__ctaBtn--outline"
+                    style={{ padding: '8px 16px', fontSize: '0.88rem' }}
+                    onClick={() => setLessonFeedbackOpen(true)}
                   >
-                    {marking ? 'Saving…' : 'Mark lesson complete'}
+                    <FiStar style={{ color: '#ffc107', marginRight: 6 }} /> Rate this Lesson
                   </button>
-                )}
+                </div>
                 {actionError ? (
                   <p className="CourseDetails__formMsg CourseDetails__formMsg--error">{actionError}</p>
                 ) : null}
@@ -282,6 +294,18 @@ export default function CourseLearn() {
           </section>
         </div>
       </div>
+
+      {/* Lesson Feedback Modal */}
+      {lessonFeedbackOpen && activeLesson && (
+        <FeedbackModal
+          isOpen={lessonFeedbackOpen}
+          onClose={() => setLessonFeedbackOpen(false)}
+          targetType="lesson"
+          targetId={activeLesson.lesson_id}
+          courseId={courseId}
+          targetTitle={`${course.title} — ${activeLesson.title}`}
+        />
+      )}
     </div>
   );
 }

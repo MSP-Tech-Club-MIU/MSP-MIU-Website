@@ -154,6 +154,14 @@ const getAllEvents = async (req, res) => {
             };
         }
 
+        if (req.query.search && typeof req.query.search === 'string' && req.query.search.trim()) {
+            const term = `%${req.query.search.trim()}%`;
+            where[Op.or] = [
+                { name: { [Op.like]: term } },
+                { description: { [Op.like]: term } }
+            ];
+        }
+
         const include = [];
         if (seasonFilter.includeSeason) {
             include.push(seasonInclude());

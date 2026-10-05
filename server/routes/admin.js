@@ -16,6 +16,8 @@ const {
     getNotifications,
     getSuggestions,
     getEventFeedbackAll,
+    getAdminFeedbacks,
+    getAdminFeedbackStats,
     deleteSuggestion,
     deleteAdminFeedback,
     getCompetitionTeams,
@@ -150,6 +152,9 @@ router.get('/suggestions', fullAdmin, getSuggestions);
 router.delete('/suggestions/:id', fullAdmin, deleteSuggestion);
 router.get('/feedback', fullAdmin, getEventFeedbackAll);
 router.delete('/feedback/:id', fullAdmin, deleteAdminFeedback);
+router.get('/feedbacks', fullAdmin, getAdminFeedbacks);
+router.get('/feedbacks/stats', fullAdmin, getAdminFeedbackStats);
+router.delete('/feedbacks/:id', fullAdmin, deleteAdminFeedback);
 
 // Blacklist management — full admin only
 router.get('/blacklist', fullAdmin, getBlacklistEntries);

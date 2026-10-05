@@ -22,6 +22,7 @@ import { useModal } from '../context/ModalContext';
 import PageLoader from '../components/PageLoader';
 import BackButton from '../components/BackButton';
 import SEO from '../components/SEO';
+import FeedbackModal from '../components/FeedbackModal';
 
 import mspLogo from '../assets/Images/msp-logo.png';
 
@@ -33,8 +34,6 @@ const EventDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [files, setFiles] = useState([]);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -192,46 +191,6 @@ const EventDetails = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const handleSubmitFeedback = async (e) => {
-    e.preventDefault();
-    if (!feedbackText.trim()) {
-      await modalAlert({
-        title: 'Feedback Required',
-        message: 'Please enter your feedback before submitting.',
-        type: 'warning'
-      });
-      return;
-    }
-    if (feedbackText.trim().length > 2000) {
-      await modalAlert({
-        title: 'Feedback Too Long',
-        message: 'Feedback must be less than 2000 characters.',
-        type: 'warning'
-      });
-      return;
-    }
-
-    setIsSubmittingFeedback(true);
-    try {
-      await ApiService.addEventFeedback(event.event_id, feedbackText.trim());
-      setFeedbackText('');
-      await modalAlert({
-        title: 'Feedback Submitted',
-        message: 'Thank you for your feedback! It helps us improve our events.',
-        type: 'success'
-      });
-    } catch (err) {
-      console.error('Error submitting feedback:', err);
-      await modalAlert({
-        title: 'Submission Failed',
-        message: 'Failed to submit feedback: ' + (err.message || 'Unknown error'),
-        type: 'danger'
-      });
-    } finally {
-      setIsSubmittingFeedback(false);
-    }
   };
 
   if (loading) {
@@ -416,99 +375,12 @@ const EventDetails = () => {
               </div>
             )}
 
-            <div
-              style={{
-                marginTop: '1.5rem',
-                padding: '1.5rem',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              <h3
-                style={{
-                  margin: '0 0 1rem 0',
-                  fontSize: '1.2rem',
-                  color: '#8EC2F0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <FiMessageCircle />
-                Share Your Feedback
-              </h3>
-              <form onSubmit={handleSubmitFeedback}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <textarea
-                    value={feedbackText}
-                    onChange={(e) => setFeedbackText(e.target.value)}
-                    placeholder="What did you think about this event? Share your thoughts, suggestions, or experiences..."
-                    rows="4"
-                    maxLength={2000}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(142, 194, 240, 0.3)',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '0.95rem',
-                      fontFamily: 'inherit',
-                      resize: 'vertical',
-                      minHeight: '100px'
-                    }}
-                  />
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <span style={{ color: '#8EC2F0', fontSize: '0.85rem' }}>
-                      {feedbackText.length}/2000 characters
-                    </span>
-                    <motion.button
-                      type="submit"
-                      disabled={!feedbackText.trim() || isSubmittingFeedback}
-                      whileHover={{ scale: isSubmittingFeedback ? 1 : 1.02 }}
-                      whileTap={{ scale: isSubmittingFeedback ? 1 : 0.98 }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 1.5rem',
-                        background:
-                          feedbackText.trim() && !isSubmittingFeedback
-                            ? 'rgba(142, 194, 240, 0.2)'
-                            : 'rgba(255, 255, 255, 0.1)',
-                        color:
-                          feedbackText.trim() && !isSubmittingFeedback
-                            ? '#8EC2F0'
-                            : 'rgba(142, 194, 240, 0.5)',
-                        border: `1px solid ${
-                          feedbackText.trim() && !isSubmittingFeedback
-                            ? 'rgba(142, 194, 240, 0.3)'
-                            : 'rgba(142, 194, 240, 0.1)'
-                        }`,
-                        borderRadius: '8px',
-                        cursor:
-                          feedbackText.trim() && !isSubmittingFeedback
-                            ? 'pointer'
-                            : 'not-allowed',
-                        fontSize: '0.9rem',
-                        fontWeight: '500',
-                        opacity: feedbackText.trim() && !isSubmittingFeedback ? 1 : 0.6
-                      }}
-                    >
-                      <FiSend />
-                      {isSubmittingFeedback ? 'Submitting...' : 'Submit Feedback'}
-                    </motion.button>
-                  </div>
-                </div>
-              </form>
-            </div>
+            <FeedbackModal
+              isInline={true}
+              targetType="event"
+              targetId={event.event_id}
+              targetTitle={event.name}
+            />
 
             <div className="EventDetails__files">
               <div className="EventDetails__filesHeader">

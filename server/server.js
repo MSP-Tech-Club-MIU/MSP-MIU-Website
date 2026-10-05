@@ -29,6 +29,7 @@ router.use("/cloud", require("./routes/cloud"));
 router.use("/upload", require("./routes/upload"));
 router.use("/admin", require("./routes/admin")); // This line is for Admin Routes which are President, VP, Head of SWD
 router.use("/suggestions", require("./routes/suggestions"));
+router.use("/feedback", require("./routes/feedback"));
 router.use("/seasons", require("./routes/seasons"));
 router.use("/email-templates", require("./routes/emailTemplates"));
 router.use("/email", require("./routes/emailPreferences"));

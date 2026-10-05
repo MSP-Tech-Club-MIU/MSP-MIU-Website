@@ -1,0 +1,256 @@
+/* KPI Cards */
+.FeedbackAdminTab__kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.FeedbackAdminTab__kpiCard {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.FeedbackAdminTab__kpiCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #03a9f4;
+}
+
+.FeedbackAdminTab__kpiCard--rating::before {
+  background: #ffc107;
+}
+
+.FeedbackAdminTab__kpiCard--positives::before {
+  background: #4caf50;
+}
+
+.FeedbackAdminTab__kpiCard--negatives::before {
+  background: #ff9800;
+}
+
+.FeedbackAdminTab__kpiTitle {
+  font-size: 0.82rem;
+  color: #9cb8d9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.FeedbackAdminTab__kpiValue {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Category Breakdown Row */
+.FeedbackAdminTab__breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(142, 194, 240, 0.12);
+}
+
+.FeedbackAdminTab__breakdownPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  font-size: 0.8rem;
+  color: #c7defa;
+}
+
+.FeedbackAdminTab__breakdownRating {
+  color: #ffc107;
+  font-weight: 700;
+}
+
+/* Filter Controls Bar */
+.FeedbackAdminTab__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(142, 194, 240, 0.18);
+}
+
+.FeedbackAdminTab__select {
+  padding: 9px 14px;
+  background: rgba(16, 26, 46, 0.9);
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.FeedbackAdminTab__search {
+  flex: 1;
+  min-width: 220px;
+  padding: 9px 14px;
+  background: rgba(16, 26, 46, 0.9);
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.FeedbackAdminTab__search:focus,
+.FeedbackAdminTab__select:focus {
+  border-color: #03a9f4;
+}
+
+/* Badges */
+.FeedbackBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.FeedbackBadge--general {
+  background: rgba(0, 188, 212, 0.15);
+  color: #00e5ff;
+  border: 1px solid rgba(0, 188, 212, 0.3);
+}
+
+.FeedbackBadge--course {
+  background: rgba(33, 150, 243, 0.15);
+  color: #64b5f6;
+  border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.FeedbackBadge--lesson {
+  background: rgba(156, 39, 176, 0.15);
+  color: #ce93d8;
+  border: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+.FeedbackBadge--event {
+  background: rgba(0, 150, 136, 0.15);
+  color: #80cbc4;
+  border: 1px solid rgba(0, 150, 136, 0.3);
+}
+
+.FeedbackBadge--competition {
+  background: rgba(255, 152, 0, 0.15);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+/* Stars */
+.FeedbackAdminTab__stars {
+  color: #ffc107;
+  display: inline-flex;
+  gap: 2px;
+  font-size: 15px;
+}
+
+/* Snippet Previews */
+.FeedbackAdminTab__snippet {
+  max-width: 260px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.FeedbackAdminTab__snippet--pos {
+  color: #81c784;
+}
+
+.FeedbackAdminTab__snippet--neg {
+  color: #ffb74d;
+}
+
+/* Detail Modal */
+.FeedbackDetailModal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 11, 22, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.FeedbackDetailModal__card {
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(145deg, #101a2e, #09101e);
+  border: 1px solid rgba(142, 194, 240, 0.3);
+  border-radius: 16px;
+  padding: 28px;
+  position: relative;
+  color: #eaf2ff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.FeedbackDetailModal__section {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(142, 194, 240, 0.15);
+}
+
+.FeedbackDetailModal__section--pos {
+  border-color: rgba(76, 175, 80, 0.35);
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.FeedbackDetailModal__section--neg {
+  border-color: rgba(255, 152, 0, 0.35);
+  background: rgba(255, 152, 0, 0.05);
+}
+
+.FeedbackDetailModal__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.FeedbackDetailModal__text {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #ffffff;
+  white-space: pre-wrap;
+  margin: 0;
+}

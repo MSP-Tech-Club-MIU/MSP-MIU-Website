@@ -94,6 +94,7 @@ export const Footer = memo(() => {
         <section className="Footer__meta" aria-labelledby="footer-meta-heading">
           <h3 id="footer-meta-heading" className="Footer__heading">Info</h3>
           <nav className="Footer__legal" aria-label="Legal and help">
+            <Link to="/suggestions" className="Footer__legalLink">Suggestions / Feedback</Link>
             <Link to="/links" className="Footer__legalLink">Quick Links</Link>
             <Link to="/privacy" className="Footer__legalLink">Privacy Policy</Link>
             <Link to="/faqs" className="Footer__legalLink">FAQs</Link>

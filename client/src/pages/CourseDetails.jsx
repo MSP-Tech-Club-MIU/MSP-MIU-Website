@@ -11,8 +11,11 @@ import {
   FiClock,
   FiCheck,
   FiMaximize2,
-  FiX
+  FiX,
+  FiStar,
+  FiMessageSquare
 } from 'react-icons/fi';
+import FeedbackModal from '../components/FeedbackModal';
 import SEO from '../components/SEO';
 import ApiService from '../services/api';
 import PageLoader from '../components/PageLoader';
@@ -43,6 +46,7 @@ export default function CourseDetails() {
   const [registeredAttendanceType, setRegisteredAttendanceType] = useState('');
   const [fetchingEnrollment, setFetchingEnrollment] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   useEffect(() => {
     const fromQuery = searchParams.get('token');
@@ -324,6 +328,24 @@ export default function CourseDetails() {
                   </div>
                 ) : null}
               </div>
+
+              {/* Course Feedback Card */}
+              <div className="CourseDetails__actionCard" style={{ marginTop: 18 }}>
+                <h3 className="CourseDetails__actionTitle" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <FiStar style={{ color: '#ffc107' }} /> Course Feedback
+                </h3>
+                <p className="CourseDetails__actionDesc">
+                  Taken this course? Help us point out the positives and areas for growth so we can track and boost our course quality.
+                </p>
+                <button
+                  type="button"
+                  className="CourseDetails__ctaBtn CourseDetails__ctaBtn--outline"
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  onClick={() => setFeedbackModalOpen(true)}
+                >
+                  <FiMessageSquare /> Leave Course Feedback
+                </button>
+              </div>
             </div>
           </aside>
         </div>
@@ -351,6 +373,17 @@ export default function CourseDetails() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Course Feedback Modal */}
+      {feedbackModalOpen && (
+        <FeedbackModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          targetType="course"
+          targetId={courseId}
+          targetTitle={course.title}
+        />
       )}
     </div>
   );
