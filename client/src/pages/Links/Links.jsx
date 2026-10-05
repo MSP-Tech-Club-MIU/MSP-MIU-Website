@@ -166,7 +166,7 @@ const SECONDARY_LINKS = [
   },
   {
     id: 'suggestions',
-    title: 'Suggestions & Feedback',
+    title: 'Suggestions / Feedback',
     description: 'Share feedback, suggest workshop topics, or reach out to organizers.',
     url: '/suggestions',
     isExternal: false,

@@ -1,0 +1,325 @@
+.FeedbackModal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 11, 22, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.FeedbackModal__card {
+  width: 100%;
+  max-width: 620px;
+  background: linear-gradient(145deg, rgba(16, 26, 46, 0.95), rgba(9, 16, 30, 0.98));
+  border: 1px solid rgba(142, 194, 240, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(3, 169, 244, 0.15);
+  padding: 28px;
+  position: relative;
+  color: #eaf2ff;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.FeedbackModal__card--inline {
+  max-width: 100%;
+  margin: 24px 0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.FeedbackModal__close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #a3c2e6;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.FeedbackModal__close:hover {
+  background: rgba(255, 80, 80, 0.2);
+  color: #ff8080;
+  border-color: rgba(255, 80, 80, 0.4);
+}
+
+.FeedbackModal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  background: rgba(3, 169, 244, 0.15);
+  color: #64b5f6;
+  border: 1px solid rgba(3, 169, 244, 0.3);
+}
+
+.FeedbackModal__title {
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.FeedbackModal__subtitle {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  color: #9cb8d9;
+  line-height: 1.45;
+}
+
+/* Rating Selector */
+.FeedbackModal__ratingSection {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(142, 194, 240, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.FeedbackModal__ratingLabel {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #b0cfee;
+  margin-bottom: 10px;
+}
+
+.FeedbackModal__stars {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.FeedbackModal__starBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 28px;
+  color: rgba(255, 255, 255, 0.2);
+  transition: transform 0.15s ease, color 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.FeedbackModal__starBtn:hover {
+  transform: scale(1.2);
+}
+
+.FeedbackModal__starBtn--active {
+  color: #ffc107;
+  filter: drop-shadow(0 0 6px rgba(255, 193, 7, 0.6));
+}
+
+.FeedbackModal__ratingText {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffca28;
+  min-height: 20px;
+}
+
+/* Form Fields */
+.FeedbackModal__group {
+  margin-bottom: 18px;
+}
+
+.FeedbackModal__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.FeedbackModal__label--positives {
+  color: #4caf50;
+}
+
+.FeedbackModal__label--negatives {
+  color: #ff9800;
+}
+
+.FeedbackModal__label--general {
+  color: #81d4fa;
+}
+
+.FeedbackModal__textarea,
+.FeedbackModal__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-family: inherit;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.FeedbackModal__textarea:focus,
+.FeedbackModal__input:focus {
+  outline: none;
+  border-color: #03a9f4;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.2);
+}
+
+.FeedbackModal__textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.FeedbackModal__charCount {
+  display: block;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #7b9bbd;
+  margin-top: 4px;
+}
+
+/* Row & Checkbox */
+.FeedbackModal__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .FeedbackModal__row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.FeedbackModal__checkboxContainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.FeedbackModal__checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #03a9f4;
+  cursor: pointer;
+}
+
+.FeedbackModal__checkboxLabel {
+  font-size: 0.88rem;
+  color: #c7defa;
+}
+
+/* Submit & Actions */
+.FeedbackModal__error {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.35);
+  color: #ff8a80;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.FeedbackModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.FeedbackModal__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.FeedbackModal__btn--cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #b0cfee;
+}
+
+.FeedbackModal__btn--cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.FeedbackModal__btn--submit {
+  background: linear-gradient(135deg, #0288d1, #00b0ff);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 176, 255, 0.3);
+}
+
+.FeedbackModal__btn--submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #039be5, #40c4ff);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 176, 255, 0.45);
+}
+
+.FeedbackModal__btn--submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success Card */
+.FeedbackModal__success {
+  text-align: center;
+  padding: 30px 15px;
+}
+
+.FeedbackModal__successIcon {
+  font-size: 60px;
+  color: #4caf50;
+  margin-bottom: 14px;
+  filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.5));
+}
+
+.FeedbackModal__successTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.FeedbackModal__successMsg {
+  font-size: 0.95rem;
+  color: #b5d5f5;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}

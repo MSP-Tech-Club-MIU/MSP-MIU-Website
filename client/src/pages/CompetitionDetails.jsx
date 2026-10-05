@@ -18,8 +18,11 @@ import {
   FiAlertCircle,
   FiFileText,
   FiUserPlus,
-  FiPlayCircle
+  FiPlayCircle,
+  FiStar,
+  FiMessageSquare
 } from 'react-icons/fi';
+import FeedbackModal from '../components/FeedbackModal';
 
 const CompetitionDetails = () => {
   const { id } = useParams();
@@ -31,6 +34,7 @@ const CompetitionDetails = () => {
   const [userId, setUserId] = useState(null);
   const [userTeam, setUserTeam] = useState(null);
   const [taskQuizMarksGate, setTaskQuizMarksGate] = useState(null);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   // Check user role and fetch competition
   useEffect(() => {
@@ -656,7 +660,44 @@ const CompetitionDetails = () => {
             </div>
           ) : null}
         </motion.div>
+
+        {/* Competition Feedback Section */}
+        <motion.div
+          className="CompetitionDetailsPage__section"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          style={{ marginTop: 24 }}
+        >
+          <div className="CompetitionDetailsPage__sectionHeader" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <FiStar size={24} style={{ color: '#ffc107' }} />
+              <h2>Competition Feedback &amp; Experience</h2>
+            </div>
+            <button
+              type="button"
+              className="CompetitionDetailsPage__btn CompetitionDetailsPage__btn--secondary"
+              onClick={() => setFeedbackModalOpen(true)}
+            >
+              <FiMessageSquare style={{ marginRight: 6 }} /> Rate &amp; Give Feedback
+            </button>
+          </div>
+          <p style={{ color: '#9cb8d9', fontSize: '0.92rem', margin: '8px 0 0' }}>
+            Participated in or followed this competition? Help us track our performance by highlighting what went well and where we can improve.
+          </p>
+        </motion.div>
       </div>
+
+      {/* Competition Feedback Modal */}
+      {feedbackModalOpen && (
+        <FeedbackModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
+          targetType="competition"
+          targetId={competition?.competition_id}
+          targetTitle={competition?.title}
+        />
+      )}
     </section>
   );
 };

@@ -36,6 +36,7 @@ const MOUNT_TAG = {
   "/upload": "Upload",
   "/admin": "Admin",
   "/suggestions": "Suggestions",
+  "/feedback": "Feedback",
   "/seasons": "Seasons",
   "/email-templates": "EmailTemplates",
   "/android-app": "AndroidApp",

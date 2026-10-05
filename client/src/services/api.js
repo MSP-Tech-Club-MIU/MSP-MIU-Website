@@ -606,6 +606,7 @@ class ApiService {
       if (filters.upcoming) queryParams.append('upcoming', filters.upcoming);
       if (filters.past) queryParams.append('past', filters.past);
       if (filters.sort) queryParams.append('sort', filters.sort);
+      if (filters.search) queryParams.append('search', filters.search);
       if (filters.no_fallback) queryParams.append('no_fallback', String(filters.no_fallback));
       appendPaginationParams(queryParams, filters);
       appendSeasonParams(queryParams, filters);
@@ -614,7 +615,7 @@ class ApiService {
       const url = `${API_BASE_URL}/events${queryString ? `?${queryString}` : ''}`;
 
       const cacheKey = getCacheKey(url, filters);
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = (!filters.search && !filters.no_cache) ? getCachedData(cacheKey) : null;
 
       if (cachedData) {
         console.log('Returning cached events data');
@@ -1654,6 +1655,44 @@ class ApiService {
     }
   }
 
+  /** Public activity / general feedback form — auth optional. */
+  static async submitFeedback(payload) {
+    try {
+      const includeAuth = this.isAuthenticated();
+      const response = await fetch(`${API_BASE_URL}/feedback`, {
+        method: 'POST',
+        headers: this.getHeaders(includeAuth),
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit feedback');
+      }
+      return result;
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      throw error;
+    }
+  }
+
+  /** Public feedback ratings & count summary */
+  static async getFeedbackSummary(targetType, targetId) {
+    try {
+      const qs = new URLSearchParams({ target_type: targetType });
+      if (targetId) qs.append('target_id', targetId);
+      const response = await fetch(`${API_BASE_URL}/feedback/summary?${qs.toString()}`);
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch feedback summary');
+      }
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching feedback summary:', error);
+      throw error;
+    }
+  }
+
   // Delete feedback (admin/board only)
   static async deleteEventFeedback(eventId, feedbackId) {
     try {
@@ -2419,6 +2458,9 @@ class ApiService {
 
       if (filters.status) {
         queryParams.append('status', filters.status);
+      }
+      if (filters.search) {
+        queryParams.append('search', filters.search);
       }
       appendPaginationParams(queryParams, filters);
       appendSeasonParams(queryParams, filters);
@@ -3776,6 +3818,78 @@ class ApiService {
       return result;
     } catch (error) {
       console.error('Error fetching admin feedback:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all activity feedbacks with rich filtering (admin)
+   */
+  static async getAdminFeedbacks(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      appendPaginationParams(queryParams, filters);
+      if (filters.target_type && filters.target_type !== 'all') {
+        queryParams.append('target_type', filters.target_type);
+      }
+      if (filters.rating) {
+        queryParams.append('rating', filters.rating);
+      }
+      if (filters.search) {
+        queryParams.append('search', filters.search);
+      }
+      if (filters.target_id) {
+        queryParams.append('target_id', filters.target_id);
+      }
+      const qs = queryParams.toString();
+      const response = await fetch(
+        `${API_BASE_URL}/admin/feedbacks${qs ? `?${qs}` : ''}`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch feedbacks');
+      return result;
+    } catch (error) {
+      console.error('Error fetching admin feedbacks:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get feedback analytics and performance stats (admin)
+   */
+  static async getAdminFeedbackStats() {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/admin/feedbacks/stats`,
+        {
+          method: 'GET',
+          headers: this.getHeaders(true),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to fetch feedback stats');
+      return result.data || result;
+    } catch (error) {
+      console.error('Error fetching admin feedback stats:', error);
+      throw error;
+    }
+  }
+
+  static async deleteAdminFeedbackRecord(id) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/feedbacks/${id}`, {
+        method: 'DELETE',
+        headers: this.getHeaders(true),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to delete feedback');
+      return result;
+    } catch (error) {
+      console.error('Error deleting admin feedback:', error);
       throw error;
     }
   }

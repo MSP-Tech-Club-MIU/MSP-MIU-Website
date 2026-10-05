@@ -8,7 +8,7 @@ import {
     MdPeople, MdEvent, MdPendingActions, MdDescription,
     MdTrendingUp, MdCalendarToday, MdCalendarMonth, MdCampaign, MdFeedback, MdPerson, MdSettings,
     MdBusiness, MdGroups, MdPermMedia, MdArticle, MdEmail, MdPhoneAndroid, MdAccountTree, MdMenuBook,
-    MdBugReport, MdSend, MdBlock, MdTrackChanges
+    MdBugReport, MdSend, MdBlock, MdTrackChanges, MdRateReview
 } from 'react-icons/md';
 import { FiDownload } from 'react-icons/fi';
 import ApiService from '../../services/api';
@@ -23,6 +23,7 @@ import RegistrationsTab from './RegistrationsTab';
 import SponsorsAdminTab from './SponsorsAdminTab';
 import BoardAdminTab from './BoardAdminTab';
 import DepartmentsAdminTab from './DepartmentsAdminTab';
+import FeedbackAdminTab from './FeedbackAdminTab';
 import MediaAdminTab from './MediaAdminTab';
 import SiteContentAdminTab from './SiteContentAdminTab';
 import MembersAdminTab from './MembersAdminTab';
@@ -264,10 +265,12 @@ const AdminPanel = () => {
         { key: 'notifications', label: 'Notifications', icon: <MdNotifications />, category: 'Communications' },
         { key: 'announcements', label: 'Announcements', icon: <MdCampaign />, category: 'Communications' },
         { key: 'suggestions', label: 'Suggestions', icon: <MdFeedback />, category: 'Communications' },
+        { key: 'feedback', label: 'Activity Feedback', icon: <MdRateReview />, category: 'Communications' },
     ], []);
 
     const registrationsOnlyNav = useMemo(() => [
         { key: 'registrations', label: 'Registrations', icon: <MdAppRegistration />, category: 'Programs' },
+        { key: 'feedback', label: 'Feedback', icon: <MdRateReview />, category: 'Programs' },
     ], []);
 
     const programsOnlyNav = useMemo(() => [
@@ -1782,6 +1785,13 @@ const AdminPanel = () => {
                                     document.body
                                 )
                                 : null}
+                        </motion.div>
+                    )}
+
+                    {/* === ACTIVITY FEEDBACK & PERFORMANCE === */}
+                    {activeTab === 'feedback' && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <FeedbackAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 

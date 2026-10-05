@@ -190,6 +190,8 @@ const AppRouter = () => {
           <Route path="/quizpage/:quizId/take/:step" element={<SiteLayout><QuizTakeSession /></SiteLayout>} />
           <Route path="/accept-team-invitation" element={<AcceptTeamInvitation />} />
           <Route path="/suggestions" element={<SiteLayout><Suggestions /></SiteLayout>} />
+          <Route path="/feedback" element={<Navigate to="/suggestions" replace />} />
+          <Route path="/suggestions-feedback" element={<Navigate to="/suggestions" replace />} />
           <Route path="/leaderboard" element={<SiteLayout><Leaderboard /></SiteLayout>} />
           <Route path="/sponsors" element={<SiteLayout><Sponsors /></SiteLayout>} />
           <Route path="/registration-admin" element={<Navigate to="/admin/registrations" replace />} />

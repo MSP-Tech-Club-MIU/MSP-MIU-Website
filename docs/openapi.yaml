@@ -56,6 +56,8 @@ tags:
   -
     name: Suggestions
   -
+    name: Feedback
+  -
     name: Seasons
   -
     name: EmailTemplates
@@ -700,6 +702,46 @@ paths:
       responses:
         '200':
           description: Deleted
+  /admin/feedbacks:
+    get:
+      summary: 'Get /admin/feedbacks'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
+  '/admin/feedbacks/{id}':
+    delete:
+      summary: 'Delete /admin/feedbacks/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  /admin/feedbacks/stats:
+    get:
+      summary: 'Get /admin/feedbacks/stats'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Admin
+      security:
+        -
+          bearerAuth: []
   /admin/logs:
     get:
       summary: 'Get /admin/logs'
@@ -3389,6 +3431,22 @@ paths:
       responses:
         '201':
           description: Created
+  /feedback:
+    post:
+      summary: 'Create/submit /feedback'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Feedback
+  /feedback/summary:
+    get:
+      summary: 'Get /feedback/summary'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Feedback
   /members:
     get:
       tags:

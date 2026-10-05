@@ -8,6 +8,7 @@ const Session = require('./Session');
 const Attendance = require('./Attendance');
 const Event = require('./Event');
 const EventFeedback = require('./EventFeedback');
+const Feedback = require('./Feedback');
 const User = require('./User');
 const PasswordToken = require('./PasswordToken');
 const Leaderboard = require('./Leaderboard');
@@ -55,6 +56,7 @@ const models = {
   Attendance,
   Event,
   EventFeedback,
+  Feedback,
   User,
   PasswordToken,
   Leaderboard,
@@ -150,6 +152,43 @@ EventFeedback.belongsTo(Event, {
 Event.hasMany(EventFeedback, {
   foreignKey: 'event_id',
   as: 'feedbacks'
+});
+
+// Activity Feedback associations
+Feedback.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user',
+  constraints: false
+});
+User.hasMany(Feedback, {
+  foreignKey: 'user_id',
+  as: 'feedbacks',
+  constraints: false
+});
+Feedback.belongsTo(Event, {
+  foreignKey: 'target_id',
+  as: 'event',
+  constraints: false
+});
+Feedback.belongsTo(Course, {
+  foreignKey: 'target_id',
+  as: 'course',
+  constraints: false
+});
+Feedback.belongsTo(CourseLesson, {
+  foreignKey: 'target_id',
+  as: 'lesson',
+  constraints: false
+});
+Feedback.belongsTo(Competition, {
+  foreignKey: 'target_id',
+  as: 'competition',
+  constraints: false
+});
+Feedback.belongsTo(Course, {
+  foreignKey: 'course_id',
+  as: 'lessonCourse',
+  constraints: false
 });
 
 // User associations

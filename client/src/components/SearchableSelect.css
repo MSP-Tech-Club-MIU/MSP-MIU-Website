@@ -1,0 +1,390 @@
+.SearchableSelect {
+  position: relative;
+  width: 100%;
+  font-family: inherit;
+}
+
+.SearchableSelect__label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #a8c5e0;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+
+/* Trigger Button */
+.SearchableSelect__trigger {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(15, 30, 52, 0.75);
+  border: 1px solid rgba(0, 229, 255, 0.22);
+  border-radius: 12px;
+  padding: 10px 16px;
+  color: #f0f7ff;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  text-align: left;
+}
+
+.SearchableSelect__trigger:hover {
+  background: rgba(20, 39, 68, 0.85);
+  border-color: rgba(0, 229, 255, 0.45);
+  box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+}
+
+.SearchableSelect--open .SearchableSelect__trigger {
+  border-color: #00e5ff;
+  background: rgba(18, 38, 66, 0.95);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.22);
+}
+
+.SearchableSelect__triggerContent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.SearchableSelect__triggerIcon {
+  color: #00e5ff;
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.SearchableSelect__triggerValue {
+  color: #ffffff;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.SearchableSelect__triggerValue--placeholder {
+  color: #8da4c4;
+  font-weight: 400;
+}
+
+.SearchableSelect__chevron {
+  color: #79a6d2;
+  font-size: 1.15rem;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.SearchableSelect__chevron--flipped {
+  transform: rotate(180deg);
+  color: #00e5ff;
+}
+
+/* Popover Panel */
+.SearchableSelect__popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: rgba(11, 22, 38, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(0, 229, 255, 0.12);
+  overflow: hidden;
+  animation: SearchableSelectFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes SearchableSelectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search Header */
+.SearchableSelect__searchBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(18, 35, 60, 0.65);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.SearchableSelect__searchIcon {
+  color: #00e5ff;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.SearchableSelect__searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 500;
+  outline: none;
+  font-family: inherit;
+}
+
+.SearchableSelect__searchInput::placeholder {
+  color: #6d8ba8;
+}
+
+.SearchableSelect__clearBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #a0c0e0;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.82rem;
+  transition: all 0.2s ease;
+}
+
+.SearchableSelect__clearBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Meta status bar */
+.SearchableSelect__metaBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6e8fae;
+  background: rgba(8, 16, 28, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.SearchableSelect__searchingIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #00e5ff;
+}
+
+/* Options List Container */
+.SearchableSelect__optionsList {
+  max-height: 270px;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.SearchableSelect__optionsList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.SearchableSelect__optionsList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.SearchableSelect__optionsList::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.25);
+  border-radius: 3px;
+}
+
+.SearchableSelect__optionsList::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.5);
+}
+
+/* Single Option */
+.SearchableSelect__option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  color: #d8e8f8;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.18s ease, color 0.18s ease;
+  font-family: inherit;
+}
+
+.SearchableSelect__option:hover {
+  background: rgba(0, 229, 255, 0.08);
+  color: #ffffff;
+}
+
+.SearchableSelect__option--selected {
+  background: rgba(0, 229, 255, 0.14) !important;
+  color: #00e5ff !important;
+  font-weight: 600;
+}
+
+.SearchableSelect__optionInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.SearchableSelect__optionTitle {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.SearchableSelect__optionSubtitle {
+  font-size: 0.76rem;
+  color: #7b9cb8;
+  letter-spacing: 0.02em;
+}
+
+.SearchableSelect__checkIcon {
+  color: #00e5ff;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+/* State messages */
+.SearchableSelect__stateMessage {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #8da4c4;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.SearchableSelect__resetSearchBtn {
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  color: #00e5ff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.SearchableSelect__resetSearchBtn:hover {
+  background: rgba(0, 229, 255, 0.24);
+}
+
+/* Load More */
+.SearchableSelect__loadMoreWrapper {
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(8, 16, 28, 0.3);
+}
+
+.SearchableSelect__loadMoreBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(0, 229, 255, 0.08);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: #9eefff;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.SearchableSelect__loadMoreBtn:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.18);
+  color: #ffffff;
+  border-color: rgba(0, 229, 255, 0.4);
+}
+
+.SearchableSelect__loadMoreBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner Animation */
+.SearchableSelect__spinner {
+  animation: SearchableSelectSpin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes SearchableSelectSpin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Disabled */
+.SearchableSelect--disabled .SearchableSelect__trigger {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading Skeleton */
+.SearchableSelect__loadingSkeleton {
+  padding: 6px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.SearchableSelect__skeletonItem {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.SearchableSelect__skeletonBar {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(0, 229, 255, 0.14) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: SearchableSelectShimmer 1.4s infinite ease-in-out;
+}
+
+@keyframes SearchableSelectShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+

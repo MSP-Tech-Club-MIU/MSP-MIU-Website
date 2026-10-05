@@ -56,7 +56,7 @@ function coerceIsTeamBased(value, defaultValue = true) {
  */
 const getAllCompetitions = async (req, res) => {
     try {
-        const { status } = req.query;
+        const { status, search } = req.query;
         const userRole = req.user?.role; // From JWT if authenticated
         const { page, limit, offset } = parsePagination(req.query);
         const seasonFilter = await resolveSeasonFilter(req.query);
@@ -82,6 +82,12 @@ const getAllCompetitions = async (req, res) => {
         } else if (status) {
             sqlWhere = 'competitions.status = ?';
             replacements.push(status);
+        }
+
+        if (search && typeof search === 'string' && search.trim()) {
+            sqlWhere += ' AND (competitions.title LIKE ? OR competitions.description LIKE ?)';
+            const searchPattern = `%${search.trim()}%`;
+            replacements.push(searchPattern, searchPattern);
         }
 
         if (seasonFilter.where.season_id != null) {
