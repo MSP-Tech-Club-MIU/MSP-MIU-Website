@@ -16,7 +16,6 @@ import './Board/Board.css';
 import img5 from '../assets/Images/card.jpg';
 import vpPhoto from '../assets/Images/VP H.png';
 import PW from '../assets/Images/Mo-Wael President.png';
-import Founder from '../assets/Images/Founder Photo.png';
 import CoHeadM1 from '../assets/Images/Co Head Joseph.png';
 import HeadHR from '../assets/Images/SalmaHR.png';
 import CoHeadH1 from '../assets/Images/RawaaHR.png';
@@ -25,7 +24,6 @@ import CoHeadPR2 from '../assets/Images/Yousef-AbdelaalPR.png';
 
 /** Legacy fallback if the board API has no visible members yet. */
 const FALLBACK_BOARD = [
-  { id: 1, name: 'Mahmoud Mamdouh', role: 'Founder', department: 9, image: Founder },
   { id: 2, name: 'Mohamed Wael', role: 'President', department: 8, image: PW },
   { id: 3, name: 'Mohamed Hesham', role: 'Vice President', department: 7, image: vpPhoto },
   { id: 4, name: 'Ahmed Mostafa', role: 'Software Development Head', department: 1, image: img5 },
@@ -50,7 +48,7 @@ const FALLBACK_BOARD = [
   { id: 23, name: 'Habiba Aglan', role: 'Event Planning Co-Head', department: 6 },
 ];
 
-const ROLE_ORDER = { Founder: 1, President: 2, 'Vice President': 3 };
+const ROLE_ORDER = { President: 1, 'Vice President': 2 };
 const LEADERSHIP_NAMES = ['Founder', 'President', 'Vice President', 'Competitor'];
 
 function findDeptId(depts, name, fallbackId) {
@@ -69,8 +67,7 @@ function mapApiMember(row, leadershipIds) {
   }
 
   let department = row.department_id;
-  if (position === 'Founder') department = leadershipIds.founder;
-  else if (position === 'President') department = leadershipIds.president;
+  if (position === 'President') department = leadershipIds.president;
   else if (position === 'Vice President') department = leadershipIds.vicePresident;
 
   return {
@@ -91,15 +88,12 @@ function mapApiMember(row, leadershipIds) {
 const Board = memo(() => {
   const { seasonFilters, isAll } = useSeason();
   const [departments, setDepartments] = useState(FALLBACK_DEPARTMENTS);
-  const [selectedDepartment, setSelectedDepartment] = useState(
-    () => FALLBACK_DEPARTMENTS.find((d) => !LEADERSHIP_NAMES.includes(d.name))?.id ?? 1
-  );
+  const [selectedDepartment, setSelectedDepartment] = useState('president-vp');
   const [boardMembers, setBoardMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const leadershipIds = useMemo(
     () => ({
-      founder: findDeptId(departments, 'Founder', 9),
       president: findDeptId(departments, 'President', 8),
       vicePresident: findDeptId(departments, 'Vice President', 7),
     }),
@@ -108,9 +102,10 @@ const Board = memo(() => {
 
   const deptOrder = useMemo(
     () => ({
-      [leadershipIds.founder]: 1,
-      [leadershipIds.president]: 2,
-      [leadershipIds.vicePresident]: 3,
+      president: 1,
+      'vice president': 2,
+      [leadershipIds.president]: 1,
+      [leadershipIds.vicePresident]: 2,
     }),
     [leadershipIds]
   );
@@ -125,10 +120,11 @@ const Board = memo(() => {
           const mapped = rows.map((d) => ({ id: d.department_id, name: d.name }));
           setDepartments(mapped);
 
-          // Keep current selection if it still exists; otherwise pick first operational dept
+          // Keep current selection if it still exists; otherwise keep president-vp or pick first operational dept
           setSelectedDepartment((prev) => {
-            if (mapped.some((d) => d.id === prev) || prev === 'president-vp') return prev;
-            return mapped.find((d) => !LEADERSHIP_NAMES.includes(d.name))?.id ?? mapped[0]?.id ?? prev;
+            if (prev === 'president-vp') return prev;
+            if (mapped.some((d) => d.id === prev)) return prev;
+            return 'president-vp';
           });
         }
       } catch {
@@ -147,7 +143,13 @@ const Board = memo(() => {
         setLoading(true);
         const result = await ApiService.getBoard({ limit: 100, page: 1, ...seasonFilters });
         const rows = Array.isArray(result?.data) ? result.data : [];
-        const mapped = rows.map((row) => mapApiMember(row, leadershipIds));
+        const nonFounderRows = rows.filter(
+          (row) =>
+            row.position !== 'Founder' &&
+            row.department?.name !== 'Founder' &&
+            row.role !== 'Founder'
+        );
+        const mapped = nonFounderRows.map((row) => mapApiMember(row, leadershipIds));
         if (!cancelled) {
           setBoardMembers(mapped.length > 0 ? mapped : FALLBACK_BOARD);
         }
@@ -169,7 +171,9 @@ const Board = memo(() => {
         members = boardMembers.filter(
           (m) =>
             m.department === leadershipIds.president ||
-            m.department === leadershipIds.vicePresident
+            m.department === leadershipIds.vicePresident ||
+            m.role === 'President' ||
+            m.role === 'Vice President'
         );
       } else {
         members = boardMembers.filter((m) => m.department === selectedDepartment);
@@ -182,7 +186,7 @@ const Board = memo(() => {
       if (!groups[deptId]) groups[deptId] = { heads: [], coHeads: [] };
 
       const role = member.role.toLowerCase();
-      const isSpecial = ['founder', 'president', 'vice president'].includes(member.role.toLowerCase());
+      const isSpecial = ['president', 'vice president'].includes(role);
       const isHead = role.includes('head') && !role.includes('co-head');
 
       if (isHead || isSpecial) {

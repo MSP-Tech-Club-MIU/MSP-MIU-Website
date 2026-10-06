@@ -16,21 +16,81 @@ const DEFAULTS = {
   },
   about: {
     pageTitle: 'About MSP Tech Club',
+    badge: 'Student-Led Innovation Community · Founded in 2025 at MIU',
     subtitle:
-      'MSP Tech Club is a student-led innovation community powered by the Microsoft Learn Student Ambassadors program. We explore cutting-edge technologies, build real projects, and develop technical & leadership excellence together.',
+      'MSP Tech Club was founded in 2025 at Misr International University, officially powered by the Microsoft Learn Student Ambassadors program. We empower future engineers, innovators, and leaders to master emerging technologies, build real-world products, and compete in continuous hands-on challenges.',
     mission:
-      'To inspire and equip students with the knowledge, tools, and opportunities to innovate and make an impact through technology.',
+      'To inspire, educate, and equip students with hands-on engineering capabilities, modern toolsets, and mentorship needed to innovate and make a lasting impact through technology.',
     vision:
-      'A thriving community of future tech leaders driving digital transformation through creativity, collaboration, and continuous learning.',
-    values: 'Innovation · Growth · Collaboration · Inclusion · Excellence',
+      'A thriving university community of future tech pioneers driving digital transformation through relentless curiosity, open collaboration, and continuous learning.',
+    values: 'Innovation · Technical Mastery · Collaborative Spirit · Inclusivity · Leadership',
     meaningTitle: 'What MSP Stands For',
     meaningBody:
-      'MSP stands for Microsoft Student Partners — now known as Microsoft Learn Student Ambassadors. We bring Microsoft technologies and a global community to campus while building local impact at MIU.',
+      'MSP stands for Microsoft Student Partners — now known as Microsoft Learn Student Ambassadors (MLSA). Founded at MIU in 2025, our club connects passionate student technologists with industry-grade tools, mentors, and pathways to impact through hands-on bootcamps, continuous hackathons, open project incubation, and community solution building.',
     focusChips: [
-      'Program Alignment',
-      'Emerging Tech Labs',
-      'Community & Mentorship',
-      'Excellence & Impact'
+      'Microsoft Learn Alignment',
+      'Agentic AI & Emerging Tech',
+      'Cybersecurity & CTF',
+      'Full-Stack Software Engineering',
+      'Competitive Programming',
+      'Student Leadership & Mentorship'
+    ],
+    stats: [
+      { id: 'attendees', value: '240+', label: 'Verified Attendances', desc: 'Logged across technical sessions & campus workshops' },
+      { id: 'members', value: '90+', label: 'Active Committee Members', desc: 'Across 8 engineering & operational departments' },
+      { id: 'enrollments', value: '90+', label: 'Bootcamp Enrollments', desc: 'In Cybersecurity & ECPC Competitive Programming' },
+      { id: 'teams', value: '15+', label: 'Competition Teams', desc: 'Formed & mentored across continuous seasonal challenges' }
+    ],
+    milestones: [
+      {
+        year: 'Late 2025',
+        title: 'Chapter Founding & Launch',
+        body: 'Established at Misr International University under the Microsoft Learn Student Ambassadors program. Kicked off Season 25/26 with our Opening Session and packed web engineering series with 180+ session attendees.'
+      },
+      {
+        year: 'Early 2026',
+        title: 'Security Masterclasses & CTF Debut',
+        body: 'Expanded hands-on training with Encryption, Deception & Decryption, and launched our 1st Capture The Flag (CTF) tournament and multi-team Software Development Competitions.'
+      },
+      {
+        year: 'Mid 2026',
+        title: 'Custom Digital Platform Launch',
+        body: 'Our Software Development team designed and engineered our full-stack in-house digital ecosystem—powering attendance verification, quizzes, competitions, and mobile apps.'
+      },
+      {
+        year: '2026 - 2027',
+        title: 'Agentic AI & Continuous Challenges',
+        body: 'Entering Season 26/27 with cutting-edge Agentic AI workshops, advanced Cloud labs, and continuous evolving seasonal competitions across all departments.'
+      }
+    ],
+    realHighlights: [
+      {
+        category: 'Recent Workshops & Sessions',
+        items: [
+          'CSS – The Art of Styling (64 Attendees)',
+          'Git & GitHub in Practice (51 Attendees)',
+          'JavaScript Fundamentals (46 Attendees)',
+          'Encryption, Deception & Decryption (16 Attendees)',
+          'Intro to Agentic AI (Emerging Tech)'
+        ]
+      },
+      {
+        category: 'Continuous Competitions',
+        items: [
+          'Software Development Competition (11 Teams, 25 Participants)',
+          'Capture The Flag (CTF) 1st Edition (Security Exploitation)',
+          'Front-End Web Development Task & Quiz Sprint',
+          'Microsoft Imagine Cup Mentorship & Project Incubation'
+        ]
+      },
+      {
+        category: 'Bootcamps & Courses',
+        items: [
+          'Cybersecurity Bootcamp (58 Enrollments)',
+          'ECPC Level 1 Competitive Programming (33 Enrollments)',
+          'Web Engineering Practical Sprints'
+        ]
+      }
     ]
   },
   footer: {

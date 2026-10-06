@@ -1,10 +1,32 @@
 import { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDrag } from 'react-use-gesture';
-import { FaHome, FaSignInAlt, FaCalendarAlt, FaUsers, FaUser, FaTimes, FaUserPlus, FaAndroid, FaChevronDown, FaHandshake, FaGamepad } from 'react-icons/fa';
-import { MdGroups, MdEmojiEvents, MdFeedback, MdMenuBook } from 'react-icons/md';
+import {
+  FaHome,
+  FaCalendarAlt,
+  FaUsers,
+  FaUser,
+  FaTimes,
+  FaUserPlus,
+  FaSignInAlt,
+  FaSignOutAlt,
+  FaAndroid,
+  FaChevronDown,
+  FaHandshake,
+  FaGamepad,
+  FaTrophy,
+  FaClipboardCheck,
+} from 'react-icons/fa';
+import {
+  MdGroups,
+  MdEmojiEvents,
+  MdFeedback,
+  MdMenuBook,
+  MdDashboard,
+  MdOutlineAdminPanelSettings,
+} from 'react-icons/md';
 import './Navbar.css';
 import ApiService from '../../services/api';
 import AndroidBackButtonHandler from '../../components/AndroidBackButtonHandler';
@@ -24,87 +46,117 @@ const Navbar = memo(() => {
   const [isAndroidDevice, setIsAndroidDevice] = useState(false);
   const [statusBarHeight, setStatusBarHeight] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+
   const moreWrapRef = useRef(null);
   const moreMegaRef = useRef(null);
-  const location = useLocation();
+  const profileWrapRef = useRef(null);
+  const profileMenuRef = useRef(null);
 
-  // Check authentication status and handle token expiration
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Authentication check: run on mount, tab focus, and storage event
   useEffect(() => {
-    const checkAuth = async () => {
-      // Check if token exists and is valid (not expired)
+    let isMounted = true;
+
+    const checkAuth = async (forceRefresh = false) => {
       const isAuth = ApiService.isAuthenticated();
+      if (!isMounted) return;
       setIsAuthenticated(isAuth);
-      
-      // If authenticated, fetch user profile to get role
+
       if (isAuth) {
-        try {
-          const userData = await ApiService.getProfile();
-          setUser(userData);
-        } catch (error) {
-          // If profile fetch fails, user might not be authenticated
-          setIsAuthenticated(false);
-          setUser(null);
+        if (forceRefresh || !user) {
+          try {
+            const userData = await ApiService.getProfile();
+            if (isMounted) {
+              setUser(userData);
+            }
+          } catch (error) {
+            if (isMounted) {
+              setIsAuthenticated(false);
+              setUser(null);
+            }
+          }
         }
       } else {
-        setUser(null);
+        if (isMounted) {
+          setUser(null);
+        }
       }
     };
-    
+
     checkAuth();
-    
-    // Check on focus (when user returns to tab)
+
+    // Check when user returns to tab
     const handleFocus = () => {
-      checkAuth().catch(() => {
-        // Silently handle errors
-      });
-    };
-    
-    // Check on storage change (token removed in another tab)
-    const handleStorageChange = (e) => {
-      if (e.key === 'authToken') {
-        checkAuth().catch(() => {
-          // Silently handle errors
-        });
+      const currentTokenState = ApiService.isAuthenticated();
+      if (currentTokenState !== isAuthenticated) {
+        checkAuth(true);
       }
     };
-    
-    // Periodic check for token expiration (every 30 seconds)
+
+    // Storage event for multi-tab synchronization or explicit logout
+    const handleStorageChange = (e) => {
+      if (!e || e.key === 'authToken' || e.type === 'storage') {
+        checkAuth(true);
+      }
+    };
+
+    // Periodic token expiration check (every 45s)
     const intervalId = setInterval(() => {
-      checkAuth().catch(() => {
-        // Silently handle errors in interval
-      });
-    }, 30000);
-    
+      if (ApiService.isAuthenticated()) {
+        if (ApiService.isTokenExpired && ApiService.isTokenExpired()) {
+          checkAuth(true);
+        }
+      } else if (isAuthenticated) {
+        checkAuth(true);
+      }
+    }, 45000);
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
+      isMounted = false;
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(intervalId);
     };
-  }, [location.pathname]);
+  }, [isAuthenticated, user]);
 
-  // Check if running on Android device and detect status bar height
+  // Sync auth state if token state changes during route transition
+  useEffect(() => {
+    const hasToken = ApiService.isAuthenticated();
+    if (hasToken !== isAuthenticated) {
+      setIsAuthenticated(hasToken);
+      if (hasToken) {
+        ApiService.getProfile()
+          .then((data) => setUser(data))
+          .catch(() => {
+            setIsAuthenticated(false);
+            setUser(null);
+          });
+      } else {
+        setUser(null);
+      }
+    }
+  }, [location.pathname, isAuthenticated]);
+
+  // Android Capacitor safe-area detection
   useEffect(() => {
     const android = isAndroid();
     setIsAndroidDevice(android);
-    
+
     if (android) {
       const getStatusBarHeight = () => {
-        // Method 1: Check visual viewport vs window height difference
-        // This detects if status bar is taking up space
         if (window.visualViewport) {
           const diff = window.innerHeight - window.visualViewport.height;
-          // Status bar is typically 24-48px, so use this if it's in a reasonable range
           if (diff > 0 && diff < 100) {
             return diff;
           }
         }
-        
-        // Method 2: Check if we can detect safe-area-inset via CSS custom property
-        // Try to read it from a test element
         try {
           const testEl = document.createElement('div');
           testEl.style.cssText = 'position:fixed;top:0;left:-9999px;padding-top:env(safe-area-inset-top,0px);';
@@ -113,38 +165,27 @@ const Navbar = memo(() => {
           const paddingTop = computed.paddingTop;
           const value = parseFloat(paddingTop);
           document.body.removeChild(testEl);
-          
-          if (value > 0) {
-            return value;
-          }
+          if (value > 0) return value;
         } catch (e) {
-          // Ignore errors
+          // Ignore
         }
-        
-        // No status bar detected
         return 0;
       };
-      
-      // Set initial status bar height after a small delay to ensure viewport is ready
+
       const checkHeight = () => {
         const height = getStatusBarHeight();
         setStatusBarHeight(height);
       };
-      
-      // Check immediately and after a short delay
+
       checkHeight();
       const timeoutId = setTimeout(checkHeight, 100);
-      
-      // Re-check on resize/orientation change
-      const handleResize = () => {
-        checkHeight();
-      };
-      
+
+      const handleResize = () => checkHeight();
       window.addEventListener('resize', handleResize);
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', handleResize);
       }
-      
+
       return () => {
         clearTimeout(timeoutId);
         window.removeEventListener('resize', handleResize);
@@ -155,32 +196,79 @@ const Navbar = memo(() => {
     }
   }, []);
 
-  useEffect(() => { 
-    document.body.style.overflow = mobileOpen ? 'hidden' : ''; 
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [mobileOpen]);
 
+  // Throttled scroll listener
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 20;
+          setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
 
   const closeMobile = useCallback(() => {
     setMobileOpen(false);
   }, []);
-  
+
+  // Logout handler
+  const handleLogout = useCallback(async () => {
+    setProfileOpen(false);
+    setMobileOpen(false);
+    try {
+      await ApiService.logout();
+    } catch (err) {
+      console.error('Logout failed:', err);
+      ApiService.removeAuthToken();
+    }
+    setIsAuthenticated(false);
+    setUser(null);
+    window.dispatchEvent(new Event('storage'));
+    navigate('/');
+  }, [navigate]);
+
+  // Role resolution
+  const userRole = user?.role?.toLowerCase();
+  const deptRaw = user?.department_id;
+  const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+  const isAdminOrBoard = Boolean(
+    userRole === 'board' ||
+    userRole === 'admin' ||
+    (!Number.isNaN(deptId) && deptId === 5)
+  );
+
+  const roleLabel = useMemo(() => {
+    if (userRole === 'board') return 'Board Member';
+    if (userRole === 'admin') return 'Admin';
+    if (userRole === 'instructor') return 'Instructor';
+    if (userRole === 'judge') return 'Judge';
+    return 'Member';
+  }, [userRole]);
+
+  // Navigation items definition (Leaderboard intentionally excluded)
   const navSections = useMemo(() => {
     const primary = [
       { to: '/', label: 'Home', icon: <FaHome /> },
+      { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
       { to: '/courses', label: 'Courses', icon: <MdMenuBook /> },
       { to: '/competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
     ];
     const extended = [
-      { to: '/about', label: 'About Us', icon: <MdGroups /> },
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
       { to: '/suggestions', label: 'Suggestions / Feedback', icon: <MdFeedback /> },
@@ -189,25 +277,18 @@ const Navbar = memo(() => {
     if (!isCapacitor()) {
       extended.push({ to: '/download-android', label: 'Download App', icon: <FaAndroid /> });
     }
-    if (!isAuthenticated) {
-      extended.push({ to: '/become-member', label: 'Become a Member', icon: <FaUserPlus /> });
-    }
-    const account = [];
-    if (isAuthenticated) {
-      account.push({ to: '/profile', label: 'Profile', icon: <FaUser />, isProfile: true });
-    } else {
-      account.push({ to: '/login', label: 'Login', icon: <FaSignInAlt /> });
-    }
-    return { primary, extended, account };
-  }, [isAuthenticated]);
+    return { primary, extended };
+  }, []);
 
   const extendedHasActive = useMemo(
     () => navSections.extended.some((l) => pathMatchesNavTarget(location.pathname, l.to)),
     [navSections.extended, location.pathname]
   );
 
+  // Close menus on navigation
   useEffect(() => {
     setMoreOpen(false);
+    setProfileOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -216,171 +297,82 @@ const Navbar = memo(() => {
     }
   }, [extendedHasActive]);
 
+  // Click-outside listener for desktop dropdowns
   useEffect(() => {
-    if (!moreOpen) return;
+    if (!moreOpen && !profileOpen) return;
     const onPointerDown = (e) => {
-      const inTrigger = moreWrapRef.current?.contains(e.target);
-      const inMega = moreMegaRef.current?.contains(e.target);
-      if (!inTrigger && !inMega) {
-        setMoreOpen(false);
+      if (moreOpen) {
+        const inTrigger = moreWrapRef.current?.contains(e.target);
+        const inMega = moreMegaRef.current?.contains(e.target);
+        if (!inTrigger && !inMega) {
+          setMoreOpen(false);
+        }
+      }
+      if (profileOpen) {
+        const inProfileWrap = profileWrapRef.current?.contains(e.target);
+        const inProfileMenu = profileMenuRef.current?.contains(e.target);
+        if (!inProfileWrap && !inProfileMenu) {
+          setProfileOpen(false);
+        }
       }
     };
     document.addEventListener('mousedown', onPointerDown);
     return () => document.removeEventListener('mousedown', onPointerDown);
-  }, [moreOpen]);
+  }, [moreOpen, profileOpen]);
 
+  // Close desktop menus on viewport resize
   useEffect(() => {
     const onResize = () => {
-      if (typeof window !== 'undefined' && window.innerWidth <= 1180 && moreOpen) {
-        setMoreOpen(false);
+      if (typeof window !== 'undefined' && window.innerWidth <= 1180) {
+        if (moreOpen) setMoreOpen(false);
+        if (profileOpen) setProfileOpen(false);
       }
     };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [moreOpen]);
+  }, [moreOpen, profileOpen]);
 
+  // Keyboard accessibility: Escape key closes menus
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key !== 'Escape') return;
       if (mobileOpen) closeMobile();
       else if (moreOpen) setMoreOpen(false);
+      else if (profileOpen) setProfileOpen(false);
     };
-    if (mobileOpen || moreOpen) {
+    if (mobileOpen || moreOpen || profileOpen) {
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [mobileOpen, moreOpen, closeMobile]);
+  }, [mobileOpen, moreOpen, profileOpen, closeMobile]);
 
-  const renderDesktopItem = (l) => (
-    <li key={l.to}>
-      <NavLink
-        to={l.to}
-        className={({ isActive }) =>
-          `NavItem ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavItem--profile-only' : ''}`
-        }
-      >
-        <span className={`NavItem__icon ${l.isProfile ? 'NavItem__icon--profile' : ''}`}>
-          {l.isProfile ? (
-            <>
-              {user?.profile_picture_url ? (
-                <img
-                  src={user.profile_picture_url}
-                  alt="Profile"
-                  className="NavItem__profile-picture"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const fallback = e.target.parentElement.querySelector('.NavItem__profile-fallback');
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <span
-                className="NavItem__profile-fallback"
-                style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
-              >
-                <FaUser />
-              </span>
-            </>
-          ) : (
-            l.icon
-          )}
-        </span>
-        {!l.isProfile && <span className="NavItem__label">{l.label}</span>}
-      </NavLink>
-    </li>
-  );
-
-  const renderDrawerItem = (l) => (
-    <li key={l.to}>
-      <NavLink
-        to={l.to}
-        onClick={(e) => {
-          e.stopPropagation();
-          closeMobile();
-        }}
-        className={({ isActive }) =>
-          `NavDrawer__link ${isActive ? 'is-active' : ''} ${l.isProfile ? 'NavDrawer__link--profile-only' : ''}`
-        }
-        end
-      >
-        <span className={`NavDrawer__icon ${l.isProfile ? 'NavDrawer__icon--profile' : ''}`}>
-          {l.isProfile ? (
-            <>
-              {user?.profile_picture_url ? (
-                <img
-                  src={user.profile_picture_url}
-                  alt="Profile"
-                  className="NavDrawer__profile-picture"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    const fallback = e.target.parentElement.querySelector('.NavDrawer__profile-fallback');
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-              ) : null}
-              <span
-                className="NavDrawer__profile-fallback"
-                style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
-              >
-                <FaUser />
-              </span>
-            </>
-          ) : (
-            l.icon
-          )}
-        </span>
-        {!l.isProfile && <span className="NavDrawer__label">{l.label}</span>}
-      </NavLink>
-    </li>
-  );
-
-  // Swipe left gesture to open drawer (Android only) using react-use-gesture
-  const edgeThreshold = 30; // Px from the left edge to initiate a swipe
-  
-  const bindSwipeGesture = useDrag(
-    ({ swipe: [swipeX], first, initial: [ix, iy] }) => {
-      // Only enable swipe gesture on Android
-      if (!isAndroid()) {
-        return;
-      }
-
-      // Only handle if drawer is closed
-      if (mobileOpen) {
-        return;
-      }
-
-      // Check if swipe started from the left edge
-      if (first && ix > edgeThreshold) {
-        return; // Don't start tracking if not from edge
-      }
-
-      // Handle swipe left gesture
-      if (swipeX === -1) {
-        // Swipe left detected - open drawer
-        setMobileOpen(true);
+  // Swipe-to-close gesture on mobile drawer
+  const bindDrawerCloseGesture = useDrag(
+    ({ swipe: [swipeX] }) => {
+      if (swipeX === 1) {
+        closeMobile();
       }
     },
     {
-      // Only detect horizontal swipes
       axis: 'x',
-      // Only trigger on swipe left (negative direction)
-      swipeDistance: [50, 50],
-      swipeVelocity: [0.5, 0.5],
-      // Filter to only allow swipes from left edge
+      swipeVelocity: [0.3, 0.3],
       filterTaps: true,
-      // Prevent conflicts with vertical gestures (pull-to-refresh)
-      threshold: 10,
-      // Only enable on Android
-      enabled: isAndroid() && !mobileOpen,
+      enabled: mobileOpen,
     }
   );
 
   return (
-    <header 
-      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${moreOpen ? 'Navbar--megaOpen' : ''} ${isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''}`}
+    <header
+      className={`Navbar ${scrolled ? 'Navbar--scrolled' : ''} ${moreOpen ? 'Navbar--megaOpen' : ''} ${
+        isAndroidDevice && statusBarHeight > 0 ? 'Navbar--android' : ''
+      }`}
       style={isAndroidDevice && statusBarHeight > 0 ? { paddingTop: `${statusBarHeight}px` } : {}}
-      {...bindSwipeGesture()}
-    >      
+    >
+      {/* Accessible Skip Link */}
+      <a href="#main-content" className="Navbar__skipLink">
+        Skip to content
+      </a>
+
       <div className="Navbar__inner">
         <NavLink to="/" className="Navbar__brand" aria-label="MSP Home">
           <img
@@ -392,49 +384,261 @@ const Navbar = memo(() => {
           <div className="Navbar__logoMark">MSP</div>
           <div className="Navbar__logoText">Tech Club</div>
         </NavLink>
-        <ul className="Navbar__links">
-          {navSections.primary.map((l) => (
-            <li key={l.to}>
-              <NavLink
-                to={l.to}
-                className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''}`}
-              >
-                <span className="NavItem__icon">{l.icon}</span>
-                <span className="NavItem__label">{l.label}</span>
-              </NavLink>
-            </li>
-          ))}
-          {navSections.extended.length > 0 && (
-            <li className="Navbar__moreWrap" ref={moreWrapRef}>
+
+        {/* Center: Navigation Links */}
+        <nav className="Navbar__center" aria-label="Main Navigation">
+          <ul className="Navbar__links">
+            {navSections.primary.map((l) => (
+              <li key={l.to}>
+                <NavLink
+                  to={l.to}
+                  end={l.to === '/'}
+                  className={({ isActive }) => `NavItem ${isActive ? 'is-active' : ''}`}
+                >
+                  <span className="NavItem__icon">{l.icon}</span>
+                  <span className="NavItem__label">{l.label}</span>
+                </NavLink>
+              </li>
+            ))}
+
+            {/* Desktop "More" Dropdown Trigger */}
+            {navSections.extended.length > 0 && (
+              <li className="Navbar__moreWrap" ref={moreWrapRef}>
+                <button
+                  type="button"
+                  className={`NavItem NavItem--more ${moreOpen ? 'is-open' : ''} ${
+                    extendedHasActive ? 'has-active-child' : ''
+                  }`}
+                  aria-expanded={moreOpen}
+                  aria-haspopup="true"
+                  aria-controls="navbar-more-panel"
+                  id="navbar-more-trigger"
+                  onClick={() => setMoreOpen((o) => !o)}
+                >
+                  <span className="NavItem__icon NavItem__icon--chevron">
+                    <FaChevronDown />
+                  </span>
+                  <span className="NavItem__label">More</span>
+                </button>
+              </li>
+            )}
+          </ul>
+        </nav>
+
+        {/* Right: Auth / Profile Actions */}
+        <div className="Navbar__right">
+          {isAuthenticated ? (
+            <div className="Navbar__profileWrap" ref={profileWrapRef}>
               <button
                 type="button"
-                className={`NavItem NavItem--more ${moreOpen ? 'is-open' : ''} ${extendedHasActive ? 'has-active-child' : ''}`}
-                aria-expanded={moreOpen}
+                className={`Navbar__profileBtn ${profileOpen ? 'is-open' : ''}`}
+                onClick={() => setProfileOpen((o) => !o)}
+                aria-expanded={profileOpen}
                 aria-haspopup="true"
-                aria-controls="navbar-more-panel"
-                id="navbar-more-trigger"
-                onClick={() => setMoreOpen((o) => !o)}
+                aria-controls="navbar-profile-menu"
+                aria-label={`Account menu for ${user?.full_name || 'user'}`}
               >
-                <span className="NavItem__icon NavItem__icon--chevron">
+                <span className="Navbar__profileAvatar">
+                  {user?.profile_picture_url ? (
+                    <img
+                      src={user.profile_picture_url}
+                      alt={user?.full_name || 'Profile'}
+                      className="Navbar__avatarImg"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        const fallback = e.target.parentElement?.querySelector('.Navbar__avatarFallback');
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <span
+                    className="Navbar__avatarFallback"
+                    style={{ display: user?.profile_picture_url ? 'none' : 'flex' }}
+                    aria-hidden="true"
+                  >
+                    <FaUser />
+                  </span>
+                  <span className="Navbar__statusDot" />
+                </span>
+                <span className="Navbar__profileChevron">
                   <FaChevronDown />
                 </span>
-                <span className="NavItem__label">More</span>
               </button>
-            </li>
+
+              <AnimatePresence>
+                {profileOpen && (
+                  <motion.div
+                    ref={profileMenuRef}
+                    id="navbar-profile-menu"
+                    role="menu"
+                    aria-label="User Account Menu"
+                    className="Navbar__profileDropdown"
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    {/* User Header */}
+                    <div className="Navbar__profileHeader">
+                      <div className="Navbar__profileHeaderAvatar">
+                        {user?.profile_picture_url ? (
+                          <img
+                            src={user.profile_picture_url}
+                            alt=""
+                            className="Navbar__avatarImg"
+                          />
+                        ) : (
+                          <FaUser />
+                        )}
+                      </div>
+                      <div className="Navbar__profileHeaderMeta">
+                        <span className="Navbar__profileName" title={user?.full_name || 'Member'}>
+                          {user?.full_name || 'Member'}
+                        </span>
+                        {user?.email && (
+                          <span className="Navbar__profileEmail" title={user.email}>
+                            {user.email}
+                          </span>
+                        )}
+                        <span className={`Navbar__roleBadge Navbar__roleBadge--${userRole || 'member'}`}>
+                          {roleLabel}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="Navbar__profileDivider" />
+
+                    {/* Member Quick Links */}
+                    <div className="Navbar__profileGroup">
+                      <NavLink
+                        to="/profile"
+                        role="menuitem"
+                        className="Navbar__profileMenuItem"
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        <FaUser className="Navbar__profileItemIcon" />
+                        <span>My Profile</span>
+                      </NavLink>
+                      <NavLink
+                        to="/attendance-request"
+                        role="menuitem"
+                        className="Navbar__profileMenuItem"
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        <FaClipboardCheck className="Navbar__profileItemIcon" />
+                        <span>Attendance Request</span>
+                      </NavLink>
+                    </div>
+
+                    {/* Admin Shortcuts (Board / Admin only) */}
+                    {isAdminOrBoard && (
+                      <>
+                        <div className="Navbar__profileDivider" />
+                        <div className="Navbar__profileSectionTitle">Management</div>
+                        <div className="Navbar__profileGroup">
+                          <NavLink
+                            to="/admin"
+                            role="menuitem"
+                            className="Navbar__profileMenuItem Navbar__profileMenuItem--admin"
+                            onClick={() => setProfileOpen(false)}
+                          >
+                            <MdDashboard className="Navbar__profileItemIcon" />
+                            <span>Admin Panel</span>
+                          </NavLink>
+                          <NavLink
+                            to="/admin/competition-management"
+                            role="menuitem"
+                            className="Navbar__profileMenuItem Navbar__profileMenuItem--admin"
+                            onClick={() => setProfileOpen(false)}
+                          >
+                            <FaTrophy className="Navbar__profileItemIcon" />
+                            <span>Competition Manager</span>
+                          </NavLink>
+                          <NavLink
+                            to="/attendance-review"
+                            role="menuitem"
+                            className="Navbar__profileMenuItem Navbar__profileMenuItem--admin"
+                            onClick={() => setProfileOpen(false)}
+                          >
+                            <MdOutlineAdminPanelSettings className="Navbar__profileItemIcon" />
+                            <span>Review Attendance</span>
+                          </NavLink>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="Navbar__profileDivider" />
+
+                    {/* Logout Button */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="Navbar__profileMenuItem Navbar__profileMenuItem--logout"
+                      onClick={handleLogout}
+                    >
+                      <FaSignOutAlt className="Navbar__profileItemIcon" />
+                      <span>Log Out</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="Navbar__authActions">
+              <NavLink
+                to="/become-member"
+                className="NavItem NavItem--cta"
+                aria-label="Become a Member"
+              >
+                <span className="NavItem__icon"><FaUserPlus /></span>
+                <span className="NavItem__label">Become a Member</span>
+              </NavLink>
+              <NavLink
+                to="/login"
+                className="NavItem NavItem--login"
+                aria-label="Login"
+              >
+                <span className="NavItem__icon"><FaSignInAlt /></span>
+                <span className="NavItem__label">Login</span>
+              </NavLink>
+            </div>
           )}
-          {navSections.account.map((l) => renderDesktopItem(l))}
-        </ul>
-        <button 
-          className={`NavHamburger ${mobileOpen ? 'is-open' : ''}`} 
-          aria-label="Menu" 
-          aria-expanded={mobileOpen} 
-          onClick={() => setMobileOpen(o => !o)}
+        </div>
+
+        {/* Mobile Hamburger Toggle */}
+        <button
+          className={`NavHamburger ${mobileOpen ? 'is-open' : ''}`}
+          aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-nav-drawer"
+          onClick={() => setMobileOpen((o) => !o)}
         >
           <span />
           <span />
           <span />
         </button>
       </div>
+
+      {/* Desktop Mega Panel Backdrop Portal */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {moreOpen && navSections.extended.length > 0 && (
+              <motion.div
+                className="Navbar__megaBackdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                onClick={() => setMoreOpen(false)}
+                aria-hidden="true"
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Desktop Mega Panel */}
       <AnimatePresence>
         {moreOpen && navSections.extended.length > 0 && (
           <motion.div
@@ -448,12 +652,12 @@ const Navbar = memo(() => {
             exit={{
               opacity: 0,
               clipPath: 'inset(0 0 100% 0 round 0 0 14px 14px)',
-              transition: { duration: 0.36, ease: [0.4, 0, 0.2, 1] },
+              transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
             }}
             transition={{
-              duration: 0.56,
+              duration: 0.45,
               ease: [0.16, 1, 0.3, 1],
-              opacity: { duration: 0.42, ease: [0.16, 1, 0.3, 1] },
+              opacity: { duration: 0.35, ease: [0.16, 1, 0.3, 1] },
             }}
           >
             <motion.div
@@ -461,17 +665,17 @@ const Navbar = memo(() => {
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
-                duration: 0.5,
-                delay: 0.06,
+                duration: 0.4,
+                delay: 0.05,
                 ease: [0.16, 1, 0.3, 1],
               }}
             >
               <div className="Navbar__megaHeader">
                 <p className="Navbar__megaTitle" id="navbar-more-heading">
-                  Explore more
+                  Explore More
                 </p>
                 <p className="Navbar__megaSubtitle">
-                  Learn about the club, get the app, and access member tools
+                  Discover club activities, leadership, sponsors, and interactive tools
                 </p>
               </div>
               <ul className="Navbar__megaGrid">
@@ -494,110 +698,225 @@ const Navbar = memo(() => {
           </motion.div>
         )}
       </AnimatePresence>
-      {createPortal(
-        <AnimatePresence>
-          {mobileOpen && (
-            <>
-              <motion.div
-                className="NavOverlay"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={closeMobile}
-                aria-label="Close menu"
-              />
-              <motion.div
-                aria-label="Mobile navigation"
-                role="navigation"
-                className="NavDrawer"
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'tween', duration: 0.3 }}
-                onClick={(e) => {
-                  // Prevent clicks inside drawer from closing it
-                  e.stopPropagation();
-                }}
-              >
-                <button
-                  className="NavDrawer__close"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeMobile();
-                  }}
+
+      {/* Mobile Drawer (Portal) */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {mobileOpen && (
+              <>
+                <motion.div
+                  className="NavOverlay"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={closeMobile}
                   aria-label="Close menu"
+                />
+                <motion.div
+                  aria-label="Mobile navigation"
+                  role="dialog"
+                  aria-modal="true"
+                  id="mobile-nav-drawer"
+                  className="NavDrawer"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'tween', duration: 0.28 }}
+                  onClick={(e) => e.stopPropagation()}
+                  {...bindDrawerCloseGesture()}
                 >
-                  <FaTimes />
-                </button>
-                <ul className="NavDrawer__list">
-                  <li className="NavDrawer__sectionLabel">Browse</li>
-                  {navSections.primary.map((l) => (
-                    <li key={l.to}>
-                      <NavLink
-                        to={l.to}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          closeMobile();
-                        }}
-                        className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
-                        end={l.to === '/'}
-                      >
-                        <span className="NavDrawer__icon">{l.icon}</span>
-                        <span className="NavDrawer__label">{l.label}</span>
-                      </NavLink>
-                    </li>
-                  ))}
-                  {navSections.extended.length > 0 && (
-                    <>
-                      <li className="NavDrawer__sectionLabel NavDrawer__sectionLabel--spaced">About &amp; more</li>
-                      <li className="NavDrawer__expandRow">
+                  <div className="NavDrawer__topBar">
+                    <div className="NavDrawer__brandMini">
+                      <img src={mspLogo} alt="" height={30} width={38} />
+                      <span className="NavDrawer__brandName">MSP MIU</span>
+                    </div>
+                    <button
+                      className="NavDrawer__close"
+                      onClick={closeMobile}
+                      aria-label="Close menu"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+
+                  {/* Drawer User Card or Join Card */}
+                  {isAuthenticated ? (
+                    <div className="NavDrawer__userCard">
+                      <div className="NavDrawer__userCardTop">
+                        <div className="NavDrawer__userAvatar">
+                          {user?.profile_picture_url ? (
+                            <img src={user.profile_picture_url} alt="" />
+                          ) : (
+                            <FaUser />
+                          )}
+                        </div>
+                        <div className="NavDrawer__userMeta">
+                          <span className="NavDrawer__userName">{user?.full_name || 'Club Member'}</span>
+                          <span className={`NavDrawer__roleBadge NavDrawer__roleBadge--${userRole || 'member'}`}>
+                            {roleLabel}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="NavDrawer__userCardActions">
+                        <NavLink
+                          to="/profile"
+                          onClick={closeMobile}
+                          className="NavDrawer__userActionBtn"
+                        >
+                          <FaUser /> My Profile
+                        </NavLink>
                         <button
                           type="button"
-                          className={`NavDrawer__expandToggle ${mobileMoreOpen ? 'is-open' : ''}`}
-                          aria-expanded={mobileMoreOpen}
-                          onClick={() => setMobileMoreOpen((o) => !o)}
+                          onClick={handleLogout}
+                          className="NavDrawer__userActionBtn NavDrawer__userActionBtn--logout"
                         >
-                          <span className="NavDrawer__expandToggleLabel">
-                            {mobileMoreOpen ? 'Hide' : 'Show'} sections
-                          </span>
-                          <FaChevronDown className="NavDrawer__expandChevron" aria-hidden />
+                          <FaSignOutAlt /> Log Out
                         </button>
-                      </li>
-                      {mobileMoreOpen && (
-                        <li className="NavDrawer__extendedBlock">
-                          <ul className="NavDrawer__nestedList">
-                            {navSections.extended.map((l) => (
-                              <li key={l.to}>
-                                <NavLink
-                                  to={l.to}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    closeMobile();
-                                  }}
-                                  className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
-                                  end
-                                >
-                                  <span className="NavDrawer__icon">{l.icon}</span>
-                                  <span className="NavDrawer__label">{l.label}</span>
-                                </NavLink>
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      )}
-                    </>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="NavDrawer__joinCard">
+                      <div className="NavDrawer__joinContent">
+                        <p className="NavDrawer__joinTitle">Join MSP Tech Club</p>
+                        <p className="NavDrawer__joinSubtitle">
+                          Learn, compete, and grow with Microsoft Student Partners
+                        </p>
+                      </div>
+                      <div className="NavDrawer__joinActions">
+                        <NavLink
+                          to="/become-member"
+                          onClick={closeMobile}
+                          className="NavDrawer__ctaBtn"
+                        >
+                          <FaUserPlus /> Become a Member
+                        </NavLink>
+                        <NavLink
+                          to="/login"
+                          onClick={closeMobile}
+                          className="NavDrawer__loginBtn"
+                        >
+                          <FaSignInAlt /> Login
+                        </NavLink>
+                      </div>
+                    </div>
                   )}
-                  <li className="NavDrawer__sectionLabel NavDrawer__sectionLabel--spaced">Account</li>
-                  {navSections.account.map((l) => renderDrawerItem(l))}
-                </ul>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-      
-      {/* Android Back Button Handler */}
+
+                  {/* Drawer Navigation List */}
+                  <ul className="NavDrawer__list">
+                    <li className="NavDrawer__sectionLabel">Browse</li>
+                    {navSections.primary.map((l) => (
+                      <li key={l.to}>
+                        <NavLink
+                          to={l.to}
+                          onClick={closeMobile}
+                          className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                          end={l.to === '/'}
+                        >
+                          <span className="NavDrawer__icon">{l.icon}</span>
+                          <span className="NavDrawer__label">{l.label}</span>
+                        </NavLink>
+                      </li>
+                    ))}
+
+                    {/* Explore & More Collapsible Accordion */}
+                    {navSections.extended.length > 0 && (
+                      <>
+                        <li className="NavDrawer__sectionLabel NavDrawer__sectionLabel--spaced">Explore &amp; More</li>
+                        <li className="NavDrawer__expandRow">
+                          <button
+                            type="button"
+                            className={`NavDrawer__expandToggle ${mobileMoreOpen ? 'is-open' : ''}`}
+                            aria-expanded={mobileMoreOpen}
+                            onClick={() => setMobileMoreOpen((o) => !o)}
+                          >
+                            <span className="NavDrawer__expandToggleLabel">
+                              {mobileMoreOpen ? 'Hide' : 'Show'} club links ({navSections.extended.length})
+                            </span>
+                            <FaChevronDown className="NavDrawer__expandChevron" aria-hidden="true" />
+                          </button>
+                        </li>
+                        {mobileMoreOpen && (
+                          <li className="NavDrawer__extendedBlock">
+                            <ul className="NavDrawer__nestedList">
+                              {navSections.extended.map((l) => (
+                                <li key={l.to}>
+                                  <NavLink
+                                    to={l.to}
+                                    onClick={closeMobile}
+                                    className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                                    end
+                                  >
+                                    <span className="NavDrawer__icon">{l.icon}</span>
+                                    <span className="NavDrawer__label">{l.label}</span>
+                                  </NavLink>
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        )}
+                      </>
+                    )}
+
+                    {/* Authenticated Member Services */}
+                    {isAuthenticated && (
+                      <>
+                        <li className="NavDrawer__sectionLabel NavDrawer__sectionLabel--spaced">Member Services</li>
+                        <li>
+                          <NavLink
+                            to="/attendance-request"
+                            onClick={closeMobile}
+                            className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                          >
+                            <span className="NavDrawer__icon"><FaClipboardCheck /></span>
+                            <span className="NavDrawer__label">Attendance Request</span>
+                          </NavLink>
+                        </li>
+                        {isAdminOrBoard && (
+                          <>
+                            <li>
+                              <NavLink
+                                to="/admin"
+                                onClick={closeMobile}
+                                className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                              >
+                                <span className="NavDrawer__icon"><MdDashboard /></span>
+                                <span className="NavDrawer__label">Admin Panel</span>
+                              </NavLink>
+                            </li>
+                            <li>
+                              <NavLink
+                                to="/admin/competition-management"
+                                onClick={closeMobile}
+                                className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                              >
+                                <span className="NavDrawer__icon"><FaTrophy /></span>
+                                <span className="NavDrawer__label">Competition Manager</span>
+                              </NavLink>
+                            </li>
+                            <li>
+                              <NavLink
+                                to="/attendance-review"
+                                onClick={closeMobile}
+                                className={({ isActive }) => `NavDrawer__link ${isActive ? 'is-active' : ''}`}
+                              >
+                                <span className="NavDrawer__icon"><MdOutlineAdminPanelSettings /></span>
+                                <span className="NavDrawer__label">Review Attendance</span>
+                              </NavLink>
+                            </li>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </ul>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Android Native Back Button Handler */}
       <AndroidBackButtonHandler
         onCloseModal={() => {}}
         onCloseDrawer={closeMobile}
