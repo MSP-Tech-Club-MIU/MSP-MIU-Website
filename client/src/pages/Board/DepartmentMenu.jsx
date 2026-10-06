@@ -7,13 +7,11 @@ const HIDDEN_FROM_BOARD_MENU = new Set([...BOARD_POSITION_NAMES, 'Competitor']);
 
 const DepartmentMenu = memo(({ departments = [], selectedDepartment, onSelectDepartment }) => {
   const allDepartments = useMemo(() => {
-    const founder = departments.find((d) => d.name === 'Founder');
     const presidentAndVp = { id: 'president-vp', name: 'President & VP' };
     const otherDepartments = departments.filter((d) => !HIDDEN_FROM_BOARD_MENU.has(d.name));
 
     const menuItems = [];
-    if (founder) menuItems.push(founder);
-    if (departments.some((d) => d.name === 'President' || d.name === 'Vice President')) {
+    if (departments.some((d) => d.name === 'President' || d.name === 'Vice President') || !departments.length) {
       menuItems.push(presidentAndVp);
     }
     menuItems.push(...otherDepartments);
