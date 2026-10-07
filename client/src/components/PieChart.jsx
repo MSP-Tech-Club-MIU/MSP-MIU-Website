@@ -2,23 +2,52 @@ import React from 'react';
 
 const PieChart = ({ data, title, size = 200, theme = 'light' }) => {
   const isAdmin = theme === 'admin';
+  const isEmpty = !data || data.length === 0 || data.every((item) => (item.count || 0) === 0);
 
-  if (!data || data.length === 0) {
-    return isAdmin
-      ? <div className="RegAdmin__pieEmpty">No data available</div>
-      : (
-        <div style={{
-          textAlign: 'center',
-          margin: '20px',
-          fontFamily: 'Arial, sans-serif',
-          color: '#666'
-        }}>
-          No data available
-        </div>
-      );
+  if (isEmpty) {
+    return isAdmin ? (
+      <div className="RegAdmin__pie">
+        <h3 className="RegAdmin__pieTitle">{title}</h3>
+        <div className="RegAdmin__pieEmpty">No data available</div>
+      </div>
+    ) : (
+      <div style={{
+        textAlign: 'center',
+        margin: '20px',
+        fontFamily: 'Arial, sans-serif',
+        color: '#666'
+      }}>
+        {title && (
+          <h3 style={{
+            marginBottom: '15px',
+            color: '#395a7f',
+            fontSize: '16px',
+            fontWeight: '600',
+            fontFamily: 'Arial, sans-serif'
+          }}>{title}</h3>
+        )}
+        <div>No data available</div>
+      </div>
+    );
   }
 
-  let cumulativePercentage = 0;
+  const radius = size / 2 - 10;
+  const circumference = 2 * Math.PI * radius;
+  const totalCount = data.reduce((sum, item) => sum + (item.count || 0), 0);
+
+  let cumulativeRatio = 0;
+  const slices = data.map((item, index) => {
+    const ratio = totalCount > 0 ? (item.count || 0) / totalCount : (item.percentage || 0) / 100;
+    const strokeDasharray = `${ratio * circumference} ${circumference}`;
+    const strokeDashoffset = -cumulativeRatio * circumference;
+    cumulativeRatio += ratio;
+    return {
+      ...item,
+      key: index,
+      strokeDasharray,
+      strokeDashoffset,
+    };
+  });
 
   if (isAdmin) {
     return (
@@ -26,28 +55,22 @@ const PieChart = ({ data, title, size = 200, theme = 'light' }) => {
         <h3 className="RegAdmin__pieTitle">{title}</h3>
         <div style={{ position: 'relative', display: 'inline-block', width: size, height: size }}>
           <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-            {data.map((item, index) => {
-              const circumference = 2 * Math.PI * (size / 2 - 10);
-              const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
-              const strokeDashoffset = -(cumulativePercentage / 100) * circumference;
-              cumulativePercentage += item.percentage;
-              return (
-                <circle
-                  key={index}
-                  cx={size / 2}
-                  cy={size / 2}
-                  r={size / 2 - 10}
-                  fill="none"
-                  stroke={item.color}
-                  strokeWidth="18"
-                  strokeDasharray={strokeDasharray}
-                  strokeDashoffset={strokeDashoffset}
-                />
-              );
-            })}
+            {slices.map((item) => (
+              <circle
+                key={item.key}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={item.color}
+                strokeWidth="18"
+                strokeDasharray={item.strokeDasharray}
+                strokeDashoffset={item.strokeDashoffset}
+              />
+            ))}
           </svg>
           <div className="RegAdmin__pieCenter">
-            {data.reduce((sum, item) => sum + item.count, 0)}
+            {totalCount}
           </div>
         </div>
         <div className="RegAdmin__pieLegend">
@@ -78,29 +101,23 @@ const PieChart = ({ data, title, size = 200, theme = 'light' }) => {
 
       <div style={{ position: 'relative', display: 'inline-block', width: size, height: size }}>
         <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-          {data.map((item, index) => {
-            const circumference = 2 * Math.PI * (size / 2 - 10);
-            const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
-            const strokeDashoffset = -(cumulativePercentage / 100) * circumference;
-            cumulativePercentage += item.percentage;
-            return (
-              <circle
-                key={index}
-                cx={size / 2}
-                cy={size / 2}
-                r={size / 2 - 10}
-                fill="none"
-                stroke={item.color}
-                strokeWidth="18"
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                style={{
-                  transition: 'all 0.3s ease',
-                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-                }}
-              />
-            );
-          })}
+          {slices.map((item) => (
+            <circle
+              key={item.key}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke={item.color}
+              strokeWidth="18"
+              strokeDasharray={item.strokeDasharray}
+              strokeDashoffset={item.strokeDashoffset}
+              style={{
+                transition: 'all 0.3s ease',
+                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+              }}
+            />
+          ))}
         </svg>
 
         <div style={{
@@ -113,7 +130,7 @@ const PieChart = ({ data, title, size = 200, theme = 'light' }) => {
           color: '#395a7f',
           fontFamily: 'Arial, sans-serif'
         }}>
-          {data.reduce((sum, item) => sum + item.count, 0)}
+          {totalCount}
         </div>
       </div>
 

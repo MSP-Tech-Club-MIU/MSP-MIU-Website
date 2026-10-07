@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef, memo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, memo } from 'react';
 import ApiService from '../../services/api';
 import { confirmModal } from '../../context/ModalContext';
 import { useSeason } from '../../context/SeasonContext';
@@ -27,22 +27,30 @@ const emptyFilters = () => ({
     year: ''
 });
 
-const mapStatsToChart = (items, total, mapDept = false) =>
-    (items || [])
+const mapStatsToChart = (items, total, mapDept = false) => {
+    const list = items || [];
+    const effectiveTotal = total || list.reduce((sum, item) => sum + (item.count || 0), 0);
+    return list
         .map((row, index) => {
             let label = row.value;
-            if (mapDept && label != null && label !== '') {
-                label = getDepartmentNameById(label);
+            if (label == null || label === '' || label === 'N/A' || label === 'null' || label === 'undefined') {
+                label = mapDept ? 'None' : 'N/A';
+            } else if (mapDept) {
+                const numericId = parseInt(label, 10);
+                if (!isNaN(numericId)) {
+                    label = getDepartmentNameById(numericId);
+                }
             }
             if (!label && label !== 0) label = 'N/A';
             return {
                 label: String(label),
                 count: row.count || 0,
-                percentage: total ? Math.round((row.count / total) * 100) : 0,
+                percentage: effectiveTotal ? Math.round((row.count / effectiveTotal) * 100) : 0,
                 color: chartColors[index % chartColors.length]
             };
         })
         .sort((a, b) => b.count - a.count);
+};
 
 const RegistrationsTab = memo(({ onAlert }) => {
     const { seasonFilters } = useSeason();
@@ -128,9 +136,18 @@ const RegistrationsTab = memo(({ onAlert }) => {
     const [filters, setFilters] = useState(emptyFilters);
     const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
 
-    const firstChoiceData = mapStatsToChart(stats?.by_first_choice, stats?.total, true);
-    const secondChoiceData = mapStatsToChart(stats?.by_second_choice, stats?.total, true);
-    const facultyData = mapStatsToChart(stats?.by_faculty, stats?.total, false);
+    const firstChoiceData = useMemo(
+        () => mapStatsToChart(stats?.by_first_choice, stats?.total, true),
+        [stats?.by_first_choice, stats?.total]
+    );
+    const secondChoiceData = useMemo(
+        () => mapStatsToChart(stats?.by_second_choice, stats?.total, true),
+        [stats?.by_second_choice, stats?.total]
+    );
+    const facultyData = useMemo(
+        () => mapStatsToChart(stats?.by_faculty, stats?.total, false),
+        [stats?.by_faculty, stats?.total]
+    );
 
     const handleTextClick = (field, appId, text) => {
         if (text && text.length > 100) {
