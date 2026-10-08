@@ -85,6 +85,7 @@ const ApplicationsTable = memo(({
                     {app.motivation?.length > 100 ? `${app.motivation.substring(0, 100)}...` : app.motivation}
                   </span>
                   {app.motivation?.length > 100 && <div className="RegAdmin__hint">View more</div>}
+                </td>
                 <td>
                   <div className="RegAdmin__interviewCell">
                     <span className="RegAdmin__interviewPref">
@@ -153,6 +154,7 @@ const ApplicationsTable = memo(({
                     )}
                   </div>
                 </td>
+                <td>
                   <select
                     className="RegAdmin__statusSelect"
                     value={app.status}
@@ -273,6 +275,7 @@ const ApplicationsTable = memo(({
                 >
                   {app.motivation?.length > 100 ? `${app.motivation.substring(0, 100)}...` : app.motivation}
                 </span>
+              </td>
               <td style={{ padding: '8px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
                   <span style={{ fontWeight: '500' }}>{app.interview || '-'}</span>
@@ -324,6 +327,7 @@ const ApplicationsTable = memo(({
                   )}
                 </div>
               </td>
+              <td style={{ padding: '8px' }}>
                 <select
                   value={app.status}
                   onChange={(e) => handleStatusChange(app.application_id, e.target.value)}
