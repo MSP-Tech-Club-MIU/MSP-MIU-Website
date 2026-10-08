@@ -1315,6 +1315,24 @@ paths:
       responses:
         '200':
           description: Updated
+  '/applications/{id}/interview':
+    put:
+      summary: 'Update /applications/{id}/interview'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Applications
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/applications/{id}/status':
     put:
       tags:

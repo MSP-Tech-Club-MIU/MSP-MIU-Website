@@ -52,7 +52,7 @@ const mapStatsToChart = (items, total, mapDept = false) => {
         .sort((a, b) => b.count - a.count);
 };
 
-const RegistrationsTab = memo(({ onAlert }) => {
+const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
     const { seasonFilters } = useSeason();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -63,7 +63,25 @@ const RegistrationsTab = memo(({ onAlert }) => {
     const [hasSearched, setHasSearched] = useState(false);
     const [expandedText, setExpandedText] = useState({ field: null, appId: null });
     const [commentModal, setCommentModal] = useState({ isOpen: false, application: null, comment: '' });
+    const [localProfile, setLocalProfile] = useState(null);
     const textareaRef = useRef(null);
+
+    useEffect(() => {
+        if (!propCurrentUser) {
+            let active = true;
+            ApiService.getProfile()
+                .then((prof) => {
+                    if (active && prof) setLocalProfile(prof);
+                })
+                .catch(() => {});
+            return () => { active = false; };
+        }
+    }, [propCurrentUser]);
+
+    const currentUserName = useMemo(() => {
+        const u = propCurrentUser || localProfile;
+        return u?.full_name || u?.name || 'Interviewer';
+    }, [propCurrentUser, localProfile]);
 
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState(null);
@@ -280,11 +298,27 @@ const RegistrationsTab = memo(({ onAlert }) => {
 
     const handleStatusChange = async (application_id, newStatus) => {
         try {
-            await ApiService.updateApplicationStatus(application_id, newStatus);
+            const res = await ApiService.updateApplicationStatus(application_id, newStatus);
+            const serverInterviewStatus = res?.data?.interview_status;
+            const serverInterviewerName = res?.data?.interviewer_name;
             const patch = (prev) =>
-                prev.map((app) =>
-                    app.application_id === application_id ? { ...app, status: newStatus } : app
-                );
+                prev.map((app) => {
+                    if (app.application_id !== application_id) return app;
+                    const nextInterviewStatus =
+                        serverInterviewStatus !== undefined
+                            ? serverInterviewStatus
+                            : app.interview_status === 'being_interviewed'
+                              ? 'interviewed'
+                              : app.interview_status;
+                    return {
+                        ...app,
+                        status: newStatus,
+                        interview_status: nextInterviewStatus,
+                        ...(serverInterviewerName !== undefined
+                            ? { interviewer_name: serverInterviewerName }
+                            : {})
+                    };
+                });
             setApplications(patch);
             setFilteredApplications(patch);
             onAlert?.({
@@ -299,6 +333,43 @@ const RegistrationsTab = memo(({ onAlert }) => {
             });
         }
     };
+
+    const handleInterviewChange = useCallback(async (application_id, nextStatus, interviewerName = null) => {
+        try {
+            const nameToUse = interviewerName ?? currentUserName;
+            await ApiService.updateApplicationInterviewer(application_id, {
+                interview_status: nextStatus,
+                interviewer_name: nextStatus ? nameToUse : null
+            });
+            const patch = (prev) =>
+                prev.map((app) =>
+                    app.application_id === application_id
+                        ? {
+                              ...app,
+                              interview_status: nextStatus,
+                              interviewer_name: nextStatus ? nameToUse : null
+                          }
+                        : app
+                );
+            setApplications(patch);
+            setFilteredApplications(patch);
+            onAlert?.({
+                type: 'success',
+                message:
+                    nextStatus === 'being_interviewed'
+                        ? `Application marked as being interviewed by ${nameToUse}.`
+                        : nextStatus === 'interviewed'
+                          ? `Application marked as interviewed by ${nameToUse}.`
+                          : 'Interview status cleared.'
+            });
+        } catch (error) {
+            console.error('Error updating interview status:', error);
+            onAlert?.({
+                type: 'error',
+                message: error.message || 'Failed to update interview status.'
+            });
+        }
+    }, [currentUserName, onAlert]);
 
     const handleDelete = async (app) => {
         const ok = await confirmModal({
@@ -468,6 +539,8 @@ const RegistrationsTab = memo(({ onAlert }) => {
                 handleStatusChange={handleStatusChange}
                 handleDelete={handleDelete}
                 getStatusColor={getStatusColor}
+                currentUserName={currentUserName}
+                handleInterviewChange={handleInterviewChange}
             />
 
             <Pagination pagination={pagination} onPageChange={(p) => { setPage(p); }} />

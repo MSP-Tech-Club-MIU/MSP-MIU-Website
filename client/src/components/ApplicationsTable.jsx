@@ -8,7 +8,9 @@ const ApplicationsTable = memo(({
   handleStatusChange,
   getStatusColor,
   handleDelete,
-  theme = 'light'
+  theme = 'light',
+  currentUserName,
+  handleInterviewChange
 }) => {
   const isAdmin = theme === 'admin';
 
@@ -83,9 +85,74 @@ const ApplicationsTable = memo(({
                     {app.motivation?.length > 100 ? `${app.motivation.substring(0, 100)}...` : app.motivation}
                   </span>
                   {app.motivation?.length > 100 && <div className="RegAdmin__hint">View more</div>}
-                </td>
-                <td>{app.interview}</td>
                 <td>
+                  <div className="RegAdmin__interviewCell">
+                    <span className="RegAdmin__interviewPref">
+                      {app.interview || 'N/A'}
+                    </span>
+                    {app.interview_status === 'being_interviewed' ? (
+                      <div className="RegAdmin__interviewBadge RegAdmin__interviewBadge--being">
+                        <span className="RegAdmin__interviewPulseDot" />
+                        <span>Being interviewed by {app.interviewer_name || 'Interviewer'}</span>
+                        {handleInterviewChange && (
+                          <div className="RegAdmin__interviewActionBtns">
+                            <button
+                              type="button"
+                              className="RegAdmin__interviewMiniBtn"
+                              title={`Finish interview: Mark as interviewed by ${app.interviewer_name || currentUserName}`}
+                              onClick={() => handleInterviewChange(app.application_id, 'interviewed', app.interviewer_name || currentUserName)}
+                            >
+                              ✓
+                            </button>
+                            <button
+                              type="button"
+                              className="RegAdmin__interviewMiniBtn"
+                              title="Cancel / release interview"
+                              onClick={() => handleInterviewChange(app.application_id, null)}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : app.interview_status === 'interviewed' ? (
+                      <div className="RegAdmin__interviewBadge RegAdmin__interviewBadge--done">
+                        <span>✓ Interviewed by {app.interviewer_name || 'Interviewer'}</span>
+                        {handleInterviewChange && (
+                          <div className="RegAdmin__interviewActionBtns">
+                            <button
+                              type="button"
+                              className="RegAdmin__interviewMiniBtn"
+                              title={`Re-start interview: Being interviewed by ${currentUserName}`}
+                              onClick={() => handleInterviewChange(app.application_id, 'being_interviewed', currentUserName)}
+                            >
+                              ↺
+                            </button>
+                            <button
+                              type="button"
+                              className="RegAdmin__interviewMiniBtn"
+                              title="Clear interviewer"
+                              onClick={() => handleInterviewChange(app.application_id, null)}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      handleInterviewChange && (
+                        <button
+                          type="button"
+                          className="RegAdmin__interviewBtn"
+                          onClick={() => handleInterviewChange(app.application_id, 'being_interviewed', currentUserName)}
+                          title={`Mark as being interviewed by ${currentUserName}`}
+                        >
+                          🎙️ Being interviewed by {currentUserName}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </td>
                   <select
                     className="RegAdmin__statusSelect"
                     value={app.status}
@@ -206,9 +273,57 @@ const ApplicationsTable = memo(({
                 >
                   {app.motivation?.length > 100 ? `${app.motivation.substring(0, 100)}...` : app.motivation}
                 </span>
-              </td>
-              <td style={{ padding: '8px' }}>{app.interview}</td>
               <td style={{ padding: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: '500' }}>{app.interview || '-'}</span>
+                  {app.interview_status === 'being_interviewed' ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#e67e22', fontWeight: '600', background: 'rgba(230, 126, 34, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                      <span>🎙️ Being interviewed by {app.interviewer_name || 'Interviewer'}</span>
+                      {handleInterviewChange && (
+                        <button
+                          type="button"
+                          onClick={() => handleInterviewChange(app.application_id, null)}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit', fontWeight: 'bold' }}
+                          title="Clear interviewer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ) : app.interview_status === 'interviewed' ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#27ae60', fontWeight: '600', background: 'rgba(39, 174, 96, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                      <span>✓ Interviewed by {app.interviewer_name || 'Interviewer'}</span>
+                      {handleInterviewChange && (
+                        <button
+                          type="button"
+                          onClick={() => handleInterviewChange(app.application_id, null)}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'inherit', fontWeight: 'bold' }}
+                          title="Clear interviewer"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    handleInterviewChange && (
+                      <button
+                        type="button"
+                        onClick={() => handleInterviewChange(app.application_id, 'being_interviewed', currentUserName)}
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 6px',
+                          cursor: 'pointer',
+                          borderRadius: '4px',
+                          border: '1px solid #ccc',
+                          background: '#f8f9fa'
+                        }}
+                      >
+                        🎙️ Being interviewed by {currentUserName}
+                      </button>
+                    )
+                  )}
+                </div>
+              </td>
                 <select
                   value={app.status}
                   onChange={(e) => handleStatusChange(app.application_id, e.target.value)}
