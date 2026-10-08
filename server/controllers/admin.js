@@ -1048,7 +1048,7 @@ const getAdminFeedbacks = async (req, res) => {
                 {
                     model: User,
                     as: 'user',
-                    attributes: ['user_id', 'full_name', 'email', 'username'],
+                    attributes: ['user_id', 'full_name', 'email'],
                     required: false
                 },
                 {

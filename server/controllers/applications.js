@@ -24,7 +24,7 @@ async function isRecruitmentOpen() {
 function buildFieldCounts(rows, field) {
     const counts = {};
     for (const row of rows) {
-        let value = row[field];
+        let value = typeof row?.get === 'function' ? row.get(field) : row?.[field];
         if (value === null || value === undefined || value === '') value = 'N/A';
         const key = String(value);
         counts[key] = (counts[key] || 0) + 1;
@@ -408,25 +408,34 @@ const getAllApplications = async (req, res) => {
             });
         }
 
-        const { count, rows: applications } = await Application.findAndCountAll({
-            where: whereClause,
-            include,
-            order: [['created_at', 'DESC']],
-            limit,
-            offset,
-            distinct: true
-        });
-
-        // Get counts for dashboard
-        const allFilteredRows = await Application.findAll({
-            where: whereClause,
-            attributes: ['status', 'faculty', 'year', 'first_choice', 'second_choice', 'interview']
-        });
+        const [{ count, rows: applications }, allFilteredRows] = await Promise.all([
+            Application.findAndCountAll({
+                where: whereClause,
+                include,
+                order: [['created_at', 'DESC']],
+                limit,
+                offset,
+                distinct: true
+            }),
+            Application.findAll({
+                where: whereClause,
+                attributes: ['status', 'faculty', 'year', 'first_choice', 'second_choice', 'interview'],
+                raw: true
+            })
+        ]);
 
         const statusCounts = {};
         allFilteredRows.forEach(app => {
-            statusCounts[app.status] = (statusCounts[app.status] || 0) + 1;
+            const st = app.status;
+            statusCounts[st] = (statusCounts[st] || 0) + 1;
         });
+
+        const by_first_choice = buildFieldCounts(allFilteredRows, 'first_choice');
+        const by_second_choice = buildFieldCounts(allFilteredRows, 'second_choice');
+        const by_faculty = buildFieldCounts(allFilteredRows, 'faculty');
+        const by_status = buildFieldCounts(allFilteredRows, 'status');
+        const by_year = buildFieldCounts(allFilteredRows, 'year');
+        const by_interview = buildFieldCounts(allFilteredRows, 'interview');
 
         res.json({
             success: true,
@@ -436,7 +445,21 @@ const getAllApplications = async (req, res) => {
                 total: count,
                 pending: statusCounts['pending'] || 0,
                 approved: statusCounts['approved'] || 0,
-                rejected: statusCounts['rejected'] || 0
+                rejected: statusCounts['rejected'] || 0,
+                by_first_choice,
+                by_second_choice,
+                by_faculty,
+                by_status,
+                by_year,
+                by_interview,
+                breakdown: {
+                    status: by_status,
+                    faculty: by_faculty,
+                    year: by_year,
+                    first_choice: by_first_choice,
+                    second_choice: by_second_choice,
+                    interview: by_interview
+                }
             }
         });
 
