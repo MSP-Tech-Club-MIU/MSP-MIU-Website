@@ -24,6 +24,7 @@
     "patch:cms-schema": "node server/scripts/patchCmsSchema.js",
     "patch:board-multi-season": "node server/scripts/patchBoardMultiSeason.js",
     "patch:feedback-schema": "node server/scripts/patchFeedbackSchema.js",
+    "patch:applications-interviewer": "node server/scripts/patchApplicationInterviewerSchema.js",
     "cleanup:users-indexes": "node server/scripts/cleanupUsersIndexes.js",
     "docs:openapi": "node server/scripts/generateOpenApi.js",
     "prepare": "node scripts/install-git-hooks.js"

@@ -481,7 +481,7 @@ const updateApplicationStatus = async (req, res) => {
         const { id } = req.params;
         const { status } = req.body;
 
-        if (!req.user || req.user.role !== 'board') {
+        if (!req.user || (req.user.role !== 'board' && req.user.role !== 'admin')) {
             return res.status(403).json({
                 success: false,
                 error: 'Only board members can update application status'
@@ -497,7 +497,18 @@ const updateApplicationStatus = async (req, res) => {
             });
         }
 
-        await application.update({ status });
+        const updatePayload = { status };
+        // If the applicant was marked as being interviewed, transition to interviewed
+        if (req.body.interview_status) {
+            updatePayload.interview_status = req.body.interview_status;
+        } else if (application.interview_status === 'being_interviewed') {
+            updatePayload.interview_status = 'interviewed';
+        }
+        if (req.body.interviewer_name !== undefined) {
+            updatePayload.interviewer_name = req.body.interviewer_name;
+        }
+
+        await application.update(updatePayload);
 
         let enrollment = null;
         if (status === 'approved') {
@@ -524,6 +535,8 @@ const updateApplicationStatus = async (req, res) => {
             data: {
                 application_id: id,
                 status,
+                interview_status: application.interview_status,
+                interviewer_name: application.interviewer_name,
                 ...(enrollment
                     ? {
                           member_id: enrollment.member.member_id,
@@ -595,6 +608,82 @@ const updateApplicationComment = async (req, res) => {
         res.status(500).json({
             success: false,
             error: 'Internal server error'
+        });
+    }
+};
+
+// Update application interviewer / interview status
+const updateApplicationInterviewer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { interview_status, interviewer_name } = req.body;
+
+        const application = await Application.findByPk(id);
+
+        if (!application) {
+            return res.status(404).json({
+                success: false,
+                error: 'Application not found'
+            });
+        }
+
+        const validStatuses = ['being_interviewed', 'interviewed', null, ''];
+        if (interview_status !== undefined && !validStatuses.includes(interview_status)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid interview status. Must be "being_interviewed", "interviewed", or null'
+            });
+        }
+
+        let nextStatus;
+        if (interview_status !== undefined) {
+            nextStatus = (interview_status === '' || interview_status === null) ? null : interview_status;
+        } else {
+            nextStatus = application.interview_status;
+        }
+
+        let nextName;
+        if (interviewer_name !== undefined) {
+            nextName = (interviewer_name === '' || interviewer_name === null) ? null : interviewer_name;
+        } else if (nextStatus === null) {
+            nextName = null;
+        } else {
+            nextName = application.interviewer_name || req.user?.full_name || null;
+        }
+
+        await application.update({
+            interview_status: nextStatus,
+            interviewer_name: nextName
+        });
+
+        await logAdminAction(
+            'application_interviewer_updated',
+            nextStatus
+                ? `Updated interview status for applicant "${application.full_name}" to "${nextStatus}" (${nextName || 'N/A'})`
+                : `Cleared interviewer status for applicant "${application.full_name}"`,
+            req,
+            'application',
+            id,
+            application.season_id
+        );
+
+        res.json({
+            success: true,
+            message: nextStatus
+                ? `Application marked as ${nextStatus.replace('_', ' ')} by ${nextName || 'interviewer'}`
+                : 'Interviewer status cleared successfully',
+            data: {
+                application_id: id,
+                interview_status: nextStatus,
+                interviewer_name: nextName
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error updating application interviewer:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message || 'Internal server error'
         });
     }
 };
@@ -851,6 +940,7 @@ module.exports = {
     getAllApplications,
     updateApplicationStatus,
     updateApplicationComment,
+    updateApplicationInterviewer,
     deleteApplication,
     checkEligibility
 };

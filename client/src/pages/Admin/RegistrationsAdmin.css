@@ -368,3 +368,110 @@
     gap: 10px;
 }
 
+/* Interviewer status badge and action button */
+.RegAdmin__interviewCell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.RegAdmin__interviewPref {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--admin-text, #eaf2ff);
+}
+
+.RegAdmin__interviewBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #4aa6ff;
+    background: rgba(74, 166, 255, 0.12);
+    border: 1px dashed rgba(74, 166, 255, 0.4);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.RegAdmin__interviewBtn:hover {
+    background: rgba(74, 166, 255, 0.22);
+    border-color: #4aa6ff;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.RegAdmin__interviewBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.RegAdmin__interviewBadge--being {
+    background: rgba(243, 156, 18, 0.18);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.4);
+}
+
+.RegAdmin__interviewBadge--done {
+    background: rgba(39, 174, 96, 0.18);
+    color: #2ecc71;
+    border: 1px solid rgba(39, 174, 96, 0.35);
+}
+
+.RegAdmin__interviewPulseDot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f39c12;
+    display: inline-block;
+    box-shadow: 0 0 6px rgba(243, 156, 18, 0.8);
+    animation: pulseDot 1.5s infinite;
+}
+
+@keyframes pulseDot {
+    0% { transform: scale(0.9); opacity: 0.7; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+.RegAdmin__interviewActionBtns {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 2px;
+}
+
+.RegAdmin__interviewMiniBtn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 1px 4px;
+    border-radius: 3px;
+    opacity: 0.75;
+    transition: opacity 0.15s, background 0.15s;
+    line-height: 1;
+}
+
+.RegAdmin__interviewMiniBtn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.18);
+}
+
+

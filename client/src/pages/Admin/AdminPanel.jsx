@@ -1262,7 +1262,10 @@ const AdminPanel = () => {
                                         <MdAppRegistration /> Applications Dashboard
                                     </h2>
                                 </div>
-                                <RegistrationsTab onAlert={handleRegAlert} />
+                                <RegistrationsTab
+                                    onAlert={handleRegAlert}
+                                    currentUser={adminProfile || adminInfo}
+                                />
                             </div>
                         </motion.div>
                     )}

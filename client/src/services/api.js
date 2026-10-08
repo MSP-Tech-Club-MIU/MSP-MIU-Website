@@ -573,6 +573,29 @@ class ApiService {
     }
   }
 
+  static async updateApplicationInterviewer(id, { interview_status, interviewer_name } = {}) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/applications/${id}/interview`, {
+        method: 'PUT',
+        headers: this.getHeaders(true),
+        body: JSON.stringify({ interview_status, interviewer_name }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update application interviewer');
+      }
+
+      cache.clear();
+
+      return result;
+    } catch (error) {
+      console.error('Error updating application interviewer:', error);
+      throw error;
+    }
+  }
+
   static async deleteApplication(id) {
     try {
       const response = await fetch(`${API_BASE_URL}/applications/${id}`, {
