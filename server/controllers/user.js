@@ -7,6 +7,7 @@ const { generateToken: generateJWTToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
 const { logAuditEvent, logError, logSecurityEvent } = logger;
 const { r2, PutObjectCommand } = require('../config/cloud');
+const { deleteUnusedProfilePicture } = require('../services/cloudStorageCleanup');
 const { resolveSeasonIdForWrite, getDefaultSeasonId, serializeSeason, getDefaultSeason } = require('../utils/seasonFilter');
 
 /**
@@ -414,6 +415,7 @@ const updateProfile = async (req, res) => {
         }
 
         // Prepare update data
+        const previousProfilePicture = user.profile_picture;
         const updateData = {};
         if (full_name) updateData.full_name = full_name;
 
@@ -436,6 +438,13 @@ const updateProfile = async (req, res) => {
             // Upload to cloud storage
             const uploadResult = await uploadToCloud(profilePictureFile, 'Profile_Pictures/', filename);
             updateData.profile_picture = uploadResult.url;
+        } else if (
+            req.body.remove_profile_picture === 'true' ||
+            req.body.remove_profile_picture === true ||
+            req.body.profile_picture === '' ||
+            req.body.profile_picture === null
+        ) {
+            updateData.profile_picture = null;
         }
 
         // Handle schedule upload
@@ -460,6 +469,19 @@ const updateProfile = async (req, res) => {
 
         // Update user
         await user.update(updateData);
+
+        // Delete old profile picture from cloud storage if replaced or removed
+        if (
+            previousProfilePicture &&
+            updateData.profile_picture !== undefined &&
+            previousProfilePicture !== updateData.profile_picture
+        ) {
+            try {
+                await deleteUnusedProfilePicture(previousProfilePicture, { excludeUserId: user.user_id });
+            } catch (cleanErr) {
+                logger.error('Failed to clean up old profile picture after update:', cleanErr);
+            }
+        }
 
         // Get updated user (without password)
         const updatedUser = await User.findByPk(userId, {

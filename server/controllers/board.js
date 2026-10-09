@@ -15,6 +15,7 @@ const {
   demoteUserIfNoCurrentBoard
 } = require('../utils/boardUserSync');
 const { logAdminAction } = require('../utils/adminNotification');
+const { deleteUnusedBoardPhoto } = require('../services/cloudStorageCleanup');
 const logger = require('../utils/logger');
 
 const POSITION_VALUES = ['President', 'Vice President', 'Head', 'Co-Head', 'Founder'];
@@ -329,9 +330,22 @@ const updateBoardMember = async (req, res) => {
     const previousUserId = member.user_id;
     const previousDepartmentId = member.department_id;
     const previousPosition = member.position;
+    const previousPhotoUrl = member.photo_url;
 
     await member.update(updates);
     await member.reload();
+
+    if (
+      previousPhotoUrl &&
+      updates.photo_url !== undefined &&
+      previousPhotoUrl !== updates.photo_url
+    ) {
+      try {
+        await deleteUnusedBoardPhoto(previousPhotoUrl, { excludeBoardId: member.board_id });
+      } catch (cleanErr) {
+        logger.error('Failed to clean up old board photo after member update:', cleanErr);
+      }
+    }
 
     try {
       await syncUserFromBoard(member);
@@ -382,7 +396,17 @@ const deleteBoardMember = async (req, res) => {
     const memberPosition = member.position;
     const seasonId = member.season_id;
     const userId = member.user_id;
+    const previousPhotoUrl = member.photo_url;
     await member.destroy();
+
+    if (previousPhotoUrl) {
+      try {
+        await deleteUnusedBoardPhoto(previousPhotoUrl, { excludeBoardId: member.board_id });
+      } catch (cleanErr) {
+        logger.error('Failed to clean up board photo after member delete:', cleanErr);
+      }
+    }
+
     try {
       if (userId != null) {
         await demoteUserIfNoCurrentBoard(userId);
@@ -442,6 +466,7 @@ const updateMyBoardPhoto = async (req, res) => {
     }
 
     const photoFile = req.file || null;
+    const previousPhotoUrl = member.photo_url;
     let photo_url = null;
 
     if (photoFile) {
@@ -479,6 +504,14 @@ const updateMyBoardPhoto = async (req, res) => {
     }
 
     await member.update({ photo_url });
+
+    if (previousPhotoUrl && previousPhotoUrl !== photo_url) {
+      try {
+        await deleteUnusedBoardPhoto(previousPhotoUrl, { excludeBoardId: member.board_id });
+      } catch (cleanErr) {
+        logger.error('Failed to clean up old board photo after member updated photo:', cleanErr);
+      }
+    }
     await member.reload({
       include: [
         {

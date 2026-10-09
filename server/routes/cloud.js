@@ -10,13 +10,19 @@ const {
   getEventThumbnails,
   getDocuments,
   deleteCloudObject,
-  replaceCloudObject
+  replaceCloudObject,
+  cleanupUnusedImages
 } = require('../controllers/cloud');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 const { upload } = require('../middlewares/multer');
 
 // Images endpoint (kept separate due to special handling)
 router.get('/images', getImages);
+
+// Cleanup unused Meet the Board photos and profile pictures (admin/board)
+router.post('/cleanup-unused', authenticateToken, verifyRole('admin', 'board'), cleanupUnusedImages);
+router.get('/cleanup-unused', authenticateToken, verifyRole('admin', 'board'), cleanupUnusedImages);
+router.delete('/unused-images', authenticateToken, verifyRole('admin', 'board'), cleanupUnusedImages);
 
 // Delete a stored object (admin/board)
 router.delete('/object', authenticateToken, verifyRole('admin', 'board'), deleteCloudObject);

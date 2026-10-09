@@ -1,4 +1,4 @@
-const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const { NodeHttpHandler } = require("@smithy/node-http-handler");
 const https = require("https");
 const dotenv = require('dotenv');
@@ -76,10 +76,32 @@ async function uploadToR2(body, key, contentType = 'application/octet-stream') {
   return { key };
 }
 
+/**
+ * Delete an object from R2.
+ * @param {string} key Object key
+ * @returns {Promise<boolean>}
+ */
+async function deleteFromR2(key) {
+  const bucket = process.env.R2_BUCKET;
+  if (!bucket || !key) {
+    return false;
+  }
+  const command = new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: key
+  });
+  await r2.send(command);
+  return true;
+}
+
 module.exports = {
   r2,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
   downloadFromR2,
-  uploadToR2
+  uploadToR2,
+  deleteFromR2
 };

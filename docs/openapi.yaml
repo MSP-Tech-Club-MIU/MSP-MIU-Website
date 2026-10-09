@@ -1626,6 +1626,27 @@ paths:
       responses:
         '200':
           description: Objects
+  /cloud/cleanup-unused:
+    get:
+      summary: 'Get /cloud/cleanup-unused'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Cloud
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create/submit /cloud/cleanup-unused'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Cloud
+      security:
+        -
+          bearerAuth: []
   /cloud/codes:
     get:
       tags:
@@ -1696,6 +1717,17 @@ paths:
       responses:
         '200':
           description: Objects
+  /cloud/unused-images:
+    delete:
+      summary: 'Delete /cloud/unused-images'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Cloud
+      security:
+        -
+          bearerAuth: []
   /cloud/videos:
     get:
       tags:
