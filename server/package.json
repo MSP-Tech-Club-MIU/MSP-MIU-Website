@@ -29,6 +29,7 @@
     "patch:announcement-approval": "node scripts/patchAnnouncementApprovalSchema.js",
     "patch:feedback-schema": "node scripts/patchFeedbackSchema.js",
     "insert-approved-members": "node scripts/MemberInsertion.js",
+    "cleanup:unused-images": "node scripts/cleanupUnusedImages.js",
     "check:season-separation": "node scripts/checkSeasonSeparation.js"
   },
   "dependencies": {

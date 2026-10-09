@@ -104,4 +104,15 @@ const Board = sequelize.define('Board', {
   timestamps: false
 });
 
+Board.afterDestroy(async (member) => {
+  if (member?.photo_url) {
+    try {
+      const { deleteUnusedBoardPhoto } = require('../services/cloudStorageCleanup');
+      await deleteUnusedBoardPhoto(member.photo_url, { excludeBoardId: member.board_id });
+    } catch (err) {
+      // Safe cleanup without throwing
+    }
+  }
+});
+
 module.exports = Board;

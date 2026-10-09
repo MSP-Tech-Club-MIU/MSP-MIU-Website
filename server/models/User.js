@@ -83,4 +83,15 @@ const User = sequelize.define('User', {
   updatedAt: false
 });
 
+User.afterDestroy(async (user) => {
+  if (user?.profile_picture) {
+    try {
+      const { deleteUnusedProfilePicture } = require('../services/cloudStorageCleanup');
+      await deleteUnusedProfilePicture(user.profile_picture, { excludeUserId: user.user_id });
+    } catch (err) {
+      // Safe cleanup without throwing
+    }
+  }
+});
+
 module.exports = User;

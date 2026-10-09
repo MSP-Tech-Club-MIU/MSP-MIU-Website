@@ -501,11 +501,53 @@ const replaceCloudObject = async (req, res) => {
   }
 };
 
+/**
+ * Clean up unused Meet the Board photos and profile pictures.
+ * Compares objects in cloud storage against active database records.
+ * POST /cloud/cleanup-unused or GET /cloud/cleanup-unused
+ */
+const cleanupUnusedImages = async (req, res) => {
+  try {
+    const { cleanupAllUnusedImages } = require('../services/cloudStorageCleanup');
+    const isGet = req.method === 'GET';
+    const rawDryRun = isGet ? true : (req.body?.dry_run ?? req.query?.dry_run);
+    const dryRun = rawDryRun === true || rawDryRun === 'true' || rawDryRun === '1';
+    const force = req.body?.force === true || req.body?.force === 'true' || req.query?.force === 'true';
+    const minAgeRaw = req.body?.min_age_minutes ?? req.query?.min_age_minutes;
+    const minAgeMinutes = minAgeRaw != null && !isNaN(Number(minAgeRaw)) ? Number(minAgeRaw) : 5;
+
+    const report = await cleanupAllUnusedImages({
+      dryRun,
+      minAgeMinutes,
+      force
+    });
+
+    if (!dryRun && report.summary.totalDeleted > 0) {
+      await logAdminAction(
+        'cloud_unused_images_cleaned',
+        `Cleaned up ${report.summary.totalDeleted} unused images (${report.summary.boardPhotosDeleted} board photos, ${report.summary.profilePicturesDeleted} profile pictures) from cloud storage`,
+        req,
+        'cloud',
+        'cleanup'
+      );
+    }
+
+    return res.json(report);
+  } catch (error) {
+    logger.error('Error running cloud storage cleanup:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to clean up unused images'
+    });
+  }
+};
+
 module.exports = {
   getImages,
   getAssetsByType,
   deleteCloudObject,
   replaceCloudObject,
+  cleanupUnusedImages,
   // Legacy functions for backward compatibility
   getSlides,
   getVideos,

@@ -950,6 +950,30 @@ class ApiService {
     return result;
   }
 
+  /**
+   * Scan and clean up unused Meet the Board photos and user profile pictures from cloud storage.
+   * @param {object} options
+   * @param {boolean} [options.dryRun=false]
+   * @param {boolean} [options.force=false]
+   * @param {number} [options.minAgeMinutes=5]
+   */
+  static async cleanupUnusedImages({ dryRun = false, force = false, minAgeMinutes = 5 } = {}) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/cloud/cleanup-unused`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({
+        dry_run: Boolean(dryRun),
+        force: Boolean(force),
+        min_age_minutes: minAgeMinutes
+      }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to clean up unused images');
+    return result;
+  }
+
   static async getMembers(filters = {}) {
     const queryParams = new URLSearchParams();
     appendPaginationParams(queryParams, filters);

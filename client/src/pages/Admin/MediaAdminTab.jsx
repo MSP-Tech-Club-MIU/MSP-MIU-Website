@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { MdPermMedia, MdUpload } from 'react-icons/md';
+import { MdPermMedia, MdUpload, MdCleaningServices } from 'react-icons/md';
 import ApiService from '../../services/api';
 import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
@@ -21,6 +21,7 @@ export default function MediaAdminTab({ onAlert }) {
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [modal, setModal] = useState(null); // { mode: 'upload'|'replace', item? }
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -157,20 +158,66 @@ export default function MediaAdminTab({ onAlert }) {
     }
   };
 
+  const handleCleanupUnused = async () => {
+    const ok = await confirmModal({
+      title: 'Clean Unused Cloud Images?',
+      message:
+        'This will scan Cloudflare R2 storage for Meet the Board photos and user profile pictures that are no longer chosen or active in the database, and permanently delete them to free up cloud storage.',
+      confirmText: 'Clean Storage',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
+
+    try {
+      setCleaning(true);
+      const res = await ApiService.cleanupUnusedImages({ dryRun: false });
+      const { summary } = res || {};
+      if (summary?.totalDeleted > 0) {
+        onAlert?.({
+          type: 'success',
+          message: `Storage cleaned! Deleted ${summary.totalDeleted} unused image(s) (${summary.boardPhotosDeleted} Meet the Board photos, ${summary.profilePicturesDeleted} profile pictures).`
+        });
+      } else {
+        onAlert?.({
+          type: 'info',
+          message: `Cloud storage is already clean! All ${summary?.boardPhotosScanned || 0} board photos and ${summary?.profilePicturesScanned || 0} profile pictures are actively in use.`
+        });
+      }
+      await load();
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Cleanup failed' });
+    } finally {
+      setCleaning(false);
+    }
+  };
+
   return (
     <div className="AdminPanel__section">
       <div className="AdminPanel__sectionHeader">
         <h2 className="AdminPanel__sectionTitle">
           <MdPermMedia /> Media library
         </h2>
-        <button
-          type="button"
-          className="AdminPanel__addBtn"
-          disabled={uploading}
-          onClick={openUploadModal}
-        >
-          <MdUpload /> {uploading ? 'Working…' : 'Upload'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            className="AdminPanel__actionBtn"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            disabled={uploading || cleaning}
+            onClick={handleCleanupUnused}
+            title="Delete inactive Meet the Board photos and unused account profile pictures from R2"
+          >
+            <MdCleaningServices /> {cleaning ? 'Cleaning…' : 'Clean Unused Images'}
+          </button>
+          <button
+            type="button"
+            className="AdminPanel__addBtn"
+            disabled={uploading || cleaning}
+            onClick={openUploadModal}
+          >
+            <MdUpload /> {uploading ? 'Working…' : 'Upload'}
+          </button>
+        </div>
       </div>
 
       <div className="AdminPanel__filters">
