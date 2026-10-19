@@ -44,6 +44,7 @@ const CourseLessonProgress = require('./CourseLessonProgress');
 const CourseAnnouncement = require('./CourseAnnouncement');
 const CourseLessonAttendance = require('./CourseLessonAttendance');
 const Blacklist = require('./Blacklist');
+const CyberRunnerScore = require('./CyberRunnerScore');
 
 // Initialize models
 const models = {
@@ -88,7 +89,8 @@ const models = {
   CourseEnrollment,
   CourseLessonProgress,
   CourseAnnouncement,
-  CourseLessonAttendance
+  CourseLessonAttendance,
+  CyberRunnerScore
 };
 
 // Set up associations
@@ -709,6 +711,16 @@ User.hasMany(Blacklist, {
   as: 'blacklistEntries'
 });
 
+// CyberRunnerScore associations
+CyberRunnerScore.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+User.hasMany(CyberRunnerScore, {
+  foreignKey: 'user_id',
+  as: 'cyberrunnerScores'
+});
+
 // Sync models with database.
 // Prefer targeted patch scripts (patchCmsSchema / patchSeasonSchema) over alter:true.
 // MySQL InnoDB allows max 64 indexes per table; repeated alter sync piles up FKs/indexes
@@ -893,6 +905,25 @@ async function ensureBlacklistTable() {
   }
 }
 
+async function ensureCyberRunnerTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'cyberrunner_scores'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await CyberRunnerScore.sync();
+      logger.info('Created cyberrunner_scores table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure cyberrunner_scores table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 async function ensureCourseEnrollmentColumns() {
   try {
     const [rows] = await sequelize.query(
@@ -991,6 +1022,7 @@ const syncModels = async () => {
     await ensureCourseColumnsAndAttendanceTable();
     await ensureCourseEnrollmentColumns();
     await ensureBlacklistTable();
+    await ensureCyberRunnerTable();
     await ensureApplicationFacultyColumn();
     await ensureApplicationMultiSeasonIndexes();
   } catch (error) {

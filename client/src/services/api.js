@@ -4667,6 +4667,44 @@ class ApiService {
     return result;
   }
 
+  // CyberRunner Arcade Leaderboard & SCNT.eg Giveaway APIs
+  static async getCyberRunnerLeaderboard(params = {}) {
+    const queryParams = new URLSearchParams();
+    if (params.date) queryParams.append('date', params.date);
+    if (params.limit) queryParams.append('limit', String(params.limit));
+
+    const qs = queryParams.toString();
+    const url = `${API_BASE_URL}/game/cyberrunner/leaderboard${qs ? `?${qs}` : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: this.getHeaders(false),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch leaderboard');
+    return result;
+  }
+
+  static async submitCyberRunnerScore(payload) {
+    const response = await fetch(`${API_BASE_URL}/game/cyberrunner/score`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to submit score');
+    return result;
+  }
+
+  static async getCyberRunnerDailyChampion() {
+    const response = await fetch(`${API_BASE_URL}/game/cyberrunner/daily-champion`, {
+      method: 'GET',
+      headers: this.getHeaders(false),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch daily champion');
+    return result;
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];

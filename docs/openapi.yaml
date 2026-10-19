@@ -71,6 +71,8 @@ tags:
     name: email-jobs
   -
     name: email
+  -
+    name: game/cyberrunner
 components:
   securitySchemes:
     bearerAuth:
@@ -3497,6 +3499,59 @@ paths:
           description: Success
       tags:
         - Feedback
+  /game/cyberrunner/admin/scores:
+    get:
+      summary: 'Get /game/cyberrunner/admin/scores'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - game/cyberrunner
+      security:
+        -
+          bearerAuth: []
+  '/game/cyberrunner/admin/scores/{id}':
+    delete:
+      summary: 'Delete /game/cyberrunner/admin/scores/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - game/cyberrunner
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  /game/cyberrunner/daily-champion:
+    get:
+      summary: 'Get /game/cyberrunner/daily-champion'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - game/cyberrunner
+  /game/cyberrunner/leaderboard:
+    get:
+      summary: 'Get /game/cyberrunner/leaderboard'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - game/cyberrunner
+  /game/cyberrunner/score:
+    post:
+      summary: 'Create/submit /game/cyberrunner/score'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - game/cyberrunner
   /members:
     get:
       tags:
