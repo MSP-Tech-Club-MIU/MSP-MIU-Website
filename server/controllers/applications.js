@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Application, Member, SiteContent } = require('../models');
+const { Application, Member, User, SiteContent } = require('../models');
 const { parsePagination, paginationMeta } = require('../utils/pagination');
 const { resolveSeasonFilter, seasonInclude, resolveSeasonIdForWrite } = require('../utils/seasonFilter');
 const { enrollFromApplication } = require('../utils/memberEnrollment');
@@ -259,6 +259,30 @@ const createApplication = async (req, res) => {
                     dupField === 'university_id'
                         ? 'An application with this university ID already exists for this season'
                         : 'An application with this email address already exists for this season'
+            });
+        }
+
+        // Check if applicant is already an enrolled member in the current season
+        const currentSeasonMember = await Member.findOne({
+            where: {
+                season_id,
+                [Op.or]: [
+                    { university_id: trimmedUniId },
+                    { email: trimmedEmail }
+                ]
+            }
+        });
+
+        if (currentSeasonMember) {
+            logger.warn('Application submission rejected: already a member in current season', {
+                ...applicantMeta,
+                reason: 'already_member',
+                season_id,
+                member_id: currentSeasonMember.member_id
+            });
+            return res.status(400).json({
+                success: false,
+                error: 'You are already an active member of the club for this season'
             });
         }
 
@@ -870,9 +894,16 @@ const checkEligibility = async (req, res) => {
         }
 
         // 4. Check membership in the current season
-        if (university_id) {
+        const memberOrConditions = [];
+        if (university_id) memberOrConditions.push({ university_id });
+        if (email) memberOrConditions.push({ email });
+
+        if (memberOrConditions.length > 0) {
             const currentSeasonMember = await Member.findOne({
-                where: { university_id, season_id },
+                where: {
+                    season_id,
+                    [Op.or]: memberOrConditions
+                },
                 attributes: ['member_id', 'full_name', 'season_id']
             });
 
@@ -891,13 +922,26 @@ const checkEligibility = async (req, res) => {
                 });
             }
 
-            // 5. Check for membership in a previous season (soft warning — still eligible)
+            // 5. Check for membership or active account in a previous season (soft warning — still eligible)
             const previousSeasonMember = await Member.findOne({
-                where: { university_id },
+                where: {
+                    [Op.or]: memberOrConditions
+                },
                 attributes: ['member_id', 'full_name', 'season_id']
             });
 
-            if (previousSeasonMember) {
+            let previousSeasonUser = null;
+            if (!previousSeasonMember) {
+                previousSeasonUser = await User.findOne({
+                    where: {
+                        role: 'member',
+                        [Op.or]: memberOrConditions
+                    },
+                    attributes: ['user_id', 'full_name', 'season_id']
+                });
+            }
+
+            if (previousSeasonMember || previousSeasonUser) {
                 return res.json({
                     success: true,
                     eligible: true,
