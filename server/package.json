@@ -30,7 +30,8 @@
     "patch:feedback-schema": "node scripts/patchFeedbackSchema.js",
     "insert-approved-members": "node scripts/MemberInsertion.js",
     "cleanup:unused-images": "node scripts/cleanupUnusedImages.js",
-    "check:season-separation": "node scripts/checkSeasonSeparation.js"
+    "check:season-separation": "node scripts/checkSeasonSeparation.js",
+    "test:returning-member": "node scripts/testReturningMemberApplication.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
