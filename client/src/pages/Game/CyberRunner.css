@@ -2093,6 +2093,184 @@
   color: #ffd54f;
 }
 
+.CyberRunner__privateStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 179, 0, 0.15);
+  border: 1px solid rgba(255, 179, 0, 0.4);
+  color: #ffd54f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.CyberRunner__leaderboardNoticeBox {
+  background: linear-gradient(135deg, rgba(225, 48, 108, 0.16), rgba(131, 58, 180, 0.12));
+  border: 1.5px solid rgba(225, 48, 108, 0.45);
+  border-radius: 14px;
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(225, 48, 108, 0.15);
+}
+
+.CyberRunner__noticeHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.CyberRunner__noticeInstaIcon {
+  font-size: 1.75rem;
+  color: #e1306c;
+  flex-shrink: 0;
+}
+
+.CyberRunner__noticeHeader h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.CyberRunner__noticeHeader p {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  color: #fce4ec;
+}
+
+.CyberRunner__noticeHeader p strong {
+  color: #ff80ab;
+}
+
+.CyberRunner__noticeDesc {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #f8bbd0;
+  line-height: 1.5;
+}
+
+.CyberRunner__noticeDesc strong {
+  color: #ffffff;
+}
+
+.CyberRunner__followDirectBtn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e1306c 0%, #c13584 50%, #833ab4 100%);
+  color: #ffffff !important;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(225, 48, 108, 0.4);
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__followDirectBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(225, 48, 108, 0.55);
+}
+
+.CyberRunner__hiddenLeaderboardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.95rem 1.1rem;
+}
+
+.CyberRunner__hiddenInfoRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.CyberRunner__hiddenInfoIcon {
+  font-size: 1.05rem;
+  color: #ffd54f;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.CyberRunner__hiddenInfoRow strong {
+  display: block;
+  font-size: 0.86rem;
+  color: #ffffff;
+  margin-bottom: 0.15rem;
+}
+
+.CyberRunner__hiddenInfoRow p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a4bedc;
+  line-height: 1.45;
+}
+
+.CyberRunner__followRequirementBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(225, 48, 108, 0.16);
+  border: 1px solid rgba(225, 48, 108, 0.4);
+  color: #f8bbd0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  margin-bottom: 0.5rem;
+}
+
+.CyberRunner__followRequirementBanner svg {
+  color: #e1306c;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.CyberRunner__followRequirementBanner a {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.CyberRunner__ruleItem--highlight {
+  background: rgba(225, 48, 108, 0.15);
+  border: 1px solid rgba(225, 48, 108, 0.35);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  color: #ffffff;
+}
+
+.CyberRunner__ruleItem--highlight svg {
+  color: #e1306c !important;
+  font-size: 1.05rem !important;
+}
+
+.CyberRunner__ruleItem--highlight strong {
+  color: #ff80ab !important;
+}
+
+.CyberRunner__submitSuccessText {
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: #b0c7e4;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.CyberRunner__submitSuccessText a {
+  color: #ff80ab;
+}
+
 .CyberRunner__tabList {
   display: flex;
   align-items: center;
