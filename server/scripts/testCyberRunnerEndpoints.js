@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { SPONSOR_INFO } = require('../controllers/cyberrunner.controller');
+const { SPONSOR_INFO, getUniquePlayerBests } = require('../controllers/cyberrunner.controller');
 
 function testSponsorInfo() {
   console.log('Testing SPONSOR_INFO...');
@@ -9,6 +9,33 @@ function testSponsorInfo() {
   assert.ok(SPONSOR_INFO.description.includes('Egyptian fragrance brand'));
   assert.ok(SPONSOR_INFO.giveawayTitle.includes('Daily Top Score'));
   console.log('SPONSOR_INFO tests passed!');
+}
+
+function testUniquePlayerBests() {
+  console.log('Testing getUniquePlayerBests logic for Today & All-Time leaderboards...');
+  const testRuns = [
+    { score_id: 1, player_name: 'Player One', user_id: 10, score: 5000, level: 10, tokens: 20 },
+    { score_id: 2, player_name: 'Player One', user_id: 10, score: 3000, level: 6, tokens: 10 },
+    { score_id: 3, player_name: 'guest_user', user_id: null, score: 4500, level: 9, tokens: 18 },
+    { score_id: 4, player_name: 'GUEST_USER', user_id: null, score: 2000, level: 4, tokens: 5 },
+    { score_id: 5, player_name: 'Unique Legend', user_id: null, score: 8000, level: 16, tokens: 40 },
+    { score_id: 6, player_name: null, user_id: null, score: 1000, level: 2, tokens: 2 },
+  ];
+
+  // Already ordered by score DESC:
+  testRuns.sort((a, b) => b.score - a.score);
+
+  const bests = getUniquePlayerBests(testRuns, 10);
+
+  // Expect distinct entries for: Unique Legend (8000), Player One (5000), guest_user (4500), and null name (1000)
+  assert.strictEqual(bests.length, 4, 'Should filter out duplicates and keep each player best run');
+  assert.strictEqual(bests[0].player_name, 'Unique Legend');
+  assert.strictEqual(bests[0].score, 8000);
+  assert.strictEqual(bests[1].player_name, 'Player One');
+  assert.strictEqual(bests[1].score, 5000);
+  assert.strictEqual(bests[2].player_name, 'guest_user');
+  assert.strictEqual(bests[2].score, 4500);
+  console.log('getUniquePlayerBests tests passed successfully!');
 }
 
 function testCairoTimeCalculations() {
@@ -36,6 +63,7 @@ function testRoutesMounted() {
 async function run() {
   try {
     testSponsorInfo();
+    testUniquePlayerBests();
     testCairoTimeCalculations();
     testRoutesMounted();
     console.log('\nAll CyberRunner backend verification tests passed successfully!');
