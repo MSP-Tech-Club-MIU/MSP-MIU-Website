@@ -2201,52 +2201,64 @@
   gap: 1.15rem;
 }
 
-.CyberRunner__podiumAvatar {
-  position: relative;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 2px solid #ffd54f;
-  box-shadow: 0 0 16px rgba(255, 213, 79, 0.4);
-  flex-shrink: 0;
-  overflow: visible;
-}
-
-.CyberRunner__podiumAvatar img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.CyberRunner__avatarFallback {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0d3b66, #001f3f);
-  color: #ffd54f;
+.CyberRunner__podiumRankBadgeLarge {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 1.4rem;
-}
-
-.CyberRunner__podiumRankBadge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #ffb300;
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ffb300, #ff8f00);
   color: #03101f;
-  font-size: 0.75rem;
+  box-shadow: 0 0 16px rgba(255, 179, 0, 0.45);
+  font-size: 1.15rem;
   font-weight: 900;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.CyberRunner__podiumRankBadgeLarge span {
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.CyberRunner__podiumPlayerInfo {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border: 2px solid #03101f;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.CyberRunner__onlinePlayerNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.CyberRunner__instagramHandle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e1306c;
+  background: rgba(225, 48, 108, 0.12);
+  border: 1px solid rgba(225, 48, 108, 0.3);
+  padding: 0.12rem 0.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__instagramHandle:hover {
+  background: rgba(225, 48, 108, 0.25);
+  border-color: #e1306c;
+  color: #ff6b9d;
+  transform: translateY(-1px);
 }
 
 .CyberRunner__podiumDetails {

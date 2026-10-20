@@ -70,6 +70,26 @@ async function ensureCyberRunnerTable() {
   }
 }
 
+function formatInstagram(contact) {
+  if (!contact) return null;
+  const raw = String(contact).trim();
+  if (!raw) return null;
+  // If full Instagram URL
+  const match = raw.match(/(?:instagram\.com\/|instagr\.am\/)([a-zA-Z0-9._]+)/i);
+  if (match) return `@${match[1]}`;
+  // If already starts with @
+  if (raw.startsWith('@')) return raw;
+  // If valid handle
+  if (/^[a-zA-Z0-9._]{2,30}$/.test(raw) && /[a-zA-Z]/.test(raw)) {
+    return `@${raw}`;
+  }
+  if (raw.includes('@') && raw.includes('.')) {
+    const handle = raw.split('@')[0];
+    return handle ? `@${handle}` : raw;
+  }
+  return raw.startsWith('@') ? raw : `@${raw}`;
+}
+
 /**
  * Filter out duplicates to return only the best run per player.
  */
@@ -102,68 +122,28 @@ const getLeaderboard = async (req, res) => {
 
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
-    const userInclude = {
-      model: User,
-      as: 'user',
-      attributes: ['user_id', 'full_name', 'university_id', 'profile_picture'],
-      required: false
-    };
+    const todayRuns = await CyberRunnerScore.findAll({
+      where: {
+        played_date: requestedDate,
+        is_verified: true
+      },
+      order: [
+        ['score', 'DESC'],
+        ['created_at', 'ASC']
+      ],
+      limit: 60
+    });
 
-    let todayRuns = [];
-    let allTimeRuns = [];
-
-    try {
-      todayRuns = await CyberRunnerScore.findAll({
-        where: {
-          played_date: requestedDate,
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ],
-        limit: 60,
-        include: [userInclude]
-      });
-
-      allTimeRuns = await CyberRunnerScore.findAll({
-        where: {
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ],
-        limit: 60,
-        include: [userInclude]
-      });
-    } catch (queryErr) {
-      logger.warn('Error fetching CyberRunner runs with user include, falling back to direct scores:', {
-        message: queryErr.message
-      });
-      todayRuns = await CyberRunnerScore.findAll({
-        where: {
-          played_date: requestedDate,
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ],
-        limit: 60
-      });
-
-      allTimeRuns = await CyberRunnerScore.findAll({
-        where: {
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ],
-        limit: 60
-      });
-    }
+    const allTimeRuns = await CyberRunnerScore.findAll({
+      where: {
+        is_verified: true
+      },
+      order: [
+        ['score', 'DESC'],
+        ['created_at', 'ASC']
+      ],
+      limit: 60
+    });
 
     const uniqueToday = getUniquePlayerBests(todayRuns, limit);
     const uniqueAllTime = getUniquePlayerBests(allTimeRuns, limit);
@@ -172,26 +152,26 @@ const getLeaderboard = async (req, res) => {
     const dailyChampion = uniqueToday.length > 0 ? {
       scoreId: uniqueToday[0].score_id,
       playerName: uniqueToday[0].player_name || 'Anonymous Runner',
+      instagram: formatInstagram(uniqueToday[0].player_contact),
       score: uniqueToday[0].score,
       level: uniqueToday[0].level,
       tokens: uniqueToday[0].tokens,
       maxCombo: uniqueToday[0].max_combo,
       playedDate: uniqueToday[0].played_date,
       createdAt: uniqueToday[0].created_at,
-      avatar: uniqueToday[0].user?.profile_picture || null,
       isDailyWinner: true
     } : null;
 
     const allTimeChampion = uniqueAllTime.length > 0 ? {
       scoreId: uniqueAllTime[0].score_id,
       playerName: uniqueAllTime[0].player_name || 'Anonymous Runner',
+      instagram: formatInstagram(uniqueAllTime[0].player_contact),
       score: uniqueAllTime[0].score,
       level: uniqueAllTime[0].level,
       tokens: uniqueAllTime[0].tokens,
       maxCombo: uniqueAllTime[0].max_combo,
       playedDate: uniqueAllTime[0].played_date,
-      createdAt: uniqueAllTime[0].created_at,
-      avatar: uniqueAllTime[0].user?.profile_picture || null
+      createdAt: uniqueAllTime[0].created_at
     } : null;
 
     const countdown = getCairoResetCountdown();
@@ -206,26 +186,26 @@ const getLeaderboard = async (req, res) => {
           rank: idx + 1,
           scoreId: s.score_id,
           playerName: s.player_name || 'Anonymous Runner',
+          instagram: formatInstagram(s.player_contact),
           score: s.score,
           level: s.level,
           tokens: s.tokens,
           maxCombo: s.max_combo,
           playedDate: s.played_date,
           createdAt: s.created_at,
-          avatar: s.user?.profile_picture || null,
           isDailyChampion: idx === 0
         })),
         allTimeScores: uniqueAllTime.map((s, idx) => ({
           rank: idx + 1,
           scoreId: s.score_id,
           playerName: s.player_name || 'Anonymous Runner',
+          instagram: formatInstagram(s.player_contact),
           score: s.score,
           level: s.level,
           tokens: s.tokens,
           maxCombo: s.max_combo,
           playedDate: s.played_date,
-          createdAt: s.created_at,
-          avatar: s.user?.profile_picture || null
+          createdAt: s.created_at
         })),
         totalTodayRuns: todayRuns.length,
         totalTodayPlayers: uniqueToday.length,
@@ -401,38 +381,16 @@ const getDailyChampion = async (req, res) => {
     await ensureCyberRunnerTable();
     const cairoDate = getCairoDateString();
 
-    let topScore = null;
-    try {
-      topScore = await CyberRunnerScore.findOne({
-        where: {
-          played_date: cairoDate,
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ],
-        include: [
-          {
-            model: User,
-            as: 'user',
-            attributes: ['user_id', 'full_name', 'profile_picture'],
-            required: false
-          }
-        ]
-      });
-    } catch (e) {
-      topScore = await CyberRunnerScore.findOne({
-        where: {
-          played_date: cairoDate,
-          is_verified: true
-        },
-        order: [
-          ['score', 'DESC'],
-          ['created_at', 'ASC']
-        ]
-      });
-    }
+    const topScore = await CyberRunnerScore.findOne({
+      where: {
+        played_date: cairoDate,
+        is_verified: true
+      },
+      order: [
+        ['score', 'DESC'],
+        ['created_at', 'ASC']
+      ]
+    });
 
     const countdown = getCairoResetCountdown();
 
@@ -442,11 +400,11 @@ const getDailyChampion = async (req, res) => {
         date: cairoDate,
         dailyChampion: topScore ? {
           scoreId: topScore.score_id,
-          playerName: topScore.player_name,
+          playerName: topScore.player_name || 'Anonymous Runner',
+          instagram: formatInstagram(topScore.player_contact),
           score: topScore.score,
           level: topScore.level,
-          playedDate: topScore.played_date,
-          avatar: topScore.user?.profile_picture || null
+          playedDate: topScore.played_date
         } : null,
         countdown,
         sponsor: SPONSOR_INFO
