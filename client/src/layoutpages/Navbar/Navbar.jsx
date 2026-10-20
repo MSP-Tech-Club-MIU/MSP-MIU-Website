@@ -267,12 +267,12 @@ const Navbar = memo(() => {
       { to: '/events', label: 'Events', icon: <FaCalendarAlt /> },
       { to: '/courses', label: 'Courses', icon: <MdMenuBook /> },
       { to: '/competitions', label: 'Competitions', icon: <MdEmojiEvents /> },
+      { to: '/game', label: 'Cyber Runner', icon: <FaGamepad /> },
     ];
     const extended = [
       { to: '/Meet-the-board', label: 'Meet the Board', icon: <FaUsers /> },
       { to: '/sponsors', label: 'Sponsors', icon: <FaHandshake /> },
       { to: '/suggestions', label: 'Suggestions / Feedback', icon: <MdFeedback /> },
-      { to: '/game', label: 'Cyber Runner', icon: <FaGamepad /> },
     ];
     if (!isCapacitor()) {
       extended.push({ to: '/download-android', label: 'Download App', icon: <FaAndroid /> });
