@@ -454,6 +454,8 @@ export const CyberRunner = () => {
     error: null,
   });
   const [countdownSec, setCountdownSec] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [adminTab, setAdminTab] = useState('today'); // 'today' | 'allTime' | 'local'
 
   // Score Submission in Game Over Overlay
   const [playerName, setPlayerName] = useState(() => {
@@ -837,6 +839,31 @@ export const CyberRunner = () => {
   }, [fetchLeaderboard]);
 
   useEffect(() => {
+    let isMounted = true;
+    if (ApiService.isAuthenticated()) {
+      ApiService.getProfile()
+        .then((data) => {
+          if (isMounted) setCurrentUser(data);
+        })
+        .catch(() => {
+          if (isMounted) setCurrentUser(null);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const userRole = currentUser?.role?.toLowerCase();
+  const deptRaw = currentUser?.department_id;
+  const deptId = typeof deptRaw === 'number' ? deptRaw : parseInt(deptRaw, 10);
+  const isAdminOrBoard = Boolean(
+    userRole === 'board' ||
+    userRole === 'admin' ||
+    (!Number.isNaN(deptId) && deptId === 5)
+  );
+
+  useEffect(() => {
     if (countdownSec == null || countdownSec <= 0) return;
     const interval = setInterval(() => {
       setCountdownSec((prev) => {
@@ -854,17 +881,27 @@ export const CyberRunner = () => {
     if (e) e.preventDefault();
     const trimmedName = playerName.trim();
     if (!trimmedName || trimmedName.length < 2) {
-      setSubmitError('Please enter your name (at least 2 characters)');
+      setSubmitError('Please enter your full name (at least 2 characters)');
       return;
     }
+    const rawContact = playerContact.trim();
+    if (!rawContact || rawContact.length < 2) {
+      setSubmitError('Please enter your Instagram username (must follow @scnt.eg)');
+      return;
+    }
+    const cleanIg = rawContact.replace(/^(https?:\/\/)?(www\.)?instagram\.com\//i, '').replace(/^@+/, '');
+    if (!cleanIg || cleanIg.length < 2) {
+      setSubmitError('Please enter a valid Instagram username');
+      return;
+    }
+    const formattedIg = `@${cleanIg}`;
+
     setIsSubmittingScore(true);
     setSubmitError(null);
     try {
       try {
         localStorage.setItem('msp_cyber_player_name', trimmedName);
-        if (playerContact.trim()) {
-          localStorage.setItem('msp_cyber_player_contact', playerContact.trim());
-        }
+        localStorage.setItem('msp_cyber_player_contact', formattedIg);
       } catch (e) {}
 
       const res = await ApiService.submitCyberRunnerScore({
@@ -873,7 +910,7 @@ export const CyberRunner = () => {
         tokens: hud.tokens,
         maxCombo: hud.combo,
         playerName: trimmedName,
-        playerContact: playerContact.trim(),
+        playerContact: formattedIg,
       });
 
       if (res.success && res.data) {
@@ -2190,7 +2227,7 @@ export const CyberRunner = () => {
               <FaGift /> SCNT.EG DAILY GIVEAWAY
             </span>
             <span className="CyberRunner__tickerText">
-              Must follow{' '}
+              To participate in the leaderboard: follow{' '}
               <a
                 href={SCNT_INSTAGRAM_URL}
                 target="_blank"
@@ -2199,7 +2236,7 @@ export const CyberRunner = () => {
               >
                 <strong>@scnt.eg</strong> <FaExternalLinkAlt className="CyberRunner__miniIcon" />
               </a>{' '}
-              on Instagram to participate in the leaderboard &amp; win the daily luxury perfume!
+              on Instagram &amp; submit with your <strong>Full Name</strong> and <strong>IG Username</strong>! Daily #1 wins authentic luxury perfume.
             </span>
           </div>
           <div className="CyberRunner__sponsorTickerRight">
@@ -2350,9 +2387,15 @@ export const CyberRunner = () => {
                   <p>
                     Tap screen or press <kbd>Space</kbd> to Jump (tap twice for{' '}
                     <strong>Double Jump</strong>) and hold <kbd>↓</kbd> or swipe down to{' '}
-                    <strong>Duck under Cyber Birds</strong>. Top the leaderboard to win an authentic SCNT luxury perfume &mdash; you must follow{' '}
-                    <strong>@scnt.eg</strong> on Instagram to participate!
+                    <strong>Duck under Cyber Birds</strong>.
                   </p>
+                  <div className="CyberRunner__startRequirementsBox">
+                    <FaGift className="CyberRunner__startReqIcon" />
+                    <div>
+                      <strong>To enter the leaderboard &amp; win SCNT perfume:</strong>
+                      <span>Follow <strong>@scnt.eg</strong> on Instagram &amp; submit with your <strong>Full Name</strong> and <strong>IG Username</strong>!</span>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     className="CyberRunner__primaryBtn"
@@ -2484,13 +2527,13 @@ export const CyberRunner = () => {
 
                         <div className="CyberRunner__followRequirementBanner">
                           <FaInstagram />
-                          <span>
-                            <strong>Mandatory:</strong> You must follow{' '}
-                            <a href={SCNT_INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
-                              @scnt.eg
-                            </a>{' '}
-                            on Instagram to participate in the leaderboard &amp; qualify!
-                          </span>
+                          <div>
+                            <strong>To Enter the Leaderboard:</strong>
+                            <p>
+                              1) Follow <a href={SCNT_INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">@scnt.eg</a> on Instagram<br />
+                              2) Submit with your <strong>Full Name</strong> and <strong>IG Username</strong> below:
+                            </p>
+                          </div>
                         </div>
 
                         {!submitResult ? (
@@ -2500,7 +2543,7 @@ export const CyberRunner = () => {
                                 <FaUser className="CyberRunner__inputIcon" />
                                 <input
                                   type="text"
-                                  placeholder="Your Name *"
+                                  placeholder="Your Full Name *"
                                   value={playerName}
                                   onChange={(e) => setPlayerName(e.target.value)}
                                   onKeyDown={(e) => e.stopPropagation()}
@@ -2508,24 +2551,29 @@ export const CyberRunner = () => {
                                   maxLength={35}
                                   disabled={isSubmittingScore}
                                   required
-                                  aria-label="Your Name for Leaderboard"
+                                  aria-label="Your Full Name for Leaderboard"
                                 />
                               </div>
                               <div className="CyberRunner__inputField">
                                 <FaInstagram className="CyberRunner__inputIcon" />
                                 <input
                                   type="text"
-                                  placeholder="Instagram @handle (must follow @scnt.eg) *"
+                                  placeholder="Your Instagram Username (@username) *"
                                   value={playerContact}
                                   onChange={(e) => setPlayerContact(e.target.value)}
                                   onKeyDown={(e) => e.stopPropagation()}
                                   onKeyUp={(e) => e.stopPropagation()}
                                   maxLength={50}
                                   disabled={isSubmittingScore}
-                                  aria-label="Instagram handle for giveaway prize"
+                                  required
+                                  aria-label="Your Instagram Username (must follow @scnt.eg)"
                                 />
                               </div>
                             </div>
+
+                            <span className="CyberRunner__inputHelperHint">
+                              <FaInfoCircle /> Must follow <strong>@scnt.eg</strong> with this Instagram account to be valid on the leaderboard.
+                            </span>
 
                             {submitError && (
                               <div className="CyberRunner__submitError">{submitError}</div>
@@ -2569,11 +2617,11 @@ export const CyberRunner = () => {
                               </div>
                             )}
                             <p className="CyberRunner__submitSuccessText">
-                              Make sure you follow{' '}
+                              Run submitted! Make sure you follow{' '}
                               <a href={SCNT_INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
                                 <strong>@scnt.eg</strong>
                               </a>{' '}
-                              on Instagram to validate your entry for the luxury perfume prize!
+                              on Instagram with your submitted handle so we can verify your entry!
                             </p>
                           </div>
                         )}
@@ -2670,136 +2718,396 @@ export const CyberRunner = () => {
           </div>
 
           <div className="CyberRunner__contestGrid">
-            {/* Left Column: Leaderboard Participation & Personal Records */}
+            {/* Left Column: Leaderboard Card (Admin Live View OR Public Hidden Guide) */}
             <div className="CyberRunner__leaderboardCard" id="cyberrunner-leaderboard">
               <div className="CyberRunner__leaderboardHeader">
                 <div className="CyberRunner__leaderboardTitle">
                   <FaTrophy className="CyberRunner__panelIconGold" />
                   <div>
-                    <h3>Leaderboard &amp; Participation</h3>
-                    <p>Contest standings &amp; eligibility requirements</p>
+                    <h3>{isAdminOrBoard ? 'Live Arcade Leaderboard' : 'Leaderboard & Participation'}</h3>
+                    <p>{isAdminOrBoard ? 'Admin View: Real-time standings & participant handles' : 'Contest standings & eligibility requirements'}</p>
                   </div>
                 </div>
 
-                <span className="CyberRunner__privateStatusBadge">
-                  <FaEyeSlash /> Public Leaderboard Hidden
-                </span>
-              </div>
-
-              {/* Mandatory Follow Requirement Notice */}
-              <div className="CyberRunner__leaderboardNoticeBox">
-                <div className="CyberRunner__noticeHeader">
-                  <FaInstagram className="CyberRunner__noticeInstaIcon" />
-                  <div>
-                    <h4>Mandatory Requirement to Participate</h4>
-                    <p>You must follow official sponsor <strong>@scnt.eg</strong> on Instagram to qualify.</p>
+                {isAdminOrBoard ? (
+                  <div className="CyberRunner__adminHeaderRight">
+                    <span className="CyberRunner__adminBadge">
+                      <FaCrown /> Admin View (Live)
+                    </span>
+                    <div className="CyberRunner__tabList">
+                      <button
+                        type="button"
+                        className={`CyberRunner__tabButton ${adminTab === 'today' ? 'is-active' : ''}`}
+                        onClick={() => setAdminTab('today')}
+                      >
+                        <FaCrown />
+                        <span>Today ({leaderboardData.todayScores.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`CyberRunner__tabButton ${adminTab === 'allTime' ? 'is-active' : ''}`}
+                        onClick={() => setAdminTab('allTime')}
+                      >
+                        <FaMedal />
+                        <span>All-Time ({leaderboardData.allTimeScores.length})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`CyberRunner__tabButton ${adminTab === 'local' ? 'is-active' : ''}`}
+                        onClick={() => setAdminTab('local')}
+                      >
+                        <FaGamepad />
+                        <span>Local</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="CyberRunner__refreshBtn"
+                        onClick={fetchLeaderboard}
+                        title="Refresh Leaderboard"
+                      >
+                        <FaSyncAlt className={leaderboardData.loading ? 'spin-icon' : ''} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <p className="CyberRunner__noticeDesc">
-                  Any submitted score from a participant not following <strong>@scnt.eg</strong> will be disqualified from winning the daily luxury fragrance prize.
-                </p>
-                <a
-                  href={SCNT_INSTAGRAM_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="CyberRunner__followDirectBtn"
-                >
-                  <FaInstagram /> Follow @scnt.eg on Instagram <FaExternalLinkAlt className="CyberRunner__miniExternalIcon" />
-                </a>
-              </div>
-
-              {/* Hidden Leaderboard Explanation */}
-              <div className="CyberRunner__hiddenLeaderboardInfo">
-                <div className="CyberRunner__hiddenInfoRow">
-                  <FaLock className="CyberRunner__hiddenInfoIcon" />
-                  <div>
-                    <strong>Why is the public leaderboard hidden?</strong>
-                    <p>
-                      To ensure fair play and prevent last-second score sniping, live public standings are kept private during active rounds. All valid runs are logged securely on our servers.
-                    </p>
-                  </div>
-                </div>
-                <div className="CyberRunner__hiddenInfoRow">
-                  <FaClock className="CyberRunner__hiddenInfoIcon" />
-                  <div>
-                    <strong>Daily Round Resets at Midnight Cairo Time</strong>
-                    <p>
-                      The verified #1 runner of the day will be announced on Instagram by MSP MIU &amp; SCNT.eg and contacted to receive their perfume!
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Local Device Records */}
-              <div className="CyberRunner__tabContent" style={{ marginTop: '0.4rem' }}>
-                <div className="CyberRunner__panelHeader">
-                  <span className="CyberRunner__gamesCount">
-                      {stats.totalGames} {stats.totalGames === 1 ? 'Run' : 'Runs'} Played on this Device
+                ) : (
+                  <div className="CyberRunner__publicHeaderRight">
+                    <span className="CyberRunner__privateStatusBadge">
+                      <FaEyeSlash /> Public Leaderboard Hidden
                     </span>
                   </div>
+                )}
+              </div>
 
-                  {stats.topRuns.length === 0 ? (
-                    <p className="CyberRunner__emptyText">
-                      No runs recorded in this browser yet. Hit <strong>Start Run</strong> above to set your first score!
-                    </p>
-                  ) : (
-                    <ul className="CyberRunner__runsList">
-                      {stats.topRuns.map((run, idx) => (
-                        <li key={`${run.score}-${idx}`} className="CyberRunner__runItem">
-                          <span className={`CyberRunner__runRank CyberRunner__runRank--${idx + 1}`}>
-                            #{idx + 1}
-                          </span>
-                          <div className="CyberRunner__runInfo">
-                            <strong>{run.score.toLocaleString()} pts</strong>
-                            <span>
-                              Lvl {run.level || getLevelFromScore(run.score)} ({run.world || getLevelTheme(getLevelFromScore(run.score)).name}) &bull; {run.tokens} tokens
-                            </span>
+              {isAdminOrBoard ? (
+                <>
+                  {/* ADMIN TAB 1: Today's Contest */}
+                  {adminTab === 'today' && (
+                    <div className="CyberRunner__tabContent">
+                      {dailyChampion ? (
+                        <div className="CyberRunner__dailyPodium">
+                          <div className="CyberRunner__podiumBadge">
+                            <FaCrown /> CURRENT #1 FOR SCNT GIVEAWAY
                           </div>
-                          <span className="CyberRunner__runDate">{run.date}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                          <div className="CyberRunner__podiumBody">
+                            <div className="CyberRunner__podiumRankBadgeLarge">
+                              <FaCrown />
+                              <span>#1</span>
+                            </div>
+                            <div className="CyberRunner__podiumDetails">
+                              <div className="CyberRunner__podiumNameRow">
+                                <div className="CyberRunner__podiumPlayerInfo">
+                                  <h4>{dailyChampion.playerName}</h4>
+                                  {dailyChampion.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${dailyChampion.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${dailyChampion.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {dailyChampion.instagram}
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="CyberRunner__podiumGiveawayTag">
+                                  <FaGift /> SCNT Winner Position
+                                </span>
+                              </div>
+                              <div className="CyberRunner__podiumStatsRow">
+                                <span className="CyberRunner__podiumScore">
+                                  <strong>{dailyChampion.score.toLocaleString()}</strong> pts
+                                </span>
+                                <span>Level {dailyChampion.level || getLevelFromScore(dailyChampion.score)}</span>
+                                <span>{dailyChampion.tokens || 0} tokens</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
 
-                  <div className="CyberRunner__lifetimeRow">
-                    <div>
-                      <span>Lifetime Tokens</span>
-                      <strong>{stats.totalTokens.toLocaleString()}</strong>
-                    </div>
-                    <div>
-                      <span>Best Combo</span>
-                      <strong>{stats.bestStreak || 1}x</strong>
-                    </div>
-                    <div>
-                      {!confirmReset ? (
-                        <button
-                          type="button"
-                          className="CyberRunner__resetBtn"
-                          onClick={() => setConfirmReset(true)}
-                        >
-                          <FaTrashAlt /> Reset Local Scores
-                        </button>
+                      {leaderboardData.todayScores.length === 0 ? (
+                        <div className="CyberRunner__emptyBoardPrompt">
+                          <FaCrown className="CyberRunner__emptyCrownIcon" />
+                          <h4>No runs submitted today yet</h4>
+                          <p>Scores will appear here as soon as runners submit them.</p>
+                        </div>
                       ) : (
-                        <div className="CyberRunner__confirmReset">
-                          <button
-                            type="button"
-                            className="CyberRunner__confirmYes"
-                            onClick={handleResetStats}
-                          >
-                            Confirm Reset
-                          </button>
-                          <button
-                            type="button"
-                            className="CyberRunner__confirmNo"
-                            onClick={() => setConfirmReset(false)}
-                          >
-                            Cancel
-                          </button>
+                        <div className="CyberRunner__scoresTableWrapper">
+                          <h4 className="CyberRunner__tableTitle">
+                            Today's Submitted Runs ({leaderboardData.todayScores.length})
+                          </h4>
+                          <ul className="CyberRunner__onlineList">
+                            {leaderboardData.todayScores.map((run, idx) => (
+                              <li
+                                key={`admin-today-${run.scoreId || idx}`}
+                                className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
+                              >
+                                <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
+                                  {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
+                                </span>
+                                <div className="CyberRunner__onlinePlayer">
+                                  <div className="CyberRunner__onlinePlayerNameRow">
+                                    <strong>{run.playerName}</strong>
+                                    {run.instagram && (
+                                      <a
+                                        href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="CyberRunner__instagramHandle"
+                                        title={`View ${run.instagram} on Instagram`}
+                                      >
+                                        <FaInstagram /> {run.instagram}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <span>
+                                    Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                  </span>
+                                </div>
+                                <div className="CyberRunner__onlineScoreCol">
+                                  <strong>{run.score.toLocaleString()} pts</strong>
+                                  {idx === 0 && (
+                                    <span className="CyberRunner__prizeMiniBadge">
+                                      <FaGift /> Top 1
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* ADMIN TAB 2: All-Time Legends */}
+                  {adminTab === 'allTime' && (
+                    <div className="CyberRunner__tabContent">
+                      {leaderboardData.allTimeScores.length === 0 ? (
+                        <div className="CyberRunner__emptyBoardPrompt">
+                          <FaMedal className="CyberRunner__emptyCrownIcon" />
+                          <h4>No all-time scores yet</h4>
+                        </div>
+                      ) : (
+                        <ul className="CyberRunner__onlineList">
+                          {leaderboardData.allTimeScores.map((run, idx) => (
+                            <li
+                              key={`admin-all-${run.scoreId || idx}`}
+                              className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
+                            >
+                              <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
+                                {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
+                              </span>
+                              <div className="CyberRunner__onlinePlayer">
+                                <div className="CyberRunner__onlinePlayerNameRow">
+                                  <strong>{run.playerName}</strong>
+                                  {run.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${run.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {run.instagram}
+                                    </a>
+                                  )}
+                                </div>
+                                <span>
+                                  Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                </span>
+                              </div>
+                              <div className="CyberRunner__onlineScoreCol">
+                                <strong>{run.score.toLocaleString()} pts</strong>
+                                <span className="CyberRunner__runDate">{run.playedDate}</span>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ADMIN TAB 3: Local Device Records */}
+                  {adminTab === 'local' && (
+                    <div className="CyberRunner__tabContent">
+                      <div className="CyberRunner__panelHeader">
+                        <span className="CyberRunner__gamesCount">
+                          {stats.totalGames} {stats.totalGames === 1 ? 'Run' : 'Runs'} on this Device
+                        </span>
+                      </div>
+                      {stats.topRuns.length === 0 ? (
+                        <p className="CyberRunner__emptyText">No runs recorded on this device yet.</p>
+                      ) : (
+                        <ul className="CyberRunner__runsList">
+                          {stats.topRuns.map((run, idx) => (
+                            <li key={`${run.score}-${idx}`} className="CyberRunner__runItem">
+                              <span className={`CyberRunner__runRank CyberRunner__runRank--${idx + 1}`}>
+                                #{idx + 1}
+                              </span>
+                              <div className="CyberRunner__runInfo">
+                                <strong>{run.score.toLocaleString()} pts</strong>
+                                <span>
+                                  Lvl {run.level || getLevelFromScore(run.score)} ({run.world || getLevelTheme(getLevelFromScore(run.score)).name}) &bull; {run.tokens} tokens
+                                </span>
+                              </div>
+                              <span className="CyberRunner__runDate">{run.date}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Public View: 3-Step Participation Checklist */}
+                  <div className="CyberRunner__leaderboardNoticeBox">
+                    <div className="CyberRunner__noticeHeader">
+                      <FaInstagram className="CyberRunner__noticeInstaIcon" />
+                      <div>
+                        <h4>How to Participate in the Leaderboard</h4>
+                        <p>Complete all 3 requirements to enter the contest and qualify for the SCNT giveaway:</p>
+                      </div>
+                    </div>
+
+                    <div className="CyberRunner__stepsList">
+                      <div className="CyberRunner__stepItem">
+                        <div className="CyberRunner__stepNumber">1</div>
+                        <div className="CyberRunner__stepContent">
+                          <strong>Follow @scnt.eg on Instagram</strong>
+                          <span>You must follow official giveaway sponsor <a href={SCNT_INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">@scnt.eg</a> to qualify.</span>
+                        </div>
+                      </div>
+                      <div className="CyberRunner__stepItem">
+                        <div className="CyberRunner__stepNumber">2</div>
+                        <div className="CyberRunner__stepContent">
+                          <strong>Play &amp; Set Your Best Run</strong>
+                          <span>Dodge bugs, duck under cyber birds, and reach your highest score.</span>
+                        </div>
+                      </div>
+                      <div className="CyberRunner__stepItem">
+                        <div className="CyberRunner__stepNumber">3</div>
+                        <div className="CyberRunner__stepContent">
+                          <strong>Submit Your Full Name &amp; Instagram Username</strong>
+                          <span>When your run crashes, submit your <strong>real name</strong> and <strong>IG username (@handle)</strong> so we can verify your entry and award your perfume!</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <a
+                      href={SCNT_INSTAGRAM_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="CyberRunner__followDirectBtn"
+                    >
+                      <FaInstagram /> Follow @scnt.eg on Instagram <FaExternalLinkAlt className="CyberRunner__miniExternalIcon" />
+                    </a>
                   </div>
-                </div>
+
+                  {/* Hidden Leaderboard Explanation */}
+                  <div className="CyberRunner__hiddenLeaderboardInfo">
+                    <div className="CyberRunner__hiddenInfoRow">
+                      <FaLock className="CyberRunner__hiddenInfoIcon" />
+                      <div>
+                        <strong>Why is the public leaderboard hidden?</strong>
+                        <p>
+                          To ensure fair play and prevent last-second score sniping, live public standings are kept private during active rounds. All valid runs with a verified name &amp; IG username are tracked securely on our servers.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="CyberRunner__hiddenInfoRow">
+                      <FaClock className="CyberRunner__hiddenInfoIcon" />
+                      <div>
+                        <strong>Daily Round Resets at Midnight Cairo Time</strong>
+                        <p>
+                          The verified #1 runner of the day will be announced on Instagram by MSP MIU &amp; SCNT.eg and contacted to receive their perfume!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Admin Login Hint */}
+                  <div className="CyberRunner__adminHintBox">
+                    <FaLock className="CyberRunner__adminLockIcon" />
+                    <span>
+                      Are you an MSP Admin or Board Member?{' '}
+                      <Link to="/login">Log in to view live standings</Link>
+                    </span>
+                  </div>
+
+                  {/* Personal Local Device Records */}
+                  <div className="CyberRunner__tabContent" style={{ marginTop: '0.4rem' }}>
+                    <div className="CyberRunner__panelHeader">
+                      <span className="CyberRunner__gamesCount">
+                        <FaGamepad /> My Local Device Records ({stats.totalGames} {stats.totalGames === 1 ? 'Run' : 'Runs'})
+                      </span>
+                    </div>
+
+                    {stats.topRuns.length === 0 ? (
+                      <p className="CyberRunner__emptyText">
+                        No runs recorded on this device yet. Hit <strong>Start Run</strong> above to set your first score!
+                      </p>
+                    ) : (
+                      <ul className="CyberRunner__runsList">
+                        {stats.topRuns.map((run, idx) => (
+                          <li key={`${run.score}-${idx}`} className="CyberRunner__runItem">
+                            <span className={`CyberRunner__runRank CyberRunner__runRank--${idx + 1}`}>
+                              #{idx + 1}
+                            </span>
+                            <div className="CyberRunner__runInfo">
+                              <strong>{run.score.toLocaleString()} pts</strong>
+                              <span>
+                                Lvl {run.level || getLevelFromScore(run.score)} ({run.world || getLevelTheme(getLevelFromScore(run.score)).name}) &bull; {run.tokens} tokens
+                              </span>
+                            </div>
+                            <span className="CyberRunner__runDate">{run.date}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <div className="CyberRunner__lifetimeRow">
+                      <div>
+                        <span>Lifetime Tokens</span>
+                        <strong>{stats.totalTokens.toLocaleString()}</strong>
+                      </div>
+                      <div>
+                        <span>Best Combo</span>
+                        <strong>{stats.bestStreak || 1}x</strong>
+                      </div>
+                      <div>
+                        {!confirmReset ? (
+                          <button
+                            type="button"
+                            className="CyberRunner__resetBtn"
+                            onClick={() => setConfirmReset(true)}
+                          >
+                            <FaTrashAlt /> Reset Local Scores
+                          </button>
+                        ) : (
+                          <div className="CyberRunner__confirmReset">
+                            <button
+                              type="button"
+                              className="CyberRunner__confirmYes"
+                              onClick={handleResetStats}
+                            >
+                              Confirm Reset
+                            </button>
+                            <button
+                              type="button"
+                              className="CyberRunner__confirmNo"
+                              onClick={() => setConfirmReset(false)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right Column: SCNT.eg Fragrance Giveaway Showcase Card */}
@@ -2841,7 +3149,10 @@ export const CyberRunner = () => {
 
                 <div className="CyberRunner__sponsorContestRules">
                   <div className="CyberRunner__ruleItem CyberRunner__ruleItem--highlight">
-                    <FaInstagram /> <strong>Must follow @scnt.eg on Instagram</strong> to participate &amp; claim prize
+                    <FaInstagram /> <strong>Must follow @scnt.eg on Instagram</strong> with your submitted handle
+                  </div>
+                  <div className="CyberRunner__ruleItem">
+                    <FaUser /> <strong>Submit your Full Name &amp; IG Username</strong> after your run
                   </div>
                   <div className="CyberRunner__ruleItem">
                     <FaCrown /> <strong>#1 Top Score of the Day</strong> wins an exclusive perfume bottle
