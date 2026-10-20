@@ -2747,19 +2747,26 @@ export const CyberRunner = () => {
                             <FaCrown /> CURRENT DAILY CHAMPION
                           </div>
                           <div className="CyberRunner__podiumBody">
-                            <div className="CyberRunner__podiumAvatar">
-                              {dailyChampion.avatar ? (
-                                <img src={dailyChampion.avatar} alt={dailyChampion.playerName} />
-                              ) : (
-                                <div className="CyberRunner__avatarFallback">
-                                  {dailyChampion.playerName.charAt(0).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="CyberRunner__podiumRankBadge">#1</div>
+                            <div className="CyberRunner__podiumRankBadgeLarge">
+                              <FaCrown />
+                              <span>#1</span>
                             </div>
                             <div className="CyberRunner__podiumDetails">
                               <div className="CyberRunner__podiumNameRow">
-                                <h4>{dailyChampion.playerName}</h4>
+                                <div className="CyberRunner__podiumPlayerInfo">
+                                  <h4>{dailyChampion.playerName}</h4>
+                                  {dailyChampion.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${dailyChampion.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${dailyChampion.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {dailyChampion.instagram}
+                                    </a>
+                                  )}
+                                </div>
                                 <span className="CyberRunner__podiumGiveawayTag">
                                   <FaGift /> SCNT.eg Perfume Winner Position
                                 </span>
@@ -2812,7 +2819,20 @@ export const CyberRunner = () => {
                                   {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
                                 </span>
                                 <div className="CyberRunner__onlinePlayer">
-                                  <strong>{run.playerName}</strong>
+                                  <div className="CyberRunner__onlinePlayerNameRow">
+                                    <strong>{run.playerName}</strong>
+                                    {run.instagram && (
+                                      <a
+                                        href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="CyberRunner__instagramHandle"
+                                        title={`View ${run.instagram} on Instagram`}
+                                      >
+                                        <FaInstagram /> {run.instagram}
+                                      </a>
+                                    )}
+                                  </div>
                                   <span>
                                     Lvl {run.level} &bull; {run.tokens || 0} tokens
                                   </span>
@@ -2877,7 +2897,20 @@ export const CyberRunner = () => {
                             {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
                           </span>
                           <div className="CyberRunner__onlinePlayer">
-                            <strong>{run.playerName}</strong>
+                            <div className="CyberRunner__onlinePlayerNameRow">
+                              <strong>{run.playerName}</strong>
+                              {run.instagram && (
+                                <a
+                                  href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="CyberRunner__instagramHandle"
+                                  title={`View ${run.instagram} on Instagram`}
+                                >
+                                  <FaInstagram /> {run.instagram}
+                                </a>
+                              )}
+                            </div>
                             <span>
                               Lvl {run.level} &bull; {run.tokens || 0} tokens
                             </span>
