@@ -815,9 +815,7 @@ export const CyberRunner = () => {
           loading: false,
           error: null,
         });
-        if (res.data.dailyChampion) {
-          setDailyChampion(res.data.dailyChampion);
-        }
+        setDailyChampion(res.data.dailyChampion || null);
         if (res.data.countdown?.secondsRemaining != null) {
           setCountdownSec(res.data.countdown.secondsRemaining);
         }
@@ -1192,14 +1190,25 @@ export const CyberRunner = () => {
 
   // Keyboard bindings
   useEffect(() => {
+    const isTextInputTarget = (el) => {
+      if (!el) return false;
+      const tag = el.tagName;
+      return (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        Boolean(el.isContentEditable) ||
+        Boolean(el.closest && el.closest('input, textarea, select, [contenteditable="true"]'))
+      );
+    };
+
     const onKeyDown = (e) => {
+      if (isTextInputTarget(e.target) || isTextInputTarget(document.activeElement)) {
+        return;
+      }
+
       if (['Space', 'ArrowUp', 'KeyW', 'ArrowDown', 'KeyS'].includes(e.code)) {
-        if (
-          document.activeElement?.tagName !== 'INPUT' &&
-          document.activeElement?.tagName !== 'TEXTAREA'
-        ) {
-          e.preventDefault();
-        }
+        e.preventDefault();
       }
 
       if (e.repeat && ['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
@@ -1216,6 +1225,10 @@ export const CyberRunner = () => {
     };
 
     const onKeyUp = (e) => {
+      if (isTextInputTarget(e.target) || isTextInputTarget(document.activeElement)) {
+        return;
+      }
+
       if (e.code === 'ArrowDown' || e.code === 'KeyS') {
         setDuckState(false);
       }
@@ -2484,6 +2497,8 @@ export const CyberRunner = () => {
                                   placeholder="Your Name *"
                                   value={playerName}
                                   onChange={(e) => setPlayerName(e.target.value)}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  onKeyUp={(e) => e.stopPropagation()}
                                   maxLength={35}
                                   disabled={isSubmittingScore}
                                   required
@@ -2497,6 +2512,8 @@ export const CyberRunner = () => {
                                   placeholder="Instagram @handle or Phone *"
                                   value={playerContact}
                                   onChange={(e) => setPlayerContact(e.target.value)}
+                                  onKeyDown={(e) => e.stopPropagation()}
+                                  onKeyUp={(e) => e.stopPropagation()}
                                   maxLength={50}
                                   disabled={isSubmittingScore}
                                   aria-label="Instagram handle or phone for giveaway prize"

@@ -66,7 +66,8 @@ function getUniquePlayerBests(scores, limit = 10) {
   const seen = new Set();
   const unique = [];
   for (const s of scores) {
-    const key = (s.user_id ? `u_${s.user_id}` : `p_${s.player_name.trim().toLowerCase()}`);
+    const rawName = s.player_name ? String(s.player_name).trim().toLowerCase() : '';
+    const key = (s.user_id ? `u_${s.user_id}` : `p_${rawName}`);
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(s);
@@ -133,7 +134,7 @@ const getLeaderboard = async (req, res) => {
     // Today's Daily Champion is the #1 player of today
     const dailyChampion = uniqueToday.length > 0 ? {
       scoreId: uniqueToday[0].score_id,
-      playerName: uniqueToday[0].player_name,
+      playerName: uniqueToday[0].player_name || 'Anonymous Runner',
       score: uniqueToday[0].score,
       level: uniqueToday[0].level,
       tokens: uniqueToday[0].tokens,
@@ -146,7 +147,7 @@ const getLeaderboard = async (req, res) => {
 
     const allTimeChampion = uniqueAllTime.length > 0 ? {
       scoreId: uniqueAllTime[0].score_id,
-      playerName: uniqueAllTime[0].player_name,
+      playerName: uniqueAllTime[0].player_name || 'Anonymous Runner',
       score: uniqueAllTime[0].score,
       level: uniqueAllTime[0].level,
       tokens: uniqueAllTime[0].tokens,
@@ -167,7 +168,7 @@ const getLeaderboard = async (req, res) => {
         todayScores: uniqueToday.map((s, idx) => ({
           rank: idx + 1,
           scoreId: s.score_id,
-          playerName: s.player_name,
+          playerName: s.player_name || 'Anonymous Runner',
           score: s.score,
           level: s.level,
           tokens: s.tokens,
@@ -180,7 +181,7 @@ const getLeaderboard = async (req, res) => {
         allTimeScores: uniqueAllTime.map((s, idx) => ({
           rank: idx + 1,
           scoreId: s.score_id,
-          playerName: s.player_name,
+          playerName: s.player_name || 'Anonymous Runner',
           score: s.score,
           level: s.level,
           tokens: s.tokens,
@@ -495,5 +496,6 @@ module.exports = {
   submitScore,
   getDailyChampion,
   getAdminScores,
-  deleteScore
+  deleteScore,
+  getUniquePlayerBests
 };
