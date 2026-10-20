@@ -458,21 +458,9 @@ export const CyberRunner = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [adminTab, setAdminTab] = useState('today'); // 'today' | 'allTime' | 'local'
 
-  // Score Submission in Game Over Overlay
-  const [playerName, setPlayerName] = useState(() => {
-    try {
-      return localStorage.getItem('msp_cyber_player_name') || '';
-    } catch {
-      return '';
-    }
-  });
-  const [playerContact, setPlayerContact] = useState(() => {
-    try {
-      return localStorage.getItem('msp_cyber_player_contact') || '';
-    } catch {
-      return '';
-    }
-  });
+  // Score Submission in Game Over Overlay (empty by default so placeholder is always visible)
+  const [playerName, setPlayerName] = useState('');
+  const [playerContact, setPlayerContact] = useState('');
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
@@ -653,6 +641,8 @@ export const CyberRunner = () => {
     });
     setSubmitResult(null);
     setSubmitError(null);
+    setPlayerName('');
+    setPlayerContact('');
     setCopiedLink(false);
     setGameState('PLAYING');
   }, []);
@@ -840,6 +830,11 @@ export const CyberRunner = () => {
   }, [fetchLeaderboard]);
 
   useEffect(() => {
+    try {
+      localStorage.removeItem('msp_cyber_player_name');
+      localStorage.removeItem('msp_cyber_player_contact');
+    } catch (e) {}
+
     let isMounted = true;
     if (ApiService.isAuthenticated()) {
       ApiService.getProfile()
@@ -900,11 +895,6 @@ export const CyberRunner = () => {
     setIsSubmittingScore(true);
     setSubmitError(null);
     try {
-      try {
-        localStorage.setItem('msp_cyber_player_name', trimmedName);
-        localStorage.setItem('msp_cyber_player_contact', formattedIg);
-      } catch (e) {}
-
       const res = await ApiService.submitCyberRunnerScore({
         score: hud.score,
         level: hud.level,
@@ -917,6 +907,8 @@ export const CyberRunner = () => {
       if (res.success && res.data) {
         setSubmitResult(res.data);
         fetchLeaderboard();
+        setPlayerName('');
+        setPlayerContact('');
       }
     } catch (err) {
       setSubmitError(err.message || 'Failed to submit score. Try again.');
@@ -2552,6 +2544,9 @@ export const CyberRunner = () => {
                                   maxLength={35}
                                   disabled={isSubmittingScore}
                                   required
+                                  autoComplete="off"
+                                  autoCorrect="off"
+                                  spellCheck="false"
                                   aria-label="Your Full Name for Leaderboard"
                                 />
                               </div>
@@ -2567,6 +2562,9 @@ export const CyberRunner = () => {
                                   maxLength={50}
                                   disabled={isSubmittingScore}
                                   required
+                                  autoComplete="off"
+                                  autoCorrect="off"
+                                  spellCheck="false"
                                   aria-label="Your Instagram Username (must follow @scnt.eg)"
                                 />
                               </div>
