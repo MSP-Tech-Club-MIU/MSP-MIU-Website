@@ -37,6 +37,7 @@ import {
   FaLock,
   FaEyeSlash,
   FaUserCheck,
+  FaInfoCircle,
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ApiService from '../../services/api';
