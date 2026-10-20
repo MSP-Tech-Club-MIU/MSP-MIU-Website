@@ -2718,95 +2718,119 @@ export const CyberRunner = () => {
               {/* TAB 1: Today's Leaderboard & Champion Podium */}
               {activeLeaderboardTab === 'today' && (
                 <div className="CyberRunner__tabContent">
-                  {/* Daily Champion Podium Card */}
-                  {dailyChampion ? (
-                    <div className="CyberRunner__dailyPodium">
-                      <div className="CyberRunner__podiumBadge">
-                        <FaCrown /> CURRENT DAILY CHAMPION
-                      </div>
-                      <div className="CyberRunner__podiumBody">
-                        <div className="CyberRunner__podiumAvatar">
-                          {dailyChampion.avatar ? (
-                            <img src={dailyChampion.avatar} alt={dailyChampion.playerName} />
-                          ) : (
-                            <div className="CyberRunner__avatarFallback">
-                              {dailyChampion.playerName.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div className="CyberRunner__podiumRankBadge">#1</div>
-                        </div>
-                        <div className="CyberRunner__podiumDetails">
-                          <div className="CyberRunner__podiumNameRow">
-                            <h4>{dailyChampion.playerName}</h4>
-                            <span className="CyberRunner__podiumGiveawayTag">
-                              <FaGift /> SCNT.eg Perfume Winner Position
-                            </span>
-                          </div>
-                          <div className="CyberRunner__podiumStatsRow">
-                            <span className="CyberRunner__podiumScore">
-                              <strong>{dailyChampion.score.toLocaleString()}</strong> pts
-                            </span>
-                            <span>Level {dailyChampion.level || getLevelFromScore(dailyChampion.score)}</span>
-                            <span>{dailyChampion.tokens || 0} tokens</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="CyberRunner__podiumFooter">
-                        <span>
-                          Round ends at midnight Cairo Time &bull; Winner announced daily!
-                        </span>
-                        {countdownSec != null && (
-                          <span className="CyberRunner__podiumCountdown">
-                            <FaClock /> Resets in {formatTimeRemaining(countdownSec)}
-                          </span>
-                        )}
-                      </div>
+                  {leaderboardData.loading && !dailyChampion && leaderboardData.todayScores.length === 0 ? (
+                    <div className="CyberRunner__emptyBoardPrompt">
+                      <FaSpinner className="CyberRunner__spinIcon" style={{ fontSize: '2rem', color: '#03a9f4' }} />
+                      <h4>Connecting to Leaderboard...</h4>
+                      <p>Fetching today's top runner rankings...</p>
+                    </div>
+                  ) : leaderboardData.error && !dailyChampion && leaderboardData.todayScores.length === 0 ? (
+                    <div className="CyberRunner__emptyBoardPrompt">
+                      <FaSyncAlt style={{ fontSize: '2rem', color: '#ff5b1f' }} />
+                      <h4>Leaderboard Temporarily Unavailable</h4>
+                      <p>{leaderboardData.error}</p>
+                      <button
+                        type="button"
+                        className="CyberRunner__primaryBtn"
+                        style={{ marginTop: '0.6rem', padding: '0.45rem 1.2rem', fontSize: '0.85rem' }}
+                        onClick={fetchLeaderboard}
+                      >
+                        <FaSyncAlt /> Try Reconnecting
+                      </button>
                     </div>
                   ) : (
-                    <div className="CyberRunner__emptyBoardPrompt">
-                      <FaCrown className="CyberRunner__emptyCrownIcon" />
-                      <h4>No runs submitted today yet!</h4>
-                      <p>
-                        Play CyberRunner now and submit your score to claim today's #1 spot and win the <strong>SCNT.eg</strong> fragrance giveaway!
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Today's Top 10 List */}
-                  {leaderboardData.todayScores.length > 0 && (
-                    <div className="CyberRunner__scoresTableWrapper">
-                      <h4 className="CyberRunner__tableTitle">
-                        Today's Top Runners ({leaderboardData.todayScores.length})
-                      </h4>
-                      <ul className="CyberRunner__onlineList">
-                        {leaderboardData.todayScores.map((run, idx) => (
-                          <li
-                            key={`today-${run.scoreId || idx}`}
-                            className={`CyberRunner__onlineItem ${
-                              idx === 0 ? 'is-first-place' : ''
-                            }`}
-                          >
-                            <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
-                              {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
-                            </span>
-                            <div className="CyberRunner__onlinePlayer">
-                              <strong>{run.playerName}</strong>
-                              <span>
-                                Lvl {run.level} &bull; {run.tokens || 0} tokens
-                              </span>
-                            </div>
-                            <div className="CyberRunner__onlineScoreCol">
-                              <strong>{run.score.toLocaleString()} pts</strong>
-                              {idx === 0 && (
-                                <span className="CyberRunner__prizeMiniBadge">
-                                  <FaGift /> Winner
-                                </span>
+                    <>
+                      {/* Daily Champion Podium Card */}
+                      {dailyChampion ? (
+                        <div className="CyberRunner__dailyPodium">
+                          <div className="CyberRunner__podiumBadge">
+                            <FaCrown /> CURRENT DAILY CHAMPION
+                          </div>
+                          <div className="CyberRunner__podiumBody">
+                            <div className="CyberRunner__podiumAvatar">
+                              {dailyChampion.avatar ? (
+                                <img src={dailyChampion.avatar} alt={dailyChampion.playerName} />
+                              ) : (
+                                <div className="CyberRunner__avatarFallback">
+                                  {dailyChampion.playerName.charAt(0).toUpperCase()}
+                                </div>
                               )}
+                              <div className="CyberRunner__podiumRankBadge">#1</div>
                             </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                            <div className="CyberRunner__podiumDetails">
+                              <div className="CyberRunner__podiumNameRow">
+                                <h4>{dailyChampion.playerName}</h4>
+                                <span className="CyberRunner__podiumGiveawayTag">
+                                  <FaGift /> SCNT.eg Perfume Winner Position
+                                </span>
+                              </div>
+                              <div className="CyberRunner__podiumStatsRow">
+                                <span className="CyberRunner__podiumScore">
+                                  <strong>{dailyChampion.score.toLocaleString()}</strong> pts
+                                </span>
+                                <span>Level {dailyChampion.level || getLevelFromScore(dailyChampion.score)}</span>
+                                <span>{dailyChampion.tokens || 0} tokens</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="CyberRunner__podiumFooter">
+                            <span>
+                              Round ends at midnight Cairo Time &bull; Winner announced daily!
+                            </span>
+                            {countdownSec != null && (
+                              <span className="CyberRunner__podiumCountdown">
+                                <FaClock /> Resets in {formatTimeRemaining(countdownSec)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="CyberRunner__emptyBoardPrompt">
+                          <FaCrown className="CyberRunner__emptyCrownIcon" />
+                          <h4>No runs submitted today yet!</h4>
+                          <p>
+                            Play CyberRunner now and submit your score to claim today's #1 spot and win the <strong>SCNT.eg</strong> fragrance giveaway!
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Today's Top 10 List */}
+                      {leaderboardData.todayScores.length > 0 && (
+                        <div className="CyberRunner__scoresTableWrapper">
+                          <h4 className="CyberRunner__tableTitle">
+                            Today's Top Runners ({leaderboardData.todayScores.length})
+                          </h4>
+                          <ul className="CyberRunner__onlineList">
+                            {leaderboardData.todayScores.map((run, idx) => (
+                              <li
+                                key={`today-${run.scoreId || idx}`}
+                                className={`CyberRunner__onlineItem ${
+                                  idx === 0 ? 'is-first-place' : ''
+                                }`}
+                              >
+                                <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
+                                  {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
+                                </span>
+                                <div className="CyberRunner__onlinePlayer">
+                                  <strong>{run.playerName}</strong>
+                                  <span>
+                                    Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                  </span>
+                                </div>
+                                <div className="CyberRunner__onlineScoreCol">
+                                  <strong>{run.score.toLocaleString()} pts</strong>
+                                  {idx === 0 && (
+                                    <span className="CyberRunner__prizeMiniBadge">
+                                      <FaGift /> Winner
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -2814,7 +2838,27 @@ export const CyberRunner = () => {
               {/* TAB 2: All-Time Hall of Fame */}
               {activeLeaderboardTab === 'allTime' && (
                 <div className="CyberRunner__tabContent">
-                  {leaderboardData.allTimeScores.length === 0 ? (
+                  {leaderboardData.loading && leaderboardData.allTimeScores.length === 0 ? (
+                    <div className="CyberRunner__emptyBoardPrompt">
+                      <FaSpinner className="CyberRunner__spinIcon" style={{ fontSize: '2rem', color: '#03a9f4' }} />
+                      <h4>Connecting to Hall of Fame...</h4>
+                      <p>Fetching all-time legendary scores...</p>
+                    </div>
+                  ) : leaderboardData.error && leaderboardData.allTimeScores.length === 0 ? (
+                    <div className="CyberRunner__emptyBoardPrompt">
+                      <FaSyncAlt style={{ fontSize: '2rem', color: '#ff5b1f' }} />
+                      <h4>Leaderboard Temporarily Unavailable</h4>
+                      <p>{leaderboardData.error}</p>
+                      <button
+                        type="button"
+                        className="CyberRunner__primaryBtn"
+                        style={{ marginTop: '0.6rem', padding: '0.45rem 1.2rem', fontSize: '0.85rem' }}
+                        onClick={fetchLeaderboard}
+                      >
+                        <FaSyncAlt /> Try Reconnecting
+                      </button>
+                    </div>
+                  ) : leaderboardData.allTimeScores.length === 0 ? (
                     <div className="CyberRunner__emptyBoardPrompt">
                       <FaMedal className="CyberRunner__emptyCrownIcon" />
                       <h4>No all-time scores recorded yet</h4>
