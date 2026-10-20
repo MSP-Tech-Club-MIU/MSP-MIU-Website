@@ -59,6 +59,17 @@ function getCairoResetCountdown() {
   }
 }
 
+let tableEnsured = false;
+async function ensureCyberRunnerTable() {
+  if (tableEnsured) return;
+  try {
+    await CyberRunnerScore.sync();
+    tableEnsured = true;
+  } catch (err) {
+    // Safe fallback if already exists or sync error
+  }
+}
+
 /**
  * Filter out duplicates to return only the best run per player.
  */
@@ -83,50 +94,76 @@ function getUniquePlayerBests(scores, limit = 10) {
  */
 const getLeaderboard = async (req, res) => {
   try {
+    await ensureCyberRunnerTable();
+
     const requestedDate = req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
       ? req.query.date
       : getCairoDateString();
 
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
-    // Fetch top scores of requested day (Cairo time)
-    const todayRuns = await CyberRunnerScore.findAll({
-      where: {
-        played_date: requestedDate,
-        is_verified: true
-      },
-      order: [
-        ['score', 'DESC'],
-        ['created_at', 'ASC']
-      ],
-      limit: 60,
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'university_id', 'profile_picture']
-        }
-      ]
-    });
+    const userInclude = {
+      model: User,
+      as: 'user',
+      attributes: ['user_id', 'full_name', 'university_id', 'profile_picture'],
+      required: false
+    };
 
-    // Fetch all-time top scores
-    const allTimeRuns = await CyberRunnerScore.findAll({
-      where: {
-        is_verified: true
-      },
-      order: [
-        ['score', 'DESC'],
-        ['created_at', 'ASC']
-      ],
-      limit: 60,
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'university_id', 'profile_picture']
-        }
-      ]
-    });
+    let todayRuns = [];
+    let allTimeRuns = [];
+
+    try {
+      todayRuns = await CyberRunnerScore.findAll({
+        where: {
+          played_date: requestedDate,
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        limit: 60,
+        include: [userInclude]
+      });
+
+      allTimeRuns = await CyberRunnerScore.findAll({
+        where: {
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        limit: 60,
+        include: [userInclude]
+      });
+    } catch (queryErr) {
+      logger.warn('Error fetching CyberRunner runs with user include, falling back to direct scores:', {
+        message: queryErr.message
+      });
+      todayRuns = await CyberRunnerScore.findAll({
+        where: {
+          played_date: requestedDate,
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        limit: 60
+      });
+
+      allTimeRuns = await CyberRunnerScore.findAll({
+        where: {
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        limit: 60
+      });
+    }
 
     const uniqueToday = getUniquePlayerBests(todayRuns, limit);
     const uniqueAllTime = getUniquePlayerBests(allTimeRuns, limit);
@@ -211,6 +248,8 @@ const getLeaderboard = async (req, res) => {
  */
 const submitScore = async (req, res) => {
   try {
+    await ensureCyberRunnerTable();
+
     const {
       score,
       level = 1,
@@ -238,9 +277,9 @@ const submitScore = async (req, res) => {
 
     if (req.user) {
       resolvedUserId = req.user.user_id;
-      const fullName = `${req.user.first_name || ''} ${req.user.last_name || ''}`.trim();
+      const fullName = (req.user.full_name || req.user.username || '').trim();
       if (!resolvedName) {
-        resolvedName = fullName || req.user.username || `Runner_${req.user.user_id}`;
+        resolvedName = fullName || `Runner_${req.user.user_id}`;
       }
       if (!resolvedStudentId && req.user.university_id) {
         resolvedStudentId = req.user.university_id;
@@ -359,25 +398,41 @@ const submitScore = async (req, res) => {
  */
 const getDailyChampion = async (req, res) => {
   try {
+    await ensureCyberRunnerTable();
     const cairoDate = getCairoDateString();
 
-    const topScore = await CyberRunnerScore.findOne({
-      where: {
-        played_date: cairoDate,
-        is_verified: true
-      },
-      order: [
-        ['score', 'DESC'],
-        ['created_at', 'ASC']
-      ],
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'profile_picture']
-        }
-      ]
-    });
+    let topScore = null;
+    try {
+      topScore = await CyberRunnerScore.findOne({
+        where: {
+          played_date: cairoDate,
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['user_id', 'full_name', 'profile_picture'],
+            required: false
+          }
+        ]
+      });
+    } catch (e) {
+      topScore = await CyberRunnerScore.findOne({
+        where: {
+          played_date: cairoDate,
+          is_verified: true
+        },
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ]
+      });
+    }
 
     const countdown = getCairoResetCountdown();
 
@@ -412,6 +467,7 @@ const getDailyChampion = async (req, res) => {
  */
 const getAdminScores = async (req, res) => {
   try {
+    await ensureCyberRunnerTable();
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const offset = (page - 1) * limit;
@@ -439,7 +495,8 @@ const getAdminScores = async (req, res) => {
         {
           model: User,
           as: 'user',
-          attributes: ['user_id', 'first_name', 'last_name', 'email', 'university_id']
+          attributes: ['user_id', 'full_name', 'email', 'university_id'],
+          required: false
         }
       ]
     });
