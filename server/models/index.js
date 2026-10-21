@@ -45,6 +45,7 @@ const CourseAnnouncement = require('./CourseAnnouncement');
 const CourseLessonAttendance = require('./CourseLessonAttendance');
 const Blacklist = require('./Blacklist');
 const CyberRunnerScore = require('./CyberRunnerScore');
+const DirectEmail = require('./DirectEmail');
 
 // Initialize models
 const models = {
@@ -90,7 +91,8 @@ const models = {
   CourseLessonProgress,
   CourseAnnouncement,
   CourseLessonAttendance,
-  CyberRunnerScore
+  CyberRunnerScore,
+  DirectEmail
 };
 
 // Set up associations
@@ -720,6 +722,16 @@ User.hasMany(CyberRunnerScore, {
   foreignKey: 'user_id',
   as: 'cyberrunnerScores'
 });
+// DirectEmail associations
+DirectEmail.belongsTo(User, {
+  foreignKey: 'sender_id',
+  as: 'sender'
+});
+User.hasMany(DirectEmail, {
+  foreignKey: 'sender_id',
+  as: 'sentDirectEmails'
+});
+
 
 // Sync models with database.
 // Prefer targeted patch scripts (patchCmsSchema / patchSeasonSchema) over alter:true.
@@ -1004,6 +1016,25 @@ async function ensureApplicationMultiSeasonIndexes() {
   }
 }
 
+async function ensureDirectEmailTable() {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS c
+       FROM INFORMATION_SCHEMA.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME = 'direct_emails'`
+    );
+    if (Number(rows[0]?.c) === 0) {
+      await DirectEmail.sync();
+      logger.info('Created direct_emails table');
+    }
+  } catch (err) {
+    logger.warn('Could not ensure direct_emails table:', {
+      message: err.parent?.sqlMessage || err.message
+    });
+  }
+}
+
 const syncModels = async () => {
   try {
     const useAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
@@ -1023,6 +1054,7 @@ const syncModels = async () => {
     await ensureCourseEnrollmentColumns();
     await ensureBlacklistTable();
     await ensureCyberRunnerTable();
+    await ensureDirectEmailTable();
     await ensureApplicationFacultyColumn();
     await ensureApplicationMultiSeasonIndexes();
   } catch (error) {

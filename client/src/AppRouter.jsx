@@ -42,6 +42,7 @@ const Links = lazy(() => import('./pages/Links/Links'));
 const CyberRunner = lazy(() => import('./pages/Game/CyberRunner'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const AdminPanel = lazy(() => import('./pages/Admin/AdminPanel'));
+const MailPage = lazy(() => import('./pages/MailPage'));
 const CompetitionManagement = lazy(() => import('./pages/Admin/CompetitionManagement'));
 
 // Helper to check if running in Capacitor (native app) environment
@@ -211,6 +212,8 @@ const AppRouter = () => {
           <Route path="/arcade" element={<Navigate to="/game" replace />} />
           <Route path="/admin/competition-management" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
           <Route path="/admin/competition-management/:competitionId" element={<SiteLayout><CompetitionManagement /></SiteLayout>} />
+          <Route path="/mail" element={<SiteLayout><MailPage /></SiteLayout>} />
+          <Route path="/webmail" element={<Navigate to="/mail" replace />} />
           <Route path="/admin/*" element={<SiteLayout><AdminPanel /></SiteLayout>} />
           <Route path="*" element={<SiteLayout><NotFound /></SiteLayout>} />
         </Routes>
