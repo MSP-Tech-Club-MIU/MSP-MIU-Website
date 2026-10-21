@@ -1,0 +1,1215 @@
+/* =========================================================================
+   Webmail (Gmail-like Mail Client) Styling
+   ========================================================================= */
+
+.Webmail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: calc(100vh - 160px);
+  position: relative;
+}
+
+/* --- Top Header Bar --- */
+.Webmail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 20px;
+  background: rgba(14, 39, 68, 0.65);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.Webmail__headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.Webmail__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+.Webmail__brandIcon {
+  font-size: 1.6rem;
+  color: #03a9f4;
+  display: flex;
+  align-items: center;
+}
+
+.Webmail__searchForm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 520px;
+  background: rgba(11, 26, 43, 0.85);
+  border: 1px solid rgba(74, 166, 255, 0.25);
+  border-radius: 12px;
+  padding: 8px 14px;
+  transition: all 0.2s ease;
+}
+
+.Webmail__searchForm:focus-within {
+  border-color: #03a9f4;
+  box-shadow: 0 0 0 3px rgba(3, 169, 244, 0.2);
+}
+
+.Webmail__searchIcon {
+  color: #64748b;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.Webmail__searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eaf2ff;
+  font-size: 0.95rem;
+}
+
+.Webmail__searchInput::placeholder {
+  color: #64748b;
+}
+
+.Webmail__searchClear {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.Webmail__searchClear:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.Webmail__headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.Webmail__smtpBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: rgba(129, 199, 132, 0.14);
+  color: #81c784;
+  border: 1px solid rgba(129, 199, 132, 0.3);
+}
+
+.Webmail__smtpDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  box-shadow: 0 0 8px #4caf50;
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.Webmail__refreshBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(11, 26, 43, 0.8);
+  border: 1px solid rgba(74, 166, 255, 0.25);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.Webmail__refreshBtn:hover {
+  color: #03a9f4;
+  border-color: #03a9f4;
+  background: rgba(3, 169, 244, 0.12);
+}
+
+/* --- Main Layout: Sidebar + Content --- */
+.Webmail__main {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 18px;
+  min-height: 580px;
+}
+
+@media (max-width: 900px) {
+  .Webmail__main {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Sidebar --- */
+.Webmail__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 14px;
+  background: rgba(14, 39, 68, 0.65);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  height: fit-content;
+}
+
+.Webmail__composeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #ff5b1f 0%, #ff8244 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(255, 91, 31, 0.35);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.Webmail__composeBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 91, 31, 0.5);
+  filter: brightness(1.08);
+}
+
+.Webmail__composeBtn:active {
+  transform: translateY(0);
+}
+
+.Webmail__composeIcon {
+  font-size: 1.3rem;
+}
+
+.Webmail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.Webmail__navItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: left;
+}
+
+.Webmail__navItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.Webmail__navIcon {
+  font-size: 1.25rem;
+}
+
+.Webmail__navCount {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+}
+
+.Webmail__navItem:hover {
+  background: rgba(3, 169, 244, 0.1);
+  color: #eaf2ff;
+}
+
+.Webmail__navItem--active {
+  background: rgba(3, 169, 244, 0.18);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.3);
+}
+
+.Webmail__navItem--active .Webmail__navCount {
+  background: #03a9f4;
+  color: #091a2c;
+}
+
+.Webmail__sidebarFooter {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(142, 194, 240, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.Webmail__infoCard {
+  padding: 12px;
+  background: rgba(11, 26, 43, 0.7);
+  border-radius: 10px;
+  border: 1px solid rgba(74, 166, 255, 0.15);
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.Webmail__infoCard strong {
+  color: #eaf2ff;
+  display: block;
+  margin-bottom: 2px;
+}
+
+/* --- Content Panel --- */
+.Webmail__content {
+  background: rgba(14, 39, 68, 0.65);
+  border: 1px solid rgba(142, 194, 240, 0.2);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- List Toolbar --- */
+.Webmail__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.15);
+  background: rgba(11, 26, 43, 0.4);
+}
+
+.Webmail__toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.Webmail__checkbox {
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  accent-color: #03a9f4;
+}
+
+.Webmail__filterPills {
+  display: flex;
+  gap: 6px;
+}
+
+.Webmail__filterPill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.Webmail__filterPill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+}
+
+.Webmail__filterPill--active {
+  background: rgba(3, 169, 244, 0.18);
+  color: #03a9f4;
+  border-color: rgba(3, 169, 244, 0.35);
+}
+
+.Webmail__toolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.Webmail__pageBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.Webmail__pageBtn:hover:not(:disabled) {
+  color: #03a9f4;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.Webmail__pageBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* --- Email Rows Table / List --- */
+.Webmail__list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.Webmail__row {
+  display: grid;
+  grid-template-columns: 36px 36px 200px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.08);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+}
+
+@media (max-width: 1024px) {
+  .Webmail__row {
+    grid-template-columns: 32px 32px 140px 1fr auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .Webmail__row {
+    grid-template-columns: 32px 1fr auto;
+  }
+  .Webmail__rowStar,
+  .Webmail__rowRecipients {
+    display: none;
+  }
+}
+
+.Webmail__row:hover {
+  background: rgba(3, 169, 244, 0.06);
+}
+
+.Webmail__row--selected {
+  background: rgba(3, 169, 244, 0.12);
+}
+
+.Webmail__starBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.Webmail__starBtn:hover {
+  transform: scale(1.15);
+  color: #ffbf00;
+}
+
+.Webmail__starBtn--starred {
+  color: #ffbf00;
+}
+
+.Webmail__rowRecipients {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #eaf2ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Webmail__rowSubjectGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.Webmail__rowSubject {
+  font-weight: 600;
+  color: #eaf2ff;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  max-width: 280px;
+}
+
+.Webmail__rowSnippet {
+  font-weight: 400;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Webmail__attachBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(74, 166, 255, 0.14);
+  color: #4aa6ff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.Webmail__rowDate {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+  justify-self: end;
+}
+
+.Webmail__rowActions {
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.Webmail__row:hover .Webmail__rowActions {
+  display: flex;
+}
+
+.Webmail__row:hover .Webmail__rowDate {
+  display: none;
+}
+
+.Webmail__actionIconBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.Webmail__actionIconBtn:hover {
+  color: #ff5b1f;
+  background: rgba(255, 91, 31, 0.15);
+}
+
+/* Empty State */
+.Webmail__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.Webmail__emptyIcon {
+  font-size: 3rem;
+  color: #4aa6ff;
+  opacity: 0.7;
+}
+
+.Webmail__emptyTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+/* --- Email Detail View --- */
+.Webmail__detail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.Webmail__detailToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.15);
+  background: rgba(11, 26, 43, 0.5);
+}
+
+.Webmail__backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.Webmail__backBtn:hover {
+  color: #03a9f4;
+  background: rgba(3, 169, 244, 0.1);
+}
+
+.Webmail__detailActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Webmail__detailBody {
+  padding: 24px 28px;
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.Webmail__detailSubject {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #eaf2ff;
+  margin: 0 0 18px 0;
+  line-height: 1.35;
+}
+
+.Webmail__detailMeta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.15);
+  margin-bottom: 24px;
+}
+
+.Webmail__senderInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.Webmail__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0d7bd8 0%, #03a9f4 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 12px rgba(13, 123, 216, 0.4);
+}
+
+.Webmail__senderNames {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.Webmail__senderTitle {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #eaf2ff;
+}
+
+.Webmail__recipientsLine {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.Webmail__recipientsLine strong {
+  color: #cbd5e1;
+}
+
+.Webmail__detailDate {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.Webmail__deliveryInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #81c784;
+  margin-top: 4px;
+}
+
+/* Rendered Message Content */
+.Webmail__messageBody {
+  color: #cbd5e1;
+  font-size: 0.96rem;
+  line-height: 1.7;
+  word-break: break-word;
+  background: rgba(11, 26, 43, 0.45);
+  border: 1px solid rgba(142, 194, 240, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.Webmail__messageBody a {
+  color: #03a9f4;
+  text-decoration: underline;
+}
+
+/* Attachments Cards in Detail View */
+.Webmail__attachmentsSection {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(142, 194, 240, 0.15);
+}
+
+.Webmail__attachmentsTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #eaf2ff;
+  margin: 0 0 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Webmail__attachmentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.Webmail__attachmentCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(11, 26, 43, 0.75);
+  border: 1px solid rgba(74, 166, 255, 0.2);
+  border-radius: 10px;
+  text-decoration: none;
+  color: #eaf2ff;
+  transition: all 0.2s ease;
+}
+
+.Webmail__attachmentCard:hover {
+  background: rgba(3, 169, 244, 0.12);
+  border-color: #03a9f4;
+  transform: translateY(-2px);
+}
+
+.Webmail__attIcon {
+  font-size: 1.6rem;
+  color: #03a9f4;
+  flex-shrink: 0;
+}
+
+.Webmail__attMeta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+
+.Webmail__attName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.Webmail__attSize {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.Webmail__attDownload {
+  font-size: 1.2rem;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* =========================================================================
+   Docked / Popout Gmail Composer Modal
+   ========================================================================= */
+
+.Webmail__composer {
+  position: fixed;
+  bottom: 0;
+  right: 28px;
+  width: 580px;
+  max-width: calc(100vw - 32px);
+  background: #0c1e34;
+  border: 1px solid rgba(142, 194, 240, 0.3);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.Webmail__composer--minimized {
+  height: 48px !important;
+  width: 280px;
+}
+
+.Webmail__composer--maximized {
+  top: 40px;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 860px;
+  border-radius: 14px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.3);
+}
+
+/* Composer Header */
+.Webmail__composerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #091a2c 0%, #133b5a 100%);
+  border-bottom: 1px solid rgba(142, 194, 240, 0.2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.Webmail__composerTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #eaf2ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Webmail__composerControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.Webmail__composerControlBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+}
+
+.Webmail__composerControlBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Composer Form */
+.Webmail__composerBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  background: #0c1e34;
+  overflow-y: auto;
+  padding: 0;
+  max-height: 520px;
+}
+
+.Webmail__composer--maximized .Webmail__composerBody {
+  max-height: unset;
+}
+
+/* Fields: To / Cc / Bcc / Subject */
+.Webmail__fieldRow {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.1);
+  position: relative;
+  gap: 10px;
+}
+
+.Webmail__fieldLabel {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 50px;
+  padding-top: 6px;
+}
+
+.Webmail__chipInputContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.Webmail__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(3, 169, 244, 0.2);
+  color: #03a9f4;
+  border: 1px solid rgba(3, 169, 244, 0.35);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.Webmail__chipRemove {
+  background: none;
+  border: none;
+  color: #03a9f4;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.Webmail__chipRemove:hover {
+  color: #ff5b1f;
+}
+
+.Webmail__textInput {
+  flex: 1;
+  min-width: 140px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eaf2ff;
+  font-size: 0.92rem;
+  padding: 6px 0;
+}
+
+.Webmail__textInput::placeholder {
+  color: #475569;
+}
+
+.Webmail__ccToggles {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding-top: 6px;
+}
+
+.Webmail__ccToggleBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.Webmail__ccToggleBtn:hover {
+  color: #03a9f4;
+  background: rgba(3, 169, 244, 0.1);
+}
+
+/* Autocomplete Dropdown */
+.Webmail__autocompleteDropdown {
+  position: absolute;
+  top: 100%;
+  left: 60px;
+  right: 16px;
+  background: #091a2c;
+  border: 1px solid rgba(74, 166, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.Webmail__autocompleteItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(142, 194, 240, 0.08);
+  transition: background 0.15s ease;
+}
+
+.Webmail__autocompleteItem:hover {
+  background: rgba(3, 169, 244, 0.14);
+}
+
+.Webmail__autoName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #eaf2ff;
+}
+
+.Webmail__autoEmail {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.Webmail__autoRole {
+  font-size: 0.72rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 91, 31, 0.15);
+  color: #ff8244;
+}
+
+/* Formatting Toolbar */
+.Webmail__formattingBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 16px;
+  background: rgba(11, 26, 43, 0.6);
+  border-bottom: 1px solid rgba(142, 194, 240, 0.1);
+  flex-wrap: wrap;
+}
+
+.Webmail__formatBtn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+}
+
+.Webmail__formatBtn:hover {
+  color: #03a9f4;
+  background: rgba(3, 169, 244, 0.14);
+}
+
+.Webmail__formatDivider {
+  width: 1px;
+  height: 18px;
+  background: rgba(142, 194, 240, 0.15);
+  margin: 0 4px;
+}
+
+/* Message Textarea / Content */
+.Webmail__bodyTextarea {
+  flex: 1;
+  min-height: 220px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eaf2ff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding: 16px;
+  resize: none;
+}
+
+.Webmail__bodyTextarea::placeholder {
+  color: #475569;
+}
+
+/* Attached Files Tray in Composer */
+.Webmail__composerAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(11, 26, 43, 0.5);
+  border-top: 1px solid rgba(142, 194, 240, 0.1);
+}
+
+.Webmail__fileChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(14, 39, 68, 0.9);
+  border: 1px solid rgba(74, 166, 255, 0.25);
+  color: #eaf2ff;
+  font-size: 0.82rem;
+}
+
+.Webmail__fileChipSize {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.Webmail__fileChipRemove {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.Webmail__fileChipRemove:hover {
+  color: #ff5b1f;
+}
+
+/* Composer Bottom Action Bar */
+.Webmail__composerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #091a2c;
+  border-top: 1px solid rgba(142, 194, 240, 0.2);
+}
+
+.Webmail__composerFooterLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.Webmail__sendBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #0d7bd8 0%, #03a9f4 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(3, 169, 244, 0.35);
+  transition: all 0.2s ease;
+}
+
+.Webmail__sendBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(3, 169, 244, 0.5);
+  transform: translateY(-1px);
+}
+
+.Webmail__sendBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.Webmail__attachTriggerBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1.3rem;
+  transition: all 0.15s ease;
+}
+
+.Webmail__attachTriggerBtn:hover {
+  color: #03a9f4;
+  background: rgba(3, 169, 244, 0.12);
+  border-color: rgba(3, 169, 244, 0.3);
+}
+
+.Webmail__composerFooterRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.Webmail__discardBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+}
+
+.Webmail__discardBtn:hover {
+  color: #ff5b1f;
+  background: rgba(255, 91, 31, 0.12);
+}
+
+.Webmail__attachmentSizeNote {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.Webmail__attachmentSizeNote--warn {
+  color: #ffbf00;
+  font-weight: 600;
+}

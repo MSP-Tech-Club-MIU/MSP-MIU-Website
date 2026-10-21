@@ -34,6 +34,7 @@ router.use("/seasons", require("./routes/seasons"));
 router.use("/email-templates", require("./routes/emailTemplates"));
 router.use("/email", require("./routes/emailPreferences"));
 router.use("/email-jobs", require("./routes/emailJobs"));
+router.use("/mail", require("./routes/mail"));
 router.use("/android-app", require("./routes/androidApp"));
 router.use("/game/cyberrunner", require("./routes/cyberrunner"));
 

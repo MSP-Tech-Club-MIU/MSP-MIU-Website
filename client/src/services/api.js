@@ -4705,6 +4705,157 @@ class ApiService {
     return result;
   }
 
+
+  // =========================================================================
+  // Webmail / Direct Mailer (Gmail-like platform mailing)
+  // =========================================================================
+
+  /**
+   * Send a direct email with optional file attachments (multipart/form-data)
+   * @param {FormData} formData
+   */
+  static async sendDirectEmail(formData) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/send`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send email');
+    return result;
+  }
+
+  /**
+   * List direct emails (folder = 'sent' | 'starred' | 'drafts' | 'trash')
+   */
+  static async listDirectEmails(options = {}) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const query = new URLSearchParams();
+    if (options.folder) query.append('folder', options.folder);
+    if (options.search) query.append('search', options.search);
+    if (options.page) query.append('page', options.page);
+    if (options.limit) query.append('limit', options.limit);
+
+    const response = await fetch(`${API_BASE_URL}/mail?${query.toString()}`, {
+      method: 'GET',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to list emails');
+    return result;
+  }
+
+  /**
+   * Get single email details
+   */
+  static async getDirectEmail(id) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/${id}`, {
+      method: 'GET',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch email');
+    return result.data;
+  }
+
+  /**
+   * Toggle starred status
+   */
+  static async toggleDirectEmailStar(id) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/${id}/star`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to toggle star');
+    return result;
+  }
+
+  /**
+   * Delete or move email to trash
+   */
+  static async deleteDirectEmail(id, permanent = false) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/${id}?permanent=${permanent ? 'true' : 'false'}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to delete email');
+    return result;
+  }
+
+  /**
+   * Restore email from trash
+   */
+  static async restoreDirectEmail(id) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/${id}/restore`, {
+      method: 'POST',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to restore email');
+    return result;
+  }
+
+  /**
+   * Save draft
+   */
+  static async saveDirectEmailDraft(draftData) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/draft`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(draftData)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to save draft');
+    return result.data;
+  }
+
+  /**
+   * Search recipients for autocomplete
+   */
+  static async searchMailRecipients(query) {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/recipients?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to search contacts');
+    return result.contacts || [];
+  }
+
+  /**
+   * Get SMTP status and configuration
+   */
+  static async getMailStatus() {
+    const token = this.getAuthToken();
+    if (!token) throw new Error('Authentication required');
+    const response = await fetch(`${API_BASE_URL}/mail/status`, {
+      method: 'GET',
+      headers: this.getHeaders(true)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to fetch mail status');
+    return result.status || null;
+  }
+
   // Clear cache for a specific key pattern
   static clearCache(pattern) {
     const keysToDelete = [];

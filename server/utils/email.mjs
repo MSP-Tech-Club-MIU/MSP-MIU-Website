@@ -138,6 +138,8 @@ export async function sendEmail(mailOptions) {
       from: fromAddress,
       replyTo: mailOptions.replyTo || fromEmail,
       to: mailOptions.to,
+      ...(mailOptions.cc ? { cc: mailOptions.cc } : {}),
+      ...(mailOptions.bcc ? { bcc: mailOptions.bcc } : {}),
       subject: mailOptions.subject,
       text,
       html,

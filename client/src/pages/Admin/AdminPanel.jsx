@@ -31,6 +31,7 @@ import EventsAdminTab from './EventsAdminTab';
 import CoursesAdminTab from './CoursesAdminTab';
 import SeasonsAdminTab from './SeasonsAdminTab';
 import EmailManagementAdminTab from './EmailManagementAdminTab';
+import WebmailAdminTab from './WebmailAdminTab';
 import EmailTrackerAdminTab from './EmailTrackerAdminTab';
 import CourseEmailsAdminTab from './CourseEmailsAdminTab';
 import AndroidAppAdminTab from './AndroidAppAdminTab';
@@ -65,6 +66,8 @@ const ADMIN_TAB_TO_ROUTE = {
     content: 'content',
     members: 'members',
     seasons: 'seasons',
+    mail: 'mail',
+    webmail: 'mail',
     emails: 'emails',
     'email-tracker': 'email-tracker',
     email_tracker: 'email-tracker',
@@ -259,6 +262,7 @@ const AdminPanel = () => {
         { key: 'media', label: 'Media', icon: <MdPermMedia />, category: 'Content' },
         { key: 'content', label: 'Site content', icon: <MdArticle />, category: 'Content' },
         { key: 'android', label: 'Android app', icon: <MdPhoneAndroid />, category: 'Content' },
+        { key: 'mail', label: 'Webmail (Gmail)', icon: <MdEmail />, category: 'Communications' },
         { key: 'emails', label: 'Email management', icon: <MdEmail />, category: 'Communications' },
         { key: 'email-tracker', label: 'Email tracker', icon: <MdTrackChanges />, category: 'Communications' },
         { key: 'course-emails', label: 'Course emails', icon: <MdSend />, category: 'Communications' },
@@ -1309,6 +1313,12 @@ const AdminPanel = () => {
                     {accessLevel === 'full' && activeTab === 'android' && (
                         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
                             <AndroidAppAdminTab onAlert={setAlert} onOpenJob={(job) => setEmailSendJob(job)} />
+                        </motion.div>
+                    )}
+
+                                        {accessLevel === 'full' && (activeTab === 'mail' || activeTab === 'webmail') && (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+                            <WebmailAdminTab onAlert={setAlert} />
                         </motion.div>
                     )}
 

@@ -73,6 +73,8 @@ tags:
     name: email
   -
     name: game/cyberrunner
+  -
+    name: mail
 components:
   securitySchemes:
     bearerAuth:
@@ -3552,6 +3554,132 @@ paths:
           description: Success
       tags:
         - game/cyberrunner
+  /mail:
+    get:
+      summary: 'Get /mail'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      security:
+        -
+          bearerAuth: []
+  '/mail/{id}':
+    get:
+      summary: 'Get /mail/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete /mail/{id}'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/mail/{id}/restore':
+    post:
+      summary: 'Create/submit /mail/{id}/restore'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  '/mail/{id}/star':
+    patch:
+      summary: 'Patch /mail/{id}/star'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
+  /mail/draft:
+    post:
+      summary: 'Create/submit /mail/draft'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      security:
+        -
+          bearerAuth: []
+  /mail/recipients:
+    get:
+      summary: 'Get /mail/recipients'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      security:
+        -
+          bearerAuth: []
+  /mail/send:
+    post:
+      summary: 'Create/submit /mail/send'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      security:
+        -
+          bearerAuth: []
+  /mail/status:
+    get:
+      summary: 'Get /mail/status'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - mail
+      security:
+        -
+          bearerAuth: []
   /members:
     get:
       tags:
