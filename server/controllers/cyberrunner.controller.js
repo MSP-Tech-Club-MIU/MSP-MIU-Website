@@ -126,13 +126,15 @@ function formatInstagram(contact) {
 
 /**
  * Filter out duplicates to return only the best run per player.
+ * Deduplicates by player name (case-insensitive) rather than user_id,
+ * allowing multiple different players on a shared device/account to appear separately.
  */
 function getUniquePlayerBests(scores, limit = 10) {
   const seen = new Set();
   const unique = [];
   for (const s of scores) {
     const rawName = s.player_name ? String(s.player_name).trim().toLowerCase() : '';
-    const key = (s.user_id ? `u_${s.user_id}` : `p_${rawName}`);
+    const key = rawName ? `p_${rawName}` : (s.score_id ? `s_${s.score_id}` : '');
     if (!seen.has(key)) {
       seen.add(key);
       unique.push(s);

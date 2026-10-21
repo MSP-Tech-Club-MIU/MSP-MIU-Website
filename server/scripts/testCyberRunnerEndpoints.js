@@ -56,6 +56,8 @@ function testUniquePlayerBests() {
     { score_id: 4, player_name: 'GUEST_USER', user_id: null, score: 2000, level: 4, tokens: 5 },
     { score_id: 5, player_name: 'Unique Legend', user_id: null, score: 8000, level: 16, tokens: 40 },
     { score_id: 6, player_name: null, user_id: null, score: 1000, level: 2, tokens: 2 },
+    // Another player playing on the same laptop/user_id (should NOT be collapsed)
+    { score_id: 7, player_name: 'Player Two', user_id: 10, score: 6000, level: 12, tokens: 25 },
   ];
 
   // Already ordered by score DESC:
@@ -63,14 +65,16 @@ function testUniquePlayerBests() {
 
   const bests = getUniquePlayerBests(testRuns, 10);
 
-  // Expect distinct entries for: Unique Legend (8000), Player One (5000), guest_user (4500), and null name (1000)
-  assert.strictEqual(bests.length, 4, 'Should filter out duplicates and keep each player best run');
+  // Expect distinct entries for: Unique Legend (8000), Player Two (6000), Player One (5000), guest_user (4500), and null name (1000)
+  assert.strictEqual(bests.length, 5, 'Should not collapse different players sharing a user_id on the same device');
   assert.strictEqual(bests[0].player_name, 'Unique Legend');
   assert.strictEqual(bests[0].score, 8000);
-  assert.strictEqual(bests[1].player_name, 'Player One');
-  assert.strictEqual(bests[1].score, 5000);
-  assert.strictEqual(bests[2].player_name, 'guest_user');
-  assert.strictEqual(bests[2].score, 4500);
+  assert.strictEqual(bests[1].player_name, 'Player Two');
+  assert.strictEqual(bests[1].score, 6000);
+  assert.strictEqual(bests[2].player_name, 'Player One');
+  assert.strictEqual(bests[2].score, 5000);
+  assert.strictEqual(bests[3].player_name, 'guest_user');
+  assert.strictEqual(bests[3].score, 4500);
   console.log('getUniquePlayerBests tests passed successfully!');
 }
 
