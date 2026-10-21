@@ -2511,6 +2511,136 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Leaderboard Timeframe Filter Control Bar */
+.CyberRunner__filterControlBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(4, 15, 30, 0.75);
+  border: 1px solid rgba(3, 169, 244, 0.22);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+
+.CyberRunner__filterNav {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.CyberRunner__filterNavBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #9ab5d6;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__filterNavBtn:hover:not(:disabled) {
+  background: rgba(3, 169, 244, 0.2);
+  border-color: #03a9f4;
+  color: #ffffff;
+}
+
+.CyberRunner__filterNavBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.CyberRunner__filterInputWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.6rem;
+  background: rgba(0, 16, 32, 0.85);
+  border: 1px solid rgba(3, 169, 244, 0.3);
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.CyberRunner__filterInputWrap:focus-within {
+  border-color: #00e5ff;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
+}
+
+.CyberRunner__filterInputIcon {
+  color: #00e5ff;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.CyberRunner__dateInput,
+.CyberRunner__yearSelect {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.84rem;
+  font-weight: 600;
+  outline: none;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.CyberRunner__yearSelect option {
+  background: #04101e;
+  color: #ffffff;
+}
+
+.CyberRunner__todayQuickBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  background: rgba(3, 169, 244, 0.15);
+  border: 1px solid rgba(3, 169, 244, 0.4);
+  color: #4fc3f7;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.CyberRunner__todayQuickBtn:hover {
+  background: rgba(3, 169, 244, 0.3);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(3, 169, 244, 0.3);
+}
+
+.CyberRunner__filterCurrentLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8da6c6;
+  font-family: inherit;
+}
+
+.CyberRunner__filterCurrentLabel span {
+  color: #e0f2fe;
+}
+
+.CyberRunner__podiumDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: #8da6c6;
+  margin-left: auto;
+}
+
 /* Daily Podium Card */
 .CyberRunner__dailyPodium {
   position: relative;

@@ -4670,7 +4670,10 @@ class ApiService {
   // CyberRunner Arcade Leaderboard & SCNT.eg Giveaway APIs
   static async getCyberRunnerLeaderboard(params = {}) {
     const queryParams = new URLSearchParams();
+    if (params.period) queryParams.append('period', params.period);
     if (params.date) queryParams.append('date', params.date);
+    if (params.month) queryParams.append('month', params.month);
+    if (params.year) queryParams.append('year', String(params.year));
     if (params.limit) queryParams.append('limit', String(params.limit));
 
     const qs = queryParams.toString();

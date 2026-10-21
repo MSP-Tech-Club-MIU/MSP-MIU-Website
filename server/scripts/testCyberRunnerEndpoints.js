@@ -1,5 +1,41 @@
 const assert = require('assert');
-const { SPONSOR_INFO, getUniquePlayerBests } = require('../controllers/cyberrunner.controller');
+const {
+  SPONSOR_INFO,
+  getUniquePlayerBests,
+  getMonthDateRange,
+  getYearDateRange
+} = require('../controllers/cyberrunner.controller');
+
+function testDateRangeCalculations() {
+  console.log('Testing Day, Month, and Year date range calculations...');
+
+  // Month ranges: standard 31-day month
+  const oct = getMonthDateRange('2026-10');
+  assert.strictEqual(oct.startDate, '2026-10-01');
+  assert.strictEqual(oct.endDate, '2026-10-31');
+
+  // Month ranges: 30-day month
+  const nov = getMonthDateRange('2026-11');
+  assert.strictEqual(nov.startDate, '2026-11-01');
+  assert.strictEqual(nov.endDate, '2026-11-30');
+
+  // Month ranges: leap year February (2024 is leap)
+  const febLeap = getMonthDateRange('2024-02');
+  assert.strictEqual(febLeap.startDate, '2024-02-01');
+  assert.strictEqual(febLeap.endDate, '2024-02-29');
+
+  // Month ranges: non-leap year February (2025 is non-leap)
+  const febNonLeap = getMonthDateRange('2025-02');
+  assert.strictEqual(febNonLeap.startDate, '2025-02-01');
+  assert.strictEqual(febNonLeap.endDate, '2025-02-28');
+
+  // Year ranges
+  const y2026 = getYearDateRange('2026');
+  assert.strictEqual(y2026.startDate, '2026-01-01');
+  assert.strictEqual(y2026.endDate, '2026-12-31');
+
+  console.log('Date range calculations tests passed!');
+}
 
 function testSponsorInfo() {
   console.log('Testing SPONSOR_INFO...');
@@ -65,6 +101,7 @@ async function run() {
     testSponsorInfo();
     testUniquePlayerBests();
     testCairoTimeCalculations();
+    testDateRangeCalculations();
     testRoutesMounted();
     console.log('\nAll CyberRunner backend verification tests passed successfully!');
     process.exit(0);

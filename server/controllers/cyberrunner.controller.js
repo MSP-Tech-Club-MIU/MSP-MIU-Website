@@ -28,6 +28,40 @@ function getCairoDateString(d = new Date()) {
   }
 }
 
+function getMonthDateRange(yearMonth) {
+  const parts = String(yearMonth || '').split('-');
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (Number.isNaN(y) || Number.isNaN(m) || m < 1 || m > 12) {
+    const today = getCairoDateString();
+    return { startDate: `${today.slice(0, 7)}-01`, endDate: today };
+  }
+  const lastDay = new Date(y, m, 0).getDate();
+  const yearStr = String(y).padStart(4, '0');
+  const monthStr = String(m).padStart(2, '0');
+  const lastDayStr = String(lastDay).padStart(2, '0');
+  return {
+    startDate: `${yearStr}-${monthStr}-01`,
+    endDate: `${yearStr}-${monthStr}-${lastDayStr}`
+  };
+}
+
+function getYearDateRange(yearStr) {
+  const y = parseInt(yearStr, 10);
+  if (Number.isNaN(y) || y < 2000 || y > 2100) {
+    const currentYear = getCairoDateString().slice(0, 4);
+    return {
+      startDate: `${currentYear}-01-01`,
+      endDate: `${currentYear}-12-31`
+    };
+  }
+  const safeYear = String(y).padStart(4, '0');
+  return {
+    startDate: `${safeYear}-01-01`,
+    endDate: `${safeYear}-12-31`
+  };
+}
+
 function getCairoResetCountdown() {
   const now = new Date();
   try {
@@ -110,68 +144,142 @@ function getUniquePlayerBests(scores, limit = 10) {
 
 /**
  * GET /api/game/cyberrunner/leaderboard
- * Fetches today's champion, today's top scores, all-time hall of fame, and sponsor info.
+ * Fetches rankings filtered by Day, Month, Year, or All-Time.
+ * Supports query params:
+ *   - period: 'day' | 'month' | 'year' | 'all' (default: 'day')
+ *   - date: YYYY-MM-DD (for period='day', default: Cairo today)
+ *   - month: YYYY-MM (for period='month', default: Cairo current month)
+ *   - year: YYYY (for period='year', default: Cairo current year)
+ *   - limit: max number of unique players (default: 10, max: 100)
  */
 const getLeaderboard = async (req, res) => {
   try {
     await ensureCyberRunnerTable();
 
+    const cairoToday = getCairoDateString();
+    const periodRaw = String(req.query.period || 'day').toLowerCase();
+    const period = ['day', 'month', 'year', 'all'].includes(periodRaw)
+      ? periodRaw
+      : 'day';
+
     const requestedDate = req.query.date && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
       ? req.query.date
-      : getCairoDateString();
+      : cairoToday;
 
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const requestedMonth = req.query.month && /^\d{4}-\d{2}$/.test(req.query.month)
+      ? req.query.month
+      : cairoToday.slice(0, 7);
 
-    const todayRuns = await CyberRunnerScore.findAll({
-      where: {
-        played_date: requestedDate,
-        is_verified: true
-      },
-      order: [
-        ['score', 'DESC'],
-        ['created_at', 'ASC']
-      ],
-      limit: 60
-    });
+    const requestedYear = req.query.year && /^\d{4}$/.test(String(req.query.year))
+      ? String(req.query.year)
+      : cairoToday.slice(0, 4);
 
-    const allTimeRuns = await CyberRunnerScore.findAll({
-      where: {
-        is_verified: true
-      },
-      order: [
-        ['score', 'DESC'],
-        ['created_at', 'ASC']
-      ],
-      limit: 60
-    });
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
 
+    // Construct filter for selected period
+    const periodWhere = { is_verified: true };
+    let filterValue = requestedDate;
+
+    if (period === 'day') {
+      periodWhere.played_date = requestedDate;
+      filterValue = requestedDate;
+    } else if (period === 'month') {
+      const { startDate, endDate } = getMonthDateRange(requestedMonth);
+      periodWhere.played_date = { [Op.between]: [startDate, endDate] };
+      filterValue = requestedMonth;
+    } else if (period === 'year') {
+      const { startDate, endDate } = getYearDateRange(requestedYear);
+      periodWhere.played_date = { [Op.between]: [startDate, endDate] };
+      filterValue = requestedYear;
+    } else if (period === 'all') {
+      filterValue = 'all-time';
+    }
+
+    const fetchLimit = period === 'day' ? 100 : 300;
+
+    const isTodayQuery = period === 'day' && requestedDate === cairoToday;
+    const isAllTimeQuery = period === 'all';
+
+    const queries = [
+      CyberRunnerScore.findAll({
+        where: periodWhere,
+        order: [
+          ['score', 'DESC'],
+          ['created_at', 'ASC']
+        ],
+        limit: fetchLimit
+      })
+    ];
+
+    if (isTodayQuery) {
+      queries.push(Promise.resolve(null));
+    } else {
+      queries.push(
+        CyberRunnerScore.findAll({
+          where: {
+            played_date: cairoToday,
+            is_verified: true
+          },
+          order: [
+            ['score', 'DESC'],
+            ['created_at', 'ASC']
+          ],
+          limit: 60
+        })
+      );
+    }
+
+    if (isAllTimeQuery) {
+      queries.push(Promise.resolve(null));
+    } else {
+      queries.push(
+        CyberRunnerScore.findAll({
+          where: { is_verified: true },
+          order: [
+            ['score', 'DESC'],
+            ['created_at', 'ASC']
+          ],
+          limit: 60
+        })
+      );
+    }
+
+    const [periodRunsRaw, todayRunsRaw, allTimeRunsRaw] = await Promise.all(queries);
+    const periodRuns = periodRunsRaw || [];
+    const todayRuns = isTodayQuery ? periodRuns : (todayRunsRaw || []);
+    const allTimeRuns = isAllTimeQuery ? periodRuns : (allTimeRunsRaw || []);
+
+    const uniquePeriod = getUniquePlayerBests(periodRuns, limit);
     const uniqueToday = getUniquePlayerBests(todayRuns, limit);
     const uniqueAllTime = getUniquePlayerBests(allTimeRuns, limit);
 
+    const mapScoreItem = (s, idx) => ({
+      rank: idx + 1,
+      scoreId: s.score_id,
+      playerName: s.player_name || 'Anonymous Runner',
+      instagram: formatInstagram(s.player_contact),
+      score: s.score,
+      level: s.level,
+      tokens: s.tokens,
+      maxCombo: s.max_combo,
+      playedDate: s.played_date,
+      createdAt: s.created_at,
+      isChampion: idx === 0
+    });
+
+    const periodChampion = uniquePeriod.length > 0 ? {
+      ...mapScoreItem(uniquePeriod[0], 0),
+      isDailyWinner: period === 'day' && requestedDate === cairoToday
+    } : null;
+
     // Today's Daily Champion is the #1 player of today
     const dailyChampion = uniqueToday.length > 0 ? {
-      scoreId: uniqueToday[0].score_id,
-      playerName: uniqueToday[0].player_name || 'Anonymous Runner',
-      instagram: formatInstagram(uniqueToday[0].player_contact),
-      score: uniqueToday[0].score,
-      level: uniqueToday[0].level,
-      tokens: uniqueToday[0].tokens,
-      maxCombo: uniqueToday[0].max_combo,
-      playedDate: uniqueToday[0].played_date,
-      createdAt: uniqueToday[0].created_at,
+      ...mapScoreItem(uniqueToday[0], 0),
       isDailyWinner: true
     } : null;
 
     const allTimeChampion = uniqueAllTime.length > 0 ? {
-      scoreId: uniqueAllTime[0].score_id,
-      playerName: uniqueAllTime[0].player_name || 'Anonymous Runner',
-      instagram: formatInstagram(uniqueAllTime[0].player_contact),
-      score: uniqueAllTime[0].score,
-      level: uniqueAllTime[0].level,
-      tokens: uniqueAllTime[0].tokens,
-      maxCombo: uniqueAllTime[0].max_combo,
-      playedDate: uniqueAllTime[0].played_date,
-      createdAt: uniqueAllTime[0].created_at
+      ...mapScoreItem(uniqueAllTime[0], 0)
     } : null;
 
     const countdown = getCairoResetCountdown();
@@ -179,34 +287,23 @@ const getLeaderboard = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
+        period,
+        filterValue,
         currentDate: requestedDate,
+        currentMonth: requestedMonth,
+        currentYear: requestedYear,
+        cairoToday,
+        periodChampion,
         dailyChampion,
         allTimeChampion,
+        scores: uniquePeriod.map(mapScoreItem),
         todayScores: uniqueToday.map((s, idx) => ({
-          rank: idx + 1,
-          scoreId: s.score_id,
-          playerName: s.player_name || 'Anonymous Runner',
-          instagram: formatInstagram(s.player_contact),
-          score: s.score,
-          level: s.level,
-          tokens: s.tokens,
-          maxCombo: s.max_combo,
-          playedDate: s.played_date,
-          createdAt: s.created_at,
+          ...mapScoreItem(s, idx),
           isDailyChampion: idx === 0
         })),
-        allTimeScores: uniqueAllTime.map((s, idx) => ({
-          rank: idx + 1,
-          scoreId: s.score_id,
-          playerName: s.player_name || 'Anonymous Runner',
-          instagram: formatInstagram(s.player_contact),
-          score: s.score,
-          level: s.level,
-          tokens: s.tokens,
-          maxCombo: s.max_combo,
-          playedDate: s.played_date,
-          createdAt: s.created_at
-        })),
+        allTimeScores: uniqueAllTime.map(mapScoreItem),
+        totalPeriodRuns: periodRuns.length,
+        totalPeriodPlayers: uniquePeriod.length,
         totalTodayRuns: todayRuns.length,
         totalTodayPlayers: uniqueToday.length,
         countdown,
@@ -512,5 +609,8 @@ module.exports = {
   getDailyChampion,
   getAdminScores,
   deleteScore,
-  getUniquePlayerBests
+  getUniquePlayerBests,
+  getCairoDateString,
+  getMonthDateRange,
+  getYearDateRange
 };

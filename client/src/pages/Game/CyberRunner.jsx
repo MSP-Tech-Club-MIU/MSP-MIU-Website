@@ -38,6 +38,11 @@ import {
   FaEyeSlash,
   FaUserCheck,
   FaInfoCircle,
+  FaCalendarDay,
+  FaCalendarAlt,
+  FaCalendar,
+  FaChevronLeft,
+  FaChevronRight,
 } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ApiService from '../../services/api';
@@ -422,6 +427,82 @@ class SoundFX {
 
 const sfx = new SoundFX();
 
+const getCairoDateString = (d = new Date()) => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Africa/Cairo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+  } catch {
+    return new Date(d.getTime() + 2 * 3600 * 1000).toISOString().split('T')[0];
+  }
+};
+
+const shiftDay = (dateStr, days) => {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setDate(date.getDate() + days);
+    const nextY = date.getFullYear();
+    const nextM = String(date.getMonth() + 1).padStart(2, '0');
+    const nextD = String(date.getDate()).padStart(2, '0');
+    return `${nextY}-${nextM}-${nextD}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+const shiftMonth = (monthStr, months) => {
+  try {
+    const [y, m] = monthStr.split('-').map(Number);
+    const date = new Date(y, m - 1 + months, 1);
+    const nextY = date.getFullYear();
+    const nextM = String(date.getMonth() + 1).padStart(2, '0');
+    return `${nextY}-${nextM}`;
+  } catch {
+    return monthStr;
+  }
+};
+
+const shiftYear = (yearStr, years) => {
+  try {
+    const y = parseInt(yearStr, 10);
+    return String(y + years);
+  } catch {
+    return yearStr;
+  }
+};
+
+const formatReadableDate = (dateStr) => {
+  try {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatReadableMonth = (monthStr) => {
+  try {
+    const [y, m] = monthStr.split('-').map(Number);
+    const date = new Date(y, m - 1, 1);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return monthStr;
+  }
+};
+
 export const CyberRunner = () => {
   const [stats, setStats] = useState(() => loadStats());
   const [gameState, setGameState] = useState('IDLE'); // IDLE | PLAYING | PAUSED | GAME_OVER
@@ -444,19 +525,30 @@ export const CyberRunner = () => {
   const [isDucking, setIsDucking] = useState(false);
   const [copiedScore, setCopiedScore] = useState(false);
 
+  // Timeframe and date filter state
+  const initialCairoDate = useMemo(() => getCairoDateString(), []);
+  const [adminTab, setAdminTab] = useState('day'); // 'day' | 'month' | 'year' | 'allTime' | 'local'
+  const [selectedDate, setSelectedDate] = useState(initialCairoDate);
+  const [selectedMonth, setSelectedMonth] = useState(initialCairoDate.slice(0, 7));
+  const [selectedYear, setSelectedYear] = useState(initialCairoDate.slice(0, 4));
+
   // Online Leaderboard, Daily Champion & SCNT.eg Giveaway States
   const [dailyChampion, setDailyChampion] = useState(null);
   const [leaderboardData, setLeaderboardData] = useState({
+    scores: [],
+    periodChampion: null,
     todayScores: [],
     allTimeScores: [],
+    allTimeChampion: null,
     countdown: null,
     sponsor: null,
+    totalPeriodRuns: 0,
+    totalPeriodPlayers: 0,
     loading: false,
     error: null,
   });
   const [countdownSec, setCountdownSec] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [adminTab, setAdminTab] = useState('today'); // 'today' | 'allTime' | 'local'
 
   // Score Submission in Game Over Overlay (empty by default so placeholder is always visible)
   const [playerName, setPlayerName] = useState('');
@@ -797,20 +889,80 @@ export const CyberRunner = () => {
     } catch (e) {}
   }, [hud.score, hud.level, activeTheme.name]);
 
-  const fetchLeaderboard = useCallback(async () => {
+  const yearOptions = useMemo(() => {
+    const currentY = parseInt(initialCairoDate.slice(0, 4), 10) || 2026;
+    const years = [];
+    for (let y = currentY; y >= 2024; y--) {
+      years.push(String(y));
+    }
+    return years;
+  }, [initialCairoDate]);
+
+  const displayScores = useMemo(() => {
+    if (adminTab === 'day') {
+      return leaderboardData.scores.length > 0
+        ? leaderboardData.scores
+        : (selectedDate === initialCairoDate ? leaderboardData.todayScores : []);
+    }
+    if (adminTab === 'month') return leaderboardData.scores;
+    if (adminTab === 'year') return leaderboardData.scores;
+    if (adminTab === 'allTime') {
+      return leaderboardData.scores.length > 0 ? leaderboardData.scores : leaderboardData.allTimeScores;
+    }
+    return [];
+  }, [adminTab, leaderboardData, selectedDate, initialCairoDate]);
+
+  const activeChampion = useMemo(() => {
+    if (adminTab === 'day') {
+      return leaderboardData.periodChampion || (selectedDate === initialCairoDate ? dailyChampion : null);
+    }
+    if (adminTab === 'month') return leaderboardData.periodChampion;
+    if (adminTab === 'year') return leaderboardData.periodChampion;
+    if (adminTab === 'allTime') {
+      return leaderboardData.periodChampion || leaderboardData.allTimeChampion;
+    }
+    return null;
+  }, [adminTab, leaderboardData, selectedDate, initialCairoDate, dailyChampion]);
+
+  const fetchLeaderboard = useCallback(async (overrides = {}) => {
+    const tab = overrides.tab || adminTab;
+    if (tab === 'local') return;
+
+    const dateToFetch = overrides.date !== undefined ? overrides.date : selectedDate;
+    const monthToFetch = overrides.month !== undefined ? overrides.month : selectedMonth;
+    const yearToFetch = overrides.year !== undefined ? overrides.year : selectedYear;
+
+    let period = 'day';
+    if (tab === 'month') period = 'month';
+    else if (tab === 'year') period = 'year';
+    else if (tab === 'allTime') period = 'all';
+
     setLeaderboardData((prev) => ({ ...prev, loading: true, error: null }));
     try {
-      const res = await ApiService.getCyberRunnerLeaderboard();
-      if (res.success && res.data) {
+      const res = await ApiService.getCyberRunnerLeaderboard({
+        period,
+        date: dateToFetch,
+        month: monthToFetch,
+        year: yearToFetch,
+        limit: 50,
+      });
+      if (res && res.success && res.data) {
         setLeaderboardData({
+          scores: res.data.scores || [],
+          periodChampion: res.data.periodChampion || null,
           todayScores: res.data.todayScores || [],
           allTimeScores: res.data.allTimeScores || [],
+          allTimeChampion: res.data.allTimeChampion || null,
           countdown: res.data.countdown || null,
           sponsor: res.data.sponsor || null,
+          totalPeriodRuns: res.data.totalPeriodRuns || 0,
+          totalPeriodPlayers: res.data.totalPeriodPlayers || 0,
           loading: false,
           error: null,
         });
-        setDailyChampion(res.data.dailyChampion || null);
+        if (res.data.dailyChampion) {
+          setDailyChampion(res.data.dailyChampion);
+        }
         if (res.data.countdown?.secondsRemaining != null) {
           setCountdownSec(res.data.countdown.secondsRemaining);
         }
@@ -823,7 +975,27 @@ export const CyberRunner = () => {
         error: 'Leaderboard unavailable offline',
       }));
     }
-  }, []);
+  }, [adminTab, selectedDate, selectedMonth, selectedYear]);
+
+  const handleTabChange = useCallback((newTab) => {
+    setAdminTab(newTab);
+    fetchLeaderboard({ tab: newTab });
+  }, [fetchLeaderboard]);
+
+  const handleDateChange = useCallback((newDate) => {
+    setSelectedDate(newDate);
+    fetchLeaderboard({ tab: 'day', date: newDate });
+  }, [fetchLeaderboard]);
+
+  const handleMonthChange = useCallback((newMonth) => {
+    setSelectedMonth(newMonth);
+    fetchLeaderboard({ tab: 'month', month: newMonth });
+  }, [fetchLeaderboard]);
+
+  const handleYearChange = useCallback((newYear) => {
+    setSelectedYear(newYear);
+    fetchLeaderboard({ tab: 'year', year: newYear });
+  }, [fetchLeaderboard]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -2736,24 +2908,40 @@ export const CyberRunner = () => {
                     <div className="CyberRunner__tabList">
                       <button
                         type="button"
-                        className={`CyberRunner__tabButton ${adminTab === 'today' ? 'is-active' : ''}`}
-                        onClick={() => setAdminTab('today')}
+                        className={`CyberRunner__tabButton ${adminTab === 'day' ? 'is-active' : ''}`}
+                        onClick={() => handleTabChange('day')}
                       >
-                        <FaCrown />
-                        <span>Today ({leaderboardData.todayScores.length})</span>
+                        <FaCalendarDay />
+                        <span>Day {adminTab === 'day' ? `(${displayScores.length})` : ''}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`CyberRunner__tabButton ${adminTab === 'month' ? 'is-active' : ''}`}
+                        onClick={() => handleTabChange('month')}
+                      >
+                        <FaCalendarAlt />
+                        <span>Month {adminTab === 'month' ? `(${displayScores.length})` : ''}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`CyberRunner__tabButton ${adminTab === 'year' ? 'is-active' : ''}`}
+                        onClick={() => handleTabChange('year')}
+                      >
+                        <FaTrophy />
+                        <span>Year {adminTab === 'year' ? `(${displayScores.length})` : ''}</span>
                       </button>
                       <button
                         type="button"
                         className={`CyberRunner__tabButton ${adminTab === 'allTime' ? 'is-active' : ''}`}
-                        onClick={() => setAdminTab('allTime')}
+                        onClick={() => handleTabChange('allTime')}
                       >
                         <FaMedal />
-                        <span>All-Time ({leaderboardData.allTimeScores.length})</span>
+                        <span>All-Time {adminTab === 'allTime' ? `(${displayScores.length})` : ''}</span>
                       </button>
                       <button
                         type="button"
                         className={`CyberRunner__tabButton ${adminTab === 'local' ? 'is-active' : ''}`}
-                        onClick={() => setAdminTab('local')}
+                        onClick={() => handleTabChange('local')}
                       >
                         <FaGamepad />
                         <span>Local</span>
@@ -2761,7 +2949,7 @@ export const CyberRunner = () => {
                       <button
                         type="button"
                         className="CyberRunner__refreshBtn"
-                        onClick={fetchLeaderboard}
+                        onClick={() => fetchLeaderboard()}
                         title="Refresh Leaderboard"
                       >
                         <FaSyncAlt className={leaderboardData.loading ? 'spin-icon' : ''} />
@@ -2779,13 +2967,66 @@ export const CyberRunner = () => {
 
               {isAdminOrBoard ? (
                 <>
-                  {/* ADMIN TAB 1: Today's Contest */}
-                  {adminTab === 'today' && (
+                  {/* TAB 1: DAY FILTER */}
+                  {adminTab === 'day' && (
                     <div className="CyberRunner__tabContent">
-                      {dailyChampion ? (
+                      <div className="CyberRunner__filterControlBar">
+                        <div className="CyberRunner__filterNav">
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            onClick={() => handleDateChange(shiftDay(selectedDate, -1))}
+                            title="Previous Day"
+                          >
+                            <FaChevronLeft />
+                          </button>
+                          <div className="CyberRunner__filterInputWrap">
+                            <FaCalendarDay className="CyberRunner__filterInputIcon" />
+                            <input
+                              type="date"
+                              className="CyberRunner__dateInput"
+                              value={selectedDate}
+                              max={initialCairoDate}
+                              onChange={(e) => e.target.value && handleDateChange(e.target.value)}
+                              aria-label="Filter leaderboard by day"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            disabled={selectedDate >= initialCairoDate}
+                            onClick={() => handleDateChange(shiftDay(selectedDate, 1))}
+                            title="Next Day"
+                          >
+                            <FaChevronRight />
+                          </button>
+                          {selectedDate !== initialCairoDate && (
+                            <button
+                              type="button"
+                              className="CyberRunner__todayQuickBtn"
+                              onClick={() => handleDateChange(initialCairoDate)}
+                            >
+                              Today
+                            </button>
+                          )}
+                        </div>
+                        <div className="CyberRunner__filterCurrentLabel">
+                          <FaClock />
+                          <span>
+                            {selectedDate === initialCairoDate
+                              ? `Today (${formatReadableDate(selectedDate)})`
+                              : formatReadableDate(selectedDate)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {activeChampion ? (
                         <div className="CyberRunner__dailyPodium">
                           <div className="CyberRunner__podiumBadge">
-                            <FaCrown /> CURRENT #1 FOR SCNT GIVEAWAY
+                            <FaCrown />{' '}
+                            {selectedDate === initialCairoDate
+                              ? 'CURRENT #1 FOR SCNT GIVEAWAY'
+                              : `#1 CHAMPION OF ${formatReadableDate(selectedDate)}`}
                           </div>
                           <div className="CyberRunner__podiumBody">
                             <div className="CyberRunner__podiumRankBadgeLarge">
@@ -2795,50 +3036,63 @@ export const CyberRunner = () => {
                             <div className="CyberRunner__podiumDetails">
                               <div className="CyberRunner__podiumNameRow">
                                 <div className="CyberRunner__podiumPlayerInfo">
-                                  <h4>{dailyChampion.playerName}</h4>
-                                  {dailyChampion.instagram && (
+                                  <h4>{activeChampion.playerName}</h4>
+                                  {activeChampion.instagram && (
                                     <a
-                                      href={`https://instagram.com/${dailyChampion.instagram.replace(/^@/, '')}`}
+                                      href={`https://instagram.com/${activeChampion.instagram.replace(/^@/, '')}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="CyberRunner__instagramHandle"
-                                      title={`View ${dailyChampion.instagram} on Instagram`}
+                                      title={`View ${activeChampion.instagram} on Instagram`}
                                     >
-                                      <FaInstagram /> {dailyChampion.instagram}
+                                      <FaInstagram /> {activeChampion.instagram}
                                     </a>
                                   )}
                                 </div>
                                 <span className="CyberRunner__podiumGiveawayTag">
-                                  <FaGift /> SCNT Winner Position
+                                  {selectedDate === initialCairoDate ? (
+                                    <>
+                                      <FaGift /> SCNT Winner Position
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaTrophy /> Daily Winner
+                                    </>
+                                  )}
                                 </span>
                               </div>
                               <div className="CyberRunner__podiumStatsRow">
                                 <span className="CyberRunner__podiumScore">
-                                  <strong>{dailyChampion.score.toLocaleString()}</strong> pts
+                                  <strong>{activeChampion.score.toLocaleString()}</strong> pts
                                 </span>
-                                <span>Level {dailyChampion.level || getLevelFromScore(dailyChampion.score)}</span>
-                                <span>{dailyChampion.tokens || 0} tokens</span>
+                                <span>Level {activeChampion.level || getLevelFromScore(activeChampion.score)}</span>
+                                <span>{activeChampion.tokens || 0} tokens</span>
+                                {activeChampion.playedDate && (
+                                  <span className="CyberRunner__podiumDate">
+                                    <FaCalendarDay /> {activeChampion.playedDate}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
                       ) : null}
 
-                      {leaderboardData.todayScores.length === 0 ? (
+                      {displayScores.length === 0 ? (
                         <div className="CyberRunner__emptyBoardPrompt">
                           <FaCrown className="CyberRunner__emptyCrownIcon" />
-                          <h4>No runs submitted today yet</h4>
-                          <p>Scores will appear here as soon as runners submit them.</p>
+                          <h4>No runs submitted on {formatReadableDate(selectedDate)}</h4>
+                          <p>Scores will appear here as soon as runners submit them on this date.</p>
                         </div>
                       ) : (
                         <div className="CyberRunner__scoresTableWrapper">
                           <h4 className="CyberRunner__tableTitle">
-                            Today's Submitted Runs ({leaderboardData.todayScores.length})
+                            Submitted Runs ({displayScores.length})
                           </h4>
                           <ul className="CyberRunner__onlineList">
-                            {leaderboardData.todayScores.map((run, idx) => (
+                            {displayScores.map((run, idx) => (
                               <li
-                                key={`admin-today-${run.scoreId || idx}`}
+                                key={`admin-day-${run.scoreId || idx}`}
                                 className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
                               >
                                 <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
@@ -2861,6 +3115,7 @@ export const CyberRunner = () => {
                                   </div>
                                   <span>
                                     Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                    {run.maxCombo ? ` &bull; ${run.maxCombo}x combo` : ''}
                                   </span>
                                 </div>
                                 <div className="CyberRunner__onlineScoreCol">
@@ -2879,17 +3134,393 @@ export const CyberRunner = () => {
                     </div>
                   )}
 
-                  {/* ADMIN TAB 2: All-Time Legends */}
+                  {/* TAB 2: MONTH FILTER */}
+                  {adminTab === 'month' && (
+                    <div className="CyberRunner__tabContent">
+                      <div className="CyberRunner__filterControlBar">
+                        <div className="CyberRunner__filterNav">
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            onClick={() => handleMonthChange(shiftMonth(selectedMonth, -1))}
+                            title="Previous Month"
+                          >
+                            <FaChevronLeft />
+                          </button>
+                          <div className="CyberRunner__filterInputWrap">
+                            <FaCalendarAlt className="CyberRunner__filterInputIcon" />
+                            <input
+                              type="month"
+                              className="CyberRunner__dateInput"
+                              value={selectedMonth}
+                              max={initialCairoDate.slice(0, 7)}
+                              onChange={(e) => e.target.value && handleMonthChange(e.target.value)}
+                              aria-label="Filter leaderboard by month"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            disabled={selectedMonth >= initialCairoDate.slice(0, 7)}
+                            onClick={() => handleMonthChange(shiftMonth(selectedMonth, 1))}
+                            title="Next Month"
+                          >
+                            <FaChevronRight />
+                          </button>
+                          {selectedMonth !== initialCairoDate.slice(0, 7) && (
+                            <button
+                              type="button"
+                              className="CyberRunner__todayQuickBtn"
+                              onClick={() => handleMonthChange(initialCairoDate.slice(0, 7))}
+                            >
+                              This Month
+                            </button>
+                          )}
+                        </div>
+                        <div className="CyberRunner__filterCurrentLabel">
+                          <FaCalendarAlt />
+                          <span>
+                            {selectedMonth === initialCairoDate.slice(0, 7)
+                              ? `This Month (${formatReadableMonth(selectedMonth)})`
+                              : formatReadableMonth(selectedMonth)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {activeChampion ? (
+                        <div className="CyberRunner__dailyPodium">
+                          <div className="CyberRunner__podiumBadge">
+                            <FaCrown /> #1 CHAMPION OF {formatReadableMonth(selectedMonth)}
+                          </div>
+                          <div className="CyberRunner__podiumBody">
+                            <div className="CyberRunner__podiumRankBadgeLarge">
+                              <FaCrown />
+                              <span>#1</span>
+                            </div>
+                            <div className="CyberRunner__podiumDetails">
+                              <div className="CyberRunner__podiumNameRow">
+                                <div className="CyberRunner__podiumPlayerInfo">
+                                  <h4>{activeChampion.playerName}</h4>
+                                  {activeChampion.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${activeChampion.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${activeChampion.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {activeChampion.instagram}
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="CyberRunner__podiumGiveawayTag">
+                                  <FaTrophy /> Monthly Winner
+                                </span>
+                              </div>
+                              <div className="CyberRunner__podiumStatsRow">
+                                <span className="CyberRunner__podiumScore">
+                                  <strong>{activeChampion.score.toLocaleString()}</strong> pts
+                                </span>
+                                <span>Level {activeChampion.level || getLevelFromScore(activeChampion.score)}</span>
+                                <span>{activeChampion.tokens || 0} tokens</span>
+                                {activeChampion.playedDate && (
+                                  <span className="CyberRunner__podiumDate">
+                                    <FaCalendarDay /> {activeChampion.playedDate}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {displayScores.length === 0 ? (
+                        <div className="CyberRunner__emptyBoardPrompt">
+                          <FaCalendarAlt className="CyberRunner__emptyCrownIcon" />
+                          <h4>No runs submitted in {formatReadableMonth(selectedMonth)}</h4>
+                          <p>Player high scores for this month will appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="CyberRunner__scoresTableWrapper">
+                          <h4 className="CyberRunner__tableTitle">
+                            Monthly Standings ({displayScores.length})
+                          </h4>
+                          <ul className="CyberRunner__onlineList">
+                            {displayScores.map((run, idx) => (
+                              <li
+                                key={`admin-month-${run.scoreId || idx}`}
+                                className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
+                              >
+                                <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
+                                  {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
+                                </span>
+                                <div className="CyberRunner__onlinePlayer">
+                                  <div className="CyberRunner__onlinePlayerNameRow">
+                                    <strong>{run.playerName}</strong>
+                                    {run.instagram && (
+                                      <a
+                                        href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="CyberRunner__instagramHandle"
+                                        title={`View ${run.instagram} on Instagram`}
+                                      >
+                                        <FaInstagram /> {run.instagram}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <span>
+                                    Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                    {run.maxCombo ? ` &bull; ${run.maxCombo}x combo` : ''}
+                                  </span>
+                                </div>
+                                <div className="CyberRunner__onlineScoreCol">
+                                  <strong>{run.score.toLocaleString()} pts</strong>
+                                  {run.playedDate && (
+                                    <span className="CyberRunner__runDate">{run.playedDate}</span>
+                                  )}
+                                  {idx === 0 && (
+                                    <span className="CyberRunner__prizeMiniBadge">
+                                      <FaTrophy /> Top 1
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 3: YEAR FILTER */}
+                  {adminTab === 'year' && (
+                    <div className="CyberRunner__tabContent">
+                      <div className="CyberRunner__filterControlBar">
+                        <div className="CyberRunner__filterNav">
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            onClick={() => handleYearChange(shiftYear(selectedYear, -1))}
+                            title="Previous Year"
+                          >
+                            <FaChevronLeft />
+                          </button>
+                          <div className="CyberRunner__filterInputWrap">
+                            <FaCalendar className="CyberRunner__filterInputIcon" />
+                            <select
+                              className="CyberRunner__yearSelect"
+                              value={selectedYear}
+                              onChange={(e) => handleYearChange(e.target.value)}
+                              aria-label="Filter leaderboard by year"
+                            >
+                              {yearOptions.map((yr) => (
+                                <option key={yr} value={yr}>
+                                  {yr} Season
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            className="CyberRunner__filterNavBtn"
+                            disabled={selectedYear >= initialCairoDate.slice(0, 4)}
+                            onClick={() => handleYearChange(shiftYear(selectedYear, 1))}
+                            title="Next Year"
+                          >
+                            <FaChevronRight />
+                          </button>
+                          {selectedYear !== initialCairoDate.slice(0, 4) && (
+                            <button
+                              type="button"
+                              className="CyberRunner__todayQuickBtn"
+                              onClick={() => handleYearChange(initialCairoDate.slice(0, 4))}
+                            >
+                              This Year
+                            </button>
+                          )}
+                        </div>
+                        <div className="CyberRunner__filterCurrentLabel">
+                          <FaTrophy />
+                          <span>
+                            {selectedYear === initialCairoDate.slice(0, 4)
+                              ? `Current Season (${selectedYear})`
+                              : `Season ${selectedYear}`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {activeChampion ? (
+                        <div className="CyberRunner__dailyPodium">
+                          <div className="CyberRunner__podiumBadge">
+                            <FaCrown /> #1 ANNUAL CHAMPION OF {selectedYear}
+                          </div>
+                          <div className="CyberRunner__podiumBody">
+                            <div className="CyberRunner__podiumRankBadgeLarge">
+                              <FaCrown />
+                              <span>#1</span>
+                            </div>
+                            <div className="CyberRunner__podiumDetails">
+                              <div className="CyberRunner__podiumNameRow">
+                                <div className="CyberRunner__podiumPlayerInfo">
+                                  <h4>{activeChampion.playerName}</h4>
+                                  {activeChampion.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${activeChampion.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${activeChampion.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {activeChampion.instagram}
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="CyberRunner__podiumGiveawayTag">
+                                  <FaTrophy /> Annual Champion
+                                </span>
+                              </div>
+                              <div className="CyberRunner__podiumStatsRow">
+                                <span className="CyberRunner__podiumScore">
+                                  <strong>{activeChampion.score.toLocaleString()}</strong> pts
+                                </span>
+                                <span>Level {activeChampion.level || getLevelFromScore(activeChampion.score)}</span>
+                                <span>{activeChampion.tokens || 0} tokens</span>
+                                {activeChampion.playedDate && (
+                                  <span className="CyberRunner__podiumDate">
+                                    <FaCalendarDay /> {activeChampion.playedDate}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {displayScores.length === 0 ? (
+                        <div className="CyberRunner__emptyBoardPrompt">
+                          <FaTrophy className="CyberRunner__emptyCrownIcon" />
+                          <h4>No runs submitted in season {selectedYear}</h4>
+                          <p>Player high scores for this entire year will appear here.</p>
+                        </div>
+                      ) : (
+                        <div className="CyberRunner__scoresTableWrapper">
+                          <h4 className="CyberRunner__tableTitle">
+                            Season {selectedYear} Rankings ({displayScores.length})
+                          </h4>
+                          <ul className="CyberRunner__onlineList">
+                            {displayScores.map((run, idx) => (
+                              <li
+                                key={`admin-year-${run.scoreId || idx}`}
+                                className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
+                              >
+                                <span className={`CyberRunner__onlineRank rank-${idx + 1}`}>
+                                  {idx === 0 ? <FaCrown /> : `#${idx + 1}`}
+                                </span>
+                                <div className="CyberRunner__onlinePlayer">
+                                  <div className="CyberRunner__onlinePlayerNameRow">
+                                    <strong>{run.playerName}</strong>
+                                    {run.instagram && (
+                                      <a
+                                        href={`https://instagram.com/${run.instagram.replace(/^@/, '')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="CyberRunner__instagramHandle"
+                                        title={`View ${run.instagram} on Instagram`}
+                                      >
+                                        <FaInstagram /> {run.instagram}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <span>
+                                    Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                    {run.maxCombo ? ` &bull; ${run.maxCombo}x combo` : ''}
+                                  </span>
+                                </div>
+                                <div className="CyberRunner__onlineScoreCol">
+                                  <strong>{run.score.toLocaleString()} pts</strong>
+                                  {run.playedDate && (
+                                    <span className="CyberRunner__runDate">{run.playedDate}</span>
+                                  )}
+                                  {idx === 0 && (
+                                    <span className="CyberRunner__prizeMiniBadge">
+                                      <FaTrophy /> Top 1
+                                    </span>
+                                  )}
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: ALL-TIME LEGENDS */}
                   {adminTab === 'allTime' && (
                     <div className="CyberRunner__tabContent">
-                      {leaderboardData.allTimeScores.length === 0 ? (
+                      <div className="CyberRunner__filterControlBar">
+                        <div className="CyberRunner__filterCurrentLabel">
+                          <FaMedal />
+                          <span>Hall of Fame &mdash; All-Time Verified High Scores</span>
+                        </div>
+                      </div>
+
+                      {activeChampion ? (
+                        <div className="CyberRunner__dailyPodium">
+                          <div className="CyberRunner__podiumBadge">
+                            <FaCrown /> ALL-TIME RECORD HOLDER
+                          </div>
+                          <div className="CyberRunner__podiumBody">
+                            <div className="CyberRunner__podiumRankBadgeLarge">
+                              <FaCrown />
+                              <span>#1</span>
+                            </div>
+                            <div className="CyberRunner__podiumDetails">
+                              <div className="CyberRunner__podiumNameRow">
+                                <div className="CyberRunner__podiumPlayerInfo">
+                                  <h4>{activeChampion.playerName}</h4>
+                                  {activeChampion.instagram && (
+                                    <a
+                                      href={`https://instagram.com/${activeChampion.instagram.replace(/^@/, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="CyberRunner__instagramHandle"
+                                      title={`View ${activeChampion.instagram} on Instagram`}
+                                    >
+                                      <FaInstagram /> {activeChampion.instagram}
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="CyberRunner__podiumGiveawayTag">
+                                  <FaMedal /> Hall of Fame Legend
+                                </span>
+                              </div>
+                              <div className="CyberRunner__podiumStatsRow">
+                                <span className="CyberRunner__podiumScore">
+                                  <strong>{activeChampion.score.toLocaleString()}</strong> pts
+                                </span>
+                                <span>Level {activeChampion.level || getLevelFromScore(activeChampion.score)}</span>
+                                <span>{activeChampion.tokens || 0} tokens</span>
+                                {activeChampion.playedDate && (
+                                  <span className="CyberRunner__podiumDate">
+                                    <FaCalendarDay /> {activeChampion.playedDate}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {displayScores.length === 0 ? (
                         <div className="CyberRunner__emptyBoardPrompt">
                           <FaMedal className="CyberRunner__emptyCrownIcon" />
                           <h4>No all-time scores yet</h4>
                         </div>
                       ) : (
                         <ul className="CyberRunner__onlineList">
-                          {leaderboardData.allTimeScores.map((run, idx) => (
+                          {displayScores.map((run, idx) => (
                             <li
                               key={`admin-all-${run.scoreId || idx}`}
                               className={`CyberRunner__onlineItem ${idx === 0 ? 'is-first-place' : ''}`}
@@ -2914,11 +3545,14 @@ export const CyberRunner = () => {
                                 </div>
                                 <span>
                                   Lvl {run.level} &bull; {run.tokens || 0} tokens
+                                  {run.maxCombo ? ` &bull; ${run.maxCombo}x combo` : ''}
                                 </span>
                               </div>
                               <div className="CyberRunner__onlineScoreCol">
                                 <strong>{run.score.toLocaleString()} pts</strong>
-                                <span className="CyberRunner__runDate">{run.playedDate}</span>
+                                {run.playedDate && (
+                                  <span className="CyberRunner__runDate">{run.playedDate}</span>
+                                )}
                               </div>
                             </li>
                           ))}
@@ -2927,7 +3561,7 @@ export const CyberRunner = () => {
                     </div>
                   )}
 
-                  {/* ADMIN TAB 3: Local Device Records */}
+                  {/* TAB 5: LOCAL DEVICE RECORDS */}
                   {adminTab === 'local' && (
                     <div className="CyberRunner__tabContent">
                       <div className="CyberRunner__panelHeader">
