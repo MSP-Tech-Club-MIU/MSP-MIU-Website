@@ -1086,6 +1086,20 @@ class ApiService {
     return result;
   }
 
+  /** Send member acceptance (WhatsApp) email to a single member. */
+  static async sendMemberAcceptanceEmail(id) {
+    const response = await fetch(
+      `${API_BASE_URL}/members/${id}/send-acceptance-email`,
+      {
+        method: 'POST',
+        headers: this.getHeaders(true),
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send acceptance email');
+    return result;
+  }
+
   // ── Email templates (Email Management) ──────────────────────────
   static async getEmailTemplates() {
     const response = await fetch(`${API_BASE_URL}/email-templates`, {

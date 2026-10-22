@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { MdPeople } from 'react-icons/md';
+import { MdPeople, MdMoreVert, MdEdit, MdDelete, MdEmail } from 'react-icons/md';
+import { FaWhatsapp } from 'react-icons/fa';
 import ApiService from '../../services/api';
 import { confirmModal } from '../../context/ModalContext';
 import Pagination from '../../components/Pagination';
@@ -32,7 +33,12 @@ export default function MembersAdminTab({ onAlert }) {
   const [departmentId, setDepartmentId] = useState('');
   const [faculty, setFaculty] = useState('');
   const [departments, setDepartments] = useState(memberDepartments);
-  const [sendingId, setSendingId] = useState(null);
+  const [sendingActivationId, setSendingActivationId] = useState(null);
+  const [sendingAcceptanceId, setSendingAcceptanceId] = useState(null);
+
+  // Row operations dropdown menu state
+  const [openMenuMemberId, setOpenMenuMemberId] = useState(null);
+  const [menuCoords, setMenuCoords] = useState(null);
 
   // Edit member state
   const [editingMember, setEditingMember] = useState(null);
@@ -108,7 +114,62 @@ export default function MembersAdminTab({ onAlert }) {
     };
   }, [editingMember]);
 
+  // Close operations menu on scroll, window resize, or escape key
+  useEffect(() => {
+    if (!openMenuMemberId) return undefined;
+
+    const handleClose = () => {
+      setOpenMenuMemberId(null);
+      setMenuCoords(null);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') handleClose();
+    };
+
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuMemberId]);
+
+  const handleToggleMenu = (e, row) => {
+    e.stopPropagation();
+    if (openMenuMemberId === row.member_id) {
+      setOpenMenuMemberId(null);
+      setMenuCoords(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 275;
+    const estimatedHeight = 250;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+
+    let left = rect.right - menuWidth;
+    if (left < 12) left = 12;
+    if (left + menuWidth > window.innerWidth - 12) {
+      left = window.innerWidth - menuWidth - 12;
+    }
+
+    setMenuCoords({
+      top: rect.bottom + 6,
+      bottom: window.innerHeight - rect.top + 6,
+      left,
+      openUp
+    });
+    setOpenMenuMemberId(row.member_id);
+  };
+
   const openEdit = (row) => {
+    setOpenMenuMemberId(null);
+    setMenuCoords(null);
     setEditingMember(row);
     setEditForm({
       full_name: row.full_name || '',
@@ -186,6 +247,8 @@ export default function MembersAdminTab({ onAlert }) {
   };
 
   const remove = async (row) => {
+    setOpenMenuMemberId(null);
+    setMenuCoords(null);
     const ok = await confirmModal({
       title: 'Remove Member?',
       message: `Remove member "${row.full_name}"? This action cannot be undone.`,
@@ -204,20 +267,25 @@ export default function MembersAdminTab({ onAlert }) {
   };
 
   const sendAccountMail = async (row) => {
+    setOpenMenuMemberId(null);
+    setMenuCoords(null);
     if (!row?.email) {
       onAlert?.({ type: 'error', message: 'This member has no email address.' });
       return;
     }
+    const hasAccount = Boolean(row.has_active_account);
     const ok = await confirmModal({
-      title: 'Send Account Creation Email?',
-      message: `Send account creation email to ${row.full_name} (${row.email})?`,
+      title: hasAccount ? 'Resend Account Creation Email?' : 'Send Account Creation Email?',
+      message: hasAccount
+        ? `Member "${row.full_name}" (${row.email}) already has an account, but you can resend an activation email. Proceed?`
+        : `Send account creation email to ${row.full_name} (${row.email})?`,
       confirmText: 'Send Email',
       cancelText: 'Cancel',
       type: 'info'
     });
     if (!ok) return;
     try {
-      setSendingId(row.member_id);
+      setSendingActivationId(row.member_id);
       const result = await ApiService.sendMemberActivationEmail(row.member_id);
       onAlert?.({
         type: 'success',
@@ -226,8 +294,147 @@ export default function MembersAdminTab({ onAlert }) {
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Failed to send email' });
     } finally {
-      setSendingId(null);
+      setSendingActivationId(null);
     }
+  };
+
+  const sendAcceptanceMail = async (row) => {
+    setOpenMenuMemberId(null);
+    setMenuCoords(null);
+    if (!row?.email) {
+      onAlert?.({ type: 'error', message: 'This member has no email address.' });
+      return;
+    }
+    const deptName = row.department?.name || getDepartmentNameById(row.department_id) || 'assigned department';
+    const ok = await confirmModal({
+      title: 'Send Acceptance (WhatsApp) Email?',
+      message: `Send acceptance email (with WhatsApp group link for "${deptName}") to ${row.full_name} (${row.email})?`,
+      confirmText: 'Send Acceptance Email',
+      cancelText: 'Cancel',
+      type: 'info'
+    });
+    if (!ok) return;
+    try {
+      setSendingAcceptanceId(row.member_id);
+      const result = await ApiService.sendMemberAcceptanceEmail(row.member_id);
+      onAlert?.({
+        type: 'success',
+        message: result.message || `Acceptance (WhatsApp) email sent to ${row.email}`
+      });
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Failed to send acceptance email' });
+    } finally {
+      setSendingAcceptanceId(null);
+    }
+  };
+
+  const renderRowActionsMenu = () => {
+    if (!openMenuMemberId || !menuCoords) return null;
+    const selectedRow = items.find((m) => m.member_id === openMenuMemberId);
+    if (!selectedRow) return null;
+
+    const hasAccount = Boolean(selectedRow.has_active_account);
+    const isSendingAcceptance = sendingAcceptanceId === selectedRow.member_id;
+    const isSendingActivation = sendingActivationId === selectedRow.member_id;
+    const deptName = selectedRow.department?.name || getDepartmentNameById(selectedRow.department_id);
+
+    const closeMenu = () => {
+      setOpenMenuMemberId(null);
+      setMenuCoords(null);
+    };
+
+    return createPortal(
+      <div className="CourseActions__portalWrapper">
+        <div className="CourseActions__backdrop" onClick={closeMenu} />
+        <div
+          className={`CourseActions__menu CourseActions__menu--portal ${
+            menuCoords.openUp ? 'CourseActions__menu--up' : ''
+          }`}
+          style={{
+            position: 'fixed',
+            top: menuCoords.openUp ? 'auto' : `${menuCoords.top}px`,
+            bottom: menuCoords.openUp ? `${menuCoords.bottom}px` : 'auto',
+            left: `${menuCoords.left}px`,
+            width: '275px',
+            zIndex: 10001
+          }}
+          role="menu"
+          aria-label="Member operations"
+        >
+          <div className="CourseActions__menuHeader">Email Operations</div>
+
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            disabled={isSendingAcceptance}
+            onClick={() => sendAcceptanceMail(selectedRow)}
+          >
+            {isSendingAcceptance ? (
+              <span className="CourseActions__inlineSpinner" />
+            ) : (
+              <FaWhatsapp className="CourseActions__itemIcon CourseActions__itemIcon--whatsapp" />
+            )}
+            <div className="CourseActions__itemContent">
+              <span>Send Acceptance (WhatsApp)</span>
+              <span className="CourseActions__itemDesc">
+                {deptName ? `${deptName} group invitation` : 'Includes WhatsApp group link'}
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            disabled={isSendingActivation}
+            onClick={() => sendAccountMail(selectedRow)}
+          >
+            {isSendingActivation ? (
+              <span className="CourseActions__inlineSpinner" />
+            ) : (
+              <MdEmail className="CourseActions__itemIcon" style={{ color: '#64B5F6' }} />
+            )}
+            <div className="CourseActions__itemContent">
+              <span>{hasAccount ? 'Resend Account Email' : 'Send Account Creation Email'}</span>
+              <span className="CourseActions__itemDesc">
+                {hasAccount ? 'Account active · sends reset/login link' : 'Sends activation link to set password'}
+              </span>
+            </div>
+          </button>
+
+          <div className="CourseActions__menuDivider" />
+          <div className="CourseActions__menuHeader">Member Management</div>
+
+          <button
+            type="button"
+            className="CourseActions__menuItem"
+            role="menuitem"
+            onClick={() => openEdit(selectedRow)}
+          >
+            <MdEdit className="CourseActions__itemIcon" style={{ color: '#90CAF9' }} />
+            <div className="CourseActions__itemContent">
+              <span>Edit Member Profile</span>
+              <span className="CourseActions__itemDesc">Update details, faculty, department</span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="CourseActions__menuItem CourseActions__menuItem--danger"
+            role="menuitem"
+            onClick={() => remove(selectedRow)}
+          >
+            <MdDelete className="CourseActions__itemIcon" />
+            <div className="CourseActions__itemContent">
+              <span>Delete Member</span>
+              <span className="CourseActions__itemDesc">Remove member from club</span>
+            </div>
+          </button>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   return (
@@ -296,12 +503,16 @@ export default function MembersAdminTab({ onAlert }) {
                 <th>Year</th>
                 <th>Department</th>
                 <th>Account</th>
-                <th>Actions</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {items.map((row) => {
                 const hasAccount = Boolean(row.has_active_account);
+                const isOperating =
+                  sendingAcceptanceId === row.member_id ||
+                  sendingActivationId === row.member_id;
+
                 return (
                   <tr key={row.member_id}>
                     <td style={{ fontWeight: 600 }}>
@@ -325,32 +536,37 @@ export default function MembersAdminTab({ onAlert }) {
                       </span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
-                        onClick={() => openEdit(row)}
-                      >
-                        Edit
-                      </button>
-                      {!hasAccount && (
+                      <div className="CourseActions__row" style={{ justifyContent: 'center' }}>
                         <button
                           type="button"
-                          className="AdminPanel__actionBtn AdminPanel__actionBtn--approve"
-                          disabled={sendingId === row.member_id}
-                          onClick={() => sendAccountMail(row)}
+                          className="AdminPanel__actionBtn AdminPanel__actionBtn--edit"
+                          onClick={() => openEdit(row)}
+                          title="Edit member details"
                         >
-                          {sendingId === row.member_id
-                            ? 'Sending…'
-                            : 'Send mail'}
+                          Edit
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                        onClick={() => remove(row)}
-                      >
-                        Delete
-                      </button>
+                        <div className="CourseActions__menuWrapper">
+                          <button
+                            type="button"
+                            className={`CourseActions__iconBtn ${
+                              openMenuMemberId === row.member_id
+                                ? 'CourseActions__iconBtn--active'
+                                : ''
+                            }`}
+                            onClick={(e) => handleToggleMenu(e, row)}
+                            title="Member options & operations"
+                            aria-label={`Operations for ${row.full_name}`}
+                            aria-expanded={openMenuMemberId === row.member_id}
+                            disabled={isOperating}
+                          >
+                            {isOperating ? (
+                              <span className="CourseActions__inlineSpinner" />
+                            ) : (
+                              <MdMoreVert />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -360,6 +576,9 @@ export default function MembersAdminTab({ onAlert }) {
         </div>
       )}
       <Pagination pagination={pagination} onPageChange={setPage} />
+
+      {/* Row operations floating menu */}
+      {renderRowActionsMenu()}
 
       {/* Edit Member Profile Modal */}
       {editingMember &&

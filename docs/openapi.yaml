@@ -3756,6 +3756,24 @@ paths:
       responses:
         '200':
           description: Deleted
+  '/members/{id}/send-acceptance-email':
+    post:
+      summary: 'Create/submit /members/{id}/send-acceptance-email'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - Members
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        -
+          bearerAuth: []
   '/members/{id}/send-activation-email':
     post:
       tags:

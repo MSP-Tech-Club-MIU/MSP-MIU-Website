@@ -8,7 +8,8 @@ const {
   deleteMember,
   exportMembersToCSV,
   sendActivationEmails,
-  sendActivationEmail
+  sendActivationEmail,
+  sendAcceptanceEmail
 } = require("../controllers/members");
 const { authenticateToken, verifyRole } = require("../middlewares/auth");
 
@@ -26,6 +27,12 @@ router.post(
   authenticateToken,
   verifyRole('admin', 'board'),
   sendActivationEmail
+);
+router.post(
+  "/:id/send-acceptance-email",
+  authenticateToken,
+  verifyRole('admin', 'board'),
+  sendAcceptanceEmail
 );
 router.get("/:id", authenticateToken, verifyRole('board', 'admin'), getMemberById);
 router.put("/:id", authenticateToken, verifyRole('admin', 'board'), updateMember);
