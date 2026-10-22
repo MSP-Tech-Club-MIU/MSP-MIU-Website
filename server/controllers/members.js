@@ -277,8 +277,32 @@ const updateMember = async (req, res) => {
       return res.status(400).json({ success: false, error: 'No fields to update' });
     }
 
+    if (updates.year !== undefined) {
+      const parsedYear = Number(updates.year);
+      if (!Number.isInteger(parsedYear) || parsedYear < 1 || parsedYear > 5) {
+        return res.status(400).json({ success: false, error: 'Year must be an integer between 1 and 5' });
+      }
+      updates.year = parsedYear;
+    }
+    if (typeof updates.full_name === 'string') updates.full_name = updates.full_name.trim();
+    if (typeof updates.email === 'string') updates.email = updates.email.trim();
+    if (typeof updates.university_id === 'string') updates.university_id = updates.university_id.trim();
+    if (typeof updates.phone_number === 'string') updates.phone_number = updates.phone_number.trim();
+    if (typeof updates.faculty === 'string') updates.faculty = updates.faculty.trim();
+    if (updates.department_id !== undefined && updates.department_id !== null && updates.department_id !== '') {
+      updates.department_id = Number(updates.department_id);
+    }
+
     await member.update(updates);
-    await member.reload();
+    await member.reload({
+      include: [
+        {
+          model: Department,
+          as: 'department',
+          attributes: ['department_id', 'name']
+        }
+      ]
+    });
     await syncUserFromMember(member);
 
     await logAdminAction(
@@ -294,6 +318,16 @@ const updateMember = async (req, res) => {
   } catch (error) {
     if (error.status) {
       return res.status(error.status).json({ success: false, error: error.message });
+    }
+    const sqlMessage = error.parent?.sqlMessage || error.original?.sqlMessage;
+    const dup =
+      error.name === 'SequelizeUniqueConstraintError' ||
+      /Duplicate entry/i.test(String(sqlMessage || ''));
+    if (dup) {
+      return res.status(409).json({
+        success: false,
+        error: 'A member with this university ID or email already exists for this season.'
+      });
     }
     logger.error('Error updating member:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to update member' });

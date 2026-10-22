@@ -469,6 +469,7 @@ const getAllApplications = async (req, res) => {
                 total: count,
                 pending: statusCounts['pending'] || 0,
                 approved: statusCounts['approved'] || 0,
+                accepted_second_choice: statusCounts['accepted_second_choice'] || 0,
                 rejected: statusCounts['rejected'] || 0,
                 by_first_choice,
                 by_second_choice,
@@ -521,6 +522,20 @@ const updateApplicationStatus = async (req, res) => {
             });
         }
 
+        if (!['pending', 'approved', 'rejected', 'accepted_second_choice'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid application status'
+            });
+        }
+
+        if (status === 'accepted_second_choice' && !application.second_choice) {
+            return res.status(400).json({
+                success: false,
+                error: 'Cannot accept in second option: applicant did not specify a second choice'
+            });
+        }
+
         const updatePayload = { status };
         // If the applicant was marked as being interviewed, transition to interviewed
         if (req.body.interview_status) {
@@ -541,6 +556,12 @@ const updateApplicationStatus = async (req, res) => {
                 req.body.department_id != null && req.body.department_id !== ''
                     ? Number(req.body.department_id)
                     : application.first_choice;
+            enrollment = await enrollFromApplication(application, { departmentId });
+        } else if (status === 'accepted_second_choice') {
+            const departmentId =
+                req.body.department_id != null && req.body.department_id !== ''
+                    ? Number(req.body.department_id)
+                    : application.second_choice;
             enrollment = await enrollFromApplication(application, { departmentId });
         }
 
@@ -865,6 +886,10 @@ const checkEligibility = async (req, res) => {
                     approved: {
                         reason: 'approved_application',
                         message: 'Your application for this season has already been approved. Welcome to the club!'
+                    },
+                    accepted_second_choice: {
+                        reason: 'approved_application',
+                        message: 'Your application for this season has already been approved (second choice). Welcome to the club!'
                     },
                     rejected: {
                         reason: 'rejected_application',
