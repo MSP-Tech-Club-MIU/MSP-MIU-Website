@@ -176,15 +176,29 @@ async function syncUserFromMember(member, options = {}) {
   }
   if (!user) return null;
 
-  await user.update(
-    {
-      department_id: member.department_id,
-      season_id: member.season_id,
-      full_name: member.full_name || user.full_name,
-      ...(user.university_id ? {} : { university_id: member.university_id })
-    },
-    { transaction }
-  );
+  const userUpdates = {
+    department_id: member.department_id,
+    season_id: member.season_id,
+    full_name: member.full_name || user.full_name
+  };
+
+  if (member.university_id && member.university_id !== user.university_id) {
+    userUpdates.university_id = member.university_id;
+  }
+  if (member.email && member.email.toLowerCase() !== (user.email || '').toLowerCase()) {
+    userUpdates.email = member.email;
+  }
+
+  try {
+    await user.update(userUpdates, { transaction });
+  } catch (err) {
+    // If unique constraint prevents university_id or email change on user, sync remaining fields
+    if (userUpdates.university_id || userUpdates.email) {
+      delete userUpdates.university_id;
+      delete userUpdates.email;
+      await user.update(userUpdates, { transaction });
+    }
+  }
 
   if (member.user_id !== user.user_id) {
     await member.update({ user_id: user.user_id }, { transaction });

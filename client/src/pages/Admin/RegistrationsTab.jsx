@@ -194,7 +194,8 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
     }, [commentModal.isOpen]);
 
     const getStatusColor = (status) => {
-        if (status?.startsWith('approved')) return '#27ae60';
+        if (status === 'approved') return '#27ae60';
+        if (status === 'accepted_second_choice') return '#2980b9';
         if (status?.startsWith('rejected')) return '#e74c3c';
         return '#4aa6ff';
     };
@@ -297,6 +298,14 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
     }, []);
 
     const handleStatusChange = async (application_id, newStatus) => {
+        const targetApp = (applications || []).find((a) => a.application_id === application_id);
+        if (newStatus === 'accepted_second_choice' && (!targetApp || !targetApp.second_choice)) {
+            onAlert?.({
+                type: 'error',
+                message: 'Cannot accept in second option: applicant did not specify a second choice.'
+            });
+            return;
+        }
         try {
             const res = await ApiService.updateApplicationStatus(application_id, newStatus);
             const serverInterviewStatus = res?.data?.interview_status;
@@ -323,7 +332,11 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
             setFilteredApplications(patch);
             onAlert?.({
                 type: 'success',
-                message: `Application status updated to "${newStatus}".`
+                message: `Application status updated to "${
+                    newStatus === 'accepted_second_choice'
+                        ? 'Accepted (2nd Option)'
+                        : newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
+                }".`
             });
         } catch (error) {
             console.error('Error updating application status:', error);

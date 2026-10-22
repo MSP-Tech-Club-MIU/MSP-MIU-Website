@@ -68,6 +68,7 @@ const FiltersSection = memo(({
               <option value="">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="accepted_second_choice">Accepted (2nd Option)</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
@@ -231,6 +232,7 @@ const FiltersSection = memo(({
             <option value="">All Status</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
+            <option value="accepted_second_choice">Accepted (2nd Option)</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>

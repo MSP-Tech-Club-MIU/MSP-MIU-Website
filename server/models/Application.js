@@ -85,7 +85,7 @@ const Application = sequelize.define('Application', {
     allowNull: true
   },
   status: {
-    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    type: DataTypes.ENUM('pending', 'approved', 'rejected', 'accepted_second_choice'),
     defaultValue: 'pending'
   },
   comment: {
