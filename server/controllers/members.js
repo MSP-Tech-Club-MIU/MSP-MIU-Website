@@ -8,6 +8,9 @@ const {
   sendActivationEmailsToMembers
 } = require('../utils/activationEmail');
 const {
+  sendAcceptanceEmailForMember
+} = require('../utils/acceptanceEmail');
+const {
   findExistingUserForEnrollment,
   syncUserFromMember
 } = require('../utils/memberEnrollment');
@@ -626,6 +629,67 @@ const sendActivationEmail = async (req, res) => {
   }
 };
 
+/**
+ * Send member acceptance (WhatsApp) email to a single member.
+ */
+const sendAcceptanceEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const member = await Member.findByPk(id, {
+      include: [
+        {
+          model: Department,
+          as: 'department',
+          attributes: ['department_id', 'name', 'whatsapp_group_url']
+        }
+      ]
+    });
+    if (!member) {
+      return res.status(404).json({ success: false, error: 'Member not found' });
+    }
+
+    const { sendEmail } = await import('../utils/email.mjs');
+    const result = await sendAcceptanceEmailForMember(member, sendEmail);
+
+    if (result.skipped) {
+      return res.status(400).json({
+        success: false,
+        error: result.reason || 'Cannot send acceptance email to this member',
+        data: result
+      });
+    }
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send acceptance email',
+        data: result
+      });
+    }
+
+    await logAdminAction(
+      'acceptance_email_sent',
+      `Sent member acceptance (WhatsApp) email to "${member.full_name}" (${result.email})`,
+      req,
+      'member',
+      member.member_id,
+      member.season_id
+    );
+
+    res.json({
+      success: true,
+      message: `Acceptance (WhatsApp) email sent to ${result.email}`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error sending member acceptance email:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to send acceptance email'
+    });
+  }
+};
+
 module.exports = {
   getAllMembers,
   getMemberById,
@@ -634,5 +698,6 @@ module.exports = {
   deleteMember,
   exportMembersToCSV,
   sendActivationEmails,
-  sendActivationEmail
+  sendActivationEmail,
+  sendAcceptanceEmail
 };
