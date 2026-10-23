@@ -178,11 +178,12 @@ const searchPeople = async (req, res) => {
 
     for (const row of memberRows) {
       const json = row.toJSON ? row.toJSON() : row;
+      const roleName = json.role === 'delegate' ? 'Delegate' : 'Member';
       push({
         source: 'member',
         source_label: json.season?.label
-          ? `Member · ${json.season.label}`
-          : 'Member',
+          ? `${roleName} · ${json.season.label}`
+          : roleName,
         full_name: json.full_name || '',
         email: json.email || null,
         university_id: json.university_id || null,

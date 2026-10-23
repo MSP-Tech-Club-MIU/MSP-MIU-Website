@@ -162,8 +162,10 @@ const ApplicationsTable = memo(({
                     style={{ backgroundColor: getStatusColor(app.status) }}
                   >
                     <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
+                    <option value="approved">Accepted as Member</option>
+                    <option value="accepted_delegate">Accepted as Delegate</option>
                     <option value="accepted_second_choice">Accepted (2nd Option)</option>
+                    <option value="accepted_second_choice_delegate">Accepted as Delegate (2nd Option)</option>
                     <option value="rejected">Rejected</option>
                   </select>
                 </td>
@@ -343,8 +345,10 @@ const ApplicationsTable = memo(({
                   }}
                 >
                   <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
+                  <option value="approved">Accepted as Member</option>
+                  <option value="accepted_delegate">Accepted as Delegate</option>
                   <option value="accepted_second_choice">Accepted (2nd Option)</option>
+                  <option value="accepted_second_choice_delegate">Accepted as Delegate (2nd Option)</option>
                   <option value="rejected">Rejected</option>
                 </select>
               </td>

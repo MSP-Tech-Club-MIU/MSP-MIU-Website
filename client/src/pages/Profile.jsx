@@ -325,6 +325,8 @@ const Profile = () => {
         return '#ff4757';
       case 'board':
         return '#5352ed';
+      case 'delegate':
+        return '#9b59b6';
       case 'member':
         return '#2ed573';
       default:
