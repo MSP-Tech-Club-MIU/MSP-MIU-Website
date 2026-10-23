@@ -195,7 +195,9 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
 
     const getStatusColor = (status) => {
         if (status === 'approved') return '#27ae60';
+        if (status === 'accepted_delegate') return '#8e44ad';
         if (status === 'accepted_second_choice') return '#2980b9';
+        if (status === 'accepted_second_choice_delegate') return '#d35400';
         if (status?.startsWith('rejected')) return '#e74c3c';
         return '#4aa6ff';
     };
@@ -299,7 +301,7 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
 
     const handleStatusChange = async (application_id, newStatus) => {
         const targetApp = (applications || []).find((a) => a.application_id === application_id);
-        if (newStatus === 'accepted_second_choice' && (!targetApp || !targetApp.second_choice)) {
+        if ((newStatus === 'accepted_second_choice' || newStatus === 'accepted_second_choice_delegate') && (!targetApp || !targetApp.second_choice)) {
             onAlert?.({
                 type: 'error',
                 message: 'Cannot accept in second option: applicant did not specify a second choice.'
@@ -330,13 +332,18 @@ const RegistrationsTab = memo(({ onAlert, currentUser: propCurrentUser }) => {
                 });
             setApplications(patch);
             setFilteredApplications(patch);
+            const statusLabelMap = {
+                approved: 'Accepted as Member',
+                accepted_delegate: 'Accepted as Delegate',
+                accepted_second_choice: 'Accepted (2nd Option)',
+                accepted_second_choice_delegate: 'Accepted as Delegate (2nd Option)',
+                rejected: 'Rejected',
+                pending: 'Pending'
+            };
+            const label = statusLabelMap[newStatus] || (newStatus.charAt(0).toUpperCase() + newStatus.slice(1));
             onAlert?.({
                 type: 'success',
-                message: `Application status updated to "${
-                    newStatus === 'accepted_second_choice'
-                        ? 'Accepted (2nd Option)'
-                        : newStatus.charAt(0).toUpperCase() + newStatus.slice(1)
-                }".`
+                message: `Application status updated to "${label}".`
             });
         } catch (error) {
             console.error('Error updating application status:', error);

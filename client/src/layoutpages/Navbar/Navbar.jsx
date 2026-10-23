@@ -256,6 +256,7 @@ const Navbar = memo(() => {
     if (userRole === 'admin') return 'Admin';
     if (userRole === 'instructor') return 'Instructor';
     if (userRole === 'judge') return 'Judge';
+    if (userRole === 'delegate') return 'Delegate';
     return 'Member';
   }, [userRole]);
 

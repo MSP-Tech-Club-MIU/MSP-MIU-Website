@@ -62,6 +62,11 @@ const Member = sequelize.define('Member', {
       notEmpty: true
     }
   },
+  role: {
+    type: DataTypes.ENUM('member', 'delegate'),
+    allowNull: false,
+    defaultValue: 'member'
+  },
   joined_at: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW

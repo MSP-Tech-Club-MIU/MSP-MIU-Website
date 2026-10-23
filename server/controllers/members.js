@@ -53,7 +53,7 @@ async function attachAccountStatus(members) {
 const getAllMembers = async (req, res) => {
   try {
     const { page, limit, offset } = parsePagination(req.query);
-    const { search, department_id, faculty } = req.query;
+    const { search, department_id, faculty, role } = req.query;
     const seasonFilter = await resolveSeasonFilter(req.query);
     const where = { ...seasonFilter.where };
 
@@ -67,6 +67,7 @@ const getAllMembers = async (req, res) => {
     }
     if (department_id) where.department_id = Number(department_id);
     if (faculty) where.faculty = faculty;
+    if (role && ['member', 'delegate'].includes(role)) where.role = role;
 
     const include = [
       {
@@ -156,7 +157,8 @@ const createMember = async (req, res) => {
       department_id,
       university_id,
       schedule,
-      user_id
+      user_id,
+      role
     } = req.body;
 
     if (!full_name || !String(full_name).trim()) {
@@ -211,6 +213,7 @@ const createMember = async (req, res) => {
       year: Number(year),
       phone_number: String(phone_number).trim(),
       department_id: Number(department_id),
+      role: role === 'delegate' ? 'delegate' : 'member',
       university_id: uniId,
       schedule: schedule || null,
       user_id: linkedUser?.user_id || null,
@@ -267,7 +270,8 @@ const updateMember = async (req, res) => {
       'phone_number',
       'department_id',
       'university_id',
-      'schedule'
+      'schedule',
+      'role'
     ];
     const updates = {};
     for (const field of allowed) {
@@ -278,6 +282,12 @@ const updateMember = async (req, res) => {
     }
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ success: false, error: 'No fields to update' });
+    }
+
+    if (updates.role !== undefined) {
+      if (!['member', 'delegate'].includes(updates.role)) {
+        return res.status(400).json({ success: false, error: 'Role must be "member" or "delegate"' });
+      }
     }
 
     if (updates.year !== undefined) {
@@ -386,9 +396,9 @@ function escapeCsvCell(value) {
 }
 
 function buildMembersCsv(rows) {
-  const headers = ['university_id', 'full_name', 'email', 'faculty', 'year'];
+  const headers = ['university_id', 'full_name', 'email', 'faculty', 'year', 'role'];
   const lines = rows.map((row) =>
-    [row.university_id, row.full_name, row.email, row.faculty, row.year]
+    [row.university_id, row.full_name, row.email, row.faculty, row.year, row.role || 'Member']
       .map(escapeCsvCell)
       .join(',')
   );
@@ -424,7 +434,7 @@ const exportMembersToCSV = async (req, res) => {
     const [members, boardMembers] = await Promise.all([
       Member.findAll({
         where,
-        attributes: ['university_id', 'full_name', 'email', 'faculty', 'year'],
+        attributes: ['university_id', 'full_name', 'email', 'faculty', 'year', 'role'],
         order: [
           ['faculty', 'ASC'],
           ['full_name', 'ASC'],
@@ -433,7 +443,7 @@ const exportMembersToCSV = async (req, res) => {
       }),
       Board.findAll({
         where: { ...where },
-        attributes: ['university_id', 'full_name', 'email', 'faculty'],
+        attributes: ['university_id', 'full_name', 'email', 'faculty', 'position'],
         order: [
           ['sort_order', 'ASC'],
           ['full_name', 'ASC']
@@ -464,7 +474,8 @@ const exportMembersToCSV = async (req, res) => {
         full_name: row.full_name || '',
         email: row.email || '',
         faculty,
-        year: row.year ?? ''
+        year: row.year ?? '',
+        role: row.role || 'Member'
       });
     };
 
@@ -478,7 +489,8 @@ const exportMembersToCSV = async (req, res) => {
         full_name: member.full_name || '',
         email: member.email || '',
         faculty: member.faculty || '',
-        year: member.year ?? ''
+        year: member.year ?? '',
+        role: member.role === 'delegate' ? 'Delegate' : 'Member'
       });
     }
 
@@ -498,7 +510,8 @@ const exportMembersToCSV = async (req, res) => {
         full_name: board.full_name || '',
         email: board.email || '',
         faculty: board.faculty || 'Unknown',
-        year: ''
+        year: '',
+        role: board.position || 'Board'
       });
     }
 

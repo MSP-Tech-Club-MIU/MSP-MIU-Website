@@ -60,6 +60,7 @@ async function findExistingUserForEnrollment({ university_id, email, priorUserId
 async function enrollFromApplication(application, options = {}) {
   const {
     departmentId = application.first_choice,
+    role = options.role || (application.status && application.status.includes('delegate') ? 'delegate' : 'member'),
     transaction
   } = options;
 
@@ -119,6 +120,7 @@ async function enrollFromApplication(application, options = {}) {
     year: application.year,
     phone_number: application.phone_number,
     department_id: Number(departmentId),
+    role: role === 'delegate' ? 'delegate' : 'member',
     season_id,
     user_id: user?.user_id || member?.user_id || priorMember?.user_id || null
   };
@@ -141,6 +143,9 @@ async function enrollFromApplication(application, options = {}) {
       season_id,
       full_name: application.full_name || user.full_name
     };
+    if (!['admin', 'board', 'judge'].includes(user.role)) {
+      userUpdates.role = memberPayload.role;
+    }
     // Keep login identity stable; only fill university_id if missing
     if (!user.university_id && university_id) {
       userUpdates.university_id = university_id;
@@ -181,6 +186,10 @@ async function syncUserFromMember(member, options = {}) {
     season_id: member.season_id,
     full_name: member.full_name || user.full_name
   };
+
+  if (member.role && !['admin', 'board', 'judge'].includes(user.role)) {
+    userUpdates.role = member.role;
+  }
 
   if (member.university_id && member.university_id !== user.university_id) {
     userUpdates.university_id = member.university_id;

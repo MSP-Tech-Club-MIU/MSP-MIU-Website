@@ -952,6 +952,20 @@ body.admin-panel-active .SiteLayout__main {
     border: 1px solid rgba(244, 67, 54, 0.2);
 }
 
+.AdminPanel__badge--delegate {
+    background: linear-gradient(135deg, rgba(142, 68, 173, 0.22), rgba(155, 89, 182, 0.15));
+    color: #d7b5f7;
+    border: 1px solid rgba(155, 89, 182, 0.45);
+    box-shadow: 0 0 8px rgba(142, 68, 173, 0.2);
+    font-weight: 700;
+}
+
+.AdminPanel__badge--member {
+    background: rgba(74, 166, 255, 0.1);
+    color: #90caf9;
+    border: 1px solid rgba(74, 166, 255, 0.22);
+}
+
 /* ── Action Buttons ── */
 .AdminPanel__actionBtn {
     padding: 6px 14px;

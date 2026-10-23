@@ -469,7 +469,9 @@ const getAllApplications = async (req, res) => {
                 total: count,
                 pending: statusCounts['pending'] || 0,
                 approved: statusCounts['approved'] || 0,
+                accepted_delegate: statusCounts['accepted_delegate'] || 0,
                 accepted_second_choice: statusCounts['accepted_second_choice'] || 0,
+                accepted_second_choice_delegate: statusCounts['accepted_second_choice_delegate'] || 0,
                 rejected: statusCounts['rejected'] || 0,
                 by_first_choice,
                 by_second_choice,
@@ -522,14 +524,14 @@ const updateApplicationStatus = async (req, res) => {
             });
         }
 
-        if (!['pending', 'approved', 'rejected', 'accepted_second_choice'].includes(status)) {
+        if (!['pending', 'approved', 'rejected', 'accepted_second_choice', 'accepted_delegate', 'accepted_second_choice_delegate'].includes(status)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid application status'
             });
         }
 
-        if (status === 'accepted_second_choice' && !application.second_choice) {
+        if ((status === 'accepted_second_choice' || status === 'accepted_second_choice_delegate') && !application.second_choice) {
             return res.status(400).json({
                 success: false,
                 error: 'Cannot accept in second option: applicant did not specify a second choice'
@@ -556,13 +558,25 @@ const updateApplicationStatus = async (req, res) => {
                 req.body.department_id != null && req.body.department_id !== ''
                     ? Number(req.body.department_id)
                     : application.first_choice;
-            enrollment = await enrollFromApplication(application, { departmentId });
+            enrollment = await enrollFromApplication(application, { departmentId, role: 'member' });
+        } else if (status === 'accepted_delegate') {
+            const departmentId =
+                req.body.department_id != null && req.body.department_id !== ''
+                    ? Number(req.body.department_id)
+                    : application.first_choice;
+            enrollment = await enrollFromApplication(application, { departmentId, role: 'delegate' });
         } else if (status === 'accepted_second_choice') {
             const departmentId =
                 req.body.department_id != null && req.body.department_id !== ''
                     ? Number(req.body.department_id)
                     : application.second_choice;
-            enrollment = await enrollFromApplication(application, { departmentId });
+            enrollment = await enrollFromApplication(application, { departmentId, role: 'member' });
+        } else if (status === 'accepted_second_choice_delegate') {
+            const departmentId =
+                req.body.department_id != null && req.body.department_id !== ''
+                    ? Number(req.body.department_id)
+                    : application.second_choice;
+            enrollment = await enrollFromApplication(application, { departmentId, role: 'delegate' });
         }
 
         await logAdminAction(
@@ -586,6 +600,7 @@ const updateApplicationStatus = async (req, res) => {
                     ? {
                           member_id: enrollment.member.member_id,
                           department_id: enrollment.member.department_id,
+                          role: enrollment.member.role,
                           season_id: enrollment.member.season_id,
                           user_id: enrollment.user?.user_id || enrollment.member.user_id || null,
                           created_member: enrollment.createdMember,

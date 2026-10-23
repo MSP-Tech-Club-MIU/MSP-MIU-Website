@@ -32,6 +32,7 @@ export default function MembersAdminTab({ onAlert }) {
   const [debounced, setDebounced] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [faculty, setFaculty] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [departments, setDepartments] = useState(memberDepartments);
   const [sendingActivationId, setSendingActivationId] = useState(null);
   const [sendingAcceptanceId, setSendingAcceptanceId] = useState(null);
@@ -49,7 +50,8 @@ export default function MembersAdminTab({ onAlert }) {
     phone_number: '',
     faculty: '',
     year: '1',
-    department_id: ''
+    department_id: '',
+    role: 'member'
   });
   const [saving, setSaving] = useState(false);
 
@@ -84,6 +86,7 @@ export default function MembersAdminTab({ onAlert }) {
         search: debounced || undefined,
         department_id: departmentId || undefined,
         faculty: faculty || undefined,
+        role: roleFilter || undefined,
         ...seasonFilters
       });
       setItems(Array.isArray(result?.data) ? result.data : []);
@@ -94,7 +97,7 @@ export default function MembersAdminTab({ onAlert }) {
     } finally {
       setLoading(false);
     }
-  }, [page, debounced, departmentId, faculty, onAlert, seasonFilters]);
+  }, [page, debounced, departmentId, faculty, roleFilter, onAlert, seasonFilters]);
 
   useEffect(() => {
     load();
@@ -178,7 +181,8 @@ export default function MembersAdminTab({ onAlert }) {
       phone_number: row.phone_number || '',
       faculty: row.faculty || '',
       year: row.year != null ? String(row.year) : '1',
-      department_id: row.department_id != null ? String(row.department_id) : ''
+      department_id: row.department_id != null ? String(row.department_id) : '',
+      role: row.role || 'member'
     });
   };
 
@@ -216,7 +220,8 @@ export default function MembersAdminTab({ onAlert }) {
         phone_number: editForm.phone_number?.trim() || '',
         faculty: editForm.faculty?.trim() || '',
         year: Number(editForm.year) || 1,
-        department_id: Number(editForm.department_id)
+        department_id: Number(editForm.department_id),
+        role: editForm.role === 'delegate' ? 'delegate' : 'member'
       };
 
       const result = await ApiService.updateMember(editingMember.member_id, payload);
@@ -485,6 +490,19 @@ export default function MembersAdminTab({ onAlert }) {
             </option>
           ))}
         </select>
+        <select
+          className="AdminPanel__filterSelect"
+          value={roleFilter}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter by role"
+        >
+          <option value="">All roles</option>
+          <option value="member">Members only</option>
+          <option value="delegate">Delegates only</option>
+        </select>
       </div>
 
       {loading ? (
@@ -502,6 +520,7 @@ export default function MembersAdminTab({ onAlert }) {
                 <th>Faculty</th>
                 <th>Year</th>
                 <th>Department</th>
+                <th>Role</th>
                 <th>Account</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
@@ -526,6 +545,15 @@ export default function MembersAdminTab({ onAlert }) {
                     <td>{row.faculty}</td>
                     <td>{row.year}</td>
                     <td>{row.department?.name || getDepartmentNameById(row.department_id)}</td>
+                    <td>
+                      <span
+                        className={`AdminPanel__badge AdminPanel__badge--${
+                          row.role === 'delegate' ? 'delegate' : 'member'
+                        }`}
+                      >
+                        {row.role === 'delegate' ? '⭐ Delegate' : 'Member'}
+                      </span>
+                    </td>
                     <td>
                       <span
                         className={`AdminPanel__badge AdminPanel__badge--${
@@ -686,6 +714,18 @@ export default function MembersAdminTab({ onAlert }) {
                           {dept.name}
                         </option>
                       ))}
+                    </select>
+                  </label>
+                  <label className="AdminPanel__fullWidth">
+                    Club Role
+                    <select
+                      value={editForm.role}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, role: e.target.value }))
+                      }
+                    >
+                      <option value="member">Member</option>
+                      <option value="delegate">Delegate</option>
                     </select>
                   </label>
                 </div>
