@@ -240,89 +240,94 @@ export default function FeedbackAdminTab({ onAlert }) {
           <p>No feedback found matching current filters.</p>
         </div>
       ) : (
-        <table className="AdminPanel__table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Type</th>
-              <th>Activity / Target</th>
-              <th>Rating</th>
-              <th>Positives (What went well)</th>
-              <th>Negatives (Improvements)</th>
-              <th>Submitter</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {feedbacks.map((f) => (
-              <tr key={f.feedback_id}>
-                <td style={{ whiteSpace: 'nowrap' }}>{formatDate(f.created_at)}</td>
-                <td>
-                  <span className={`FeedbackBadge FeedbackBadge--${f.target_type}`}>
-                    {f.target_type}
-                  </span>
-                </td>
-                <td style={{ fontWeight: 600, maxWidth: 220 }}>{getTargetTitle(f)}</td>
-                <td>
-                  {f.rating ? (
-                    <div className="FeedbackAdminTab__stars" title={`${f.rating} out of 5 stars`}>
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <FiStar
-                          key={s}
-                          style={{
-                            fill: s <= f.rating ? '#ffc107' : 'none',
-                            color: s <= f.rating ? '#ffc107' : 'rgba(255,255,255,0.2)'
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <span style={{ opacity: 0.5, fontSize: '0.8rem' }}>None</span>
-                  )}
-                </td>
-                <td>
-                  <div className="FeedbackAdminTab__snippet FeedbackAdminTab__snippet--pos">
-                    {f.positives || <span style={{ opacity: 0.4 }}>—</span>}
-                  </div>
-                </td>
-                <td>
-                  <div className="FeedbackAdminTab__snippet FeedbackAdminTab__snippet--neg">
-                    {f.negatives || <span style={{ opacity: 0.4 }}>—</span>}
-                  </div>
-                </td>
-                <td style={{ fontSize: '0.85rem' }}>
-                  {f.anonymous ? (
-                    <span style={{ opacity: 0.6, fontStyle: 'italic' }}>Anonymous</span>
-                  ) : (
-                    <div>
-                      <div>{f.name || f.user?.full_name || 'Guest'}</div>
-                      <div style={{ opacity: 0.6, fontSize: '0.78rem' }}>{f.email || f.user?.email || ''}</div>
-                    </div>
-                  )}
-                </td>
-                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <button
-                    type="button"
-                    className="AdminPanel__actionBtn"
-                    style={{ marginRight: 6 }}
-                    onClick={() => setSelectedFeedback(f)}
-                    title="View Full Details"
-                  >
-                    <FiEye /> View
-                  </button>
-                  <button
-                    type="button"
-                    className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
-                    onClick={() => handleDelete(f.feedback_id)}
-                    title="Delete Feedback"
-                  >
-                    <FiTrash2 />
-                  </button>
-                </td>
+        <div className="AdminPanel__tableWrap">
+          <table className="AdminPanel__table FeedbackAdminTab__table">
+            <thead>
+              <tr>
+                <th style={{ width: '100px' }}>Date</th>
+                <th style={{ width: '85px' }}>Type</th>
+                <th>Activity</th>
+                <th style={{ width: '105px' }}>Rating</th>
+                <th>Positives</th>
+                <th>Improvements</th>
+                <th>Submitter</th>
+                <th style={{ textAlign: 'right', minWidth: '125px' }}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {feedbacks.map((f) => (
+                <tr key={f.feedback_id}>
+                  <td style={{ whiteSpace: 'nowrap' }}>{formatDate(f.created_at)}</td>
+                  <td>
+                    <span className={`FeedbackBadge FeedbackBadge--${f.target_type}`}>
+                      {f.target_type}
+                    </span>
+                  </td>
+                  <td style={{ fontWeight: 600 }} className="FeedbackAdminTab__cellTarget" title={getTargetTitle(f)}>
+                    {getTargetTitle(f)}
+                  </td>
+                  <td>
+                    {f.rating ? (
+                      <div className="FeedbackAdminTab__stars" title={`${f.rating} out of 5 stars`}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <FiStar
+                            key={s}
+                            style={{
+                              fill: s <= f.rating ? '#ffc107' : 'none',
+                              color: s <= f.rating ? '#ffc107' : 'rgba(255,255,255,0.2)'
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ opacity: 0.5, fontSize: '0.8rem' }}>None</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="FeedbackAdminTab__snippet FeedbackAdminTab__snippet--pos" title={f.positives || ''}>
+                      {f.positives || <span style={{ opacity: 0.4 }}>—</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <div className="FeedbackAdminTab__snippet FeedbackAdminTab__snippet--neg" title={f.negatives || ''}>
+                      {f.negatives || <span style={{ opacity: 0.4 }}>—</span>}
+                    </div>
+                  </td>
+                  <td style={{ fontSize: '0.85rem' }}>
+                    {f.anonymous ? (
+                      <span style={{ opacity: 0.6, fontStyle: 'italic' }}>Anonymous</span>
+                    ) : (
+                      <div className="FeedbackAdminTab__submitter">
+                        <div className="FeedbackAdminTab__submitterName">{f.name || f.user?.full_name || 'Guest'}</div>
+                        {(f.email || f.user?.email) && (
+                          <div className="FeedbackAdminTab__submitterEmail">{f.email || f.user?.email}</div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <button
+                      type="button"
+                      className="AdminPanel__actionBtn AdminPanel__actionBtn--view"
+                      onClick={() => setSelectedFeedback(f)}
+                      title="View Full Details"
+                    >
+                      <FiEye style={{ marginRight: 4 }} /> View
+                    </button>
+                    <button
+                      type="button"
+                      className="AdminPanel__actionBtn AdminPanel__actionBtn--delete"
+                      onClick={() => handleDelete(f.feedback_id)}
+                      title="Delete Feedback"
+                    >
+                      <FiTrash2 />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <Pagination pagination={pagination} onPageChange={setPage} />
