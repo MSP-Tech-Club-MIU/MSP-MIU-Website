@@ -100,7 +100,9 @@ export default function FeedbackModal({
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
     setError('');
 
     // At least one piece of feedback must be provided
@@ -271,10 +273,11 @@ export default function FeedbackModal({
 
                     {/* Positives */}
                     <div className="FeedbackModal__group">
-                      <label className="FeedbackModal__label FeedbackModal__label--positives">
+                      <label htmlFor="feedback-positives" className="FeedbackModal__label FeedbackModal__label--positives">
                         <FiThumbsUp /> What went well? (Positives)
                       </label>
                       <textarea
+                        id="feedback-positives"
                         className="FeedbackModal__textarea"
                         placeholder="What did you like most? Tutor clarity, engaging topics, organization, highlights..."
                         value={positives}
@@ -287,10 +290,11 @@ export default function FeedbackModal({
 
                     {/* Negatives / Critiques */}
                     <div className="FeedbackModal__group">
-                      <label className="FeedbackModal__label FeedbackModal__label--negatives">
+                      <label htmlFor="feedback-negatives" className="FeedbackModal__label FeedbackModal__label--negatives">
                         <FiTrendingUp /> What could be improved? (Constructive Feedback)
                       </label>
                       <textarea
+                        id="feedback-negatives"
                         className="FeedbackModal__textarea"
                         placeholder="What could we do better? Pacing, technical setup, topic depth, suggestions for next time..."
                         value={negatives}
@@ -314,14 +318,16 @@ export default function FeedbackModal({
                   >
                     {/* General comments */}
                     <div className="FeedbackModal__group">
-                      <label className="FeedbackModal__label FeedbackModal__label--general">
+                      <label htmlFor="feedback-notes" className="FeedbackModal__label FeedbackModal__label--general">
                         <FiMessageSquare /> Additional Comments or Notes
                       </label>
                       <textarea
+                        id="feedback-notes"
                         className="FeedbackModal__textarea"
                         placeholder="Any other thoughts, ideas, or recommendations..."
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
                         maxLength={MAX_LEN}
                         rows={3}
                       />
@@ -331,6 +337,7 @@ export default function FeedbackModal({
                     {/* Anonymous toggle */}
                     <label className="FeedbackModal__checkboxContainer">
                       <input
+                        id="feedback-anonymous"
                         type="checkbox"
                         className="FeedbackModal__checkbox"
                         checked={anonymous}
@@ -343,8 +350,9 @@ export default function FeedbackModal({
                     {!anonymous && (
                       <div className="FeedbackModal__row">
                         <div className="FeedbackModal__group">
-                          <label className="FeedbackModal__fieldLabel">Your Name (Optional)</label>
+                          <label htmlFor="feedback-name" className="FeedbackModal__fieldLabel">Your Name (Optional)</label>
                           <input
+                            id="feedback-name"
                             type="text"
                             className="FeedbackModal__input"
                             placeholder="Ahmed Mostafa"
@@ -354,8 +362,9 @@ export default function FeedbackModal({
                           />
                         </div>
                         <div className="FeedbackModal__group">
-                          <label className="FeedbackModal__fieldLabel">Your Email (Optional)</label>
+                          <label htmlFor="feedback-email" className="FeedbackModal__fieldLabel">Your Email (Optional)</label>
                           <input
+                            id="feedback-email"
                             type="email"
                             className="FeedbackModal__input"
                             placeholder="name@miuegypt.edu.eg"
@@ -383,15 +392,17 @@ export default function FeedbackModal({
                 <>
                   {!isInline && onClose ? (
                     <button
+                      key="fb-btn-cancel"
                       type="button"
                       className="FeedbackModal__btn FeedbackModal__btn--cancel"
                       onClick={onClose}
                     >
                       Cancel
                     </button>
-                  ) : <div />}
+                  ) : <div key="fb-btn-placeholder" />}
 
                   <button
+                    key="fb-btn-next"
                     type="button"
                     className="FeedbackModal__btn FeedbackModal__btn--next"
                     onClick={() => goToStep(2)}
@@ -403,6 +414,7 @@ export default function FeedbackModal({
               ) : (
                 <>
                   <button
+                    key="fb-btn-back"
                     type="button"
                     className="FeedbackModal__btn FeedbackModal__btn--back"
                     onClick={() => goToStep(1)}
@@ -413,8 +425,10 @@ export default function FeedbackModal({
                   </button>
 
                   <button
-                    type="submit"
+                    key="fb-btn-submit"
+                    type="button"
                     className="FeedbackModal__btn FeedbackModal__btn--submit"
+                    onClick={handleSubmit}
                     disabled={loading}
                   >
                     <FiSend />
