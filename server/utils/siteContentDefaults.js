@@ -334,6 +334,24 @@ const DEFAULTS = {
       }
     ]
   }
+,
+  linktree: {
+    highlight: {
+      enabled: true,
+      mode: 'default',
+      sectionBadge: 'Member Applications',
+      sectionTitle: 'Join MSP Tech Club',
+      badge: 'Official Registration',
+      highlightBadge: 'Open to All MIU Students',
+      title: 'Become a Member — Apply Now',
+      description: 'Join our Software Dev, AI, Cyber Security, Technical Training, Media, PR & Event Planning teams.',
+      buttonText: 'Start Application',
+      url: '/become-member',
+      icon: 'user-plus',
+      isExternal: false
+    },
+    promotionalLinks: []
+  }
 };
 
 const ALLOWED_KEYS = Object.keys(DEFAULTS);
