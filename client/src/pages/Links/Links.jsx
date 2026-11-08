@@ -26,14 +26,60 @@ import {
   FaHandshake,
   FaQuestionCircle,
   FaCode,
-  FaFire
+  FaFire,
+  FaBullhorn,
+  FaRocket,
+  FaStar
 } from 'react-icons/fa';
 import { MdVerified, MdPlayArrow, MdStars } from 'react-icons/md';
+import useSiteContent from '../../hooks/useSiteContent';
 import SEO from '../../components/SEO';
 import BackButton from '../../components/BackButton';
 import mspLogo from '../../assets/Images/msp-logo.png';
 import miuLogo from '../../assets/Images/miu-logo.png';
 import './Links.css';
+
+const DEFAULT_LINKTREE = {
+  highlight: {
+    enabled: true,
+    mode: 'default',
+    sectionBadge: 'Member Applications',
+    sectionTitle: 'Join MSP Tech Club',
+    badge: 'Official Registration',
+    highlightBadge: 'Open to All MIU Students',
+    title: 'Become a Member — Apply Now',
+    description: 'Join our Software Dev, AI, Cyber Security, Technical Training, Media, PR & Event Planning teams.',
+    buttonText: 'Start Application',
+    url: '/become-member',
+    icon: 'user-plus',
+    isExternal: false
+  },
+  promotionalLinks: []
+};
+
+function getLinkIcon(key) {
+  switch (key) {
+    case 'fire':
+      return <FaFire />;
+    case 'calendar':
+      return <FaCalendarAlt />;
+    case 'trophy':
+      return <FaTrophy />;
+    case 'star':
+      return <FaStar />;
+    case 'rocket':
+      return <FaRocket />;
+    case 'comments':
+      return <FaComments />;
+    case 'bullhorn':
+      return <FaBullhorn />;
+    case 'link':
+      return <FaExternalLinkAlt />;
+    case 'user-plus':
+    default:
+      return <FaUserPlus />;
+  }
+}
 
 const PRIMARY_SOCIALS = [
   {
@@ -256,6 +302,14 @@ const Links = memo(() => {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
 
+  const { data: siteData } = useSiteContent(['linktree'], { linktree: DEFAULT_LINKTREE });
+  const linktree = siteData?.linktree || DEFAULT_LINKTREE;
+  const highlight = {
+    ...DEFAULT_LINKTREE.highlight,
+    ...(linktree?.highlight || {})
+  };
+  const promotionalLinks = Array.isArray(linktree?.promotionalLinks) ? linktree.promotionalLinks : [];
+
   const pageUrl = typeof window !== 'undefined' ? window.location.href : 'https://msp-miu.tech/links';
 
   const handleCopyLink = useCallback(async () => {
@@ -308,6 +362,18 @@ const Links = memo(() => {
       );
     });
   }, [searchQuery]);
+
+  const filteredPromos = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return promotionalLinks;
+    return promotionalLinks.filter((item) => {
+      return (
+        (item.title && item.title.toLowerCase().includes(q)) ||
+        (item.description && item.description.toLowerCase().includes(q)) ||
+        (item.badge && item.badge.toLowerCase().includes(q))
+      );
+    });
+  }, [promotionalLinks, searchQuery]);
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -408,43 +474,154 @@ const Links = memo(() => {
         </header>
 
         {/* ======================================================== */}
-        {/* SECTION 1: TOP PRIORITY — BECOME A MEMBER (REGISTRATION) */}
+        {/* SECTION 1: TOP PRIORITY — HIGHLIGHTED SPOTLIGHT CARD      */}
         {/* ======================================================== */}
-        <section className="LinksSection" aria-labelledby="section-join-heading">
-          <div className="LinksSection__header">
-            <span className="LinksSection__badge LinksSection__badge--fire">
-              <FaFire /> Member Applications
-            </span>
-            <h2 id="section-join-heading" className="LinksSection__title">
-              Join MSP Tech Club
-            </h2>
-          </div>
+        {highlight.enabled !== false && (() => {
+          const isCustom = highlight.mode === 'custom';
+          const highlightUrl = (highlight.url || (isCustom ? '#' : '/become-member')).trim();
+          const isExt = highlight.isExternal || /^https?:\/\//i.test(highlightUrl);
+          const iconNode = getLinkIcon(highlight.icon || (isCustom ? 'fire' : 'user-plus'));
 
-          <Link to="/become-member" className="LinksHeroJoinCard">
-            <div className="LinksHeroJoinCard__ambient" aria-hidden="true" />
-            <div className="LinksHeroJoinCard__content">
-              <div className="LinksHeroJoinCard__iconBox">
-                <FaUserPlus />
-              </div>
-              <div className="LinksHeroJoinCard__text">
-                <div className="LinksHeroJoinCard__badgeRow">
-                  <span className="LinksHeroJoinCard__pill">Official Registration</span>
-                  <span className="LinksHeroJoinCard__pill LinksHeroJoinCard__pill--highlight">Open to All MIU Students</span>
+          const cardInner = (
+            <>
+              <div className="LinksHeroJoinCard__ambient" aria-hidden="true" />
+              <div className="LinksHeroJoinCard__content">
+                <div className="LinksHeroJoinCard__iconBox">
+                  {iconNode}
                 </div>
-                <h3 className="LinksHeroJoinCard__title">Become a Member — Apply Now</h3>
-                <p className="LinksHeroJoinCard__desc">
-                  Join our Software Dev, AI, Cyber Security, Technical Training, Media, PR & Event Planning teams.
-                </p>
+                <div className="LinksHeroJoinCard__text">
+                  {(highlight.badge || highlight.highlightBadge) && (
+                    <div className="LinksHeroJoinCard__badgeRow">
+                      {highlight.badge && (
+                        <span className="LinksHeroJoinCard__pill">{highlight.badge}</span>
+                      )}
+                      {highlight.highlightBadge && (
+                        <span className="LinksHeroJoinCard__pill LinksHeroJoinCard__pill--highlight">
+                          {highlight.highlightBadge}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <h3 className="LinksHeroJoinCard__title">
+                    {highlight.title || (isCustom ? 'Featured Link' : 'Become a Member — Apply Now')}
+                  </h3>
+                  {highlight.description && (
+                    <p className="LinksHeroJoinCard__desc">{highlight.description}</p>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="LinksHeroJoinCard__ctaRow">
-              <span className="LinksHeroJoinCard__ctaBtn">
-                <span>Start Application</span>
-                <FaArrowRight className="LinksHeroJoinCard__arrowIcon" />
+              <div className="LinksHeroJoinCard__ctaRow">
+                <span className="LinksHeroJoinCard__ctaBtn">
+                  <span>{highlight.buttonText || (isCustom ? 'Explore Now' : 'Start Application')}</span>
+                  {isExt ? (
+                    <FaExternalLinkAlt className="LinksHeroJoinCard__arrowIcon" />
+                  ) : (
+                    <FaArrowRight className="LinksHeroJoinCard__arrowIcon" />
+                  )}
+                </span>
+              </div>
+            </>
+          );
+
+          return (
+            <section className="LinksSection" aria-labelledby="section-join-heading">
+              <div className="LinksSection__header">
+                <span className="LinksSection__badge LinksSection__badge--fire">
+                  <FaFire /> {highlight.sectionBadge || (isCustom ? 'Featured Event' : 'Member Applications')}
+                </span>
+                <h2 id="section-join-heading" className="LinksSection__title">
+                  {highlight.sectionTitle || (isCustom ? 'Featured Highlight' : 'Join MSP Tech Club')}
+                </h2>
+              </div>
+
+              {isExt ? (
+                <a
+                  href={highlightUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="LinksHeroJoinCard"
+                >
+                  {cardInner}
+                </a>
+              ) : (
+                <Link to={highlightUrl} className="LinksHeroJoinCard">
+                  {cardInner}
+                </Link>
+              )}
+            </section>
+          );
+        })()}
+
+        {/* ======================================================== */}
+        {/* SECTION 1.5: PROMOTIONAL LINKS & SPECIAL ANNOUNCEMENTS   */}
+        {/* ======================================================== */}
+        {filteredPromos.length > 0 && (
+          <section className="LinksSection" aria-labelledby="section-promos-heading">
+            <div className="LinksSection__header">
+              <span className="LinksSection__badge LinksSection__badge--promo">
+                <FaBullhorn /> Featured Announcements
               </span>
+              <h2 id="section-promos-heading" className="LinksSection__title">
+                Promotions & Special Events
+              </h2>
             </div>
-          </Link>
-        </section>
+
+            <div className="LinksPromoList">
+              {filteredPromos.map((promo, idx) => {
+                const promoUrl = (promo.url || '#').trim();
+                const isPromoExt = promo.isExternal || /^https?:\/\//i.test(promoUrl);
+                const PromoContent = (
+                  <>
+                    <div className="LinksPromoCard__iconBox">
+                      {getLinkIcon(promo.icon || 'star')}
+                    </div>
+                    <div className="LinksPromoCard__info">
+                      <div className="LinksPromoCard__badgeRow">
+                        {promo.badge && (
+                          <span className="LinksPromoCard__badge">{promo.badge}</span>
+                        )}
+                      </div>
+                      <h3 className="LinksPromoCard__title">{promo.title}</h3>
+                      {promo.description && (
+                        <p className="LinksPromoCard__desc">{promo.description}</p>
+                      )}
+                    </div>
+                    <div className="LinksPromoCard__action">
+                      <span className="LinksPromoCard__cta">
+                        <span>{promo.buttonText || 'Visit Link'}</span>
+                        {isPromoExt ? <FaExternalLinkAlt /> : <FaArrowRight />}
+                      </span>
+                    </div>
+                  </>
+                );
+
+                return (
+                  <motion.div
+                    key={promo.id || idx}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: idx * 0.05 }}
+                  >
+                    {isPromoExt ? (
+                      <a
+                        href={promoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="LinksPromoCard"
+                      >
+                        {PromoContent}
+                      </a>
+                    ) : (
+                      <Link to={promoUrl} className="LinksPromoCard">
+                        {PromoContent}
+                      </Link>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ======================================================== */}
         {/* SECTION 2: TOP PRIORITY — OFFICIAL SOCIAL MEDIA CHANNELS */}
