@@ -1213,6 +1213,19 @@ class ApiService {
     return result;
   }
 
+  static async sendEmailDelegateAcceptance(filters = {}) {
+    const queryParams = new URLSearchParams();
+    appendSeasonParams(queryParams, filters);
+    const qs = queryParams.toString();
+    const response = await fetch(
+      `${API_BASE_URL}/email-templates/send/delegate-acceptance${qs ? `?${qs}` : ''}`,
+      { method: 'POST', headers: this.getHeaders(true) }
+    );
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Failed to send delegate acceptance emails');
+    return result;
+  }
+
   // Get event by ID
   static async getEventById(id) {
     try {

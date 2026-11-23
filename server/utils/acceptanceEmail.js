@@ -1,19 +1,22 @@
 const Member = require('../models/Member');
 const Department = require('../models/Department');
 const { renderTemplate } = require('./emailTemplates/render');
-const { departmentHasWhatsApp } = require('./emailTemplates/defaults');
+const { departmentHasWhatsApp, getGeneralWhatsAppLink } = require('./emailTemplates/defaults');
 
 const DEFAULT_INSTAGRAM = 'https://www.instagram.com/mspmiu';
 const DEFAULT_TIKTOK = 'https://www.tiktok.com/@mspmiu';
 const DEFAULT_YOUTUBE = 'https://www.youtube.com/@MSP-MIU';
 
 /**
- * Send acceptance email for a single member (uses department.whatsapp_group_url).
+ * Send acceptance email for a single member:
+ * - Delegates receive 'delegate_acceptance' with their department's WhatsApp group link.
+ * - Regular members receive 'member_acceptance' with the general members WhatsApp group link.
  */
 async function sendAcceptanceEmailForMember(member, sendEmail) {
   const studentName = member.full_name;
   const email = member.email;
   const department = member.department;
+  const isDelegate = member.role === 'delegate';
 
   if (!email) {
     return {
@@ -37,33 +40,55 @@ async function sendAcceptanceEmailForMember(member, sendEmail) {
     };
   }
 
-  if (!departmentHasWhatsApp(department.name)) {
-    return {
-      success: false,
-      skipped: true,
-      memberId: member.member_id,
-      name: studentName,
-      email,
-      reason: `${department.name} does not use a WhatsApp group link`
-    };
+  let whatsappLink = null;
+  let templateKey = 'member_acceptance';
+
+  if (isDelegate) {
+    templateKey = 'delegate_acceptance';
+    if (!departmentHasWhatsApp(department.name)) {
+      return {
+        success: false,
+        skipped: true,
+        memberId: member.member_id,
+        name: studentName,
+        email,
+        reason: `${department.name} does not use a WhatsApp group link`
+      };
+    }
+
+    whatsappLink = department.whatsapp_group_url;
+    if (!whatsappLink) {
+      return {
+        success: false,
+        skipped: true,
+        memberId: member.member_id,
+        name: studentName,
+        email,
+        reason: `No WhatsApp link for department: ${department.name}`
+      };
+    }
+  } else {
+    templateKey = 'member_acceptance';
+    whatsappLink = await getGeneralWhatsAppLink();
+    if (!whatsappLink) {
+      return {
+        success: false,
+        skipped: true,
+        memberId: member.member_id,
+        name: studentName,
+        email,
+        reason: 'No WhatsApp link configured for general members'
+      };
+    }
   }
 
-  const departmentLink = department.whatsapp_group_url;
-  if (!departmentLink) {
-    return {
-      success: false,
-      skipped: true,
-      memberId: member.member_id,
-      name: studentName,
-      email,
-      reason: `No WhatsApp link for department: ${department.name}`
-    };
-  }
-
-  const rendered = await renderTemplate('member_acceptance', {
+  const rendered = await renderTemplate(templateKey, {
     studentName,
     departmentName: department.name,
-    departmentLink,
+    departmentLink: whatsappLink,
+    generalGroupLink: whatsappLink,
+    whatsappGroupLink: whatsappLink,
+    whatsappLink,
     youtubeLink: process.env.YOUTUBE_URL || DEFAULT_YOUTUBE,
     instagramLink: process.env.INSTAGRAM_URL || DEFAULT_INSTAGRAM,
     tiktokLink: process.env.TIKTOK_URL || DEFAULT_TIKTOK
@@ -71,7 +96,7 @@ async function sendAcceptanceEmailForMember(member, sendEmail) {
 
   await sendEmail({
     to: email,
-    fromName: 'MSP MIU Website',
+    fromName: 'MSP-MIU',
     subject: rendered.subject,
     text: rendered.text,
     html: rendered.html,
@@ -85,12 +110,16 @@ async function sendAcceptanceEmailForMember(member, sendEmail) {
     memberId: member.member_id,
     name: studentName,
     email,
-    department: department.name
+    role: member.role || 'member',
+    department: department.name,
+    templateKey
   };
 }
 
 /**
- * Bulk send member acceptance emails.
+ * Bulk send acceptance emails:
+ * - Delegates receive 'delegate_acceptance' with their department's WhatsApp group link.
+ * - Regular members receive 'member_acceptance' with the general members WhatsApp group link.
  * @param {object} [options]
  * @param {object} [options.where]
  */
@@ -98,6 +127,7 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
   const { where = {} } = options;
   const { sendEmail } = await import('./email.mjs');
   const { startTrackedBulkEmailJob } = require('../services/announcementEmailJob');
+  const generalWhatsAppLink = await getGeneralWhatsAppLink();
 
   const members = await Member.findAll({
     where,
@@ -108,7 +138,7 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
         attributes: ['department_id', 'name', 'whatsapp_group_url']
       }
     ],
-    attributes: ['member_id', 'full_name', 'email', 'department_id']
+    attributes: ['member_id', 'full_name', 'email', 'department_id', 'role']
   });
 
   const validRecipients = [];
@@ -123,6 +153,18 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
       skipped++;
       continue;
     }
+    const isDelegate = m.role === 'delegate';
+    if (isDelegate) {
+      if (!departmentHasWhatsApp(m.department.name) || !m.department.whatsapp_group_url) {
+        skipped++;
+        continue;
+      }
+    } else {
+      if (!generalWhatsAppLink) {
+        skipped++;
+        continue;
+      }
+    }
     validRecipients.push({
       email,
       member: m
@@ -131,19 +173,25 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
 
   const emailJob = startTrackedBulkEmailJob({
     type: 'member_acceptance',
-    title: 'Member Acceptance Emails',
+    title: 'Acceptance Emails',
     recipients: validRecipients,
     skipped,
     sendFn: sendEmail,
     buildPayload: async (item) => {
       const m = item.member;
+      const isDelegate = m.role === 'delegate';
       const studentName = m.full_name;
       const department = m.department;
-      const rendered = await renderTemplate('member_acceptance', {
+      const templateKey = isDelegate ? 'delegate_acceptance' : 'member_acceptance';
+      const whatsappUrl = isDelegate ? department.whatsapp_group_url : generalWhatsAppLink;
+
+      const rendered = await renderTemplate(templateKey, {
         studentName,
         departmentName: department.name,
-        departmentLink: department.whatsapp_group_url || null,
-        whatsappGroupLink: department.whatsapp_group_url || null,
+        departmentLink: whatsappUrl,
+        generalGroupLink: whatsappUrl,
+        whatsappGroupLink: whatsappUrl,
+        whatsappLink: whatsappUrl,
         youtubeLink: process.env.YOUTUBE_URL || DEFAULT_YOUTUBE,
         instagramLink: process.env.INSTAGRAM_URL || DEFAULT_INSTAGRAM,
         tiktokLink: process.env.TIKTOK_URL || DEFAULT_TIKTOK
@@ -151,7 +199,7 @@ async function sendAcceptanceEmailsToMembers(options = {}) {
 
       return {
         to: item.email,
-        fromName: 'MSP MIU Website',
+        fromName: 'MSP-MIU',
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,
@@ -175,4 +223,3 @@ module.exports = {
   sendAcceptanceEmailForMember,
   sendAcceptanceEmailsToMembers
 };
-

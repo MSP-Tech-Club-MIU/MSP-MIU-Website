@@ -145,7 +145,21 @@ const SAMPLE_VARS = {
   member_acceptance: {
     studentName: 'Sample Member',
     departmentName: 'Software Development',
-    departmentLink: 'https://chat.whatsapp.com/sample',
+    departmentLink: 'https://chat.whatsapp.com/sample-general-members',
+    whatsappLink: 'https://chat.whatsapp.com/sample-general-members',
+    generalGroupLink: 'https://chat.whatsapp.com/sample-general-members',
+    whatsappGroupLink: 'https://chat.whatsapp.com/sample-general-members',
+    youtubeLink: 'https://www.youtube.com/@MSP-MIU',
+    instagramLink: 'https://www.instagram.com/mspmiu',
+    tiktokLink: 'https://www.tiktok.com/@mspmiu'
+  },
+  delegate_acceptance: {
+    studentName: 'Sample Delegate',
+    departmentName: 'Software Development',
+    departmentLink: 'https://chat.whatsapp.com/sample-department-group',
+    whatsappLink: 'https://chat.whatsapp.com/sample-department-group',
+    generalGroupLink: 'https://chat.whatsapp.com/sample-department-group',
+    whatsappGroupLink: 'https://chat.whatsapp.com/sample-department-group',
     youtubeLink: 'https://www.youtube.com/@MSP-MIU',
     instagramLink: 'https://www.instagram.com/mspmiu',
     tiktokLink: 'https://www.tiktok.com/@mspmiu'
@@ -295,7 +309,7 @@ const sendTestEmail = async (req, res) => {
     const { sendEmail } = await import('../utils/email.mjs');
     await sendEmail({
       to,
-      fromName: 'MSP MIU Website',
+      fromName: 'MSP-MIU',
       subject: `[TEST] ${rendered.subject}`,
       text: rendered.text,
       html: rendered.html
@@ -318,13 +332,20 @@ const sendTestEmail = async (req, res) => {
 
 const listDepartmentWhatsApp = async (req, res) => {
   try {
-    const { departmentHasWhatsApp } = require('../utils/emailTemplates/defaults');
+    const { departmentHasWhatsApp, getGeneralWhatsAppLink } = require('../utils/emailTemplates/defaults');
     const departments = await Department.findAll({
       attributes: ['department_id', 'name', 'whatsapp_group_url'],
       order: [['name', 'ASC']]
     });
     const filtered = departments.filter((d) => departmentHasWhatsApp(d.name));
-    res.json({ success: true, data: { departments: filtered } });
+    const generalWhatsAppUrl = await getGeneralWhatsAppLink();
+    res.json({
+      success: true,
+      data: {
+        departments: filtered,
+        general_whatsapp_url: generalWhatsAppUrl
+      }
+    });
   } catch (error) {
     logger.error('listDepartmentWhatsApp:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to list WhatsApp links' });
@@ -333,9 +354,55 @@ const listDepartmentWhatsApp = async (req, res) => {
 
 const updateDepartmentWhatsApp = async (req, res) => {
   try {
-    const { departmentHasWhatsApp } = require('../utils/emailTemplates/defaults');
     const { id } = req.params;
     const { whatsapp_group_url } = req.body;
+    const cleanUrl =
+      whatsapp_group_url != null && String(whatsapp_group_url).trim()
+        ? String(whatsapp_group_url).trim()
+        : null;
+
+    if (id === 'general' || id === 'general-members') {
+      const { getDefaultTemplate } = require('../utils/emailTemplates/defaults');
+      let tpl = await EmailTemplate.findByPk('member_acceptance');
+      if (!tpl) {
+        const def = getDefaultTemplate('member_acceptance');
+        tpl = await EmailTemplate.create({
+          template_key: 'member_acceptance',
+          name: def.name,
+          category: def.category,
+          subject: def.subject,
+          html_body: def.html_body,
+          text_body: def.text_body,
+          placeholders: def.placeholders,
+          meta: { general_whatsapp_url: cleanUrl }
+        });
+      } else {
+        const meta = (tpl.meta && typeof tpl.meta === 'object') ? { ...tpl.meta } : {};
+        meta.general_whatsapp_url = cleanUrl;
+        tpl.meta = meta;
+        await tpl.save();
+      }
+
+      const generalDept = await Department.findOne({
+        where: { name: ['General Members', 'General'] }
+      });
+      if (generalDept) {
+        generalDept.whatsapp_group_url = cleanUrl;
+        await generalDept.save();
+      }
+
+      await logAdminAction(
+        'general_whatsapp_updated',
+        'Updated General Members WhatsApp group link',
+        req,
+        'email_template',
+        'member_acceptance'
+      );
+
+      return res.json({ success: true, data: { general_whatsapp_url: cleanUrl } });
+    }
+
+    const { departmentHasWhatsApp } = require('../utils/emailTemplates/defaults');
     const department = await Department.findByPk(id);
     if (!department) {
       return res.status(404).json({ success: false, error: 'Department not found' });
@@ -346,10 +413,7 @@ const updateDepartmentWhatsApp = async (req, res) => {
         error: `${department.name} does not have a WhatsApp group link`
       });
     }
-    department.whatsapp_group_url =
-      whatsapp_group_url != null && String(whatsapp_group_url).trim()
-        ? String(whatsapp_group_url).trim()
-        : null;
+    department.whatsapp_group_url = cleanUrl;
     await department.save();
 
     await logAdminAction(
@@ -422,12 +486,15 @@ const sendBoardActivation = async (req, res) => {
 const sendMemberAcceptance = async (req, res) => {
   try {
     const seasonFilter = await resolveSeasonFilter(req.query);
-    const summary = await sendAcceptanceEmailsToMembers({
-      where: { ...seasonFilter.where }
-    });
+    const role = req.query.role || req.body?.role || 'member';
+    const where = { ...seasonFilter.where };
+    if (role !== 'all') {
+      where.role = role;
+    }
+    const summary = await sendAcceptanceEmailsToMembers({ where });
 
     await logAdminAction(
-      'acceptance_emails_sent',
+      'member_acceptance_emails_sent',
       `Sent ${summary.sent} member acceptance email(s)`,
       req,
       'member'
@@ -445,6 +512,32 @@ const sendMemberAcceptance = async (req, res) => {
   }
 };
 
+const sendDelegateAcceptance = async (req, res) => {
+  try {
+    const seasonFilter = await resolveSeasonFilter(req.query);
+    const summary = await sendAcceptanceEmailsToMembers({
+      where: { ...seasonFilter.where, role: 'delegate' }
+    });
+
+    await logAdminAction(
+      'delegate_acceptance_emails_sent',
+      `Sent ${summary.sent} delegate acceptance email(s)`,
+      req,
+      'member'
+    );
+
+    res.json({
+      success: true,
+      message: 'Delegate acceptance emails broadcast dispatched',
+      data: summary,
+      emailJob: summary.emailJob || null
+    });
+  } catch (error) {
+    logger.error('sendDelegateAcceptance:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to send delegate acceptance emails' });
+  }
+};
+
 module.exports = {
   listEmailTemplates,
   getEmailTemplate,
@@ -456,5 +549,6 @@ module.exports = {
   sendMemberActivation,
   sendBoardActivation,
   sendMemberAcceptance,
+  sendDelegateAcceptance,
   listDefaultTemplates
 };

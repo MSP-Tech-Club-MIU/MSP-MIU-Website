@@ -310,10 +310,14 @@ export default function MembersAdminTab({ onAlert }) {
       onAlert?.({ type: 'error', message: 'This member has no email address.' });
       return;
     }
+    const isDelegate = row.role === 'delegate';
     const deptName = row.department?.name || getDepartmentNameById(row.department_id) || 'assigned department';
+    const waTargetDesc = isDelegate
+      ? `with department WhatsApp link for "${deptName}"`
+      : 'with general members WhatsApp group link';
     const ok = await confirmModal({
-      title: 'Send Acceptance (WhatsApp) Email?',
-      message: `Send acceptance email (with WhatsApp group link for "${deptName}") to ${row.full_name} (${row.email})?`,
+      title: isDelegate ? 'Send Delegate Acceptance Email?' : 'Send Member Acceptance Email?',
+      message: `Send acceptance email (${waTargetDesc}) to ${row.full_name} (${row.email})?`,
       confirmText: 'Send Acceptance Email',
       cancelText: 'Cancel',
       type: 'info'
@@ -383,7 +387,9 @@ export default function MembersAdminTab({ onAlert }) {
             <div className="CourseActions__itemContent">
               <span>Send Acceptance (WhatsApp)</span>
               <span className="CourseActions__itemDesc">
-                {deptName ? `${deptName} group invitation` : 'Includes WhatsApp group link'}
+                {selectedRow.role === 'delegate'
+                  ? (deptName ? `${deptName} group invitation (Delegate)` : 'Department WhatsApp link')
+                  : 'General members WhatsApp link'}
               </span>
             </div>
           </button>
