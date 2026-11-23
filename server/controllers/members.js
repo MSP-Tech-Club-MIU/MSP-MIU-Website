@@ -680,9 +680,10 @@ const sendAcceptanceEmail = async (req, res) => {
       });
     }
 
+    const roleLabel = member.role === 'delegate' ? 'delegate' : 'member';
     await logAdminAction(
       'acceptance_email_sent',
-      `Sent member acceptance (WhatsApp) email to "${member.full_name}" (${result.email})`,
+      `Sent ${roleLabel} acceptance (WhatsApp) email to "${member.full_name}" (${result.email})`,
       req,
       'member',
       member.member_id,
@@ -691,7 +692,7 @@ const sendAcceptanceEmail = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Acceptance (WhatsApp) email sent to ${result.email}`,
+      message: `${roleLabel === 'delegate' ? 'Delegate' : 'Member'} acceptance (WhatsApp) email sent to ${result.email}`,
       data: result
     });
   } catch (error) {

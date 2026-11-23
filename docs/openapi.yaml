@@ -3207,6 +3207,17 @@ paths:
       security:
         -
           bearerAuth: []
+  /email-templates/send/delegate-acceptance:
+    post:
+      summary: 'Create/submit /email-templates/send/delegate-acceptance'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - EmailTemplates
+      security:
+        -
+          bearerAuth: []
   /email-templates/send/member-acceptance:
     post:
       tags:

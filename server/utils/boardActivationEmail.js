@@ -87,7 +87,7 @@ async function sendBoardActivationEmailForMember(boardMember, sendEmail) {
 
   await sendEmail({
     to: email,
-    fromName: 'MSP MIU Website',
+    fromName: 'MSP-MIU',
     subject: rendered.subject,
     text: rendered.text,
     html: rendered.html,
@@ -196,7 +196,7 @@ async function sendBoardActivationEmailsToMembers(options = {}) {
 
       return {
         to: item.email,
-        fromName: 'MSP MIU Website',
+        fromName: 'MSP-MIU',
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,

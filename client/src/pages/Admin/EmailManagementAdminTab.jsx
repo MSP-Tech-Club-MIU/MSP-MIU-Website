@@ -40,6 +40,7 @@ const TEMPLATE_ICONS = {
   member_activation: MdPeople,
   board_activation: MdGroups,
   member_acceptance: MdChat,
+  delegate_acceptance: MdChat,
   password_reset: MdLock,
   site_announcement: MdCampaign,
   android_app_update: MdPhoneAndroid,
@@ -56,7 +57,7 @@ const TEMPLATE_ICONS = {
   course_available_recordings: MdMenuBook
 };
 
-const WHATSAPP_TEMPLATE_KEYS = new Set(['member_acceptance']);
+const WHATSAPP_TEMPLATE_KEYS = new Set(['member_acceptance', 'delegate_acceptance']);
 
 function getEmailSubPath(pathname) {
   const parts = String(pathname || '').split('/').filter(Boolean);
@@ -226,6 +227,8 @@ function TemplateEditor({
 }
 
 function WhatsAppLinksPanel({
+  generalWa,
+  setGeneralWa,
   departments,
   waDrafts,
   setWaDrafts,
@@ -234,11 +237,29 @@ function WhatsAppLinksPanel({
 }) {
   return (
     <div className="EmailMgmt__whatsapp">
+      <div style={{ marginBottom: '1.25rem', padding: '14px 16px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
+        <h4 style={{ margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: '6px', color: '#15803d', fontSize: '15px' }}>
+          <MdChat /> General Members WhatsApp Group
+        </h4>
+        <p className="EmailMgmt__hint" style={{ margin: '0 0 10px', color: '#166534' }}>
+          This link is sent to all accepted <strong>regular members</strong> (regardless of department).
+        </p>
+        <label className="EmailMgmt__waRow" style={{ margin: 0 }}>
+          <span style={{ fontWeight: 600 }}>General Members Link</span>
+          <input
+            className="EmailMgmt__input"
+            value={generalWa || ''}
+            onChange={(e) => setGeneralWa?.(e.target.value)}
+            placeholder="https://chat.whatsapp.com/…"
+          />
+        </label>
+      </div>
+
       <h3>
-        <MdChat /> Department WhatsApp group links
+        <MdChat /> Department WhatsApp group links (for Delegates)
       </h3>
       <p className="EmailMgmt__hint">
-        Acceptance emails insert the link for the department the member was accepted into.
+        Acceptance emails for <strong>Delegates</strong> insert the specific WhatsApp group link for the department they were accepted into.
       </p>
       <div className="EmailMgmt__waTable">
         {departments.map((d) => (
@@ -280,6 +301,9 @@ function applyWhatsAppPayload(payload, setters) {
   setters.setWaDrafts(
     Object.fromEntries(deps.map((d) => [d.department_id, d.whatsapp_group_url || '']))
   );
+  if (payload?.general_whatsapp_url !== undefined && setters.setGeneralWa) {
+    setters.setGeneralWa(payload.general_whatsapp_url || '');
+  }
 }
 
 export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
@@ -304,6 +328,7 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [waDrafts, setWaDrafts] = useState({});
+  const [generalWa, setGeneralWa] = useState('');
   const [waSaving, setWaSaving] = useState(false);
   const [testEmail, setTestEmail] = useState(DEFAULT_TEST_EMAIL);
 
@@ -318,7 +343,8 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
       setTemplates(list);
       applyWhatsAppPayload(waRes?.data, {
         setDepartments,
-        setWaDrafts
+        setWaDrafts,
+        setGeneralWa
       });
     } catch (err) {
       onAlert?.({ type: 'error', message: err.message || 'Failed to load email templates' });
@@ -538,18 +564,48 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
     }
   };
 
+  const handleBulkDelegateAcceptance = async () => {
+    const ok = await confirmModal({
+      title: 'Send Delegate Acceptance Emails?',
+      message: 'Send acceptance emails to delegates (uses department WhatsApp links, current season filter)?',
+      confirmText: 'Send Delegate Acceptance Emails',
+      cancelText: 'Cancel',
+      type: 'warning'
+    });
+    if (!ok) return;
+    try {
+      setBulkBusy(true);
+      const result = await ApiService.sendEmailDelegateAcceptance(seasonFilters);
+      const job = result?.emailJob || result?.data?.emailJob;
+      if (job?.id) {
+        if (onOpenJob) {
+          onOpenJob({ id: job.id, title: 'Delegate Acceptance Emails' });
+        } else {
+          setEmailSendJob({ id: job.id, title: 'Delegate Acceptance Emails' });
+        }
+      }
+      onAlert?.({ type: 'success', message: summarizeSend(result.data) });
+    } catch (err) {
+      onAlert?.({ type: 'error', message: err.message || 'Send failed' });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const saveWhatsAppLinks = async () => {
     try {
       setWaSaving(true);
-      await Promise.all(
-        departments.map((d) =>
+      await Promise.all([
+        ...departments.map((d) =>
           ApiService.updateDepartmentWhatsApp(d.department_id, waDrafts[d.department_id] || null)
-        )
-      );
+        ),
+        ApiService.updateDepartmentWhatsApp('general', generalWa || null)
+      ]);
       const waRes = await ApiService.getDepartmentWhatsAppLinks();
       applyWhatsAppPayload(waRes?.data, {
         setDepartments,
-        setWaDrafts
+        setWaDrafts,
+        setGeneralWa
       });
       onAlert?.({ type: 'success', message: 'WhatsApp group links saved' });
     } catch (err) {
@@ -567,7 +623,10 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
       return { action: handleBulkBoardActivation, label: 'Send to pending board' };
     }
     if (key === 'member_acceptance') {
-      return { action: handleBulkAcceptance, label: 'Send acceptance emails' };
+      return { action: handleBulkAcceptance, label: 'Send member acceptance emails' };
+    }
+    if (key === 'delegate_acceptance') {
+      return { action: handleBulkDelegateAcceptance, label: 'Send delegate acceptance emails' };
     }
     return { action: null, label: null };
   };
@@ -689,6 +748,8 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
             </h2>
           </div>
           <WhatsAppLinksPanel
+            generalWa={generalWa}
+            setGeneralWa={setGeneralWa}
             departments={departments}
             waDrafts={waDrafts}
             setWaDrafts={setWaDrafts}
@@ -747,6 +808,8 @@ export default function EmailManagementAdminTab({ onAlert, onOpenJob }) {
 
         {showWhatsAppOnPage && (
           <WhatsAppLinksPanel
+            generalWa={generalWa}
+            setGeneralWa={setGeneralWa}
             departments={departments}
             waDrafts={waDrafts}
             setWaDrafts={setWaDrafts}

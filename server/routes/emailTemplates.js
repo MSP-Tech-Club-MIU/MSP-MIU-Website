@@ -10,7 +10,8 @@ const {
   updateDepartmentWhatsApp,
   sendMemberActivation,
   sendBoardActivation,
-  sendMemberAcceptance
+  sendMemberAcceptance,
+  sendDelegateAcceptance
 } = require('../controllers/emailTemplates');
 const { authenticateToken, verifyRole } = require('../middlewares/auth');
 
@@ -22,6 +23,7 @@ router.put('/departments/:id/whatsapp', ...adminBoard, updateDepartmentWhatsApp)
 router.post('/send/member-activation', ...adminBoard, sendMemberActivation);
 router.post('/send/board-activation', ...adminBoard, sendBoardActivation);
 router.post('/send/member-acceptance', ...adminBoard, sendMemberAcceptance);
+router.post('/send/delegate-acceptance', ...adminBoard, sendDelegateAcceptance);
 router.get('/:key', ...adminBoard, getEmailTemplate);
 router.put('/:key', ...adminBoard, updateEmailTemplate);
 router.post('/:key/reset', ...adminBoard, resetEmailTemplate);

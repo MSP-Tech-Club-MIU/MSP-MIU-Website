@@ -63,7 +63,7 @@ async function sendActivationEmailForMember(member, sendEmail) {
 
   await sendEmail({
     to: email,
-    fromName: 'MSP MIU Website',
+    fromName: 'MSP-MIU',
     subject: rendered.subject,
     text: rendered.text,
     html: rendered.html,
@@ -149,7 +149,7 @@ async function sendActivationEmailsToMembers(options = {}) {
 
       return {
         to: item.email,
-        fromName: 'MSP MIU Website',
+        fromName: 'MSP-MIU',
         subject: rendered.subject,
         text: rendered.text,
         html: rendered.html,

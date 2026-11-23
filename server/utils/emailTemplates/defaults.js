@@ -185,28 +185,80 @@ const MEMBER_ACCEPTANCE_HTML = `<!DOCTYPE html>
               <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px; line-height: 1.6;"><strong>Congratulations! 🎊</strong> You've been accepted into the <strong>{{departmentName}} Department</strong> at MSP MIU!</p>
               <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px; line-height: 1.6;">We really enjoyed your interview and are excited to see what you'll bring to the team.</p>
               <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #f9f9f9; border-radius: 6px; border-left: 4px solid #25D366;">
-                <h2 style="margin: 0 0 8px 0; color: #333333; font-size: 15px; font-weight: 600;">Join the Department WhatsApp Group</h2>
-                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:</p>
-                <p style="margin: 0;"><a href="{{departmentLink}}" class="email-btn" style="display: inline-block; padding: 8px 16px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 13px; text-align: center;">Join {{departmentName}} WhatsApp Group</a></p>
-              </div>
-              <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #fff9e6; border-radius: 6px; border-left: 4px solid #FFA500;">
-                <h2 style="margin: 0 0 8px 0; color: #333333; font-size: 15px; font-weight: 600;">Opening Session</h2>
-                <p style="margin: 0 0 6px 0; color: #666666; font-size: 13px; line-height: 1.5;">To kick things off, we'd love to see you at our Opening Session on <strong>Wednesday, November 12, 2025</strong>, from <strong>12:00 PM to 2:00 PM</strong> at the <strong>OOA Room, Main Building</strong>, followed by a special Orange Business Talk from <strong>2:00 PM to 3:00 PM</strong>.</p>
-                <p style="margin: 8px 0 4px 0; color: #333333; font-size: 13px; font-weight: 600;">Speakers from Orange Business:</p>
-                <ul style="margin: 0 0 0 16px; padding: 0; color: #666666; font-size: 13px; line-height: 1.55;">
-                  <li>Ahmed Galal Eldin, Operational Department Head</li>
-                  <li>Sandy Elias George, Incident Management Specialist</li>
-                  <li>Fady Sherif Saad, Incident Management Team Leader</li>
-                </ul>
+                <h2 style="margin: 0 0 8px 0; color: #333333; font-size: 15px; font-weight: 600;">Join the General Members WhatsApp Group</h2>
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">Stay connected with the MSP MIU family, get instant updates, and never miss an announcement by joining our official members WhatsApp group:</p>
+                <p style="margin: 0;"><a href="{{whatsappLink}}" class="email-btn" style="display: inline-block; padding: 8px 16px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 13px; text-align: center;">Join Members WhatsApp Group</a></p>
               </div>
               <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #f9f9f9; border-radius: 6px;">
-                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:</p>
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If you haven't already, make sure to follow us to stay updated on events and announcements:</p>
                 <p style="margin: 4px 0;"><a href="{{youtubeLink}}" style="color: #FF0000; text-decoration: none; font-size: 13px; font-weight: 600;">▶️ YouTube</a></p>
                 <p style="margin: 4px 0;"><a href="{{instagramLink}}" style="color: #E4405F; text-decoration: none; font-size: 13px; font-weight: 600;">📷 Instagram</a></p>
                 <p style="margin: 4px 0;"><a href="{{tiktokLink}}" style="color: #000000; text-decoration: none; font-size: 13px; font-weight: 600;">🎵 TikTok</a></p>
               </div>
               <p style="margin: 16px 0 10px 0; color: #333333; font-size: 14px; line-height: 1.55;">We're so glad to have you with us - <strong>welcome to the MSP MIU family!</strong></p>
-              <p style="margin: 0 0 10px 0; color: #333333; font-size: 14px; line-height: 1.55;">Can't wait to see you at the Opening Session!</p>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-footer-pad" style="padding: 12px 18px; background-color: #f9f9f9; border-top: 1px solid #eeeeee;">
+              <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.4;">Cheers,<br><strong>MSP MIU Team</strong></p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+const DELEGATE_ACCEPTANCE_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Welcome to MSP MIU - {{departmentName}} Department Delegate</title>
+  <style type="text/css">
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    @media only screen and (max-width: 680px) {
+      .email-outer-td { padding: 0 !important; }
+      .email-container { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; }
+      .email-header-pad { padding: 12px 12px !important; border-radius: 0 !important; }
+      .email-body-pad { padding: 10px 10px !important; }
+      .email-msg-box { padding: 10px 10px !important; margin: 0 0 12px !important; }
+      .email-footer-pad { padding: 10px 10px !important; border-radius: 0 !important; }
+      .email-btn { display: block !important; width: 100% !important; text-align: center !important; box-sizing: border-box !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; background-color: #f4f4f4;">
+    <tr>
+      <td class="email-outer-td" align="center" style="padding: 8px 4px;">
+        <table role="presentation" class="email-container" width="680" cellpadding="0" cellspacing="0" style="max-width: 680px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          <tr>
+            <td class="email-header-pad" style="padding: 16px 20px; background-color: #031C35;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 600;">MSP MIU</h1>
+            </td>
+          </tr>
+          <tr>
+            <td class="email-body-pad" style="padding: 16px 20px 18px; background-color: #ffffff;">
+              <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px; line-height: 1.6;">Hi {{studentName}},</p>
+              <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px; line-height: 1.6;"><strong>Congratulations! 🎊</strong> You've been accepted as a <strong>Delegate</strong> in the <strong>{{departmentName}} Department</strong> at MSP MIU!</p>
+              <p style="margin: 0 0 14px 0; color: #333333; font-size: 15px; line-height: 1.6;">We really enjoyed your interview and are excited to see what you'll bring to the team.</p>
+              <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #f9f9f9; border-radius: 6px; border-left: 4px solid #25D366;">
+                <h2 style="margin: 0 0 8px 0; color: #333333; font-size: 15px; font-weight: 600;">Join the Department WhatsApp Group</h2>
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:</p>
+                <p style="margin: 0;"><a href="{{departmentLink}}" class="email-btn" style="display: inline-block; padding: 8px 16px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: 600; font-size: 13px; text-align: center;">Join {{departmentName}} WhatsApp Group</a></p>
+              </div>
+              <div class="email-msg-box" style="margin: 16px 0; padding: 10px 10px; background-color: #f9f9f9; border-radius: 6px;">
+                <p style="margin: 0 0 8px 0; color: #666666; font-size: 13px; line-height: 1.5;">If you haven't already, make sure to follow us to stay updated on events and announcements:</p>
+                <p style="margin: 4px 0;"><a href="{{youtubeLink}}" style="color: #FF0000; text-decoration: none; font-size: 13px; font-weight: 600;">▶️ YouTube</a></p>
+                <p style="margin: 4px 0;"><a href="{{instagramLink}}" style="color: #E4405F; text-decoration: none; font-size: 13px; font-weight: 600;">📷 Instagram</a></p>
+                <p style="margin: 4px 0;"><a href="{{tiktokLink}}" style="color: #000000; text-decoration: none; font-size: 13px; font-weight: 600;">🎵 TikTok</a></p>
+              </div>
+              <p style="margin: 16px 0 10px 0; color: #333333; font-size: 14px; line-height: 1.55;">We're so glad to have you with us - <strong>welcome to the MSP MIU family!</strong></p>
             </td>
           </tr>
           <tr>
@@ -302,36 +354,55 @@ Congratulations! 🎊 You've been accepted into the {{departmentName}} Departmen
 
 We really enjoyed your interview and are excited to see what you'll bring to the team.
 
+Join the General Members WhatsApp Group
+
+Stay connected with the MSP MIU family, get instant updates, and never miss an announcement by joining our official members WhatsApp group:
+
+{{whatsappLink}}
+
+If you haven't already, make sure to follow us to stay updated on events and announcements:
+
+YouTube: {{youtubeLink}}
+Instagram: {{instagramLink}}
+TikTok: {{tiktokLink}}
+
+We're so glad to have you with us - welcome to the MSP MIU family!
+
+Cheers,
+MSP MIU Team`,
+    MEMBER_ACCEPTANCE_HTML,
+    ['studentName', 'departmentName', 'whatsappLink', 'generalGroupLink', 'departmentLink', 'youtubeLink', 'instagramLink', 'tiktokLink']
+  ),
+
+  delegate_acceptance: def(
+    'delegate_acceptance',
+    'Delegate acceptance (WhatsApp)',
+    'account',
+    'Congratulations! Welcome to {{departmentName}} Department as Delegate - MSP MIU',
+    `Hi {{studentName}},
+
+Congratulations! 🎊 You've been accepted as a Delegate in the {{departmentName}} Department at MSP MIU!
+
+We really enjoyed your interview and are excited to see what you'll bring to the team.
+
 Join the Department WhatsApp Group
 
 Stay connected with your teammates, get instant updates, and never miss an announcement by joining our official WhatsApp group:
 
 {{departmentLink}}
 
-To kick things off, we'd love to see you at our Opening Session on Wednesday, November 12, 2025, from 12:00 PM to 2:00 PM at the OOA Room, Main Building, followed by a special Orange Business Talk from 2:00 PM to 3:00 PM.
-
-Speakers from Orange Business:
-
-- Ahmed Galal Eldin, Operational Department Head
-- Sandy Elias George, Incident Management Specialist
-- Fady Sherif Saad, Incident Management Team Leader
-
-If you haven't already, make sure to join our MSP group and follow us to stay updated on events and announcements:
+If you haven't already, make sure to follow us to stay updated on events and announcements:
 
 YouTube: {{youtubeLink}}
-
 Instagram: {{instagramLink}}
-
 TikTok: {{tiktokLink}}
 
 We're so glad to have you with us - welcome to the MSP MIU family!
 
-Can't wait to see you at the Opening Session!
-
 Cheers,
 MSP MIU Team`,
-    MEMBER_ACCEPTANCE_HTML,
-    ['studentName', 'departmentName', 'departmentLink', 'youtubeLink', 'instagramLink', 'tiktokLink']
+    DELEGATE_ACCEPTANCE_HTML,
+    ['studentName', 'departmentName', 'departmentLink', 'whatsappLink', 'youtubeLink', 'instagramLink', 'tiktokLink']
   ),
 
   password_reset: def(
@@ -1198,6 +1269,7 @@ This is an automated message from MSP MIU Course Management.`,
 };
 
 const DEFAULT_WHATSAPP_LINKS = {
+  'General Members': 'https://chat.whatsapp.com/BYvbSUtcdl59RZLKnuOscE',
   'Media & Content Creation': 'https://chat.whatsapp.com/I64zmHEVRiFIuZqMKBKLma?mode=ems_copy_t',
   'Human Resources': 'https://chat.whatsapp.com/EPwUJcrQv1U03hGiN9jkkV?mode=ems_copy_t',
   'Software Development': 'https://chat.whatsapp.com/GkKuGje7wv5AfjOE1SpeZA?mode=ems_copy_t',
@@ -1218,6 +1290,32 @@ function departmentHasWhatsApp(name) {
   return !DEPARTMENTS_WITHOUT_WHATSAPP.has(String(name || '').trim());
 }
 
+async function getGeneralWhatsAppLink() {
+  if (process.env.GENERAL_MEMBERS_WHATSAPP_URL && process.env.GENERAL_MEMBERS_WHATSAPP_URL.trim()) {
+    return process.env.GENERAL_MEMBERS_WHATSAPP_URL.trim();
+  }
+  if (process.env.GENERAL_WHATSAPP_URL && process.env.GENERAL_WHATSAPP_URL.trim()) {
+    return process.env.GENERAL_WHATSAPP_URL.trim();
+  }
+  try {
+    const EmailTemplate = require('../../models/EmailTemplate');
+    const tpl = await EmailTemplate.findByPk('member_acceptance');
+    if (tpl?.meta?.general_whatsapp_url && String(tpl.meta.general_whatsapp_url).trim()) {
+      return String(tpl.meta.general_whatsapp_url).trim();
+    }
+  } catch (_) {}
+  try {
+    const Department = require('../../models/Department');
+    const generalDept = await Department.findOne({
+      where: { name: ['General Members', 'General'] }
+    });
+    if (generalDept?.whatsapp_group_url && String(generalDept.whatsapp_group_url).trim()) {
+      return String(generalDept.whatsapp_group_url).trim();
+    }
+  } catch (_) {}
+  return DEFAULT_WHATSAPP_LINKS['General Members'] || 'https://chat.whatsapp.com/BYvbSUtcdl59RZLKnuOscE';
+}
+
 function getDefaultTemplate(key) {
   return EMAIL_TEMPLATE_DEFAULTS[key] || null;
 }
@@ -1231,6 +1329,7 @@ module.exports = {
   DEFAULT_WHATSAPP_LINKS,
   DEPARTMENTS_WITHOUT_WHATSAPP,
   departmentHasWhatsApp,
+  getGeneralWhatsAppLink,
   getDefaultTemplate,
   listDefaultTemplates
 };

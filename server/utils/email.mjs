@@ -82,7 +82,7 @@ async function resolveUserForUnsubscribe(to, userIdHint) {
  */
 export async function sendEmail(mailOptions) {
   try {
-    const fromName = mailOptions.fromName || 'MSP MIU Website';
+    const fromName = mailOptions.fromName || 'MSP-MIU';
     const fromEmail = process.env.MAIL_FROM_ADDRESS || mailOptions.from || 'noreply@msp-miu.tech';
 
     if (!process.env.MAIL_FROM_ADDRESS && !mailOptions.from) {
@@ -116,7 +116,7 @@ export async function sendEmail(mailOptions) {
     const headers = {
       'Message-ID': messageId,
       Date: date,
-      'X-Mailer': 'MSP MIU Website',
+      'X-Mailer': 'MSP-MIU',
       'X-Priority': '3',
       Importance: 'normal',
       Precedence: 'bulk',
